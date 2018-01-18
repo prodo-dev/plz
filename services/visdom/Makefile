@@ -1,9 +1,9 @@
 NAME = batman-visdom
 TAG = prodo-ai/$(NAME)
-PORT = 8097
-export PORT
 
 NETWORK = batman
+PORT = 8097
+export PORT
 
 .PHONY: build
 build:
