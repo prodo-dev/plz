@@ -4,7 +4,7 @@ RUN set -ex; \
     apt-get update -qq; \
     apt-get upgrade -qqy
 
-RUN apt-get install -qqy bzip2 curl
+RUN apt-get install -qqy bzip2 curl g++
 
 ENV ANACONDA_VERSION 5.0.1
 
