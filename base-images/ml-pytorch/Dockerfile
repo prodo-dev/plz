@@ -20,6 +20,8 @@ WORKDIR /env
 COPY environment.yml ./
 RUN conda env create --name=default
 
+ENV PYTHONPATH .:${PYTHONPATH}
+
 WORKDIR /src
 ONBUILD COPY environment.yml ./
 ONBUILD RUN conda env update --name=default
