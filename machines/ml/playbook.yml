@@ -22,6 +22,30 @@
       apt:
         name: mosh
 
+- hosts: build
+  remote_user: root
+  become: yes
+  vars:
+    packer_version: 1.1.3
+    zip: /tmp/packer.zip
+  tasks:
+    - name: Install make
+      apt:
+        name: make
+    - name: Check whether Packer is present
+      stat: path=/etc/shorewall/rules
+      register: packer
+    - name: Download Packer
+      get_url:
+        url: "https://releases.hashicorp.com/packer/{{ packer_version }}/packer_{{ packer_version }}_linux_amd64.zip"
+        dest: "{{ zip }}"
+      when: not packer.stat.exists
+    - name: Install Packer
+      unarchive:
+        src: "{{ zip }}"
+        dest: /usr/local/bin
+        remote_src: yes
+
 - hosts: all
   remote_user: root
   become: yes

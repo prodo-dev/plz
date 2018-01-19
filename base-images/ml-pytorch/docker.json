@@ -1,0 +1,48 @@
+{
+  "variables": {
+    "anaconda_dir": "/opt/anaconda",
+    "anaconda_env": "default",
+    "cache": null
+  },
+  "builders": [
+    {
+      "type": "docker",
+      "image": "nvidia/cuda:9.0-cudnn7-runtime-ubuntu16.04",
+      "commit": true,
+      "volumes": {
+        "{{pwd}}": "/env",
+        "{{user `cache`}}/install": "/install",
+        "{{user `cache`}}/pkgs": "{{user `anaconda_dir`}}/pkgs"
+      },
+      "changes": [
+        "ENV PATH {{user `anaconda_dir`}}/envs/{{user `anaconda_env`}}/bin:{{user `anaconda_dir`}}/bin:${PATH}",
+        "ENV PYTHONPATH .:${PYTHONPATH}",
+        "WORKDIR /src",
+        "ONBUILD COPY environment.yml ./",
+        "ONBUILD RUN conda env update --name={{user `anaconda_env`}}",
+        "ONBUILD COPY . ./"
+      ]
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline_shebang": "/bin/sh -eux",
+      "inline": [
+        "apt-get update -qq",
+        "apt-get install -y bzip2 curl g++",
+        "/install/anaconda.sh -b -u -p {{user `anaconda_dir`}}",
+        "{{user `anaconda_dir`}}/bin/conda env create --name={{user `anaconda_env`}} --file=/env/environment.yml"
+      ]
+    }
+  ],
+  "post-processors": [
+    [
+      {
+        "type": "docker-tag",
+        "repository": "prodo-ai/ml-pytorch",
+        "tag": "latest"
+      }
+    ]
+  ]
+}

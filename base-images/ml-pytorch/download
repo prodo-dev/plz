@@ -1,0 +1,39 @@
+#!/usr/bin/env zsh
+
+set -e
+set -u
+
+if [[ $# -ne 3 ]]; then
+  echo >&2 "Usage: $0 URL OUTPUT-FILE EXPECTED-HASH"
+  exit 2
+fi
+
+url=$1
+output_file=$2
+expected_hash=$3
+
+if [[ -e $output_file ]]; then
+  actual_hash=$(openssl dgst -sha256 < $output_file)
+  echo >&2 "${output_file} already exists. Verifying..."
+  if [[ $expected_hash == $actual_hash ]]; then
+    echo >&2 "Verified."
+    exit
+  else
+    echo >&2 "The file is corrupt."
+  fi
+else
+  echo >&2 "Downloading ${output_file}..."
+fi
+
+temp_output_file=$(mktemp -t batman)
+
+curl -fL -o $temp_output_file $url
+actual_hash=$(openssl dgst -sha256 < $temp_output_file)
+if [[ $expected_hash != $actual_hash ]]; then
+  echo >&2 "${output_file} is corrupt."
+  echo >&2 "Expected SHA256 hash: ${expected_hash}"
+  echo >&2 "Actual SHA256 hash:   ${actual_hash}"
+  exit 1
+fi
+
+mv $temp_output_file $output_file
