@@ -1,0 +1,25 @@
+#!/usr/bin/env zsh
+
+set -e
+set -u
+
+cd $(dirname $0)
+
+if [[ ! -d .terraform ]]; then
+  terraform init
+fi
+terraform get
+terraform apply
+
+ssh=(ssh -i ../keys/batman.privkey)
+ip=$(jq -r '.modules[0].resources["aws_spot_instance_request.experiments"].primary.attributes.public_ip' < terraform.tfstate)
+node="ubuntu@${ip}"
+echo "experiments ansible_host=${ip} ansible_user=ubuntu" > inventory
+export ANSIBLE_INVENTORY=${PWD}/inventory
+
+$ssh $node sudo apt-get update -q
+$ssh $node sudo apt-get install -qy python
+
+ansible all -m ping
+ansible-playbook playbook.yml
+ansible all -m ping

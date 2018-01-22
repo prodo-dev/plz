@@ -1,1 +1,9 @@
+.envrc
 /data
+
+# Ansible
+*.retry
+
+# Terraform
+.terraform
+*.backup

@@ -1,0 +1,47 @@
+---
+- hosts: all
+  remote_user: root
+  become: yes
+  tasks:
+    - name: Update the APT repositories
+      apt:
+        update_cache: yes
+    - name: Upgrade everything
+      apt:
+        upgrade: full
+    - name: Install apt-transport-https
+      apt:
+        name: apt-transport-https
+    - name: Install ca-certificates
+      apt:
+        name: ca-certificates
+    - name: Install curl
+      apt:
+        name: curl
+
+    - name: Grab the Docker GPG keys
+      shell: |
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+        curl -fsSL https://nvidia.github.io/nvidia-docker/gpgkey | apt-key add -
+    - name: Add the Docker APT repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
+    - name: Add the NVIDIA-Docker APT repository
+      shell: curl -fsSL https://nvidia.github.io/nvidia-docker/ubuntu16.04/amd64/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+    - name: Update the APT repositories
+      apt:
+        update_cache: yes
+    - name: Install Docker
+      apt:
+        name: docker-ce
+    - name: Install NVIDIA-Docker
+      apt:
+        name: nvidia-docker2
+
+    - name: Reboot server
+      shell: sleep 1 && /sbin/reboot &
+      async: 0
+      poll: 0
+    - name: Wait for the server to finish rebooting
+      local_action: wait_for host={{ ansible_host }} port=22 timeout=300
+      become: no
