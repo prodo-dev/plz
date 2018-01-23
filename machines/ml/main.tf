@@ -1,3 +1,7 @@
+variable "availability-zone" {
+  default = "eu-west-1a"
+}
+
 provider "aws" {
   region = "eu-west-1"
 }
@@ -26,8 +30,9 @@ resource "aws_route" "gateway-route" {
 }
 
 resource "aws_subnet" "main" {
-  vpc_id     = "${aws_vpc.main.id}"
-  cidr_block = "10.0.1.0/24"
+  vpc_id            = "${aws_vpc.main.id}"
+  availability_zone = "${var.availability-zone}"
+  cidr_block        = "10.0.1.0/24"
 
   tags {
     Name = "Batman"
@@ -78,6 +83,21 @@ resource "aws_instance" "build" {
   tags {
     Name = "Batman Build"
   }
+}
+
+resource "aws_ebs_volume" "build-cache" {
+  availability_zone = "${aws_subnet.main.availability_zone}"
+  size              = 500
+
+  tags {
+    Name = "Batman Build Cache"
+  }
+}
+
+resource "aws_volume_attachment" "build-cache-attachment" {
+  instance_id = "${aws_instance.build.id}"
+  volume_id   = "${aws_ebs_volume.build-cache.id}"
+  device_name = "/dev/sdx"
 }
 
 resource "aws_spot_instance_request" "experiments" {

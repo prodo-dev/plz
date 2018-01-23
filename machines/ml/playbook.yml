@@ -48,6 +48,24 @@
         name: nvidia-docker2
         update_cache: yes
 
+- hosts: build
+  vars:
+    volume: /dev/xvdx
+    fstype: ext4
+  remote_user: root
+  become: yes
+  tasks:
+    - name: Create a filesystem on the build cache volume
+      filesystem:
+        dev: "{{ volume }}"
+        fstype: "{{ fstype }}"
+    - name: Mount the build cache volume
+      mount:
+        src: "{{ volume }}"
+        path: /cache
+        fstype: "{{ fstype }}"
+        state: mounted
+
 - hosts: all
   remote_user: root
   become: yes
