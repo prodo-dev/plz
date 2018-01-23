@@ -1,1 +1,5 @@
-experiments ansible_host=34.245.1.65 ansible_user=ubuntu
+[build]
+ec2-54-194-85-198.eu-west-1.compute.amazonaws.com ansible_user=ubuntu
+
+[experiments]
+ec2-34-245-1-65.eu-west-1.compute.amazonaws.com ansible_user=ubuntu

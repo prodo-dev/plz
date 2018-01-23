@@ -67,6 +67,19 @@ resource "aws_key_pair" "batman" {
   public_key = "${file("../keys/batman.pubkey")}"
 }
 
+resource "aws_instance" "build" {
+  subnet_id                   = "${aws_subnet.main.id}"
+  instance_type               = "t2.medium"
+  ami                         = "ami-4d46d534"
+  vpc_security_group_ids      = ["${aws_default_security_group.default.id}", "${aws_security_group.ssh.id}"]
+  key_name                    = "batman-key"
+  associate_public_ip_address = true
+
+  tags {
+    Name = "Batman Build"
+  }
+}
+
 resource "aws_spot_instance_request" "experiments" {
   subnet_id                   = "${aws_subnet.main.id}"
   instance_type               = "g2.2xlarge"

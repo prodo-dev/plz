@@ -12,14 +12,18 @@ terraform get
 terraform apply
 
 ssh=(ssh -i ../keys/batman.privkey)
-ip=$(jq -r '.modules[0].resources["aws_spot_instance_request.experiments"].primary.attributes.public_ip' < terraform.tfstate)
-node="ubuntu@${ip}"
-echo "experiments ansible_host=${ip} ansible_user=ubuntu" > inventory
+build_host=$(jq -r '.modules[0].resources["aws_instance.build"].primary.attributes.public_dns' < terraform.tfstate)
+experiments_host=$(jq -r '.modules[0].resources["aws_spot_instance_request.experiments"].primary.attributes.public_dns' < terraform.tfstate)
+cat > inventory <<EOF
+[build]
+${build_host} ansible_user=ubuntu
+
+[experiments]
+${experiments_host} ansible_user=ubuntu
+EOF
+
+export ANSIBLE_HOST_KEY_CHECKING=false
 export ANSIBLE_INVENTORY=${PWD}/inventory
 
-$ssh $node sudo apt-get update -q
-$ssh $node sudo apt-get install -qy python
-
-ansible all -m ping
+ansible all -m raw -a 'command -v python || ( sudo apt-get update -q && sudo apt-get install -qy python )'
 ansible-playbook playbook.yml
-ansible all -m ping
