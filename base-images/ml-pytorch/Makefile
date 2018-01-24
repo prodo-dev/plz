@@ -1,4 +1,7 @@
-SHELL := $(shell command -v zsh)
+SHELL := $(shell which zsh 2>/dev/null)
+ifndef SHELL
+$(error "Could not find zsh.")
+endif
 
 CACHE_DIR = ../../cache/base-images/ml-pytorch
 
