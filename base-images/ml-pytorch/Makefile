@@ -3,6 +3,7 @@ ifndef SHELL
 $(error "Could not find zsh.")
 endif
 
+TAG = 024444204267.dkr.ecr.eu-west-1.amazonaws.com/ml-pytorch
 CACHE_DIR = ../../cache/base-images/ml-pytorch
 
 ANACONDA_VERSION = 5.0.1
@@ -11,8 +12,13 @@ ANACONDA_INSTALLER_SHA256 = 55e4db1919f49c92d5abbf27a4be5986ae157f074bf9f8238963
 .PHONY: build
 build: cache
 	packer build \
+		-var tag=$(TAG) \
 		-var cache=$(realpath $(CACHE_DIR)) \
 		docker.json
+
+.PHONY: push
+push: build
+	docker push $(TAG)
 
 .PHONY: cache
 cache: $(CACHE_DIR)/install/anaconda.sh $(CACHE_DIR)/pkgs

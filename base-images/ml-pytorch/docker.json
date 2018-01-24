@@ -2,7 +2,8 @@
   "variables": {
     "anaconda_dir": "/opt/anaconda",
     "anaconda_env": "default",
-    "cache": null
+    "cache": null,
+    "tag": null
   },
   "builders": [
     {
@@ -40,7 +41,7 @@
     [
       {
         "type": "docker-tag",
-        "repository": "prodo-ai/ml-pytorch",
+        "repository": "{{user `tag`}}",
         "tag": "latest"
       }
     ]
