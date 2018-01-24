@@ -7,6 +7,9 @@
     - name: Update the APT repositories
       apt:
         update_cache: yes
+    - name: Install aptitude
+      apt:
+        name: aptitude
     - name: Upgrade everything
       apt:
         upgrade: full
