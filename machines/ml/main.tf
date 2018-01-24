@@ -77,7 +77,8 @@ resource "aws_security_group" "ssh" {
   }
 
   tags {
-    Name = "Batman SSH"
+    Name  = "Batman SSH"
+    Owner = "Infrastructure"
   }
 }
 
