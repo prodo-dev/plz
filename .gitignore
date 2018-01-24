@@ -4,6 +4,7 @@
 
 # Ansible
 *.retry
+/machines/*/inventory
 
 # Terraform
 .terraform
