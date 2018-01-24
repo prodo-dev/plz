@@ -1,4 +1,5 @@
 ---
+# Common packages
 - hosts: all
   remote_user: root
   become: yes
@@ -21,7 +22,14 @@
     - name: Install mosh
       apt:
         name: mosh
+    - name: Install python-pip
+      apt:
+        name: python-pip
+    - name: Install awscli
+      pip:
+        name: awscli
 
+# Build packages
 - hosts: build
   remote_user: root
   become: yes
@@ -35,15 +43,9 @@
     - name: Install make
       apt:
         name: make
-    - name: Install python-pip
-      apt:
-        name: python-pip
     - name: Install unzip
       apt:
         name: unzip
-    - name: Install awscli
-      pip:
-        name: awscli
     - name: Check whether Packer is present
       stat: path=/etc/shorewall/rules
       register: packer
@@ -59,39 +61,47 @@
         remote_src: yes
       when: not packer.stat.exists
 
-- hosts: build
+# Cache volume
+- hosts: all
   vars:
     volume: /dev/xvdx
     fstype: ext4
   remote_user: root
   become: yes
   tasks:
-    - name: Create the build user group
+    - name: Create the cache user group
       group:
-        name: build
-    - name: Create a filesystem on the build cache volume
+        name: cache
+    - name: Create a filesystem on the cache volume
       filesystem:
         dev: "{{ volume }}"
         fstype: "{{ fstype }}"
-    - name: Mount the build cache volume
+    - name: Mount the cache volume
       mount:
         src: "{{ volume }}"
         path: /cache
         fstype: "{{ fstype }}"
         state: mounted
-    - name: Set ownership for the build cache volume
+    - name: Set ownership for the cache volume
       file:
         path: /cache
         owner: root
-        group: build
+        group: cache
         mode: u+rwx,g+rws,o-rwx
-    - name: Move the Docker directory to the build cache volume
+    - name: Create the Docker directory
+      file:
+        path: /cache/docker
+        state: directory
+        owner: root
+        group: cache
+        mode: u+rwx,g+rws,o-rwx
+    - name: Move the Docker directory to the cache volume
       file:
         src: /cache/docker
         dest: /var/lib/docker
+        state: link
         owner: root
         group: root
-        state: link
 
 - hosts: all
   remote_user: root

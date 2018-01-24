@@ -129,6 +129,11 @@ resource "aws_spot_instance_request" "experiments" {
   spot_price           = "1"
   wait_for_fulfillment = true
 
+  ebs_block_device {
+    volume_size = 100
+    device_name = "/dev/sdx"
+  }
+
   tags {
     Name  = "Batman Experiments Request"
     Owner = "Infrastructure"

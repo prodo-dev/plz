@@ -19,14 +19,14 @@ build_host=$(jq -r '.modules[0].resources["aws_instance.build"].primary.attribut
 experiments_host=$(jq -r '.modules[0].resources["aws_spot_instance_request.experiments"].primary.attributes.public_dns' < terraform.tfstate)
 cat > inventory <<EOF
 [build]
-${build_host} ansible_user=ubuntu ansible_ssh_private_key_file=${ssh_private_key_file}
+${build_host} ansible_user=ubuntu ansible_ssh_private_key_file=${ssh_private_key_file} ansible_ssh_extra_args='-o ConnectTimeout=60'
 
 [experiments]
-${experiments_host} ansible_user=ubuntu ansible_ssh_private_key_file=${ssh_private_key_file}
+${experiments_host} ansible_user=ubuntu ansible_ssh_private_key_file=${ssh_private_key_file} ansible_ssh_extra_args='-o ConnectTimeout=60'
 EOF
 
 export ANSIBLE_HOST_KEY_CHECKING=false
 export ANSIBLE_INVENTORY=${PWD}/inventory
 
-ansible all -m raw -a 'command -v python || ( sudo apt-get update -q && sudo apt-get install -qy python )'
+ansible all --one-line --module-name=raw --args='command -v python || ( sudo apt-get update -qq && sudo apt-get install -qqy python )'
 ansible-playbook playbook.yml
