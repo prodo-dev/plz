@@ -11,15 +11,18 @@ fi
 terraform get
 terraform apply
 
-ssh=(ssh -i ../keys/batman.privkey)
+ssh_private_key_file=${PWD}/../keys/batman.privkey
+ssh_private_key_file=${ssh_private_key_file:A}
+chmod go-rwx $ssh_private_key_file
+ssh=(ssh -i $ssh_private_key_file)
 build_host=$(jq -r '.modules[0].resources["aws_instance.build"].primary.attributes.public_dns' < terraform.tfstate)
 experiments_host=$(jq -r '.modules[0].resources["aws_spot_instance_request.experiments"].primary.attributes.public_dns' < terraform.tfstate)
 cat > inventory <<EOF
 [build]
-${build_host} ansible_user=ubuntu
+${build_host} ansible_user=ubuntu ansible_ssh_private_key_file=${ssh_private_key_file}
 
 [experiments]
-${experiments_host} ansible_user=ubuntu
+${experiments_host} ansible_user=ubuntu ansible_ssh_private_key_file=${ssh_private_key_file}
 EOF
 
 export ANSIBLE_HOST_KEY_CHECKING=false
