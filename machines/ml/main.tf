@@ -101,6 +101,10 @@ resource "aws_instance" "build" {
   }
 }
 
+output "build-host" {
+  value = "${aws_instance.build.public_dns}"
+}
+
 resource "aws_ebs_volume" "build-cache" {
   availability_zone = "${aws_subnet.main.availability_zone}"
   size              = 500
@@ -138,4 +142,8 @@ resource "aws_spot_instance_request" "experiments" {
     Name  = "Batman Experiments Request"
     Owner = "Infrastructure"
   }
+}
+
+output "experiments-host" {
+  value = "${aws_spot_instance_request.experiments.public_dns}"
 }
