@@ -29,9 +29,21 @@
     packer_version: 1.1.3
     zip: /tmp/packer.zip
   tasks:
+    - name: Install zsh
+      apt:
+        name: zsh
     - name: Install make
       apt:
         name: make
+    - name: Install python-pip
+      apt:
+        name: python-pip
+    - name: Install unzip
+      apt:
+        name: unzip
+    - name: Install awscli
+      pip:
+        name: awscli
     - name: Check whether Packer is present
       stat: path=/etc/shorewall/rules
       register: packer
@@ -45,6 +57,41 @@
         src: "{{ zip }}"
         dest: /usr/local/bin
         remote_src: yes
+      when: not packer.stat.exists
+
+- hosts: build
+  vars:
+    volume: /dev/xvdx
+    fstype: ext4
+  remote_user: root
+  become: yes
+  tasks:
+    - name: Create the build user group
+      group:
+        name: build
+    - name: Create a filesystem on the build cache volume
+      filesystem:
+        dev: "{{ volume }}"
+        fstype: "{{ fstype }}"
+    - name: Mount the build cache volume
+      mount:
+        src: "{{ volume }}"
+        path: /cache
+        fstype: "{{ fstype }}"
+        state: mounted
+    - name: Set ownership for the build cache volume
+      file:
+        path: /cache
+        owner: root
+        group: build
+        mode: u+rwx,g+rws,o-rwx
+    - name: Move the Docker directory to the build cache volume
+      file:
+        src: /cache/docker
+        dest: /var/lib/docker
+        owner: root
+        group: root
+        state: link
 
 - hosts: all
   remote_user: root
@@ -74,24 +121,6 @@
       apt:
         name: nvidia-docker2
         update_cache: yes
-
-- hosts: build
-  vars:
-    volume: /dev/xvdx
-    fstype: ext4
-  remote_user: root
-  become: yes
-  tasks:
-    - name: Create a filesystem on the build cache volume
-      filesystem:
-        dev: "{{ volume }}"
-        fstype: "{{ fstype }}"
-    - name: Mount the build cache volume
-      mount:
-        src: "{{ volume }}"
-        path: /cache
-        fstype: "{{ fstype }}"
-        state: mounted
 
 - hosts: all
   remote_user: root

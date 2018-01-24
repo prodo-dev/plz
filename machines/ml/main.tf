@@ -93,6 +93,7 @@ resource "aws_instance" "build" {
   vpc_security_group_ids      = ["${aws_default_security_group.default.id}", "${aws_security_group.ssh.id}"]
   key_name                    = "batman-key"
   associate_public_ip_address = true
+  iam_instance_profile        = "docker-build-machines"
 
   tags {
     Name  = "Batman Build"
@@ -123,6 +124,7 @@ resource "aws_spot_instance_request" "experiments" {
   vpc_security_group_ids      = ["${aws_default_security_group.default.id}", "${aws_security_group.ssh.id}"]
   key_name                    = "batman-key"
   associate_public_ip_address = true
+  iam_instance_profile        = "docker-build-machines"
 
   spot_price           = "1"
   wait_for_fulfillment = true
