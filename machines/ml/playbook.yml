@@ -18,6 +18,9 @@
     - name: Install curl
       apt:
         name: curl
+    - name: Install mosh
+      apt:
+        name: mosh
 
 - hosts: all
   remote_user: root

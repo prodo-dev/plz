@@ -1,5 +1,5 @@
 [build]
-ec2-34-244-190-139.eu-west-1.compute.amazonaws.com ansible_user=ubuntu
+ec2-34-244-23-93.eu-west-1.compute.amazonaws.com ansible_user=ubuntu ansible_ssh_private_key_file=/Users/samirtalwar/Prodo/batman/machines/keys/batman.privkey
 
 [experiments]
-ec2-34-244-238-68.eu-west-1.compute.amazonaws.com ansible_user=ubuntu
+ec2-54-154-44-107.eu-west-1.compute.amazonaws.com ansible_user=ubuntu ansible_ssh_private_key_file=/Users/samirtalwar/Prodo/batman/machines/keys/batman.privkey
