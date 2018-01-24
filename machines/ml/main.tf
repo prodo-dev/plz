@@ -11,7 +11,8 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = true
 
   tags {
-    Name = "Batman"
+    Name  = "Batman"
+    Owner = "Infrastructure"
   }
 }
 
@@ -19,7 +20,8 @@ resource "aws_internet_gateway" "gateway" {
   vpc_id = "${aws_vpc.main.id}"
 
   tags {
-    Name = "Batman"
+    Name  = "Batman"
+    Owner = "Infrastructure"
   }
 }
 
@@ -35,7 +37,8 @@ resource "aws_subnet" "main" {
   cidr_block        = "10.0.1.0/24"
 
   tags {
-    Name = "Batman"
+    Name  = "Batman"
+    Owner = "Infrastructure"
   }
 }
 
@@ -47,6 +50,10 @@ resource "aws_default_security_group" "default" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags {
+    Owner = "Infrastructure"
   }
 }
 
@@ -88,7 +95,8 @@ resource "aws_instance" "build" {
   associate_public_ip_address = true
 
   tags {
-    Name = "Batman Build"
+    Name  = "Batman Build"
+    Owner = "Infrastructure"
   }
 }
 
@@ -97,7 +105,8 @@ resource "aws_ebs_volume" "build-cache" {
   size              = 500
 
   tags {
-    Name = "Batman Build Cache"
+    Name  = "Batman Build Cache"
+    Owner = "Infrastructure"
   }
 }
 
@@ -119,6 +128,7 @@ resource "aws_spot_instance_request" "experiments" {
   wait_for_fulfillment = true
 
   tags {
-    Name = "Batman Experiments Request"
+    Name  = "Batman Experiments Request"
+    Owner = "Infrastructure"
   }
 }
