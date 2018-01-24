@@ -1,3 +1,5 @@
+SHELL := zsh
+
 NAME = batman-visdom
 TAG = prodo-ai/$(NAME)
 

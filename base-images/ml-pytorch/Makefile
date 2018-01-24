@@ -1,7 +1,4 @@
-SHELL := $(shell which zsh 2>/dev/null)
-ifndef SHELL
-$(error "Could not find zsh.")
-endif
+SHELL := zsh
 
 TAG = 024444204267.dkr.ecr.eu-west-1.amazonaws.com/ml-pytorch
 CACHE_DIR = ../../cache/base-images/ml-pytorch
