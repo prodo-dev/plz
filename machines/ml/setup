@@ -11,8 +11,7 @@ fi
 terraform get
 terraform apply
 
-ssh_private_key_file=${PWD}/../keys/batman.privkey
-ssh_private_key_file=${ssh_private_key_file:A}
+ssh_private_key_file=../keys/batman.privkey
 chmod go-rwx $ssh_private_key_file
 ssh=(ssh -i $ssh_private_key_file)
 build_host=$(terraform output build-host)
