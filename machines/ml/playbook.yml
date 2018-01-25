@@ -134,6 +134,9 @@
       apt:
         name: nvidia-docker2
         update_cache: yes
+    - name: Install libcuda
+      apt:
+        name: libcuda1-384
 
 - hosts: all
   remote_user: root
