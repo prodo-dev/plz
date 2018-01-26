@@ -16,8 +16,9 @@
         "{{user `cache`}}/pkgs": "{{user `anaconda_dir`}}/pkgs"
       },
       "changes": [
-        "ENV PATH {{user `anaconda_dir`}}/envs/{{user `anaconda_env`}}/bin:{{user `anaconda_dir`}}/bin:${PATH}",
-        "ENV PYTHONPATH .:${PYTHONPATH}",
+        "ENV ANACONDA_DIR {{user `anaconda_dir`}}",
+        "ENV ANACONDA_ENV {{user `anaconda_env`}}",
+        "ENTRYPOINT [\"/entrypoint\"]",
         "WORKDIR /src",
         "ONBUILD COPY environment.yml ./",
         "ONBUILD RUN conda env update --name={{user `anaconda_env`}}",
@@ -35,6 +36,11 @@
         "/install/anaconda.sh -b -u -p {{user `anaconda_dir`}}",
         "{{user `anaconda_dir`}}/bin/conda env create --name={{user `anaconda_env`}} --file=/env/environment.yml"
       ]
+    },
+    {
+      "type": "file",
+      "source": "entrypoint",
+      "destination": "/entrypoint"
     }
   ],
   "post-processors": [
