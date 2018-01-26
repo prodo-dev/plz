@@ -1,7 +1,12 @@
-from types import GeneratorType
+import logging
+import requests
+import subprocess
 
 from flask import Flask, jsonify, request, Response
-import requests
+from types import GeneratorType
+
+_LOGGER = logging.getLogger('controller')
+
 
 app = Flask(__name__)
 
@@ -30,8 +35,8 @@ def run_command(command: str) -> str:
     :param command: command to run with 'bash -c'
     :return: unique execution id
     """
-    # TODO(sergio): do the actual thing
-    return 'The-id-is-' + command
+    # TODO(sergio): return an id for the execution, not the container id
+    return run_command_and_return_container_id(command)
 
 
 @app.route(f'/{_COMMAND_ROUTE}/<execution_id>/{_LOGS_SUBROUTE}',
@@ -62,8 +67,40 @@ def get_output(execution_id: str) -> GeneratorType:
         yield i
 
 
+def run_command_and_return_container_id(command):
+    # TODO(sergio): do not hardcode machine/image
+    p = subprocess.Popen([
+        'ssh', 'ubuntu@34.244.128.112',
+        'docker', 'run', '-d',
+        '024444204267.dkr.ecr.eu-west-1.amazonaws.com/ml-pytorch',
+        'bash', '-c', command],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        encoding='utf-8')
+    stdout, stderr = p.communicate()
+
+    is_hex_string = True
+    try:
+        int(stdout.rstrip('\n'), 16)
+    except ValueError:
+        is_hex_string = False
+
+    if stderr != '' or p.returncode != 0 or not is_hex_string:
+        raise ControllerException(
+            f'Error running command\n'
+            f'Exit code: [{p.returncode}]\n'
+            f'Stdout is [{stdout}]\n'
+            f'Stderr is [{stderr}]\n')
+    _LOGGER.info(f'Container id is: {stdout}')
+    return stdout.rstrip('\n')
+
+
 def _stream_binary_generator(generator: GeneratorType) -> Response:
     return Response(generator, mimetype='application/octet-stream')
 
+
+class ControllerException(Exception):
+    def __init__(self, msg):
+        super().__init__(msg)
 
 app.run()
