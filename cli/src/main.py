@@ -29,11 +29,13 @@ class RunCommand:
     def display_logs(self, process):
         response = requests.get(self.url('commands', process['id'], 'logs'),
                                 stream=True)
+        self.check_status(response, requests.codes.ok)
         for line in response.raw:
             print(line.decode('utf-8'), end='')
 
     def cleanup(self, process):
-        pass
+        response = requests.delete(self.url('commands', process['id']))
+        self.check_status(response, requests.codes.no_content)
 
     def check_status(self, response, expected_status):
         if response.status_code != expected_status:
