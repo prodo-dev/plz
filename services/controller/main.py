@@ -2,6 +2,7 @@ import logging
 from collections import Generator
 
 import requests
+import shlex
 import subprocess
 
 import select
@@ -93,7 +94,7 @@ def run_command_and_return_container_id(command):
         'ssh', 'ubuntu@34.243.203.81',
         'docker', 'run', '-d',
         '024444204267.dkr.ecr.eu-west-1.amazonaws.com/ml-pytorch',
-        'bash', '-c', f'\'{command}\''],
+        'bash', '-c', f'{shlex.quote(command)}'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         encoding='utf-8')
