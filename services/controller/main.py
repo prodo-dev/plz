@@ -14,15 +14,15 @@ _LOGGER = logging.getLogger('controller')
 app = Flask(__name__)
 
 
-_COMMAND_ROUTE = 'command'
+_COMMANDS_ROUTE = 'commands'
 _LOGS_SUBROUTE = 'logs'
 
 
-@app.route(f'/{_COMMAND_ROUTE}', methods=['POST'])
+@app.route(f'/{_COMMANDS_ROUTE}', methods=['POST'])
 def run_command_entrypoint():
     # Test with:
     # curl -X POST -F 'command=ls' localhost:5000/command
-    command = request.form['command']
+    command = request.json['command']
     resp = jsonify({'id': run_command(command)})
     resp.status_code = requests.codes.accepted
     return resp
@@ -42,17 +42,17 @@ def run_command(command: str) -> str:
     return run_command_and_return_container_id(command)
 
 
-@app.route(f'/{_COMMAND_ROUTE}/<execution_id>/{_LOGS_SUBROUTE}',
+@app.route(f'/{_COMMANDS_ROUTE}/<execution_id>/{_LOGS_SUBROUTE}',
            methods=['GET'])
 def get_output_entrypoint(execution_id):
     # Test with:
-    # curl localhost:5000/command/some-id/logs
+    # curl localhost:5000/commands/some-id/logs
     # TODO(sergio): use the execution id instead of the container id
     container_id = execution_id
     return _stream_binary_generator(get_logs_of_container(container_id))
 
 
-@app.route(f'/{_COMMAND_ROUTE}/<execution_id>/{_LOGS_SUBROUTE}/stdout')
+@app.route(f'/{_COMMANDS_ROUTE}/<execution_id>/{_LOGS_SUBROUTE}/stdout')
 def get_stderr_entrypoint(execution_id):
     # Test with:
     # curl -X POST -F 'command=ls' localhost:5000/command/some-id/logs/
@@ -60,7 +60,7 @@ def get_stderr_entrypoint(execution_id):
     return _stream_binary_generator(get_output(execution_id))
 
 
-@app.route(f'/{_COMMAND_ROUTE}/<execution_id>/{_LOGS_SUBROUTE}/stderr')
+@app.route(f'/{_COMMANDS_ROUTE}/<execution_id>/{_LOGS_SUBROUTE}/stderr')
 def get_stdout_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/command/some-id/logs/stderr
@@ -87,7 +87,7 @@ def check_is_container_id(container_id: str):
 def run_command_and_return_container_id(command):
     # TODO(sergio): do not hardcode machine/image
     p = subprocess.Popen([
-        'ssh', 'ubuntu@34.244.128.112',
+        'ssh', 'ubuntu@34.243.203.81',
         'docker', 'run', '-d',
         '024444204267.dkr.ecr.eu-west-1.amazonaws.com/ml-pytorch',
         'bash', '-c', f'\'{command}\''],
@@ -115,7 +115,8 @@ def get_logs_of_container(container_id):
         # TODO(sergio): do not hardcode machine/image
         p = subprocess.Popen(
             ['bash', '-c',
-             f'ssh ubuntu@34.244.128.112 docker logs {container_id} -f 2>&1'],
+             'ssh ubuntu@34.243.203.81 '
+             f'docker logs {container_id} -f 2>&1'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
         # Note: the docs indicate to use p.communicate() instead of
