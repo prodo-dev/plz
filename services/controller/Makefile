@@ -8,10 +8,6 @@ ifndef PYTHON
 $(error "Could not find $(PYTHON_EXE).")
 endif
 
-.PHONY: lint
-lint: $(SITE_PACKAGES)
-	flake8 src/**/*.py
-
 $(SITE_PACKAGES): env requirements.txt
 	pip install --requirement=requirements.txt
 	touch $(SITE_PACKAGES)
