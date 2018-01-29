@@ -21,7 +21,8 @@ _LOGS_SUBROUTE = 'logs'
 @app.route(f'/{_COMMANDS_ROUTE}', methods=['POST'])
 def run_command_entrypoint():
     # Test with:
-    # curl -X POST -F 'command=ls' localhost:5000/command
+    # curl -X POST -d '{"command": "ls /" }'
+    #    -H 'Content-Type: application/json' localhost:5000/commands
     command = request.json['command']
     resp = jsonify({'id': run_command(command)})
     resp.status_code = requests.codes.accepted
@@ -53,19 +54,21 @@ def get_output_entrypoint(execution_id):
 
 
 @app.route(f'/{_COMMANDS_ROUTE}/<execution_id>/{_LOGS_SUBROUTE}/stdout')
-def get_stderr_entrypoint(execution_id):
+def get_stdout_entrypoint(execution_id):
     # Test with:
-    # curl -X POST -F 'command=ls' localhost:5000/command/some-id/logs/
+    # curl localhost:5000/commands/some-id/logs/stdout
     # TODO(sergio): do the real thing
-    return _stream_binary_generator(get_output(execution_id))
+    container_id = execution_id
+    return _stream_binary_generator(get_logs_of_container(container_id))
 
 
 @app.route(f'/{_COMMANDS_ROUTE}/<execution_id>/{_LOGS_SUBROUTE}/stderr')
-def get_stdout_entrypoint(execution_id):
+def get_stderr_entrypoint(execution_id):
     # Test with:
-    # curl localhost:5000/command/some-id/logs/stderr
+    # curl localhost:5000/commands/some-id/logs/stderr
     # TODO(sergio): do the real thing
-    return _stream_binary_generator(get_output(execution_id))
+    container_id = execution_id
+    return _stream_binary_generator(get_logs_of_container(container_id))
 
 
 def get_output(execution_id: str) -> GeneratorType:
