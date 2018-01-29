@@ -2,6 +2,9 @@
 /cache
 /data
 
+# Python
+env
+
 # Ansible
 *.retry
 /machines/*/inventory
