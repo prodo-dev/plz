@@ -137,6 +137,11 @@
     - name: Install libcuda
       apt:
         name: libcuda1-384
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
 
 - hosts: all
   remote_user: root
