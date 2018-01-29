@@ -15,22 +15,32 @@ class RunCommand:
         self.command = command
 
     def run(self):
-        print(self.url('/'))
-        self.issue_command()
+        process = self.issue_command()
+        self.display_logs(process)
+        self.cleanup(process)
 
     def issue_command(self):
-        response = requests.post(self.url('/commands'), json={
+        response = requests.post(self.url('commands'), json={
             'command': self.command,
         })
         self.check_status(response, requests.codes.accepted)
-        print(response.json())
+        return response.json()
+
+    def display_logs(self, process):
+        response = requests.get(self.url('commands', process['id'], 'logs'),
+                                stream=True)
+        for line in response.raw:
+            print(line.decode('utf-8'), end='')
+
+    def cleanup(self, process):
+        pass
 
     def check_status(self, response, expected_status):
         if response.status_code != expected_status:
             raise RequestException(response)
 
-    def url(self, path):
-        return self.prefix + path
+    def url(self, *path_segments):
+        return self.prefix + '/' + '/'.join(path_segments)
 
 
 class RequestException(Exception):
