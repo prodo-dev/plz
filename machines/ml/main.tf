@@ -87,10 +87,17 @@ resource "aws_key_pair" "batman" {
   public_key = "${file("../keys/batman.pubkey")}"
 }
 
+data "aws_ami" "build-ami" {
+  filter {
+    name   = "name"
+    values = ["prodo-ml-build-test"]
+  }
+}
+
 resource "aws_instance" "build" {
   subnet_id                   = "${aws_subnet.main.id}"
   instance_type               = "t2.medium"
-  ami                         = "ami-4d46d534"
+  ami                         = "${data.aws_ami.build-ami.id}"
   vpc_security_group_ids      = ["${aws_default_security_group.default.id}", "${aws_security_group.ssh.id}"]
   key_name                    = "batman-key"
   associate_public_ip_address = true
@@ -120,12 +127,23 @@ resource "aws_volume_attachment" "build-cache-attachment" {
   instance_id = "${aws_instance.build.id}"
   volume_id   = "${aws_ebs_volume.build-cache.id}"
   device_name = "/dev/sdx"
+
+  provisioner "local-exec" {
+    command = "./initialize ${aws_instance.build.public_dns}"
+  }
+}
+
+data "aws_ami" "experiments-ami" {
+  filter {
+    name   = "name"
+    values = ["prodo-ml-experiments-test"]
+  }
 }
 
 resource "aws_spot_instance_request" "experiments" {
   subnet_id                   = "${aws_subnet.main.id}"
   instance_type               = "g2.2xlarge"
-  ami                         = "ami-4d46d534"
+  ami                         = "${data.aws_ami.experiments-ami.id}"
   vpc_security_group_ids      = ["${aws_default_security_group.default.id}", "${aws_security_group.ssh.id}"]
   key_name                    = "batman-key"
   associate_public_ip_address = true
@@ -137,6 +155,10 @@ resource "aws_spot_instance_request" "experiments" {
   ebs_block_device {
     volume_size = 100
     device_name = "/dev/sdx"
+  }
+
+  provisioner "local-exec" {
+    command = "./initialize ${self.public_dns}"
   }
 
   tags {

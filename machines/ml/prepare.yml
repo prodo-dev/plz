@@ -64,48 +64,6 @@
         remote_src: yes
       when: not packer.stat.exists
 
-# Cache volume
-- hosts: all
-  vars:
-    volume: /dev/xvdx
-    fstype: ext4
-  remote_user: root
-  become: yes
-  tasks:
-    - name: Create the cache user group
-      group:
-        name: cache
-    - name: Create a filesystem on the cache volume
-      filesystem:
-        dev: "{{ volume }}"
-        fstype: "{{ fstype }}"
-    - name: Mount the cache volume
-      mount:
-        src: "{{ volume }}"
-        path: /cache
-        fstype: "{{ fstype }}"
-        state: mounted
-    - name: Set ownership for the cache volume
-      file:
-        path: /cache
-        owner: root
-        group: cache
-        mode: u+rwx,g+rws,o-rwx
-    - name: Create the Docker directory
-      file:
-        path: /cache/docker
-        state: directory
-        owner: root
-        group: cache
-        mode: u+rwx,g+rws,o-rwx
-    - name: Move the Docker directory to the cache volume
-      file:
-        src: /cache/docker
-        dest: /var/lib/docker
-        state: link
-        owner: root
-        group: root
-
 - hosts: all
   remote_user: root
   become: yes
@@ -142,17 +100,3 @@
         name: ubuntu
         groups: docker
         append: yes
-
-- hosts: all
-  remote_user: root
-  become: yes
-  tasks:
-    - name: Reboot server
-      shell: sleep 1 && /sbin/reboot &
-      async: 0
-      poll: 0
-      args:
-        removes: /var/run/reboot-required
-    - name: Wait for the server to finish rebooting
-      local_action: wait_for host={{ inventory_hostname }} port=22 timeout=300
-      become: no
