@@ -119,8 +119,8 @@ def get_logs_of_container(container_id):
         # TODO(sergio): do not hardcode machine/image
         p = subprocess.Popen(
             ['bash', '-c',
-             'ssh ubuntu@34.243.203.81 '
-             f'\'docker logs {container_id} -f 2>&1\''],
+             'ssh ubuntu@34.243.203.81 ' +
+             shlex.quote(f'docker logs {container_id} -f 2>&1')],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
         # Note: the docs indicate to use p.communicate() instead of
