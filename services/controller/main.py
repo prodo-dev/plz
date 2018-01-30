@@ -139,13 +139,18 @@ def get_logs_of_container(container_id):
         stderr = None
         while out is None or len(out):
             out = p.stdout.read1(1024)
-            # Poll stderr to see if there's something
+            # Poll stderr to see if there's something (using peek might block
+            # if there's nothing)
             stderr_to_read, _, _ = select.select(
                 [p.stderr.fileno()], [], [], 0.1)
             if stderr_to_read:
+                # Using peek: read might block if the process hasn't finished,
+                # read1 requires an argument for the maximum size. If there's
+                # actually something we won't keep reading, so using peek is
+                # OK
+                stderr = p.stderr.peek()
                 # Check the length, if the process is already finished we
                 # might be reading the empty bytes, and there was no error
-                stderr = p.stderr.read()
                 if len(stderr):
                     raise ControllerException(
                         f'Error running command\n'
