@@ -186,13 +186,15 @@ def delete_container(container_id):
          'ssh ubuntu@34.243.203.81 '
          f'docker stop {container_id}'],
         stdout=None,
-        stderr=None)
+        stderr=None,
+        check=True)
     subprocess.run(
         ['bash', '-c',
          'ssh ubuntu@34.243.203.81 '
          f'docker rm {container_id}'],
         stdout=None,
-        stderr=None)
+        stderr=None,
+        check=True)
 
 
 def _stream_binary_generator(generator: Generator) -> Response:
