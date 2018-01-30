@@ -24,9 +24,9 @@ def run_command_entrypoint():
     # curl -X POST -d '{"command": "ls /" }'
     #    -H 'Content-Type: application/json' localhost:5000/commands
     command = request.json['command']
-    resp = jsonify({'id': run_command(command)})
-    resp.status_code = requests.codes.accepted
-    return resp
+    response = jsonify({'id': run_command(command)})
+    response.status_code = requests.codes.accepted
+    return response
 
 
 def run_command(command: str) -> str:
@@ -69,6 +69,18 @@ def get_stderr_entrypoint(execution_id):
     # TODO(sergio): do the real thing
     container_id = execution_id
     return _stream_binary_generator(get_logs_of_container(container_id))
+
+
+@app.route(f'/{_COMMANDS_ROUTE}/<execution_id>',
+           methods=['DELETE'])
+def delete_process(execution_id):
+    # Test with:
+    # curl -XDELETE localhost:5000/commands/some-id
+    container_id = execution_id
+    delete_container(container_id)
+    response = jsonify({})
+    response.status_code = requests.codes.no_content
+    return response
 
 
 def get_output(execution_id: str) -> GeneratorType:
@@ -166,6 +178,23 @@ def get_logs_of_container(container_id):
     finally:
         if p is not None and p.returncode is None:
             p.kill()
+
+
+def delete_container(container_id):
+    subprocess.run(
+        ['bash', '-c',
+         'ssh ubuntu@34.243.203.81 '
+         f'docker stop {container_id}'],
+        stdout=None,
+        stderr=None,
+        check=True)
+    subprocess.run(
+        ['bash', '-c',
+         'ssh ubuntu@34.243.203.81 '
+         f'docker rm {container_id}'],
+        stdout=None,
+        stderr=None,
+        check=True)
 
 
 def _stream_binary_generator(generator: Generator) -> Response:
