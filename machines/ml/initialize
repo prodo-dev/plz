@@ -1,5 +1,9 @@
 #!/usr/bin/env zsh
 
+# This is run on a host (provided as $1) by Terraform after creation.
+#
+# It sets up the cache volume used to cache Docker images and other large files.
+
 set -e
 set -u
 
