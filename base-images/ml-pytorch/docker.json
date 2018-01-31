@@ -21,7 +21,7 @@
         "ENTRYPOINT [\"/entrypoint\"]",
         "WORKDIR /src",
         "ONBUILD COPY environment.yml ./",
-        "ONBUILD RUN conda env update --name={{user `anaconda_env`}}",
+        "ONBUILD RUN {{user `anaconda_dir`}}/bin/conda env update --name={{user `anaconda_env`}}",
         "ONBUILD COPY . ./"
       ]
     }
