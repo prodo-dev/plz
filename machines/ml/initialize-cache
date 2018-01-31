@@ -15,13 +15,19 @@ DEVICE="$1"
 MOUNTPOINT='/cache'
 FSTYPE='ext4'
 
+if [[ ! -b "$DEVICE" ]]; then
+  echo >&2 "${DEVICE} is not a block device."
+  exit 1
+fi
+
 mkdir -p "$MOUNTPOINT"
 
 if [[ "$(file -s "$DEVICE")" == "${DEVICE}: data" ]]; then
   mkfs -t "$FSTYPE" "$DEVICE"
-  echo "${DEVICE} ${MOUNTPOINT} ${FSTYPE} defaults 0 0" > /etc/fstab
-  mount "$MOUNTPOINT"
 fi
+
+echo "${DEVICE} ${MOUNTPOINT} ${FSTYPE} defaults 0 0" > /etc/fstab
+mount "$MOUNTPOINT"
 
 addgroup cache
 chown root:cache "$MOUNTPOINT"

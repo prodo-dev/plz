@@ -127,6 +127,10 @@ resource "aws_volume_attachment" "build-cache-attachment" {
   instance_id = "${aws_instance.build.id}"
   volume_id   = "${aws_ebs_volume.build-cache.id}"
   device_name = "/dev/sdx"
+
+  provisioner "local-exec" {
+    command = "./on-host ubuntu@${aws_instance.build.public_dns} ./initialize-cache /dev/xvdx"
+  }
 }
 
 data "aws_ami" "experiments-ami" {
