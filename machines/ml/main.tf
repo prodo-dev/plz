@@ -127,10 +127,6 @@ resource "aws_volume_attachment" "build-cache-attachment" {
   instance_id = "${aws_instance.build.id}"
   volume_id   = "${aws_ebs_volume.build-cache.id}"
   device_name = "/dev/sdx"
-
-  provisioner "local-exec" {
-    command = "./initialize-cache ${aws_instance.build.public_dns}"
-  }
 }
 
 data "aws_ami" "experiments-ami" {
@@ -157,8 +153,14 @@ resource "aws_spot_instance_request" "experiments" {
     device_name = "/dev/sdx"
   }
 
-  provisioner "local-exec" {
-    command = "./initialize-cache ${self.public_dns}"
+  provisioner "remote-exec" {
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = "${file("../keys/batman.privkey")}"
+    }
+
+    inline = "${replace(file("initialize-cache"), "$1", "/dev/xvdx")}"
   }
 
   tags {
