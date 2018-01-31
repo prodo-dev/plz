@@ -129,7 +129,7 @@ resource "aws_volume_attachment" "build-cache-attachment" {
   device_name = "/dev/sdx"
 
   provisioner "local-exec" {
-    command = "./initialize ${aws_instance.build.public_dns}"
+    command = "./initialize-cache ${aws_instance.build.public_dns}"
   }
 }
 
@@ -158,7 +158,7 @@ resource "aws_spot_instance_request" "experiments" {
   }
 
   provisioner "local-exec" {
-    command = "./initialize ${self.public_dns}"
+    command = "./initialize-cache ${self.public_dns}"
   }
 
   tags {
