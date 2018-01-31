@@ -1,0 +1,30 @@
+{
+  "variables": {
+    "source-ami": "ami-4d46d534",
+    "tag": "test"
+  },
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "source_ami": "{{user `source-ami`}}",
+      "instance_type": "t2.micro",
+      "ssh_username": "ubuntu",
+      "ami_name": "prodo-ml-experiments-{{user `tag`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline_shebang": "/bin/sh -eux",
+      "inline": [
+        "sudo apt-get update -qq",
+        "sudo apt-get install -qqy python"
+      ]
+    },
+    {
+      "type": "ansible",
+      "playbook_file": "./prepare.yml",
+      "groups": "experiments"
+    }
+  ]
+}
