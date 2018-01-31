@@ -5,9 +5,9 @@ import time
 from botocore.exceptions import ClientError
 from typing import Optional
 
-# The autoscaling group has this tag with an empty value, and
-# it is propagated to new instances. That way we can look for
-# instances that are not associated with a command.
+# We find available instances by looking at those in which
+# the Command-Id tag is empty. The autoscaling group has this tag
+# with an empty value, and it is propagated to new instances.
 _COMMAND_ID_TAG = 'Command-Id'
 
 
@@ -33,7 +33,7 @@ class AutoScalingGroup:
                         'can be created only via get_group')
 
     @staticmethod
-    def get_group(name: str):
+    def get_group(name: str) -> 'AutoScalingGroup':
         with AutoScalingGroup._name_to_group_lock:
             try:
                 return AutoScalingGroup._name_to_group[name]
@@ -46,7 +46,7 @@ class AutoScalingGroup:
             return group
 
     @staticmethod
-    def check_autoscaling_group_exists(name):
+    def check_autoscaling_group_exists(name: str) -> bool:
         client = boto3.client('autoscaling')
         response = client.describe_auto_scaling_groups(
             AutoScalingGroupNames=[name],
@@ -54,7 +54,7 @@ class AutoScalingGroup:
         )
         return len(response['AutoScalingGroups']) > 0
 
-    def get_desired_capacity(self):
+    def get_desired_capacity(self) -> int:
         response = self.auto_scaling_client.describe_auto_scaling_groups(
             AutoScalingGroupNames=[self.name],
             MaxRecords=1
@@ -69,7 +69,7 @@ class AutoScalingGroup:
                 DesiredCapacity=desired_capacity + amount,
                 HonorCooldown=True)
 
-    def _get_instance_without_command_id_or_none(self):
+    def _get_available_instance(self) -> Optional[dict]:
         response = self.ec2_client.describe_instances(
             Filters=[
                 {'Name': 'tag:Command-Id',
@@ -84,7 +84,8 @@ class AutoScalingGroup:
         return None
 
     def get_unused_instance_for_command(
-            self, command_id, max_trials=5, wait_for_seconds=5) -> Optional[dict]:
+            self, command_id: str, max_trials=5,
+            wait_for_seconds=5) -> Optional[dict]:
         """
         Gets an unused instance that will run this command
 
@@ -100,7 +101,7 @@ class AutoScalingGroup:
             did_increase_capacity = False
             retry_counter = 0
             while retry_counter < max_trials:
-                instance = self._get_instance_without_command_id_or_none()
+                instance = self._get_available_instance()
                 if instance is not None:
                     self.ec2_client.create_tags(
                         Resources=[instance['InstanceId']],
