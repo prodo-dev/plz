@@ -153,15 +153,7 @@ resource "aws_spot_instance_request" "experiments" {
     device_name = "/dev/sdx"
   }
 
-  provisioner "remote-exec" {
-    connection {
-      type        = "ssh"
-      user        = "ubuntu"
-      private_key = "${file("../keys/batman.privkey")}"
-    }
-
-    inline = "${replace(file("initialize-cache"), "$1", "/dev/xvdx")}"
-  }
+  user_data = "${replace(file("initialize-cache"), "$1", "/dev/xvdx")}"
 
   tags {
     Name  = "Batman Experiments Request"
