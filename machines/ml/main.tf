@@ -187,5 +187,10 @@ resource "aws_autoscaling_group" "worker" {
       value               = "Infrastructure"
       propagate_at_launch = true
     },
+    {
+      key                 = "Execution-Id"
+      value               = ""
+      propagate_at_launch = true
+    },
   ]
 }
