@@ -129,44 +129,69 @@ resource "aws_volume_attachment" "build-cache-attachment" {
   device_name = "/dev/sdx"
 
   provisioner "local-exec" {
-    command = "./initialize-cache ${aws_instance.build.public_dns}"
+    command = "./on-host ubuntu@${aws_instance.build.public_dns} ./initialize-cache /dev/xvdx"
   }
 }
 
-data "aws_ami" "experiments-ami" {
+data "aws_ami" "worker-ami" {
   filter {
     name   = "name"
     values = ["prodo-ml-experiments-test"]
   }
 }
 
-resource "aws_spot_instance_request" "experiments" {
-  subnet_id                   = "${aws_subnet.main.id}"
+resource "aws_launch_configuration" "worker-configuration" {
+  name                        = "batman-worker"
   instance_type               = "g2.2xlarge"
-  ami                         = "${data.aws_ami.experiments-ami.id}"
-  vpc_security_group_ids      = ["${aws_default_security_group.default.id}", "${aws_security_group.ssh.id}"]
+  image_id                    = "${data.aws_ami.worker-ami.id}"
+  security_groups             = ["${aws_default_security_group.default.id}", "${aws_security_group.ssh.id}"]
   key_name                    = "batman-key"
   associate_public_ip_address = true
   iam_instance_profile        = "docker-build-machines"
 
-  spot_price           = "1"
-  wait_for_fulfillment = true
+  spot_price = "1"
 
   ebs_block_device {
     volume_size = 100
     device_name = "/dev/sdx"
   }
 
-  provisioner "local-exec" {
-    command = "./initialize-cache ${self.public_dns}"
-  }
+  user_data = "${replace(file("initialize-cache"), "$1", "/dev/xvdx")}"
 
-  tags {
-    Name  = "Batman Experiments Request"
-    Owner = "Infrastructure"
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
-output "experiments-host" {
-  value = "${aws_spot_instance_request.experiments.public_dns}"
+resource "aws_autoscaling_group" "worker" {
+  name                 = "batman-worker"
+  vpc_zone_identifier  = ["${aws_subnet.main.id}"]
+  availability_zones   = ["${var.availability-zone}"]
+  launch_configuration = "${aws_launch_configuration.worker-configuration.name}"
+
+  min_size         = 0
+  max_size         = 50
+  desired_capacity = 0
+
+  lifecycle {
+    ignore_changes = ["min_size", "desired_capacity"]
+  }
+
+  tags = [
+    {
+      key                 = "Name"
+      value               = "Batman Worker"
+      propagate_at_launch = true
+    },
+    {
+      key                 = "Owner"
+      value               = "Infrastructure"
+      propagate_at_launch = true
+    },
+    {
+      key                 = "Execution-Id"
+      value               = ""
+      propagate_at_launch = true
+    },
+  ]
 }

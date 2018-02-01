@@ -1,0 +1,33 @@
+#!/usr/bin/env zsh
+
+# This copies an executable onto a remote host and runs it.
+
+set -e
+set -u
+
+HERE=${0:A:h}
+
+CONNECTION=$1
+HOST=${CONNECTION#*@} # removes "username@" from the start
+shift
+LOCAL_EXECUTABLE=$1
+shift
+
+SSH_PRIVATE_KEY_FILE="${HERE:h}/keys/batman.privkey"
+SSH_ARGS=(-o StrictHostKeyChecking=no -i $SSH_PRIVATE_KEY_FILE)
+REMOTE_EXECUTABLE='~/.on-host-executable'
+
+start=$(date +%s)
+timeout=60
+while ! nc -z $HOST 22 >& /dev/null; do
+  sleep 1
+  now=$(date +%s)
+  if [[ $((start + timeout)) -lt $now ]]; then
+    echo >&2 "Could not connect to ${HOST}."
+    exit 1
+  fi
+done
+
+scp $SSH_ARGS $LOCAL_EXECUTABLE "${CONNECTION}:${REMOTE_EXECUTABLE}"
+ssh $SSH_ARGS $CONNECTION $REMOTE_EXECUTABLE $@
+ssh $SSH_ARGS $CONNECTION rm $REMOTE_EXECUTABLE
