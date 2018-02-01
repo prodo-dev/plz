@@ -169,11 +169,12 @@ resource "aws_autoscaling_group" "worker" {
   availability_zones   = ["${var.availability-zone}"]
   launch_configuration = "${aws_launch_configuration.worker-configuration.name}"
 
-  min_size = 0
-  max_size = 0
+  min_size         = 0
+  max_size         = 50
+  desired_capacity = 0
 
   lifecycle {
-    ignore_changes = ["min_size", "max_size"]
+    ignore_changes = ["min_size", "desired_capacity"]
   }
 
   tags = [
