@@ -1,3 +1,4 @@
+# coding=utf-8
 import boto3
 import threading
 import time
@@ -6,9 +7,9 @@ from botocore.exceptions import ClientError
 from typing import Optional
 
 # We find available instances by looking at those in which
-# the Command-Id tag is empty. The autoscaling group has this tag
+# the Execution-Id tag is empty. The autoscaling group has this tag
 # with an empty value, and it is propagated to new instances.
-_COMMAND_ID_TAG = 'Command-Id'
+_EXECUTION_ID_TAG = 'Execution-Id'
 
 
 class MaxNumberOfInstancesReached(Exception):
@@ -39,20 +40,20 @@ class AutoScalingGroup:
                 return AutoScalingGroup._name_to_group[name]
             except KeyError:
                 pass
-
             AutoScalingGroup.check_autoscaling_group_exists(name)
             group = _AutoScalingGroup(name)
             AutoScalingGroup._name_to_group[name] = group
             return group
 
     @staticmethod
-    def check_autoscaling_group_exists(name: str) -> bool:
+    def check_autoscaling_group_exists(name: str):
         client = boto3.client('autoscaling')
         response = client.describe_auto_scaling_groups(
             AutoScalingGroupNames=[name],
             MaxRecords=1
         )
-        return len(response['AutoScalingGroups']) > 0
+        if len(response['AutoScalingGroups']) == 0:
+            raise ValueError(f'Auto scaling group doesn\'t exist: [{name}]')
 
     def get_desired_capacity(self) -> int:
         response = self.auto_scaling_client.describe_auto_scaling_groups(
@@ -69,11 +70,19 @@ class AutoScalingGroup:
                 DesiredCapacity=desired_capacity + amount,
                 HonorCooldown=True)
 
-    def _get_available_instance(self) -> Optional[dict]:
+    def _get_available_instance(self):
+        return self.get_instance_from_execution_id('')
+
+    @staticmethod
+    def get_public_ip_of_instance(instance: dict):
+        return instance['PublicIpAddress']
+
+    def get_instance_from_execution_id(
+            self, execution_id_tag) -> Optional[dict]:
         response = self.ec2_client.describe_instances(
             Filters=[
-                {'Name': 'tag:Command-Id',
-                 'Values': ['']},
+                {'Name': f'tag:{_EXECUTION_ID_TAG}',
+                 'Values': [execution_id_tag]},
                 {'Name': 'tag:aws:autoscaling:groupName',
                  'Values': [self.name]}])
         for reservation in response['Reservations']:
@@ -83,16 +92,27 @@ class AutoScalingGroup:
                 pass
         return None
 
-    def get_unused_instance_for_command(
-            self, command_id: str, max_trials=5,
+    def _set_execution_id_tag(self, instance_id: str, execution_id: str):
+        self.ec2_client.create_tags(
+            Resources=[instance_id],
+            Tags=[{'Key': _EXECUTION_ID_TAG,
+                   'Value': execution_id}]
+        )
+
+    def execution_finished(self, execution_id: str):
+        self._set_execution_id_tag(
+            self.get_instance_from_execution_id(execution_id)['InstanceId'], '')
+
+    def get_available_instance_for_execution(
+            self, execution_id: str, max_trials=5,
             wait_for_seconds=5) -> Optional[dict]:
         """
-        Gets an unused instance that will run this command
+        Gets an available instance for the execution with the given id.
 
         If there's at least one instance in the group that is not running
-        a command, assign the command id to one of them and return it. Otherwise,
-        increase the desired capacity of the group and try until the
-        maximum number of trials.
+        a command, assign the execution id to one of them and return it.
+        Otherwise, increase the desired capacity of the group and try until
+        the maximum number of trials.
 
         :return: the dict of the instance, as returned by boto, or None
                  if unsuccessful
@@ -105,8 +125,8 @@ class AutoScalingGroup:
                 if instance is not None:
                     self.ec2_client.create_tags(
                         Resources=[instance['InstanceId']],
-                        Tags=[{'Key': _COMMAND_ID_TAG,
-                               'Value': command_id}]
+                        Tags=[{'Key': _EXECUTION_ID_TAG,
+                               'Value': execution_id}]
                     )
                     # TODO: if did_increase capacity, spawn a thread before
                     # returning, to ensure there will be a spare one next time

@@ -1,22 +1,28 @@
+# coding=utf-8
 import logging
-from collections import Generator
+import random
+import socket
 
 import requests
+import select
 import shlex
 import subprocess
+import uuid
 
-import select
+from collections import Generator
 from flask import Flask, Response, jsonify, request, stream_with_context
-from types import GeneratorType
+
+from AutoScalingGroup import AutoScalingGroup
 
 _LOGGER = logging.getLogger('controller')
 
-
 app = Flask(__name__)
-
 
 _COMMANDS_ROUTE = 'commands'
 _LOGS_SUBROUTE = 'logs'
+
+# TODO: set autoscaling group properly
+_AUTOSCALING_GROUP = AutoScalingGroup.get_group('batman-worker')
 
 
 @app.route(f'/{_COMMANDS_ROUTE}', methods=['POST'])
@@ -25,23 +31,21 @@ def run_command_entrypoint():
     # curl -X POST -d '{"command": "ls /" }'
     #    -H 'Content-Type: application/json' localhost:5000/commands
     command = request.json['command']
-    response = jsonify({'id': run_command(command)})
+    execution_id = str(get_command_uuid())
+    instance = _AUTOSCALING_GROUP.get_available_instance_for_execution(
+        execution_id)
+    if instance is None:
+        response = jsonify(
+            {'error': 'Couldn\'t get an instance, please retry later'})
+        response.status_code = requests.codes.timeout
+        return response
+    # TODO: use private ip? (It's harder for testing)
+    run_command(
+        AutoScalingGroup.get_public_ip_of_instance(instance),
+        command, execution_id)
+    response = jsonify({'id': execution_id})
     response.status_code = requests.codes.accepted
     return response
-
-
-def run_command(command: str) -> str:
-    """
-    Runs a command in a machine.
-
-    Returns a unique id for the command execution, that can be passed to other
-    entrypoints as to retrieve information about the execution
-
-    :param command: command to run with 'bash -c'
-    :return: unique execution id
-    """
-    # TODO(sergio): return an id for the execution, not the container id
-    return run_command_and_return_container_id(command)
 
 
 @app.route(f'/{_COMMANDS_ROUTE}/<execution_id>/{_LOGS_SUBROUTE}',
@@ -49,27 +53,25 @@ def run_command(command: str) -> str:
 def get_output_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/commands/some-id/logs
-    # TODO(sergio): use the execution id instead of the container id
-    container_id = execution_id
-    return _stream_binary_generator(get_logs_of_container(container_id))
+    return _stream_binary_generator(
+        get_logs_of_execution(
+            get_ip_for_execution_id(execution_id), execution_id))
 
 
 @app.route(f'/{_COMMANDS_ROUTE}/<execution_id>/{_LOGS_SUBROUTE}/stdout')
 def get_stdout_entrypoint(execution_id):
     # Test with:
-    # curl localhost:5000/commands/some-id/logs/stdout
-    # TODO(sergio): do the real thing
-    container_id = execution_id
-    return _stream_binary_generator(get_logs_of_container(container_id))
+    # curl localhost:5000/commands/some-id/logs/stderr
+    # TODO(sergio): implement
+    raise NotImplemented(execution_id)
 
 
 @app.route(f'/{_COMMANDS_ROUTE}/<execution_id>/{_LOGS_SUBROUTE}/stderr')
 def get_stderr_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/commands/some-id/logs/stderr
-    # TODO(sergio): do the real thing
-    container_id = execution_id
-    return _stream_binary_generator(get_logs_of_container(container_id))
+    # TODO(sergio): implement
+    raise NotImplemented(execution_id)
 
 
 @app.route(f'/{_COMMANDS_ROUTE}/<execution_id>',
@@ -77,17 +79,66 @@ def get_stderr_entrypoint(execution_id):
 def delete_process(execution_id):
     # Test with:
     # curl -XDELETE localhost:5000/commands/some-id
-    container_id = execution_id
-    delete_container(container_id)
+    delete_container(get_ip_for_execution_id(execution_id),
+                     execution_id)
     response = jsonify({})
     response.status_code = requests.codes.no_content
     return response
 
 
-def get_output(execution_id: str) -> GeneratorType:
-    # TODO(sergio): do the actual thing
-    for i in execution_id:
-        yield i
+def get_command_uuid() -> str:
+    # Recommended method for the node if you don't want to disclose the
+    # physical address (see Python uuid docs)
+    random_node = random.getrandbits(48) | 0x010000000000
+    return str(uuid.uuid1(node=random_node))
+
+
+def run_command(worker_ip: str, command: str, execution_id: str):
+    """
+    Runs a command in a worker.
+
+    Returns a unique id for the command execution, that can be passed to other
+    entrypoints as to retrieve information about the execution
+
+    :param worker_ip: IP to connect via ssh
+    :param command: command to run with 'bash -c'
+    :param execution_id: id of the execution of the command, used to name
+           resources (like the docker container)
+    """
+    _check_ip(worker_ip)
+    _check_execution_id(execution_id)
+    # TODO(sergio): do not hardcode image
+    # Intellij doesn't know about the encoding argument. All
+    # suppresions in this function are related to that
+    # (it thinks that the pipe outputs bytes)
+    # noinspection PyArgumentList
+    p = subprocess.Popen([
+        'ssh', f'ubuntu@{worker_ip}',
+        'docker', 'run', '-d', '--name', execution_id,
+        '024444204267.dkr.ecr.eu-west-1.amazonaws.com/ml-pytorch',
+        'bash', '-c', f'{shlex.quote(command)}'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        encoding='utf-8')
+    stdout, stderr = p.communicate()
+
+    # noinspection PyTypeChecker
+    container_id = stdout.rstrip('\n')
+    # noinspection PyTypeChecker
+    if stderr != '' or p.returncode != 0 or \
+            not check_is_container_id(container_id):
+        raise ControllerException(
+            f'Error running command\n'
+            f'Exit code: [{p.returncode}]\n'
+            f'Stdout is [{stdout}]\n'
+            f'Stderr is [{stderr}]\n')
+    _LOGGER.info(f'Container id is: {container_id}')
+
+
+def get_ip_for_execution_id(execution_id):
+    return AutoScalingGroup.get_public_ip_of_instance(
+        _AUTOSCALING_GROUP.get_instance_from_execution_id(
+            execution_id))
 
 
 def check_is_container_id(container_id: str):
@@ -100,39 +151,29 @@ def check_is_container_id(container_id: str):
     return True
 
 
-def run_command_and_return_container_id(command):
-    # TODO(sergio): do not hardcode machine/image
-    p = subprocess.Popen([
-        'ssh', 'ubuntu@34.243.203.81',
-        'docker', 'run', '-d',
-        '024444204267.dkr.ecr.eu-west-1.amazonaws.com/ml-pytorch',
-        'bash', '-c', f'{shlex.quote(command)}'],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding='utf-8')
-    stdout, stderr = p.communicate()
-
-    container_id = stdout.rstrip('\n')
-
-    if stderr != '' or p.returncode != 0 or \
-            not check_is_container_id(container_id):
-        raise ControllerException(
-            f'Error running command\n'
-            f'Exit code: [{p.returncode}]\n'
-            f'Stdout is [{stdout}]\n'
-            f'Stderr is [{stderr}]\n')
-    _LOGGER.info(f'Container id is: {container_id}')
-    return container_id
+def _check_ip(worker_ip: str):
+    try:
+        socket.inet_aton(worker_ip)
+    except OSError:
+        raise ValueError(f'Invalid worker IP: [{worker_ip}]')
 
 
-def get_logs_of_container(container_id):
+def _check_execution_id(execution_id: str):
+    try:
+        uuid.UUID(execution_id)
+    except ValueError:
+        raise ValueError(f'Invalid command id:[{execution_id}]')
+
+
+def get_logs_of_execution(worker_ip: str, execution_id: str):
     p = None
     try:
-        # TODO(sergio): do not hardcode machine/image
+        _check_ip(worker_ip)
+        _check_execution_id(execution_id)
         p = subprocess.Popen(
             ['bash', '-c',
-             'ssh ubuntu@34.243.203.81 ' +
-             shlex.quote(f'docker logs {container_id} -f 2>&1')],
+             f'ssh ubuntu@{worker_ip} ' +
+             shlex.quote(f'docker logs {execution_id} -f 2>&1')],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
         # Note: the docs indicate to use p.communicate() instead of
@@ -186,21 +227,22 @@ def get_logs_of_container(container_id):
             p.kill()
 
 
-def delete_container(container_id):
+def delete_container(worker_ip: str, execution_id: str):
+    _check_ip(worker_ip)
+    _check_execution_id(execution_id)
     subprocess.run(
-        ['bash', '-c',
-         'ssh ubuntu@34.243.203.81 '
-         f'docker stop {container_id}'],
+        ['ssh',  f'ubuntu@{worker_ip}',
+         f'docker stop {execution_id}'],
         stdout=None,
         stderr=None,
         check=True)
     subprocess.run(
-        ['bash', '-c',
-         'ssh ubuntu@34.243.203.81 '
-         f'docker rm {container_id}'],
+        ['ssh', f'ubuntu@{worker_ip}',
+         f'docker rm {execution_id}'],
         stdout=None,
         stderr=None,
         check=True)
+    _AUTOSCALING_GROUP.execution_finished(execution_id)
 
 
 def _stream_binary_generator(generator: Generator) -> Response:
@@ -209,6 +251,11 @@ def _stream_binary_generator(generator: Generator) -> Response:
 
 
 class ControllerException(Exception):
+    def __init__(self, msg):
+        super().__init__(msg)
+
+
+class InconsistentAwsResourceStateException(Exception):
     def __init__(self, msg):
         super().__init__(msg)
 
