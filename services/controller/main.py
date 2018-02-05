@@ -2,6 +2,7 @@
 import docker
 import json
 import logging
+import os
 import random
 import requests
 import select
@@ -23,6 +24,7 @@ _LOGGER = logging.getLogger('controller')
 _DOCKER_CLIENT = docker.from_env()
 
 app = Flask(__name__)
+port = int(os.environ.get('PORT', '8080'))
 
 
 # TODO: set autoscaling group properly
@@ -295,4 +297,4 @@ class InconsistentAwsResourceStateException(Exception):
         super().__init__(msg)
 
 
-app.run()
+app.run(port=port)
