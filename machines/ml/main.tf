@@ -87,17 +87,17 @@ resource "aws_key_pair" "batman" {
   public_key = "${file("../keys/batman.pubkey")}"
 }
 
-data "aws_ami" "build-ami" {
+data "aws_ami" "controller-ami" {
   filter {
     name   = "name"
-    values = ["prodo-ml-build-test"]
+    values = ["prodo-ml-controller-test"]
   }
 }
 
 resource "aws_instance" "controller" {
   subnet_id                   = "${aws_subnet.main.id}"
   instance_type               = "t2.small"
-  ami                         = "${data.aws_ami.build-ami.id}"
+  ami                         = "${data.aws_ami.controller-ami.id}"
   vpc_security_group_ids      = ["${aws_default_security_group.default.id}", "${aws_security_group.ssh.id}"]
   key_name                    = "batman-key"
   associate_public_ip_address = true
@@ -111,6 +111,13 @@ resource "aws_instance" "controller" {
 
 output "controller-host" {
   value = "${aws_instance.controller.public_dns}"
+}
+
+data "aws_ami" "build-ami" {
+  filter {
+    name   = "name"
+    values = ["prodo-ml-build-test"]
+  }
 }
 
 resource "aws_instance" "build" {
@@ -155,7 +162,7 @@ resource "aws_volume_attachment" "build-cache-attachment" {
 data "aws_ami" "worker-ami" {
   filter {
     name   = "name"
-    values = ["prodo-ml-experiments-test"]
+    values = ["prodo-ml-worker-test"]
   }
 }
 

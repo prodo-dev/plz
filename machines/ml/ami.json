@@ -1,7 +1,8 @@
 {
   "variables": {
     "source-ami": "ami-4d46d534",
-    "tag": "test"
+    "tag": "test",
+    "group": null
   },
   "builders": [
     {
@@ -9,7 +10,7 @@
       "source_ami": "{{user `source-ami`}}",
       "instance_type": "t2.micro",
       "ssh_username": "ubuntu",
-      "ami_name": "prodo-ml-build-{{user `tag`}}"
+      "ami_name": "prodo-ml-{{user `group`}}-{{user `tag`}}"
     }
   ],
   "provisioners": [
@@ -24,7 +25,7 @@
     {
       "type": "ansible",
       "playbook_file": "./prepare.yml",
-      "groups": "build"
+      "groups": "{{user `group`}}"
     }
   ]
 }

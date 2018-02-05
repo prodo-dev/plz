@@ -79,7 +79,7 @@
         name: docker-ce
         update_cache: yes
 
-- hosts: experiments
+- hosts: worker
   remote_user: root
   become: yes
   tasks:
