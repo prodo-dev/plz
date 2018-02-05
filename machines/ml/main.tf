@@ -2,6 +2,10 @@ variable "availability-zone" {
   default = "eu-west-1a"
 }
 
+variable "ami-tag" {
+  default = "2018-02-05"
+}
+
 provider "aws" {
   region = "eu-west-1"
 }
@@ -90,7 +94,7 @@ resource "aws_key_pair" "batman" {
 data "aws_ami" "controller-ami" {
   filter {
     name   = "name"
-    values = ["prodo-ml-controller-test"]
+    values = ["prodo-ml-controller-${var.ami-tag}"]
   }
 }
 
@@ -116,7 +120,7 @@ output "controller-host" {
 data "aws_ami" "build-ami" {
   filter {
     name   = "name"
-    values = ["prodo-ml-build-test"]
+    values = ["prodo-ml-build-${var.ami-tag}"]
   }
 }
 
@@ -162,7 +166,7 @@ resource "aws_volume_attachment" "build-cache-attachment" {
 data "aws_ami" "worker-ami" {
   filter {
     name   = "name"
-    values = ["prodo-ml-worker-test"]
+    values = ["prodo-ml-worker-${var.ami-tag}"]
   }
 }
 
