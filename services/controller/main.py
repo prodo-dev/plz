@@ -93,7 +93,7 @@ def delete_process(execution_id):
 @app.route(f'/snapshot', methods=['POST'])
 def create_snapshot():
     # Test with
-    # { echo '{"user": "bruce", "project": "mobile"}'; cat some_file.tar.gz; }
+    # { echo '{"user": "bruce", "project": "mobile"}'; cat some_file.tar.bz2; }
     #     | http localhost:5000/snapshot
     # Create a timestamp in milliseconds
     timestamp = str(int(time.time() * 1000))
@@ -114,7 +114,7 @@ def create_snapshot():
     tag = f'{json_parameters["user"]}-{json_parameters["project"]}:{timestamp}'
     # Pass the rest of the stream to docker
     _DOCKER_CLIENT.images.build(
-        fileobj=request.stream, custom_context=True, encoding='gzip', tag=tag)
+        fileobj=request.stream, custom_context=True, encoding='bz2', tag=tag)
     response = jsonify({'id': tag})
     response.status_code = requests.codes.accepted
     return response
