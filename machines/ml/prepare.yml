@@ -78,6 +78,9 @@
       apt:
         name: docker-ce
         update_cache: yes
+    - name: Install docker-py
+      pip:
+        name: docker-py
 
 - hosts: worker
   remote_user: root
