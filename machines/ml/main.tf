@@ -94,6 +94,21 @@ data "aws_ami" "build-ami" {
   }
 }
 
+resource "aws_instance" "controller" {
+  subnet_id                   = "${aws_subnet.main.id}"
+  instance_type               = "t2.small"
+  ami                         = "${data.aws_ami.build-ami.id}"
+  vpc_security_group_ids      = ["${aws_default_security_group.default.id}", "${aws_security_group.ssh.id}"]
+  key_name                    = "batman-key"
+  associate_public_ip_address = true
+  iam_instance_profile        = "docker-build-machines"
+
+  tags {
+    Name  = "Batman Controller"
+    Owner = "Infrastructure"
+  }
+}
+
 resource "aws_instance" "build" {
   subnet_id                   = "${aws_subnet.main.id}"
   instance_type               = "t2.medium"
