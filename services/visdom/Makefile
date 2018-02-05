@@ -7,13 +7,7 @@ NETWORK = batman
 PORT = 8097
 export PORT
 
-.PHONY: build
-build:
-	docker build --tag=$(TAG) .
-
-.PHONY: push
-push: build
-	docker push $(TAG)
+include ../../docker.mk
 
 .PHONY: start
 start: build
