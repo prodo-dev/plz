@@ -109,6 +109,10 @@ resource "aws_instance" "controller" {
   }
 }
 
+output "controller-host" {
+  value = "${aws_instance.controller.public_dns}"
+}
+
 resource "aws_instance" "build" {
   subnet_id                   = "${aws_subnet.main.id}"
   instance_type               = "t2.medium"
