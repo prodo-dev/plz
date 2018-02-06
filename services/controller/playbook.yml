@@ -6,16 +6,15 @@
     - name: Log in to AWS ECR
       shell: |
         eval "$(aws ecr get-login --no-include-email --region {{ aws_region }})"
-    - name: Pull the image
-      docker_image:
-        name: "{{ image }}"
     - name: Start the container
       docker_container:
         name: controller
         image: "{{ image }}"
+        pull: yes
         env:
-          PORT: "{{ service_port }}"
           AWS_DEFAULT_REGION: "{{ aws_region }}"
+          AWS_PROJECT: "{{ aws_project }}"
+          PORT: "{{ service_port }}"
         published_ports:
           - "{{ service_port }}:{{ service_port }}"
         restart_policy: unless-stopped

@@ -23,7 +23,7 @@ _LOGS_SUBROUTE = 'logs'
 _LOGGER = logging.getLogger('controller')
 _DOCKER_CLIENT = docker.from_env()
 
-project = os.environ['PROJECT']
+project = os.environ['AWS_PROJECT']
 
 app = Flask(__name__)
 port = int(os.environ.get('PORT', '8080'))

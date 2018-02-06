@@ -31,6 +31,7 @@ all:
       ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
   vars:
     aws_region: "${AWS_REGION}"
+    aws_project: "${AWS_PROJECT}"
     image: "${IMAGE}"
     service_port: "${SERVICE_PORT}"
 EOF
