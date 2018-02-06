@@ -1,13 +1,12 @@
-variable "availability-zone" {
-  default = "eu-west-1a"
-}
+variable "region" {}
+variable "availability_zone" {}
 
-variable "ami-tag" {
+variable "ami_tag" {
   default = "2018-02-05"
 }
 
 provider "aws" {
-  region = "eu-west-1"
+  region = "${var.region}"
 }
 
 resource "aws_vpc" "main" {
@@ -37,7 +36,7 @@ resource "aws_route" "gateway-route" {
 
 resource "aws_subnet" "main" {
   vpc_id            = "${aws_vpc.main.id}"
-  availability_zone = "${var.availability-zone}"
+  availability_zone = "${var.availability_zone}"
   cidr_block        = "10.0.1.0/24"
 
   tags {
@@ -94,7 +93,7 @@ resource "aws_key_pair" "batman" {
 data "aws_ami" "controller-ami" {
   filter {
     name   = "name"
-    values = ["prodo-ml-controller-${var.ami-tag}"]
+    values = ["prodo-ml-controller-${var.ami_tag}"]
   }
 }
 
@@ -120,7 +119,7 @@ output "controller-host" {
 data "aws_ami" "build-ami" {
   filter {
     name   = "name"
-    values = ["prodo-ml-build-${var.ami-tag}"]
+    values = ["prodo-ml-build-${var.ami_tag}"]
   }
 }
 
@@ -166,7 +165,7 @@ resource "aws_volume_attachment" "build-cache-attachment" {
 data "aws_ami" "worker-ami" {
   filter {
     name   = "name"
-    values = ["prodo-ml-worker-${var.ami-tag}"]
+    values = ["prodo-ml-worker-${var.ami_tag}"]
   }
 }
 
@@ -196,7 +195,7 @@ resource "aws_launch_configuration" "worker-configuration" {
 resource "aws_autoscaling_group" "worker" {
   name                 = "batman-worker"
   vpc_zone_identifier  = ["${aws_subnet.main.id}"]
-  availability_zones   = ["${var.availability-zone}"]
+  availability_zones   = ["${var.availability_zone}"]
   launch_configuration = "${aws_launch_configuration.worker-configuration.name}"
 
   min_size         = 0

@@ -1,7 +1,9 @@
 SHELL := zsh
 
+include ../../vars.mk
+
 NAME = batman-visdom
-TAG = 024444204267.dkr.ecr.eu-west-1.amazonaws.com/visdom
+TAG = $(AWS_PROJECT)/visdom
 
 NETWORK = batman
 PORT = 8097

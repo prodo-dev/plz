@@ -5,7 +5,7 @@
   tasks:
     - name: Log in to AWS ECR
       shell: |
-        eval $(aws ecr get-login --no-include-email --region eu-west-1)
+        eval "$(aws ecr get-login --no-include-email --region {{ aws_region }})"
     - name: Pull the image
       docker_image:
         name: "{{ image }}"
@@ -15,7 +15,7 @@
         image: "{{ image }}"
         env:
           PORT: "{{ service_port }}"
-          AWS_DEFAULT_REGION: eu-west-1
+          AWS_DEFAULT_REGION: "{{ aws_region }}"
         published_ports:
           - "{{ service_port }}:{{ service_port }}"
         restart_policy: unless-stopped
