@@ -8,4 +8,9 @@ build:
 
 .PHONY: push
 push: build
+	eval $$(aws ecr get-login --no-include-email --region eu-west-1)
 	docker push $(TAG)
+
+.PHONY: tag
+tag:
+	@ echo $(TAG)
