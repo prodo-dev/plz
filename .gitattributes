@@ -1,1 +1,2 @@
+*.awscreds filter=git-crypt diff=git-crypt
 *.privkey filter=git-crypt diff=git-crypt
