@@ -117,7 +117,7 @@ def create_snapshot():
     _DOCKER_CLIENT.images.build(
         fileobj=request.stream, custom_context=True, encoding='bz2', tag=tag)
     response = jsonify({'id': tag})
-    response.status_code = requests.codes.accepted
+    response.status_code = requests.codes.ok
     return response
 
 
