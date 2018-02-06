@@ -1,12 +1,14 @@
 # coding=utf-8
+import docker
+import json
 import logging
 import random
-import socket
-
 import requests
 import select
 import shlex
+import socket
 import subprocess
+import time
 import uuid
 
 from collections import Generator
@@ -14,12 +16,14 @@ from flask import Flask, Response, jsonify, request, stream_with_context
 
 from AutoScalingGroup import AutoScalingGroup
 
+_COMMANDS_ROUTE = 'commands'
+_LOGS_SUBROUTE = 'logs'
+
 _LOGGER = logging.getLogger('controller')
+_DOCKER_CLIENT = docker.from_env()
 
 app = Flask(__name__)
 
-_COMMANDS_ROUTE = 'commands'
-_LOGS_SUBROUTE = 'logs'
 
 # TODO: set autoscaling group properly
 _AUTOSCALING_GROUP = AutoScalingGroup.get_group('batman-worker')
@@ -83,6 +87,37 @@ def delete_process(execution_id):
                      execution_id)
     response = jsonify({})
     response.status_code = requests.codes.no_content
+    return response
+
+
+@app.route('/snapshots', methods=['POST'])
+def create_snapshot():
+    # Test with
+    # { echo '{"user": "bruce", "project": "mobile"}'; cat some_file.tar.bz2; }
+    #     | http localhost:5000/snapshots
+    # Create a timestamp in milliseconds
+    timestamp = str(int(time.time() * 1000))
+    # Read a string with a json object until a newline is found.
+    # Using the utf-8 decoder from the codecs module fails as it's decoding
+    # beyond the new line (even using readline(). Probably it does a read()
+    # and decodes everything it gets, as it's not possible to push back to
+    # the request stream). We don't use readline on a BufferedReader as the
+    # the request.stream is a LimitedStream that doesn't support it.
+    b = None
+    json_bytes = []
+    while b != b'\n':
+        b = request.stream.read(1)
+        if len(b) == 0:
+            raise ValueError('Expected json at the beginning of request')
+        json_bytes.append(b)
+    metadata_str = str(b''.join(json_bytes), 'utf-8')
+    metadata = json.loads(metadata_str)
+    tag = f'{metadata["user"]}-{metadata["project"]}:{timestamp}'
+    # Pass the rest of the stream to docker
+    _DOCKER_CLIENT.images.build(
+        fileobj=request.stream, custom_context=True, encoding='bz2', tag=tag)
+    response = jsonify({'id': tag})
+    response.status_code = requests.codes.ok
     return response
 
 
