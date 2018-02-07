@@ -1,8 +1,8 @@
-source ../../vars.mk
+include ../../vars.mk
 
 SHELL := zsh
 
-TAG = $(PROJECT)/ml-pytorch
+TAG = $(AWS_PROJECT)/ml-pytorch
 CACHE_DIR = ../../cache/base-images/ml-pytorch
 
 ANACONDA_VERSION = 5.0.1
