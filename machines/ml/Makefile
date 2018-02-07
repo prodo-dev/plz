@@ -1,14 +1,21 @@
 SHELL := zsh -e -u
 
+include ../../vars.mk
+
 IMAGE_NAMES = controller build worker
+
+TAG = $(shell date '+%F')
 
 .PHONY: amis
 amis:
-	@ [[ -z "$(TAG)" ]] && { \
-		echo >&2 'Please specify a tag by suffixing the tag with `TAG=foo`.'; \
-		exit 1; \
-	}
-	$(foreach NAME, $(IMAGE_NAMES), packer build -var tag=$(TAG) -var group=$(NAME) ami.json${\n})
+	$(info TAG = $(TAG))
+	$(foreach NAME, $(IMAGE_NAMES), \
+		export AWS_SHARED_CREDENTIALS_FILE=../credentials/root.awscreds; \
+		packer build \
+			-var aws-region=$(AWS_REGION) \
+			-var tag=$(TAG) \
+			-var group=$(NAME) \
+			ami.json ${\n})
 
 .PHONY: deploy
 deploy:

@@ -2,7 +2,7 @@ variable "region" {}
 variable "availability_zone" {}
 
 variable "ami_tag" {
-  default = "2018-02-05"
+  default = "2018-02-07"
 }
 
 variable "ec2_role" {
@@ -24,7 +24,6 @@ EOF
 
 provider "aws" {
   shared_credentials_file = "../credentials/root.awscreds"
-  profile                 = "root"
   region                  = "${var.region}"
 }
 
@@ -116,7 +115,7 @@ resource "aws_key_pair" "batman" {
 data "aws_ami" "controller-ami" {
   filter {
     name   = "name"
-    values = ["prodo-ml-controller-${var.ami_tag}"]
+    values = ["batman-controller-${var.ami_tag}"]
   }
 }
 
@@ -165,7 +164,7 @@ output "controller-host" {
 data "aws_ami" "build-ami" {
   filter {
     name   = "name"
-    values = ["prodo-ml-build-${var.ami_tag}"]
+    values = ["batman-build-${var.ami_tag}"]
   }
 }
 
@@ -229,7 +228,7 @@ output "build-host" {
 data "aws_ami" "worker-ami" {
   filter {
     name   = "name"
-    values = ["prodo-ml-worker-${var.ami_tag}"]
+    values = ["batman-worker-${var.ami_tag}"]
   }
 }
 

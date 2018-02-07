@@ -5,6 +5,10 @@ AWS_REGION = eu-west-1
 AWS_AVAILABILITY_ZONE = eu-west-1a
 AWS_PROJECT = 024444204267.dkr.ecr.eu-west-1.amazonaws.com
 
+.PHONY: no-op
+no-op:
+	true
+
 .PHONY: bash
 bash:
 	@ echo 'export AWS_REGION="$(AWS_REGION)"'
