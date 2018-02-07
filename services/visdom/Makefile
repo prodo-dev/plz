@@ -21,7 +21,7 @@ start: build
 		--publish="$${PORT:-8097}:8097" \
 		$$([[ -n "$(VOLUME)" ]] && echo "--volume=$(VOLUME):/root/.visdom" || :) \
 		--init \
-		prodo-ai/batman-visdom
+		$(TAG)
 
 .PHONY: stop
 stop:
