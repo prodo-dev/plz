@@ -15,12 +15,13 @@ from collections import Generator
 from flask import Flask, Response, jsonify, request, stream_with_context
 
 from AutoScalingGroup import AutoScalingGroup
+from controller_config import DOCKER_HOST, get_config_parameter
 
 _COMMANDS_ROUTE = 'commands'
 _LOGS_SUBROUTE = 'logs'
 
 _LOGGER = logging.getLogger('controller')
-_DOCKER_CLIENT = docker.from_env()
+_DOCKER_CLIENT = docker.DockerClient(base_url=get_config_parameter(DOCKER_HOST))
 
 app = Flask(__name__)
 
@@ -161,7 +162,7 @@ def run_command(worker_ip: str, command: str, execution_id: str):
     container_id = stdout.rstrip('\n')
     # noinspection PyTypeChecker
     if stderr != '' or p.returncode != 0 or \
-            not check_is_container_id(container_id):
+            not is_container_id(container_id):
         raise ControllerException(
             f'Error running command\n'
             f'Exit code: [{p.returncode}]\n'
@@ -176,7 +177,7 @@ def get_ip_for_execution_id(execution_id):
             execution_id))
 
 
-def check_is_container_id(container_id: str):
+def is_container_id(container_id: str):
     if len(container_id) != 64:
         return False
     try:
@@ -186,11 +187,12 @@ def check_is_container_id(container_id: str):
     return True
 
 
-def _check_ip(worker_ip: str):
+def _check_ip(ip: str):
+    """Throws an exception in case of an invalid IP"""
     try:
-        socket.inet_aton(worker_ip)
+        socket.inet_aton(ip)
     except OSError:
-        raise ValueError(f'Invalid worker IP: [{worker_ip}]')
+        raise ValueError(f'Invalid worker IP: [{ip}]')
 
 
 def _check_execution_id(execution_id: str):
