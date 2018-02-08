@@ -2,7 +2,6 @@
 import docker
 import json
 import logging
-import os
 import random
 import requests
 import select
@@ -16,19 +15,13 @@ from collections import Generator
 from flask import Flask, Response, jsonify, request, stream_with_context
 
 from AutoScalingGroup import AutoScalingGroup
-from controller_config import (
-    AWS_PROJECT,
-    DOCKER_HOST,
-    PORT,
-    get_config_parameter
-)
+from controller_config import config
 
 _COMMANDS_ROUTE = 'commands'
 _LOGS_SUBROUTE = 'logs'
 
 _LOGGER = logging.getLogger('controller')
-_DOCKER_CLIENT = docker.DockerClient(
-    base_url=get_config_parameter(DOCKER_HOST))
+_DOCKER_CLIENT = docker.DockerClient(base_url=config.docker_host)
 
 
 app = Flask(__name__)
@@ -124,7 +117,7 @@ def create_snapshot():
     tag = f'{metadata["user"]}-{metadata["project"]}:{timestamp}'
     # Pass the rest of the stream to docker
     _DOCKER_CLIENT.images.build(
-        fileobj=request.stream, custom_context=True, encoding='bz2', tag=tag)
+        fileobj=request.stream, custom_context=True, encoding='bz2', rm=True, tag=tag)
     response = jsonify({'id': tag})
     response.status_code = requests.codes.ok
     return response
@@ -158,7 +151,7 @@ def run_command(worker_ip: str, command: str, execution_id: str):
     p = subprocess.Popen([
         'ssh', f'ubuntu@{worker_ip}',
         'docker', 'run', '-d', '--name', execution_id,
-        f'{get_config_parameter(AWS_PROJECT)}/ml-pytorch',
+        f'{config.aws_project}/ml-pytorch',
         'bash', '-c', f'{shlex.quote(command)}'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -304,4 +297,4 @@ class InconsistentAwsResourceStateException(Exception):
         super().__init__(msg)
 
 
-app.run(port=get_config_parameter(PORT))
+app.run(host='0.0.0.0', port=config.port)
