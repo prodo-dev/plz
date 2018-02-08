@@ -19,6 +19,7 @@ from AutoScalingGroup import AutoScalingGroup
 from controller_config import (
     AWS_PROJECT,
     DOCKER_HOST,
+    PORT,
     get_config_parameter
 )
 
@@ -29,7 +30,6 @@ _LOGGER = logging.getLogger('controller')
 _DOCKER_CLIENT = docker.DockerClient(
     base_url=get_config_parameter(DOCKER_HOST))
 
-project = os.environ['AWS_PROJECT']
 
 app = Flask(__name__)
 
@@ -304,4 +304,4 @@ class InconsistentAwsResourceStateException(Exception):
         super().__init__(msg)
 
 
-app.run(port=get_config_parameter(port))
+app.run(port=get_config_parameter(PORT))
