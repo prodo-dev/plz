@@ -14,7 +14,7 @@ $(SITE_PACKAGES): env requirements.txt
 
 .PHONY: freeze
 freeze: env
-	pip freeze > requirements.txt
+	pip freeze | grep -v '^pkg-resources=' > requirements.txt
 
 env: $(PYTHON)
 	virtualenv --python=$(PYTHON_EXE) env

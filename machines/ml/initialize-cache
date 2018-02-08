@@ -1,37 +1,40 @@
-#!/usr/bin/env zsh
+#!/bin/bash
 
-# This is run on a host (provided as $1) by Terraform after creation.
+# This is copied to a host and run by Terraform after creation.
 #
 # It sets up the cache volume used to cache Docker images and other large files.
 
 set -e
 set -u
 
-cd $(dirname $0)
+if [[ "$(id -u)" -ne 0 ]]; then
+  exec sudo "$0" "$@"
+fi
 
-HOST=$1
-PORT=22
+DEVICE="$1"
+MOUNTPOINT='/cache'
+FSTYPE='ext4'
 
-SSH_PRIVATE_KEY_FILE=../keys/batman.privkey
-chmod go-rwx $SSH_PRIVATE_KEY_FILE
+if [[ ! -b "$DEVICE" ]]; then
+  echo >&2 "${DEVICE} is not a block device."
+  exit 1
+fi
 
-ANSIBLE_INVENTORY=$(mktemp)
-echo "${HOST} ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_PRIVATE_KEY_FILE:h} ansible_ssh_extra_args='-o ConnectTimeout=300'" \
-  > $ANSIBLE_INVENTORY
+mkdir -p "$MOUNTPOINT"
 
-start=$(date +%s)
-timeout=60
-while ! nc -z $HOST $PORT >& /dev/null; do
-  sleep 1
-  now=$(date +%s)
-  if [[ $((start + timeout)) -lt $now ]]; then
-    echo >&2 "Could not connect to ${HOST}."
-    exit 1
-  fi
-done
+if [[ "$(file -s "$DEVICE")" == "${DEVICE}: data" ]]; then
+  mkfs -t "$FSTYPE" "$DEVICE"
+fi
 
-export ANSIBLE_HOST_KEY_CHECKING=false
-export ANSIBLE_INVENTORY
-ansible-playbook cache.yml
+echo "${DEVICE} ${MOUNTPOINT} ${FSTYPE} defaults 0 0" > /etc/fstab
+mount "$MOUNTPOINT"
 
-rm -f $ANSIBLE_INVENTORY
+addgroup cache
+chown root:cache "$MOUNTPOINT"
+chmod u+rwx,g+rws,o-rwx "$MOUNTPOINT"
+
+mkdir -p "${MOUNTPOINT}/docker"
+service docker stop
+rm -rf /var/lib/docker
+ln -s "${MOUNTPOINT}/docker" /var/lib/docker
+service docker start

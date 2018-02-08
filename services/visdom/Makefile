@@ -1,15 +1,15 @@
 SHELL := zsh
 
+include ../../vars.mk
+
 NAME = batman-visdom
-TAG = prodo-ai/$(NAME)
+TAG = $(AWS_PROJECT)/visdom
 
 NETWORK = batman
 PORT = 8097
 export PORT
 
-.PHONY: build
-build:
-	docker build --tag=$(TAG) .
+include ../../docker.mk
 
 .PHONY: start
 start: build
@@ -21,7 +21,7 @@ start: build
 		--publish="$${PORT:-8097}:8097" \
 		$$([[ -n "$(VOLUME)" ]] && echo "--volume=$(VOLUME):/root/.visdom" || :) \
 		--init \
-		prodo-ai/batman-visdom
+		$(TAG)
 
 .PHONY: stop
 stop:

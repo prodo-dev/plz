@@ -1,0 +1,7 @@
+.envrc
+__pycache__
+deploy
+env
+example.envrc
+Makefile
+playbook.yml

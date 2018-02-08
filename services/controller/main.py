@@ -2,6 +2,7 @@
 import docker
 import json
 import logging
+import os
 import random
 import requests
 import select
@@ -23,7 +24,10 @@ _LOGS_SUBROUTE = 'logs'
 _LOGGER = logging.getLogger('controller')
 _DOCKER_CLIENT = docker.DockerClient(base_url=get_config_parameter(DOCKER_HOST))
 
+project = os.environ['AWS_PROJECT']
+
 app = Flask(__name__)
+port = int(os.environ.get('PORT', '8080'))
 
 
 # TODO: set autoscaling group properly
@@ -151,7 +155,7 @@ def run_command(worker_ip: str, command: str, execution_id: str):
     p = subprocess.Popen([
         'ssh', f'ubuntu@{worker_ip}',
         'docker', 'run', '-d', '--name', execution_id,
-        '024444204267.dkr.ecr.eu-west-1.amazonaws.com/ml-pytorch',
+        f'{project}/ml-pytorch',
         'bash', '-c', f'{shlex.quote(command)}'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -297,4 +301,4 @@ class InconsistentAwsResourceStateException(Exception):
         super().__init__(msg)
 
 
-app.run()
+app.run(port=port)

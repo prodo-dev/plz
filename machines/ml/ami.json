@@ -1,15 +1,21 @@
 {
   "variables": {
+    "aws-region": null,
     "source-ami": "ami-4d46d534",
-    "tag": "test"
+    "tag": null,
+    "group": null
   },
   "builders": [
     {
       "type": "amazon-ebs",
+      "region": "{{user `aws-region`}}",
       "source_ami": "{{user `source-ami`}}",
       "instance_type": "t2.micro",
       "ssh_username": "ubuntu",
-      "ami_name": "prodo-ml-build-{{user `tag`}}"
+      "ami_name": "batman-{{user `group`}}-{{user `tag`}}",
+      "tags": {
+        "Owner": "Infrastructure"
+      }
     }
   ],
   "provisioners": [
@@ -24,7 +30,7 @@
     {
       "type": "ansible",
       "playbook_file": "./prepare.yml",
-      "groups": "build"
+      "groups": "{{user `group`}}"
     }
   ]
 }
