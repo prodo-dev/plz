@@ -16,18 +16,22 @@ from collections import Generator
 from flask import Flask, Response, jsonify, request, stream_with_context
 
 from AutoScalingGroup import AutoScalingGroup
-from controller_config import DOCKER_HOST, get_config_parameter
+from controller_config import (
+    AWS_PROJECT,
+    DOCKER_HOST,
+    get_config_parameter
+)
 
 _COMMANDS_ROUTE = 'commands'
 _LOGS_SUBROUTE = 'logs'
 
 _LOGGER = logging.getLogger('controller')
-_DOCKER_CLIENT = docker.DockerClient(base_url=get_config_parameter(DOCKER_HOST))
+_DOCKER_CLIENT = docker.DockerClient(
+    base_url=get_config_parameter(DOCKER_HOST))
 
 project = os.environ['AWS_PROJECT']
 
 app = Flask(__name__)
-port = int(os.environ.get('PORT', '8080'))
 
 
 # TODO: set autoscaling group properly
@@ -147,7 +151,6 @@ def run_command(worker_ip: str, command: str, execution_id: str):
     """
     _check_ip(worker_ip)
     _check_execution_id(execution_id)
-    # TODO(sergio): do not hardcode image
     # Intellij doesn't know about the encoding argument. All
     # suppresions in this function are related to that
     # (it thinks that the pipe outputs bytes)
@@ -155,7 +158,7 @@ def run_command(worker_ip: str, command: str, execution_id: str):
     p = subprocess.Popen([
         'ssh', f'ubuntu@{worker_ip}',
         'docker', 'run', '-d', '--name', execution_id,
-        f'{project}/ml-pytorch',
+        f'{get_config_parameter(AWS_PROJECT)}/ml-pytorch',
         'bash', '-c', f'{shlex.quote(command)}'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -301,4 +304,4 @@ class InconsistentAwsResourceStateException(Exception):
         super().__init__(msg)
 
 
-app.run(port=port)
+app.run(port=get_config_parameter(port))

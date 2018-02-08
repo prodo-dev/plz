@@ -5,17 +5,37 @@ import threading
 
 from os import environ
 
+AWS_PROJECT = 'aws-project'
 DOCKER_HOST = 'docker-host'
+PORT = 'port'
 
 _ARGUMENTS_SPEC = [
     {
-     'name': DOCKER_HOST,
-     'spec': {
-        'type': str,
-        'help': 'url pointing at the docker server. Example: tcp://127.0.0.1:1234'
-     },
-     'default': None
+        'name': AWS_PROJECT,
+        'spec': {
+            'type': str,
+            'help': 'project in the Elastic Container Registry. '
+                    'Example: 024444204267.dkr.ecr.eu-west-1.amazonaws.com'
+        },
+        'default': None
+    },
+    {
+        'name': DOCKER_HOST,
+        'spec': {
+            'type': str,
+            'help': 'url pointing at the docker server. Example: tcp://127.0.0.1:1234'
+        },
+        'default': None
+    },
+    {
+        'name': PORT,
+        'spec': {
+            'type': int,
+            'help': 'port where the controller listens for HTTP requests'
+        },
+        'default': 8080
     }
+
 ]
 _CONFIG_LOCK = threading.Lock()
 
