@@ -2,7 +2,6 @@
 import docker
 import json
 import logging
-import os
 import random
 import requests
 import select
@@ -16,17 +15,16 @@ from collections import Generator
 from flask import Flask, Response, jsonify, request, stream_with_context
 
 from AutoScalingGroup import AutoScalingGroup
+from controller_config import config
 
 _COMMANDS_ROUTE = 'commands'
 _LOGS_SUBROUTE = 'logs'
 
 _LOGGER = logging.getLogger('controller')
-_DOCKER_CLIENT = docker.from_env()
+_DOCKER_CLIENT = docker.DockerClient(base_url=config.docker_host)
 
-project = os.environ['AWS_PROJECT']
 
 app = Flask(__name__)
-port = int(os.environ.get('PORT', '8080'))
 
 
 # TODO: set autoscaling group properly
@@ -119,7 +117,7 @@ def create_snapshot():
     tag = f'{metadata["user"]}-{metadata["project"]}:{timestamp}'
     # Pass the rest of the stream to docker
     _DOCKER_CLIENT.images.build(
-        fileobj=request.stream, custom_context=True, encoding='bz2', tag=tag)
+        fileobj=request.stream, custom_context=True, encoding='bz2', rm=True, tag=tag)
     response = jsonify({'id': tag})
     response.status_code = requests.codes.ok
     return response
@@ -146,7 +144,6 @@ def run_command(worker_ip: str, command: str, execution_id: str):
     """
     _check_ip(worker_ip)
     _check_execution_id(execution_id)
-    # TODO(sergio): do not hardcode image
     # Intellij doesn't know about the encoding argument. All
     # suppresions in this function are related to that
     # (it thinks that the pipe outputs bytes)
@@ -154,7 +151,7 @@ def run_command(worker_ip: str, command: str, execution_id: str):
     p = subprocess.Popen([
         'ssh', f'ubuntu@{worker_ip}',
         'docker', 'run', '-d', '--name', execution_id,
-        f'{project}/ml-pytorch',
+        f'{config.aws_project}/ml-pytorch',
         'bash', '-c', f'{shlex.quote(command)}'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -165,7 +162,7 @@ def run_command(worker_ip: str, command: str, execution_id: str):
     container_id = stdout.rstrip('\n')
     # noinspection PyTypeChecker
     if stderr != '' or p.returncode != 0 or \
-            not check_is_container_id(container_id):
+            not is_container_id(container_id):
         raise ControllerException(
             f'Error running command\n'
             f'Exit code: [{p.returncode}]\n'
@@ -180,7 +177,7 @@ def get_ip_for_execution_id(execution_id):
             execution_id))
 
 
-def check_is_container_id(container_id: str):
+def is_container_id(container_id: str):
     if len(container_id) != 64:
         return False
     try:
@@ -190,11 +187,12 @@ def check_is_container_id(container_id: str):
     return True
 
 
-def _check_ip(worker_ip: str):
+def _check_ip(ip: str):
+    """Throws an exception in case of an invalid IP"""
     try:
-        socket.inet_aton(worker_ip)
+        socket.inet_aton(ip)
     except OSError:
-        raise ValueError(f'Invalid worker IP: [{worker_ip}]')
+        raise ValueError(f'Invalid worker IP: [{ip}]')
 
 
 def _check_execution_id(execution_id: str):
@@ -299,4 +297,4 @@ class InconsistentAwsResourceStateException(Exception):
         super().__init__(msg)
 
 
-app.run(port=port)
+app.run(host='0.0.0.0', port=config.port)
