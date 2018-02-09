@@ -186,6 +186,8 @@ resource "aws_volume_attachment" "build-cache-attachment" {
   volume_id   = "${aws_ebs_volume.build-cache.id}"
   device_name = "/dev/sdx"
 
+  skip_destroy = true
+
   provisioner "local-exec" {
     command = "./on-host ubuntu@${aws_instance.build.public_dns} ./initialize-cache /dev/xvdx"
   }
