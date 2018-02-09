@@ -19,6 +19,7 @@ amis:
 
 .PHONY: deploy
 deploy:
+	make -C ../vpc deploy
 	eval $$(make --file=../../vars.mk terraform); \
 	terraform init; \
 	terraform apply
