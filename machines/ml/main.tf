@@ -1,5 +1,14 @@
+variable "environment" {
+  default = "Production"
+}
+
 variable "region" {}
+
 variable "availability_zone" {}
+
+variable "cidr_block" {
+  default = "10.0.1.0/24"
+}
 
 variable "ami_tag" {
   default = "2018-02-07"
@@ -34,8 +43,9 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = true
 
   tags {
-    Name  = "Batman"
-    Owner = "Infrastructure"
+    Name        = "Batman"
+    Environment = "${var.environment}"
+    Owner       = "Infrastructure"
   }
 }
 
@@ -43,8 +53,9 @@ resource "aws_internet_gateway" "gateway" {
   vpc_id = "${aws_vpc.main.id}"
 
   tags {
-    Name  = "Batman"
-    Owner = "Infrastructure"
+    Name        = "Batman"
+    Environment = "${var.environment}"
+    Owner       = "Infrastructure"
   }
 }
 
@@ -57,11 +68,12 @@ resource "aws_route" "gateway-route" {
 resource "aws_subnet" "main" {
   vpc_id            = "${aws_vpc.main.id}"
   availability_zone = "${var.availability_zone}"
-  cidr_block        = "10.0.1.0/24"
+  cidr_block        = "${var.cidr_block}"
 
   tags {
-    Name  = "Batman"
-    Owner = "Infrastructure"
+    Name        = "Batman"
+    Environment = "${var.environment}"
+    Owner       = "Infrastructure"
   }
 }
 
@@ -76,7 +88,8 @@ resource "aws_default_security_group" "default" {
   }
 
   tags {
-    Owner = "Infrastructure"
+    Environment = "${var.environment}"
+    Owner       = "Infrastructure"
   }
 }
 
@@ -100,8 +113,9 @@ resource "aws_security_group" "ssh" {
   }
 
   tags {
-    Name  = "Batman SSH"
-    Owner = "Infrastructure"
+    Name        = "Batman SSH"
+    Environment = "${var.environment}"
+    Owner       = "Infrastructure"
   }
 }
 
@@ -129,8 +143,9 @@ resource "aws_instance" "controller" {
   iam_instance_profile        = "${aws_iam_instance_profile.controller.name}"
 
   tags {
-    Name  = "Batman Controller"
-    Owner = "Infrastructure"
+    Name        = "Batman Controller"
+    Environment = "${var.environment}"
+    Owner       = "Infrastructure"
   }
 }
 
@@ -178,8 +193,9 @@ resource "aws_instance" "build" {
   iam_instance_profile        = "${aws_iam_instance_profile.build.name}"
 
   tags {
-    Name  = "Batman Build"
-    Owner = "Infrastructure"
+    Name        = "Batman Build"
+    Environment = "${var.environment}"
+    Owner       = "Infrastructure"
   }
 }
 
@@ -204,8 +220,9 @@ resource "aws_ebs_volume" "build-cache" {
   size              = 500
 
   tags {
-    Name  = "Batman Build Cache"
-    Owner = "Infrastructure"
+    Name        = "Batman Build Cache"
+    Environment = "${var.environment}"
+    Owner       = "Infrastructure"
   }
 }
 
@@ -273,6 +290,11 @@ resource "aws_autoscaling_group" "worker" {
     {
       key                 = "Name"
       value               = "Batman Worker"
+      propagate_at_launch = true
+    },
+    {
+      key                 = "Environment"
+      value               = "${var.environment}"
       propagate_at_launch = true
     },
     {
