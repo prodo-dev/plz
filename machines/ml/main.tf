@@ -1,10 +1,10 @@
-variable "environment" {
-  default = "Production"
-}
-
 variable "region" {}
 
 variable "availability_zone" {}
+
+variable "environment" {
+  default = "Production"
+}
 
 variable "cidr_block" {
   default = "10.0.1.0/24"
@@ -68,14 +68,14 @@ resource "aws_subnet" "main" {
   cidr_block        = "${var.cidr_block}"
 
   tags {
-    Name        = "Batman"
+    Name        = "Batman ${var.environment}"
     Environment = "${var.environment}"
     Owner       = "Infrastructure"
   }
 }
 
 resource "aws_key_pair" "batman" {
-  key_name   = "batman-key"
+  key_name   = "batman-${lower(var.environment)}-key"
   public_key = "${file("../keys/batman.pubkey")}"
 }
 
@@ -93,24 +93,24 @@ resource "aws_instance" "controller" {
   instance_type               = "t2.small"
   ami                         = "${data.aws_ami.controller-ami.id}"
   vpc_security_group_ids      = ["${data.aws_security_group.default.id}", "${data.aws_security_group.ssh.id}"]
-  key_name                    = "batman-key"
+  key_name                    = "batman-${lower(var.environment)}-key"
   associate_public_ip_address = true
   iam_instance_profile        = "${aws_iam_instance_profile.controller.name}"
 
   tags {
-    Name        = "Batman Controller"
+    Name        = "Batman ${var.environment} Controller"
     Environment = "${var.environment}"
     Owner       = "Infrastructure"
   }
 }
 
 resource "aws_iam_instance_profile" "controller" {
-  name = "batman-controller"
+  name = "batman-${lower(var.environment)}-controller"
   role = "${aws_iam_role.controller.name}"
 }
 
 resource "aws_iam_role" "controller" {
-  name = "batman-controller"
+  name = "batman-${lower(var.environment)}-controller"
 
   assume_role_policy = "${var.ec2_role}"
 }
@@ -143,24 +143,24 @@ resource "aws_instance" "build" {
   instance_type               = "t2.medium"
   ami                         = "${data.aws_ami.build-ami.id}"
   vpc_security_group_ids      = ["${data.aws_security_group.default.id}", "${data.aws_security_group.ssh.id}"]
-  key_name                    = "batman-key"
+  key_name                    = "batman-${lower(var.environment)}-key"
   associate_public_ip_address = true
   iam_instance_profile        = "${aws_iam_instance_profile.build.name}"
 
   tags {
-    Name        = "Batman Build"
+    Name        = "Batman ${var.environment} Build"
     Environment = "${var.environment}"
     Owner       = "Infrastructure"
   }
 }
 
 resource "aws_iam_instance_profile" "build" {
-  name = "batman-build"
+  name = "batman-${lower(var.environment)}-build"
   role = "${aws_iam_role.build.name}"
 }
 
 resource "aws_iam_role" "build" {
-  name = "batman-build"
+  name = "batman-${lower(var.environment)}-build"
 
   assume_role_policy = "${var.ec2_role}"
 }
@@ -175,7 +175,7 @@ resource "aws_ebs_volume" "build-cache" {
   size              = 500
 
   tags {
-    Name        = "Batman Build Cache"
+    Name        = "Batman ${var.environment} Build Cache"
     Environment = "${var.environment}"
     Owner       = "Infrastructure"
   }
@@ -207,11 +207,11 @@ data "aws_ami" "worker-ami" {
 }
 
 resource "aws_launch_configuration" "worker-configuration" {
-  name                        = "batman-worker"
+  name                        = "batman-${lower(var.environment)}-worker"
   instance_type               = "g2.2xlarge"
   image_id                    = "${data.aws_ami.worker-ami.id}"
   security_groups             = ["${data.aws_security_group.default.id}", "${data.aws_security_group.ssh.id}"]
-  key_name                    = "batman-key"
+  key_name                    = "batman-${lower(var.environment)}-key"
   associate_public_ip_address = true
   iam_instance_profile        = "${aws_iam_instance_profile.worker.name}"
 
@@ -230,7 +230,7 @@ resource "aws_launch_configuration" "worker-configuration" {
 }
 
 resource "aws_autoscaling_group" "worker" {
-  name                 = "batman-worker"
+  name                 = "batman-${lower(var.environment)}-worker"
   vpc_zone_identifier  = ["${aws_subnet.main.id}"]
   availability_zones   = ["${var.availability_zone}"]
   launch_configuration = "${aws_launch_configuration.worker-configuration.name}"
@@ -246,7 +246,7 @@ resource "aws_autoscaling_group" "worker" {
   tags = [
     {
       key                 = "Name"
-      value               = "Batman Worker"
+      value               = "Batman ${var.environment} Worker"
       propagate_at_launch = true
     },
     {
@@ -268,12 +268,12 @@ resource "aws_autoscaling_group" "worker" {
 }
 
 resource "aws_iam_instance_profile" "worker" {
-  name = "batman-worker"
+  name = "batman-${lower(var.environment)}-worker"
   role = "${aws_iam_role.worker.name}"
 }
 
 resource "aws_iam_role" "worker" {
-  name = "batman-worker"
+  name = "batman-${lower(var.environment)}-worker"
 
   assume_role_policy = "${var.ec2_role}"
 }
