@@ -5,16 +5,18 @@
 #
 # More details at https://github.com/ansible/ansible/issues/29913
 
-set -eu
+set -e
+set -u
+set -o pipefail
 
 cd ${0:h}
 ROOT=${PWD:h:h:a}
 
-eval $(make --directory=$ROOT --file="${ROOT}/vars.mk" bash)
+eval $(make --no-print-directory --file="${ROOT}/vars.mk" bash)
 
 HOST=$(cd "${ROOT}/machines/ml" && terraform output controller-host)
 SSH_PRIVATE_KEY_FILE="${ROOT}/machines/keys/batman.privkey"
-TAG=$(make tag)
+TAG=$(make --no-print-directory tag)
 # DIGEST=$(docker inspect $TAG | jq -r '.[0].Id')
 # IMAGE="${TAG}:${DIGEST}"
 IMAGE=$TAG
