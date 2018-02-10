@@ -14,7 +14,7 @@ ROOT=${PWD:h:h:a}
 
 eval $(make --no-print-directory --file="${ROOT}/vars.mk" bash)
 
-HOST=$(cd "${ROOT}/machines/ml" && terraform output controller-host)
+HOST=$(cd "${ROOT}/machines/ml" && terraform output -state=$1 controller-host)
 SSH_PRIVATE_KEY_FILE="${ROOT}/machines/keys/batman.privkey"
 TAG=$(make --no-print-directory tag)
 # DIGEST=$(docker inspect $TAG | jq -r '.[0].Id')
