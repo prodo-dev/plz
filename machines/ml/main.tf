@@ -283,3 +283,7 @@ resource "aws_iam_role_policy_attachment" "worker-policy-ecr" {
   role       = "${aws_iam_role.worker.name}"
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
+
+output "autoscaling-group-name" {
+  value = "${aws_autoscaling_group.worker.name}"
+}

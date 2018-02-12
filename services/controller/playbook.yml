@@ -14,6 +14,7 @@
         env:
           AWS_DEFAULT_REGION: "{{ aws_region }}"
           AWS_PROJECT: "{{ aws_project }}"
+          AWS_AUTOSCALING_GROUP: "{{ aws_autoscaling_group }}"
           PORT: "{{ service_port }}"
         published_ports:
           - "{{ service_port }}:{{ service_port }}"

@@ -12,8 +12,16 @@ _ARGUMENTS_SPEC = [
         'name': 'aws_project',
         'spec': {
             'type': str,
-            'help': 'project in the Elastic Container Registry. '
+            'help': 'AWS project in the Elastic Container Registry. '
                     'Example: 024444204267.dkr.ecr.eu-west-1.amazonaws.com'
+        }
+    },
+    {
+        'name': 'aws_autoscaling_group',
+        'spec': {
+            'type': str,
+            'help': 'AWS auto-scaling group name'
+                    'Example: batman-production-worker'
         }
     },
     {

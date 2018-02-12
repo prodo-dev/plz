@@ -14,7 +14,9 @@ ROOT=${PWD:h:h:a}
 
 eval $(make --no-print-directory --file="${ROOT}/vars.mk" bash)
 
-HOST=$(cd "${ROOT}/machines/ml" && terraform output -state=$1 controller-host)
+STATE_FILE=$1
+HOST=$(terraform output -state="${ROOT}/machines/ml/${STATE_FILE}" controller-host)
+AWS_AUTOSCALING_GROUP=$(terraform output -state="${ROOT}/machines/ml/${STATE_FILE}" autoscaling-group-name)
 SSH_PRIVATE_KEY_FILE="${ROOT}/machines/keys/batman.privkey"
 TAG=$(make --no-print-directory tag)
 # DIGEST=$(docker inspect $TAG | jq -r '.[0].Id')
@@ -34,6 +36,7 @@ all:
   vars:
     aws_region: "${AWS_REGION}"
     aws_project: "${AWS_PROJECT}"
+    aws_autoscaling_group: "${AWS_AUTOSCALING_GROUP}"
     image: "${IMAGE}"
     service_port: "${SERVICE_PORT}"
 EOF

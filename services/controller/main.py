@@ -28,7 +28,7 @@ app = Flask(__name__)
 
 
 # TODO: set autoscaling group properly
-_AUTOSCALING_GROUP = AutoScalingGroup.get_group('batman-worker')
+_AUTOSCALING_GROUP = AutoScalingGroup.get_group(config.aws_autoscaling_group)
 
 
 @app.route(f'/{_COMMANDS_ROUTE}', methods=['POST'])
