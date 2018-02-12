@@ -17,11 +17,19 @@ amis:
 			-var group=$(NAME) \
 			ami.json ${\n})
 
-.PHONY: deploy
-deploy:
-	eval $$(make --file=../../vars.mk terraform); \
+.PHONY: deploy-production
+deploy-production:
+	eval $$($(MAKE) --no-print-directory --file=../../vars.mk terraform); \
 	terraform init; \
-	terraform apply
+	terraform apply -state=production.tfstate
+
+.PHONY: deploy-test
+deploy-test:
+	$(MAKE) --no-print-directory --file=../../vars.mk terraform
+	eval $$($(MAKE) --no-print-directory --file=../../vars.mk terraform); \
+	eval $$($(MAKE) --no-print-directory --file=../../vars.mk terraform-test); \
+	terraform init; \
+	terraform apply -state=test.tfstate
 
 
 # Necessary to make each `foreach` line a new instruction.

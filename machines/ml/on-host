@@ -14,7 +14,7 @@ LOCAL_EXECUTABLE=$1
 shift
 
 SSH_PRIVATE_KEY_FILE="${HERE:h}/keys/batman.privkey"
-SSH_ARGS=(-o StrictHostKeyChecking=no -i $SSH_PRIVATE_KEY_FILE)
+SSH_ARGS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i $SSH_PRIVATE_KEY_FILE)
 REMOTE_EXECUTABLE='~/.on-host-executable'
 
 start=$(date +%s)

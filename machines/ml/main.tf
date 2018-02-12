@@ -1,5 +1,14 @@
 variable "region" {}
+
 variable "availability_zone" {}
+
+variable "environment" {
+  default = "Production"
+}
+
+variable "cidr_block" {
+  default = "10.0.1.0/24"
+}
 
 variable "ami_tag" {
   default = "2018-02-07"
@@ -23,90 +32,51 @@ EOF
 }
 
 provider "aws" {
+  version                 = "~> 1.8"
   shared_credentials_file = "../credentials/root.awscreds"
+  profile                 = "default"
   region                  = "${var.region}"
 }
 
 ///
 
-resource "aws_vpc" "main" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_hostnames = true
-
+data "aws_vpc" "main" {
   tags {
     Name  = "Batman"
     Owner = "Infrastructure"
   }
 }
 
-resource "aws_internet_gateway" "gateway" {
-  vpc_id = "${aws_vpc.main.id}"
+data "aws_security_group" "default" {
+  vpc_id = "${data.aws_vpc.main.id}"
 
-  tags {
-    Name  = "Batman"
-    Owner = "Infrastructure"
-  }
+  filter = [
+    {
+      name   = "group-name"
+      values = ["default"]
+    },
+  ]
 }
 
-resource "aws_route" "gateway-route" {
-  route_table_id         = "${aws_vpc.main.default_route_table_id}"
-  destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = "${aws_internet_gateway.gateway.id}"
+data "aws_security_group" "ssh" {
+  vpc_id = "${data.aws_vpc.main.id}"
+  name   = "ssh"
 }
 
 resource "aws_subnet" "main" {
-  vpc_id            = "${aws_vpc.main.id}"
+  vpc_id            = "${data.aws_vpc.main.id}"
   availability_zone = "${var.availability_zone}"
-  cidr_block        = "10.0.1.0/24"
+  cidr_block        = "${var.cidr_block}"
 
   tags {
-    Name  = "Batman"
-    Owner = "Infrastructure"
-  }
-}
-
-resource "aws_default_security_group" "default" {
-  vpc_id = "${aws_vpc.main.id}"
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags {
-    Owner = "Infrastructure"
-  }
-}
-
-resource "aws_security_group" "ssh" {
-  vpc_id      = "${aws_vpc.main.id}"
-  name        = "ssh"
-  description = "Allow SSH and Mosh access"
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 60000
-    to_port     = 61000
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags {
-    Name  = "Batman SSH"
-    Owner = "Infrastructure"
+    Name        = "Batman ${var.environment}"
+    Environment = "${var.environment}"
+    Owner       = "Infrastructure"
   }
 }
 
 resource "aws_key_pair" "batman" {
-  key_name   = "batman-key"
+  key_name   = "batman-${lower(var.environment)}-key"
   public_key = "${file("../keys/batman.pubkey")}"
 }
 
@@ -123,24 +93,25 @@ resource "aws_instance" "controller" {
   subnet_id                   = "${aws_subnet.main.id}"
   instance_type               = "t2.small"
   ami                         = "${data.aws_ami.controller-ami.id}"
-  vpc_security_group_ids      = ["${aws_default_security_group.default.id}", "${aws_security_group.ssh.id}"]
-  key_name                    = "batman-key"
+  vpc_security_group_ids      = ["${data.aws_security_group.default.id}", "${data.aws_security_group.ssh.id}"]
+  key_name                    = "batman-${lower(var.environment)}-key"
   associate_public_ip_address = true
   iam_instance_profile        = "${aws_iam_instance_profile.controller.name}"
 
   tags {
-    Name  = "Batman Controller"
-    Owner = "Infrastructure"
+    Name        = "Batman ${var.environment} Controller"
+    Environment = "${var.environment}"
+    Owner       = "Infrastructure"
   }
 }
 
 resource "aws_iam_instance_profile" "controller" {
-  name = "batman-controller"
+  name = "batman-${lower(var.environment)}-controller"
   role = "${aws_iam_role.controller.name}"
 }
 
 resource "aws_iam_role" "controller" {
-  name = "batman-controller"
+  name = "batman-${lower(var.environment)}-controller"
 
   assume_role_policy = "${var.ec2_role}"
 }
@@ -172,24 +143,25 @@ resource "aws_instance" "build" {
   subnet_id                   = "${aws_subnet.main.id}"
   instance_type               = "t2.medium"
   ami                         = "${data.aws_ami.build-ami.id}"
-  vpc_security_group_ids      = ["${aws_default_security_group.default.id}", "${aws_security_group.ssh.id}"]
-  key_name                    = "batman-key"
+  vpc_security_group_ids      = ["${data.aws_security_group.default.id}", "${data.aws_security_group.ssh.id}"]
+  key_name                    = "batman-${lower(var.environment)}-key"
   associate_public_ip_address = true
   iam_instance_profile        = "${aws_iam_instance_profile.build.name}"
 
   tags {
-    Name  = "Batman Build"
-    Owner = "Infrastructure"
+    Name        = "Batman ${var.environment} Build"
+    Environment = "${var.environment}"
+    Owner       = "Infrastructure"
   }
 }
 
 resource "aws_iam_instance_profile" "build" {
-  name = "batman-build"
+  name = "batman-${lower(var.environment)}-build"
   role = "${aws_iam_role.build.name}"
 }
 
 resource "aws_iam_role" "build" {
-  name = "batman-build"
+  name = "batman-${lower(var.environment)}-build"
 
   assume_role_policy = "${var.ec2_role}"
 }
@@ -204,8 +176,9 @@ resource "aws_ebs_volume" "build-cache" {
   size              = 500
 
   tags {
-    Name  = "Batman Build Cache"
-    Owner = "Infrastructure"
+    Name        = "Batman ${var.environment} Build Cache"
+    Environment = "${var.environment}"
+    Owner       = "Infrastructure"
   }
 }
 
@@ -213,6 +186,8 @@ resource "aws_volume_attachment" "build-cache-attachment" {
   instance_id = "${aws_instance.build.id}"
   volume_id   = "${aws_ebs_volume.build-cache.id}"
   device_name = "/dev/sdx"
+
+  skip_destroy = true
 
   provisioner "local-exec" {
     command = "./on-host ubuntu@${aws_instance.build.public_dns} ./initialize-cache /dev/xvdx"
@@ -233,11 +208,11 @@ data "aws_ami" "worker-ami" {
 }
 
 resource "aws_launch_configuration" "worker-configuration" {
-  name                        = "batman-worker"
+  name                        = "batman-${lower(var.environment)}-worker"
   instance_type               = "g2.2xlarge"
   image_id                    = "${data.aws_ami.worker-ami.id}"
-  security_groups             = ["${aws_default_security_group.default.id}", "${aws_security_group.ssh.id}"]
-  key_name                    = "batman-key"
+  security_groups             = ["${data.aws_security_group.default.id}", "${data.aws_security_group.ssh.id}"]
+  key_name                    = "batman-${lower(var.environment)}-key"
   associate_public_ip_address = true
   iam_instance_profile        = "${aws_iam_instance_profile.worker.name}"
 
@@ -256,7 +231,7 @@ resource "aws_launch_configuration" "worker-configuration" {
 }
 
 resource "aws_autoscaling_group" "worker" {
-  name                 = "batman-worker"
+  name                 = "batman-${lower(var.environment)}-worker"
   vpc_zone_identifier  = ["${aws_subnet.main.id}"]
   availability_zones   = ["${var.availability_zone}"]
   launch_configuration = "${aws_launch_configuration.worker-configuration.name}"
@@ -272,7 +247,12 @@ resource "aws_autoscaling_group" "worker" {
   tags = [
     {
       key                 = "Name"
-      value               = "Batman Worker"
+      value               = "Batman ${var.environment} Worker"
+      propagate_at_launch = true
+    },
+    {
+      key                 = "Environment"
+      value               = "${var.environment}"
       propagate_at_launch = true
     },
     {
@@ -289,12 +269,12 @@ resource "aws_autoscaling_group" "worker" {
 }
 
 resource "aws_iam_instance_profile" "worker" {
-  name = "batman-worker"
+  name = "batman-${lower(var.environment)}-worker"
   role = "${aws_iam_role.worker.name}"
 }
 
 resource "aws_iam_role" "worker" {
-  name = "batman-worker"
+  name = "batman-${lower(var.environment)}-worker"
 
   assume_role_policy = "${var.ec2_role}"
 }
