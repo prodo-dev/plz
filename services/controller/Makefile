@@ -9,7 +9,7 @@ include ../../python.mk
 
 .PHONY: deploy-production
 deploy-production: push
-	./deploy terraform.tfstate
+	./deploy production.tfstate
 
 .PHONY: deploy-test
 deploy-test: push

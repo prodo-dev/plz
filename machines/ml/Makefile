@@ -21,7 +21,7 @@ amis:
 deploy-production:
 	eval $$($(MAKE) --no-print-directory --file=../../vars.mk terraform); \
 	terraform init; \
-	terraform apply
+	terraform apply -state=production.tfstate
 
 .PHONY: deploy-test
 deploy-test:
