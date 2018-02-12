@@ -22,7 +22,7 @@ TAG=$(make --no-print-directory tag)
 IMAGE=$TAG
 SERVICE_PORT=80
 
-ANSIBLE_INVENTORY=$(mktemp "${TMPDIR:/tmp/}inventory-XXXXX")
+ANSIBLE_INVENTORY=$(mktemp "${TMPDIR:-/tmp/}inventory-XXXXX")
 cat > $ANSIBLE_INVENTORY <<EOF
 ---
 all:
