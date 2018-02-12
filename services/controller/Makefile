@@ -1,3 +1,5 @@
+SHELL := zsh -e -u
+
 include ../../vars.mk
 
 TAG = $(AWS_PROJECT)/batman-controller
