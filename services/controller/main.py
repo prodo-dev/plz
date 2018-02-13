@@ -1,4 +1,7 @@
 # coding=utf-8
+import base64
+
+import boto3
 import docker
 import json
 import logging
@@ -22,6 +25,7 @@ _LOGS_SUBROUTE = 'logs'
 
 _LOGGER = logging.getLogger('controller')
 _LOGGER.info(f'It is: {config.docker_host}')
+_ECR_CLIENT = boto3.client('ecr')
 _DOCKER_CLIENT = docker.APIClient(base_url=config.docker_host)
 
 
@@ -118,6 +122,9 @@ def create_snapshot():
     metadata = json.loads(metadata_str)
     tag = f'{metadata["user"]}-{metadata["project"]}:{timestamp}'
     # Pass the rest of the stream to docker
+    ecr_token = _ECR_CLIENT.get_authorization_token()['authorizationData'][0]['authorizationToken']
+    ecr_user, ecr_password = str(base64.b64decode(ecr_token), 'utf-8').split(':')
+    _DOCKER_CLIENT.login(ecr_user, ecr_password, registry=config.aws_project)
     response = _DOCKER_CLIENT.build(
         fileobj=request.stream, custom_context=True, encoding='bz2', rm=True, tag=tag)
     return _stream_binary_generator(response)
