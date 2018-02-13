@@ -56,7 +56,7 @@ class RunCommand:
                 error = True
                 print(json_resp['error'], end='', file=sys.stdout)
             if 'aux' in json_resp:
-                snapshot = json_resp['aux']['ID']
+                snapshot = json_resp['aux']['ID'][len('sha256:'):]
         if error:
             return None
         return snapshot

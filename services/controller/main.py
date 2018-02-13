@@ -42,7 +42,8 @@ def run_command_entrypoint():
     # curl -X POST -d '{"command": "ls /" }'
     #    -H 'Content-Type: application/json' localhost:5000/commands
     command = request.json['command']
-    execution_id = str(get_command_uuid())
+    snapshot = request.json['snapshot']
+    execution_id = get_command_uuid()
 
     instance = _AUTOSCALING_GROUP.get_available_instance_for_execution(
         execution_id)
@@ -54,7 +55,7 @@ def run_command_entrypoint():
     # TODO: use private ip? (It's harder for testing)
     run_command(
         AutoScalingGroup.get_public_ip_of_instance(instance),
-        command, execution_id)
+        command, snapshot, execution_id)
     response = jsonify({'id': execution_id})
     response.status_code = requests.codes.accepted
     return response
@@ -128,12 +129,6 @@ def create_snapshot():
     response = _DOCKER_CLIENT.build(
         fileobj=request.stream, custom_context=True, encoding='bz2', rm=True, tag=tag)
     return _stream_binary_generator(response)
-    # return _stream_binary_generator((bytes(v, 'utf-8') for l in response
-    #                                  for v in json.loads(str(l, 'utf-8')).values()))
-    # return _stream_binary_generator((v for l in response for k, v in l))
-    # response = jsonify({'id': tag})
-    # response.status_code = requests.codes.ok
-    # return response
 
 
 def get_command_uuid() -> str:
@@ -143,7 +138,7 @@ def get_command_uuid() -> str:
     return str(uuid.uuid1(node=random_node))
 
 
-def run_command(worker_ip: str, command: str, execution_id: str):
+def run_command(worker_ip: str, command: str, snapshot: str, execution_id: str):
     """
     Runs a command in a worker.
 
@@ -152,18 +147,20 @@ def run_command(worker_ip: str, command: str, execution_id: str):
 
     :param worker_ip: IP to connect via ssh
     :param command: command to run with 'bash -c'
+    :param snapshot: id of the snapshot to run the command
     :param execution_id: id of the execution of the command, used to name
            resources (like the docker container)
     """
     _check_ip(worker_ip)
     _check_execution_id(execution_id)
+    # TODO(sergio): check the snapshot
     # Intellij doesn't know about the encoding argument. All
     # suppresions in this function are related to that
     # (it thinks that the pipe outputs bytes)
     # noinspection PyArgumentList
     p = subprocess.Popen([
         'ssh', f'ubuntu@{worker_ip}',
-        'docker', 'run', '-d', '--name', execution_id,
+        'docker', 'run', '-d', snapshot, '--name', execution_id,
         'bash', '-c', f'{shlex.quote(command)}'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
