@@ -21,7 +21,8 @@ _COMMANDS_ROUTE = 'commands'
 _LOGS_SUBROUTE = 'logs'
 
 _LOGGER = logging.getLogger('controller')
-_DOCKER_CLIENT = docker.DockerClient(base_url=config.docker_host)
+_LOGGER.info(f'It is: {config.docker_host}')
+_DOCKER_CLIENT = docker.APIClient(base_url=config.docker_host)
 
 
 app = Flask(__name__)
@@ -38,6 +39,7 @@ def run_command_entrypoint():
     #    -H 'Content-Type: application/json' localhost:5000/commands
     command = request.json['command']
     execution_id = str(get_command_uuid())
+
     instance = _AUTOSCALING_GROUP.get_available_instance_for_execution(
         execution_id)
     if instance is None:
@@ -116,11 +118,15 @@ def create_snapshot():
     metadata = json.loads(metadata_str)
     tag = f'{metadata["user"]}-{metadata["project"]}:{timestamp}'
     # Pass the rest of the stream to docker
-    _DOCKER_CLIENT.images.build(
+    response = _DOCKER_CLIENT.build(
         fileobj=request.stream, custom_context=True, encoding='bz2', rm=True, tag=tag)
-    response = jsonify({'id': tag})
-    response.status_code = requests.codes.ok
-    return response
+    return _stream_binary_generator(response)
+    # return _stream_binary_generator((bytes(v, 'utf-8') for l in response
+    #                                  for v in json.loads(str(l, 'utf-8')).values()))
+    # return _stream_binary_generator((v for l in response for k, v in l))
+    # response = jsonify({'id': tag})
+    # response.status_code = requests.codes.ok
+    # return response
 
 
 def get_command_uuid() -> str:
@@ -151,7 +157,6 @@ def run_command(worker_ip: str, command: str, execution_id: str):
     p = subprocess.Popen([
         'ssh', f'ubuntu@{worker_ip}',
         'docker', 'run', '-d', '--name', execution_id,
-        f'{config.aws_project}/ml-pytorch',
         'bash', '-c', f'{shlex.quote(command)}'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -211,6 +216,7 @@ def get_logs_of_execution(worker_ip: str, execution_id: str):
             ['bash', '-c',
              f'ssh ubuntu@{worker_ip} ' +
              shlex.quote(f'docker logs {execution_id} -f 2>&1')],
+            shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
         # Note: the docs indicate to use p.communicate() instead of

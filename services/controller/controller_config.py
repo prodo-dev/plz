@@ -5,7 +5,6 @@ import threading
 
 from collections import namedtuple
 from os import environ
-from typing import Any, Callable
 
 _ARGUMENTS_SPEC = [
     {
