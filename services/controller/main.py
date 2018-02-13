@@ -43,7 +43,7 @@ def run_command_entrypoint():
     #    -H 'Content-Type: application/json' localhost:5000/commands
     command = request.json['command']
     snapshot = request.json['snapshot']
-    execution_id = get_command_uuid()
+    execution_id = str(get_command_uuid())
 
     instance = _AUTOSCALING_GROUP.get_available_instance_for_execution(
         execution_id)
@@ -220,7 +220,6 @@ def get_logs_of_execution(worker_ip: str, execution_id: str):
             ['bash', '-c',
              f'ssh ubuntu@{worker_ip} ' +
              shlex.quote(f'docker logs {execution_id} -f 2>&1')],
-            shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
         # Note: the docs indicate to use p.communicate() instead of
