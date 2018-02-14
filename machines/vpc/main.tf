@@ -35,6 +35,13 @@ resource "aws_route" "gateway-route" {
 resource "aws_default_security_group" "default" {
   vpc_id = "${aws_vpc.main.id}"
 
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["${aws_vpc.main.cidr_block}"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
