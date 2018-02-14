@@ -121,6 +121,11 @@ resource "aws_iam_role_policy_attachment" "controller-policy-autoscaling" {
   policy_arn = "arn:aws:iam::aws:policy/AutoScalingFullAccess"
 }
 
+resource "aws_iam_role_policy_attachment" "controller-policy-ec2" {
+  role       = "${aws_iam_role.controller.name}"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
+}
+
 resource "aws_iam_role_policy_attachment" "controller-policy-ecr" {
   role       = "${aws_iam_role.controller.name}"
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
