@@ -28,12 +28,9 @@ class RunCommand:
 
     def run(self):
         snapshot = self.build_snapshot()
-        process = self.issue_command(snapshot)
-        self.display_logs({
-            'command': self.command,
-            'snapshot': snapshot
-        })
-        self.cleanup(process)
+        execution_id = self.issue_command(snapshot)
+        self.display_logs(execution_id)
+        self.cleanup(execution_id)
 
     def build_snapshot(self) -> Optional[str]:
         metadata = json.dumps({
@@ -67,17 +64,17 @@ class RunCommand:
             'snapshot': snapshot
         })
         self.check_status(response, requests.codes.accepted)
-        return response.json()
+        return response.json()['id']
 
-    def display_logs(self, process):
-        response = requests.get(self.url('commands', process['id'], 'logs'),
+    def display_logs(self, execution_id):
+        response = requests.get(self.url('commands', execution_id, 'logs'),
                                 stream=True)
         self.check_status(response, requests.codes.ok)
         for line in response.raw:
             print(line.decode('utf-8'), end='')
 
-    def cleanup(self, process):
-        response = requests.delete(self.url('commands', process['id']))
+    def cleanup(self, execution_id):
+        response = requests.delete(self.url('commands', execution_id))
         self.check_status(response, requests.codes.no_content)
 
     def check_status(self, response, expected_status):
