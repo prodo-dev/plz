@@ -1,5 +1,6 @@
 # coding=utf-8
 import base64
+from typing import Optional
 
 import boto3
 import docker
@@ -45,17 +46,21 @@ def run_command_entrypoint():
     snapshot = request.json['snapshot']
     execution_id = str(get_command_uuid())
 
-    instance = _AUTOSCALING_GROUP.get_available_instance_for_execution(
-        execution_id)
-    if instance is None:
-        response = jsonify(
-            {'error': 'Couldn\'t get an instance, please retry later'})
-        response.status_code = requests.codes.timeout
-        return response
-    # TODO: use private ip? (It's harder for testing)
-    run_command(
-        AutoScalingGroup.get_public_ip_of_instance(instance),
-        command, snapshot, execution_id)
+    if config.run_commands_locally:
+        worker_ip = None
+    else:
+        instance = _AUTOSCALING_GROUP.get_available_instance_for_execution(
+            execution_id)
+        if instance is None:
+            response = jsonify(
+                {'error': 'Couldn\'t get an instance, please retry later'})
+            response.status_code = requests.codes.timeout
+            return response
+        # TODO: use private ip? (It's harder for testing)
+        worker_ip = AutoScalingGroup.get_public_ip_of_instance(instance)
+
+    run_command(worker_ip, command, snapshot, execution_id)
+
     response = jsonify({'id': execution_id})
     response.status_code = requests.codes.accepted
     return response
@@ -138,6 +143,13 @@ def get_command_uuid() -> str:
     return str(uuid.uuid1(node=random_node))
 
 
+def maybe_prepend_ssh(subprocess_token_list: [str], worker_ip):
+    _check_ip(worker_ip, allow_none=config.run_commands_locally)
+    if config.run_commands_locally:
+        return subprocess_token_list
+    return ['ssh', f'ubuntu@{worker_ip}'] + subprocess_token_list
+
+
 def run_command(worker_ip: str, command: str, snapshot: str, execution_id: str):
     """
     Runs a command in a worker.
@@ -151,20 +163,21 @@ def run_command(worker_ip: str, command: str, snapshot: str, execution_id: str):
     :param execution_id: id of the execution of the command, used to name
            resources (like the docker container)
     """
-    _check_ip(worker_ip)
     _check_execution_id(execution_id)
     # TODO(sergio): check the snapshot
+
+    subprocess_token_list = \
+        ['docker', 'run', '-d', '--name', execution_id, snapshot,
+         'bash', '-c', command]
     # Intellij doesn't know about the encoding argument. All
     # suppresions in this function are related to that
     # (it thinks that the pipe outputs bytes)
     # noinspection PyArgumentList
-    p = subprocess.Popen([
-        'ssh', f'ubuntu@{worker_ip}',
-        'docker', 'run', '-d', snapshot, '--name', execution_id,
-        'bash', '-c', f'{shlex.quote(command)}'],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding='utf-8')
+    p = subprocess.Popen(
+            maybe_prepend_ssh(subprocess_token_list, worker_ip),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding='utf-8')
     stdout, stderr = p.communicate()
 
     # noinspection PyTypeChecker
@@ -181,9 +194,12 @@ def run_command(worker_ip: str, command: str, snapshot: str, execution_id: str):
 
 
 def get_ip_for_execution_id(execution_id):
-    return AutoScalingGroup.get_public_ip_of_instance(
-        _AUTOSCALING_GROUP.get_instance_from_execution_id(
-            execution_id))
+    if config.run_commands_locally:
+        return None
+    else:
+        return AutoScalingGroup.get_public_ip_of_instance(
+            _AUTOSCALING_GROUP.get_instance_from_execution_id(
+                execution_id))
 
 
 def is_container_id(container_id: str):
@@ -196,8 +212,13 @@ def is_container_id(container_id: str):
     return True
 
 
-def _check_ip(ip: str):
+def _check_ip(ip: Optional[str], allow_none=False):
     """Throws an exception in case of an invalid IP"""
+    if ip is None:
+        if allow_none:
+            return
+        else:
+            raise ValueError('Expected an IP, got None')
     try:
         socket.inet_aton(ip)
     except OSError:
@@ -214,12 +235,17 @@ def _check_execution_id(execution_id: str):
 def get_logs_of_execution(worker_ip: str, execution_id: str):
     p = None
     try:
-        _check_ip(worker_ip)
         _check_execution_id(execution_id)
+        # Make the redirection happen in the worker side
+        docker_command = f'docker logs {execution_id} -f 2>&1'
+        if config.run_commands_locally:
+            # Need bash -c if running locally
+            subprocess_token_list = ['bash', '-c', docker_command]
+        else:
+            subprocess_token_list = [docker_command]
+        subprocess_token_list = maybe_prepend_ssh(subprocess_token_list, worker_ip)
         p = subprocess.Popen(
-            ['bash', '-c',
-             f'ssh ubuntu@{worker_ip} ' +
-             shlex.quote(f'docker logs {execution_id} -f 2>&1')],
+            maybe_prepend_ssh(subprocess_token_list, worker_ip),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
         # Note: the docs indicate to use p.communicate() instead of
@@ -274,21 +300,20 @@ def get_logs_of_execution(worker_ip: str, execution_id: str):
 
 
 def delete_container(worker_ip: str, execution_id: str):
-    _check_ip(worker_ip)
     _check_execution_id(execution_id)
+    execution_id = shlex.quote(execution_id)
     subprocess.run(
-        ['ssh',  f'ubuntu@{worker_ip}',
-         f'docker stop {execution_id}'],
+        maybe_prepend_ssh(['docker', 'stop', execution_id], worker_ip),
         stdout=None,
         stderr=None,
         check=True)
     subprocess.run(
-        ['ssh', f'ubuntu@{worker_ip}',
-         f'docker rm {execution_id}'],
+        maybe_prepend_ssh(['docker', 'rm', execution_id], worker_ip),
         stdout=None,
         stderr=None,
         check=True)
-    _AUTOSCALING_GROUP.execution_finished(execution_id)
+    if worker_ip is not None:
+        _AUTOSCALING_GROUP.execution_finished(execution_id)
 
 
 def _stream_binary_generator(generator: Generator) -> Response:

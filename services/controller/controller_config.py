@@ -4,6 +4,7 @@ import sys
 import threading
 
 from collections import namedtuple
+from distutils.util import strtobool
 from os import environ
 
 _ARGUMENTS_SPEC = [
@@ -38,6 +39,16 @@ _ARGUMENTS_SPEC = [
             'help': 'port where the controller listens for HTTP requests'
         },
         'default': 8080
+    },
+    {
+        'name': 'run_commands_locally',
+        'spec': {
+            'action': 'store_const',
+            'const': True,
+            'help': 'don\'t spawn workers, run the commands locally'
+        },
+        'from_string': strtobool,
+        'default': False
     }
 
 ]
@@ -72,8 +83,10 @@ def _create_config():
         if val is None:
             val = environ.get(_name_to_env_variable(spec['name']), None)
             if val is not None:
-                # noinspection PyCallingNonCallable
-                val = spec['spec']['type'](val)
+                if 'from_string' in spec:
+                    val = spec['from_string'](val)
+                elif 'type' in spec['spec']:
+                    val = spec['spec']['type'](val)
         if val is None:
             if 'default' in spec:
                 val = spec['default']
