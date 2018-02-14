@@ -13,6 +13,10 @@ class RunCommand:
     def prepare_argument_parser(parser):
         parser.add_argument('command')
         # TODO(sergio): grab user and project from somewhere
+        # These shouldn't be switches are they are mandatory,
+        # but later we are gonna retrieve them from a
+        # config file and these command line switches are gonna
+        # disappear
         parser.add_argument('--user')
         parser.add_argument('--project')
         # TODO(sergio): gather the files and zip instead of passing
@@ -22,6 +26,8 @@ class RunCommand:
     def __init__(self, host, port, command, user, project, bz2_file):
         self.prefix = f'http://{host}:{port}'
         self.command = command
+        if user is None or project is None or bz2_file is None:
+            raise ValueError('Need to specify user, project and bz2_file')
         self.user = user
         self.project = project
         self.bz2_file = bz2_file
