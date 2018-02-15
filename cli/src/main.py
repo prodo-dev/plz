@@ -1,4 +1,7 @@
 import argparse
+import json
+from typing import Optional
+
 import requests
 import sys
 
@@ -9,32 +12,75 @@ class RunCommand:
     @staticmethod
     def prepare_argument_parser(parser):
         parser.add_argument('command')
+        # TODO(sergio): grab user and project from somewhere
+        # These shouldn't be switches are they are mandatory,
+        # but later we are gonna retrieve them from a
+        # config file and these command line switches are gonna
+        # disappear
+        parser.add_argument('--user')
+        parser.add_argument('--project')
+        # TODO(sergio): gather the files and zip instead of passing
+        # the parameter
+        parser.add_argument('--bz2-file')
 
-    def __init__(self, host, port, command):
+    def __init__(self, host, port, command, user, project, bz2_file):
         self.prefix = f'http://{host}:{port}'
         self.command = command
+        if user is None or project is None or bz2_file is None:
+            raise ValueError('Need to specify user, project and bz2_file')
+        self.user = user
+        self.project = project
+        self.bz2_file = bz2_file
 
     def run(self):
-        process = self.issue_command()
-        self.display_logs(process)
-        self.cleanup(process)
+        snapshot = self.build_snapshot()
+        execution_id = self.issue_command(snapshot)
+        self.display_logs(execution_id)
+        self.cleanup(execution_id)
 
-    def issue_command(self):
+    def build_snapshot(self) -> Optional[str]:
+        metadata = json.dumps({
+            'user': self.user,
+            'project': self.project
+        }).encode('utf-8')
+        with open(self.bz2_file, 'rb') as f:
+            file_content = f.read()
+        request_data = b'\n'.join([metadata, file_content])
+        response = requests.post(
+            self.url('snapshots'), request_data, stream=True)
+        self.check_status(response, requests.codes.ok)
+        error = False
+        snapshot = None
+        for json_bytes in response.raw:
+            json_resp = json.loads(str(json_bytes, 'utf-8'))
+            if 'stream' in json_resp:
+                print(json_resp['stream'], end='')
+            if 'error' in json_resp:
+                error = True
+                print(json_resp['error'], end='', file=sys.stdout)
+            if 'aux' in json_resp:
+                snapshot = json_resp['aux']['ID'][len('sha256:'):]
+        if error:
+            return None
+        return snapshot
+
+    def issue_command(self, snapshot):
         response = requests.post(self.url('commands'), json={
             'command': self.command,
+            'snapshot': snapshot
         })
         self.check_status(response, requests.codes.accepted)
-        return response.json()
+        return response.json()['id']
 
-    def display_logs(self, process):
-        response = requests.get(self.url('commands', process['id'], 'logs'),
+    def display_logs(self, execution_id):
+        response = requests.get(self.url('commands', execution_id, 'logs'),
                                 stream=True)
         self.check_status(response, requests.codes.ok)
         for line in response.raw:
             print(line.decode('utf-8'), end='')
 
-    def cleanup(self, process):
-        response = requests.delete(self.url('commands', process['id']))
+    def cleanup(self, execution_id):
+        response = requests.delete(self.url('commands', execution_id))
         self.check_status(response, requests.codes.no_content)
 
     def check_status(self, response, expected_status):
