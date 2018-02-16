@@ -6,6 +6,10 @@
     - name: Log in to AWS ECR
       shell: |
         eval "$(aws ecr get-login --no-include-email --region {{ aws_region }})"
+    - name: Stop the container
+      docker_container:
+        name: controller
+        state: absent
     - name: Start the container
       docker_container:
         name: controller
