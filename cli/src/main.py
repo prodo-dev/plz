@@ -17,17 +17,15 @@ class RunCommand:
         # but later we are gonna retrieve them from a
         # config file and these command line switches are gonna
         # disappear
-        parser.add_argument('--user')
-        parser.add_argument('--project')
+        parser.add_argument('--user', required=True)
+        parser.add_argument('--project', required=True)
         # TODO(sergio): gather the files and zip instead of passing
         # the parameter
-        parser.add_argument('--bz2-file')
+        parser.add_argument('--bz2-file', required=True)
 
     def __init__(self, host, port, command, user, project, bz2_file):
         self.prefix = f'http://{host}:{port}'
         self.command = command
-        if user is None or project is None or bz2_file is None:
-            raise ValueError('Need to specify user, project and bz2_file')
         self.user = user
         self.project = project
         self.bz2_file = bz2_file
