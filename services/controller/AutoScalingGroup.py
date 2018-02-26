@@ -22,13 +22,12 @@ class AutoScalingGroup:
     _name_to_group_lock = threading.RLock()
 
     def __init__(self):
-        # This controlled can't be called. We use a private subclass
-        # when creating instances. Members are defined here so that
-        # the IDE knows about them.
+        # This constructor can't be called. We use a private subclass when
+        # creating instances. Members are defined here so that the IDE knows
+        # about them.
         self.name = None
         self.auto_scaling_client = None
         self.ec2_client = None
-        # TODO: lock decorator
         self.lock = None
         raise TypeError(f'Instances of {AutoScalingGroup.__name__ } '
                         'can be created only via get_group')
@@ -104,8 +103,11 @@ class AutoScalingGroup:
             self.get_instance_from_execution_id(execution_id)['InstanceId'], '')
 
     def get_available_instance_for_execution(
-            self, execution_id: str, max_trials=5,
-            wait_for_seconds=5) -> Optional[dict]:
+            self,
+            execution_id: str,
+            max_trials: int = 30,
+            wait_for_seconds: int = 10) \
+            -> Optional[dict]:
         """
         Gets an available instance for the execution with the given id.
 
@@ -117,20 +119,12 @@ class AutoScalingGroup:
         :return: the dict of the instance, as returned by boto, or None
                  if unsuccessful
         """
+        tries_remaining = max_trials
         with self.lock:
             did_increase_capacity = False
-            retry_counter = 0
-            while retry_counter < max_trials:
-                instance = self._get_available_instance()
-                if instance is not None:
-                    self.ec2_client.create_tags(
-                        Resources=[instance['InstanceId']],
-                        Tags=[{'Key': _EXECUTION_ID_TAG,
-                               'Value': execution_id}]
-                    )
-                    # TODO: if did_increase capacity, spawn a thread before
-                    # returning, to ensure there will be a spare one next time
-                    return instance
+            while tries_remaining > 0:
+                tries_remaining -= 1
+
                 if not did_increase_capacity:
                     try:
                         self._increase_desired_capacity()
@@ -144,10 +138,22 @@ class AutoScalingGroup:
                         elif error_code == 'ValidationError':
                             raise MaxNumberOfInstancesReached(e.args)
                         else:
-                            raise e
+                            raise
+
                 time.sleep(wait_for_seconds)
-                retry_counter += 1
-            return None
+
+                instance = self._get_available_instance()
+                if instance is not None:
+                    self.ec2_client.create_tags(
+                        Resources=[instance['InstanceId']],
+                        Tags=[
+                            {'Key': _EXECUTION_ID_TAG,
+                             'Value': execution_id}
+                        ]
+                    )
+                    return instance
+
+        return None
 
 
 class _AutoScalingGroup(AutoScalingGroup):
