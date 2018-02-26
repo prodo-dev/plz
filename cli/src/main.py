@@ -1,9 +1,9 @@
 import argparse
 import json
+import sys
 from typing import Optional
 
 import requests
-import sys
 
 
 class RunCommand:
@@ -31,10 +31,11 @@ class RunCommand:
         self.bz2_file = bz2_file
 
     def run(self):
-        snapshot = self.build_snapshot()
-        execution_id = self.issue_command(snapshot)
-        self.display_logs(execution_id)
-        self.cleanup(execution_id)
+        snapshot_id = self.build_snapshot()
+        if snapshot_id:
+            execution_id = self.issue_command(snapshot_id)
+            self.display_logs(execution_id)
+            self.cleanup(execution_id)
 
     def build_snapshot(self) -> Optional[str]:
         metadata = json.dumps({
@@ -48,19 +49,19 @@ class RunCommand:
             self.url('snapshots'), request_data, stream=True)
         self.check_status(response, requests.codes.ok)
         error = False
-        snapshot = None
+        snapshot_id = None
         for json_bytes in response.raw:
             json_resp = json.loads(str(json_bytes, 'utf-8'))
             if 'stream' in json_resp:
                 print(json_resp['stream'], end='')
             if 'error' in json_resp:
                 error = True
-                print(json_resp['error'], end='', file=sys.stdout)
+                print(json_resp['error'], end='')
             if 'aux' in json_resp:
-                snapshot = json_resp['aux']['ID'][len('sha256:'):]
+                snapshot_id = json_resp['aux']['ID'][len('sha256:'):]
         if error:
             return None
-        return snapshot
+        return snapshot_id
 
     def issue_command(self, snapshot):
         response = requests.post(self.url('commands'), json={

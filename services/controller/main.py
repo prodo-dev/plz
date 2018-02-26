@@ -1,26 +1,27 @@
 # coding=utf-8
 
 import base64
-import boto3
-import docker
 import json
-import itertools
 import logging
 import random
-import requests
 import select
 import shlex
 import socket
 import subprocess
 import time
+import traceback
 import uuid
+from typing import Callable, Iterator, Optional, TypeVar
 
-from collections import Generator
+import boto3
+import docker
+import requests
 from flask import Flask, Response, jsonify, request, stream_with_context
-from typing import Optional
 
 from AutoScalingGroup import AutoScalingGroup
 from controller_config import config
+
+T = TypeVar('T')
 
 _COMMANDS_ROUTE = 'commands'
 _LOGS_SUBROUTE = 'logs'
@@ -142,7 +143,10 @@ def create_snapshot():
         encoding='bz2',
         rm=True,
         tag=tag)
-    return _binary_stream(_eager(response))
+    return _binary_stream(_handle_lazy_exceptions(
+        response,
+        formatter=lambda message: json.dumps({'error': message})
+                                      .encode('utf-8')))
 
 
 def get_command_uuid() -> str:
@@ -159,7 +163,8 @@ def maybe_prepend_ssh(subprocess_token_list: [str], worker_ip):
     return ['ssh', f'ubuntu@{worker_ip}'] + subprocess_token_list
 
 
-def run_command(worker_ip: str, command: str, snapshot: str, execution_id: str):
+def run_command(worker_ip: str, command: str, snapshot: str,
+                execution_id: str):
     """
     Runs a command in a worker.
 
@@ -326,15 +331,20 @@ def delete_container(worker_ip: str, execution_id: str):
         _AUTOSCALING_GROUP.execution_finished(execution_id)
 
 
-def _binary_stream(generator: Generator,
+def _binary_stream(generator: Iterator[bytes],
                    mimetype: str = 'application/octet-stream') -> Response:
     return Response(stream_with_context(generator), mimetype=mimetype)
 
 
-def _eager(generator: Generator) -> Generator:
-    head = next(generator)
-    tail = generator
-    return itertools.chain(iter([head]), tail)
+def _handle_lazy_exceptions(generator: Iterator[T],
+                            formatter: Callable[[str], T]) -> Iterator[T]:
+    # noinspection PyBroadException
+    try:
+        for value in generator:
+            yield value
+    except Exception as e:
+        yield formatter(str(e) + '\n')
+        traceback.print_exc()
 
 
 class ControllerException(Exception):
