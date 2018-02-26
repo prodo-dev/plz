@@ -1,4 +1,5 @@
 # coding=utf-8
+
 import argparse
 import sys
 import threading
@@ -28,7 +29,8 @@ _ARGUMENTS_SPEC = [
         'name': 'docker_host',
         'spec': {
             'type': str,
-            'help': 'url pointing at the docker server. Example: tcp://127.0.0.1:1234'
+            'help': 'url pointing at the docker server. '
+                    'Example: tcp://127.0.0.1:1234'
         },
         'default': None
     },
@@ -54,12 +56,12 @@ _ARGUMENTS_SPEC = [
 ]
 _CONFIG_LOCK = threading.Lock()
 
-
 Config = namedtuple('Config', [spec['name'] for spec in _ARGUMENTS_SPEC])
 
 
 def _create_arg_parser():
-    arg_parser = argparse.ArgumentParser(description='Controller for batman workers')
+    arg_parser = argparse.ArgumentParser(
+        description='Controller for batman workers')
     for spec in _ARGUMENTS_SPEC:
         arg_parser.add_argument(f'--{_name_to_cli_parameter(spec["name"])}',
                                 **spec['spec'])
@@ -91,8 +93,9 @@ def _create_config():
             if 'default' in spec:
                 val = spec['default']
             else:
-                raise KeyError('Parameter wasn\'t specified and there\'s no default: '
-                               f'--{_name_to_cli_parameter(spec["name"])}')
+                raise KeyError(
+                    'Parameter wasn\'t specified and there\'s no default: '
+                    f'--{_name_to_cli_parameter(spec["name"])}')
         cfg[spec['name']] = val
     return Config(**cfg)
 

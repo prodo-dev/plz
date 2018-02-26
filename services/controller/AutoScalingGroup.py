@@ -1,4 +1,5 @@
 # coding=utf-8
+
 import boto3
 import threading
 import time
@@ -17,7 +18,6 @@ class MaxNumberOfInstancesReached(Exception):
 
 
 class AutoScalingGroup:
-
     _name_to_group = {}
     _name_to_group_lock = threading.RLock()
 

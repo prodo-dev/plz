@@ -110,6 +110,7 @@ def create_snapshot():
     #     | http localhost:5000/snapshots
     # Create a timestamp in milliseconds
     timestamp = str(int(time.time() * 1000))
+
     # Read a string with a json object until a newline is found.
     # Using the utf-8 decoder from the codecs module fails as it's decoding
     # beyond the new line (even using readline(). Probably it does a read()
@@ -126,9 +127,14 @@ def create_snapshot():
     metadata_str = str(b''.join(json_bytes), 'utf-8')
     metadata = json.loads(metadata_str)
     tag = f'{metadata["user"]}-{metadata["project"]}:{timestamp}'
+
+    # Authenticate with AWS ECR
+    ecr_auth_data = _ECR_CLIENT.get_authorization_token()['authorizationData']
+    ecr_encoded_token = ecr_auth_data[0]['authorizationToken']
+    ecr_token = base64.b64decode(ecr_encoded_token).decode('utf-8')
+    ecr_user, ecr_password = ecr_token.split(':')
+
     # Pass the rest of the stream to docker
-    ecr_token = _ECR_CLIENT.get_authorization_token()['authorizationData'][0]['authorizationToken']
-    ecr_user, ecr_password = str(base64.b64decode(ecr_token), 'utf-8').split(':')
     _DOCKER_CLIENT.login(ecr_user, ecr_password, registry=config.aws_project)
     response = _DOCKER_CLIENT.build(
         fileobj=request.stream,
@@ -177,10 +183,10 @@ def run_command(worker_ip: str, command: str, snapshot: str, execution_id: str):
     # (it thinks that the pipe outputs bytes)
     # noinspection PyArgumentList
     p = subprocess.Popen(
-            maybe_prepend_ssh(subprocess_token_list, worker_ip),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            encoding='utf-8')
+        maybe_prepend_ssh(subprocess_token_list, worker_ip),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        encoding='utf-8')
     stdout, stderr = p.communicate()
 
     # noinspection PyTypeChecker
@@ -246,7 +252,8 @@ def get_logs_of_execution(worker_ip: str, execution_id: str):
             subprocess_token_list = ['bash', '-c', docker_command]
         else:
             subprocess_token_list = [docker_command]
-        subprocess_token_list = maybe_prepend_ssh(subprocess_token_list, worker_ip)
+        subprocess_token_list = \
+            maybe_prepend_ssh(subprocess_token_list, worker_ip)
         p = subprocess.Popen(
             maybe_prepend_ssh(subprocess_token_list, worker_ip),
             stdout=subprocess.PIPE,
@@ -285,7 +292,7 @@ def get_logs_of_execution(worker_ip: str, execution_id: str):
                         f'Exit code: [{p.returncode}]\n'
                         f'Stdout is [{out}]\n'
                         f'Stderr is [{stderr}]\n')
-            yield(out)
+            yield out
         # Get the return code
         try:
             p.communicate(timeout=0.01)
