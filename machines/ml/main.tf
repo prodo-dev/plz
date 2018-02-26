@@ -85,7 +85,7 @@ resource "aws_key_pair" "batman" {
 data "aws_ami" "controller-ami" {
   filter {
     name   = "name"
-    values = ["batman-controller-${var.ami_tag}"]
+    values = ["batman-build-${var.ami_tag}"]
   }
 }
 
@@ -128,51 +128,6 @@ resource "aws_iam_role_policy_attachment" "controller-policy-ec2" {
 
 resource "aws_iam_role_policy_attachment" "controller-policy-ecr" {
   role       = "${aws_iam_role.controller.name}"
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-}
-
-output "controller-host" {
-  value = "${aws_instance.controller.public_dns}"
-}
-
-///
-
-data "aws_ami" "build-ami" {
-  filter {
-    name   = "name"
-    values = ["batman-build-${var.ami_tag}"]
-  }
-}
-
-resource "aws_instance" "build" {
-  subnet_id                   = "${aws_subnet.main.id}"
-  instance_type               = "t2.medium"
-  ami                         = "${data.aws_ami.build-ami.id}"
-  vpc_security_group_ids      = ["${data.aws_security_group.default.id}", "${data.aws_security_group.ssh.id}"]
-  key_name                    = "batman-${lower(var.environment)}-key"
-  associate_public_ip_address = true
-  iam_instance_profile        = "${aws_iam_instance_profile.build.name}"
-
-  tags {
-    Name        = "Batman ${var.environment} Build"
-    Environment = "${var.environment}"
-    Owner       = "Infrastructure"
-  }
-}
-
-resource "aws_iam_instance_profile" "build" {
-  name = "batman-${lower(var.environment)}-build"
-  role = "${aws_iam_role.build.name}"
-}
-
-resource "aws_iam_role" "build" {
-  name = "batman-${lower(var.environment)}-build"
-
-  assume_role_policy = "${var.ec2_role}"
-}
-
-resource "aws_iam_role_policy_attachment" "build-policy-ecr" {
-  role       = "${aws_iam_role.build.name}"
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
 }
 
@@ -188,19 +143,19 @@ resource "aws_ebs_volume" "build-cache" {
 }
 
 resource "aws_volume_attachment" "build-cache-attachment" {
-  instance_id = "${aws_instance.build.id}"
+  instance_id = "${aws_instance.controller.id}"
   volume_id   = "${aws_ebs_volume.build-cache.id}"
   device_name = "/dev/sdx"
 
   skip_destroy = true
 
   provisioner "local-exec" {
-    command = "./on-host ubuntu@${aws_instance.build.public_dns} ./initialize-cache /dev/xvdx"
+    command = "./on-host ubuntu@${aws_instance.controller.public_dns} ./initialize-cache /dev/xvdx"
   }
 }
 
-output "build-host" {
-  value = "${aws_instance.build.public_dns}"
+output "controller-host" {
+  value = "${aws_instance.controller.public_dns}"
 }
 
 ///

@@ -22,4 +22,6 @@
           PORT: "{{ service_port }}"
         published_ports:
           - "{{ service_port }}:{{ service_port }}"
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
         restart_policy: unless-stopped
