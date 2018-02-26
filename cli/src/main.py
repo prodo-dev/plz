@@ -7,20 +7,17 @@ import requests
 
 
 class RunCommand:
-    '''Run an arbitrary command on a remote machine.'''
+    """Run an arbitrary command on a remote machine."""
 
     @staticmethod
     def prepare_argument_parser(parser):
         parser.add_argument('command')
         # TODO(sergio): grab user and project from somewhere
-        # These shouldn't be switches are they are mandatory,
-        # but later we are gonna retrieve them from a
-        # config file and these command line switches are gonna
-        # disappear
+        # These shouldn't be switches as they are mandatory, but later we'll
+        # retrieve them from a config file, so they'll disappear
         parser.add_argument('--user', required=True)
         parser.add_argument('--project', required=True)
-        # TODO(sergio): gather the files and zip instead of passing
-        # the parameter
+        # TODO(sergio): build the Docker context as part of the command
         parser.add_argument('--bz2-file', required=True)
 
     def __init__(self, host, port, command, user, project, bz2_file):
@@ -47,18 +44,18 @@ class RunCommand:
         request_data = b'\n'.join([metadata, file_content])
         response = requests.post(
             self.url('snapshots'), request_data, stream=True)
-        self.check_status(response, requests.codes.ok)
+        check_status(response, requests.codes.ok)
         error = False
         snapshot_id = None
         for json_bytes in response.raw:
-            json_resp = json.loads(str(json_bytes, 'utf-8'))
-            if 'stream' in json_resp:
-                print(json_resp['stream'], end='')
-            if 'error' in json_resp:
+            data = json.loads(json_bytes.decode('utf-8'))
+            if 'stream' in data:
+                print(data['stream'].rstrip())
+            if 'error' in data:
                 error = True
-                print(json_resp['error'], end='')
-            if 'aux' in json_resp:
-                snapshot_id = json_resp['aux']['ID'][len('sha256:'):]
+                print(data['error'].rstrip())
+            if 'aux' in data:
+                snapshot_id = data['aux']['ID'][len('sha256:'):]
         if error:
             return None
         return snapshot_id
@@ -68,23 +65,19 @@ class RunCommand:
             'command': self.command,
             'snapshot': snapshot
         })
-        self.check_status(response, requests.codes.accepted)
+        check_status(response, requests.codes.accepted)
         return response.json()['id']
 
     def display_logs(self, execution_id):
         response = requests.get(self.url('commands', execution_id, 'logs'),
                                 stream=True)
-        self.check_status(response, requests.codes.ok)
+        check_status(response, requests.codes.ok)
         for line in response.raw:
             print(line.decode('utf-8'), end='')
 
     def cleanup(self, execution_id):
         response = requests.delete(self.url('commands', execution_id))
-        self.check_status(response, requests.codes.no_content)
-
-    def check_status(self, response, expected_status):
-        if response.status_code != expected_status:
-            raise RequestException(response)
+        check_status(response, requests.codes.no_content)
 
     def url(self, *path_segments):
         return self.prefix + '/' + '/'.join(path_segments)
@@ -105,6 +98,11 @@ class RequestException(Exception):
 COMMANDS = {
     'run': RunCommand,
 }
+
+
+def check_status(response, expected_status):
+    if response.status_code != expected_status:
+        raise RequestException(response)
 
 
 def main(args):
