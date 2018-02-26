@@ -1,10 +1,10 @@
 # coding=utf-8
-import base64
-from typing import Optional
 
+import base64
 import boto3
 import docker
 import json
+import itertools
 import logging
 import random
 import requests
@@ -17,6 +17,7 @@ import uuid
 
 from collections import Generator
 from flask import Flask, Response, jsonify, request, stream_with_context
+from typing import Optional
 
 from AutoScalingGroup import AutoScalingGroup
 from controller_config import config
@@ -29,9 +30,7 @@ _LOGGER.info(f'It is: {config.docker_host}')
 _ECR_CLIENT = boto3.client('ecr')
 _DOCKER_CLIENT = docker.APIClient(base_url=config.docker_host)
 
-
 app = Flask(__name__)
-
 
 # TODO: set autoscaling group properly
 _AUTOSCALING_GROUP = AutoScalingGroup.get_group(config.aws_autoscaling_group)
@@ -71,9 +70,9 @@ def run_command_entrypoint():
 def get_output_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/commands/some-id/logs
-    return _stream_binary_generator(
-        get_logs_of_execution(
-            get_ip_for_execution_id(execution_id), execution_id))
+    response = get_logs_of_execution(
+        get_ip_for_execution_id(execution_id), execution_id)
+    return _binary_stream(response)
 
 
 @app.route(f'/{_COMMANDS_ROUTE}/<execution_id>/{_LOGS_SUBROUTE}/stdout')
@@ -132,8 +131,12 @@ def create_snapshot():
     ecr_user, ecr_password = str(base64.b64decode(ecr_token), 'utf-8').split(':')
     _DOCKER_CLIENT.login(ecr_user, ecr_password, registry=config.aws_project)
     response = _DOCKER_CLIENT.build(
-        fileobj=request.stream, custom_context=True, encoding='bz2', rm=True, tag=tag)
-    return _stream_binary_generator(response)
+        fileobj=request.stream,
+        custom_context=True,
+        encoding='bz2',
+        rm=True,
+        tag=tag)
+    return _binary_stream(_eager(response))
 
 
 def get_command_uuid() -> str:
@@ -316,9 +319,15 @@ def delete_container(worker_ip: str, execution_id: str):
         _AUTOSCALING_GROUP.execution_finished(execution_id)
 
 
-def _stream_binary_generator(generator: Generator) -> Response:
-    return Response(stream_with_context(generator),
-                    mimetype='application/octet-stream')
+def _binary_stream(generator: Generator,
+                   mimetype: str = 'application/octet-stream') -> Response:
+    return Response(stream_with_context(generator), mimetype=mimetype)
+
+
+def _eager(generator: Generator) -> Generator:
+    head = next(generator)
+    tail = generator
+    return itertools.chain(iter([head]), tail)
 
 
 class ControllerException(Exception):
