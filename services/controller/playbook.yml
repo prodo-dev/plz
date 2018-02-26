@@ -3,6 +3,12 @@
   remote_user: root
   become: yes
   tasks:
+    - name: Copy the SSH private key
+      copy:
+        src: "{{ ssh_private_key_file }}"
+        dest: /home/ubuntu/.ssh/batman.privkey
+        owner: ubuntu
+        mode: 0600
     - name: Log in to AWS ECR
       shell: |
         eval "$(aws ecr get-login --no-include-email --region {{ aws_region }})"
@@ -24,4 +30,5 @@
           - "{{ service_port }}:{{ service_port }}"
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
+          - /home/ubuntu/.ssh/batman.privkey:/root/.ssh/id_rsa:ro
         restart_policy: unless-stopped

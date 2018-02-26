@@ -100,7 +100,8 @@ class AutoScalingGroup:
 
     def execution_finished(self, execution_id: str):
         self._set_execution_id_tag(
-            self.get_instance_from_execution_id(execution_id)['InstanceId'], '')
+            self.get_instance_from_execution_id(execution_id)['InstanceId'],
+            '')
 
     def get_available_instance_for_execution(
             self,

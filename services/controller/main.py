@@ -153,7 +153,12 @@ def maybe_prepend_ssh(subprocess_token_list: [str], worker_ip):
     _check_ip(worker_ip, allow_none=config.run_commands_locally)
     if config.run_commands_locally:
         return subprocess_token_list
-    return ['ssh', f'ubuntu@{worker_ip}'] + subprocess_token_list
+    return \
+        ['ssh',
+         '-o', 'StrictHostKeyChecking=no',
+         '-o', 'UserKnownHostsFile=/dev/null',
+         f'ubuntu@{worker_ip}'] \
+        + subprocess_token_list
 
 
 def run_command(worker_ip: str, command: str, snapshot: str,
