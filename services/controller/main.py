@@ -9,7 +9,6 @@ import shlex
 import socket
 import subprocess
 import time
-import traceback
 import uuid
 from typing import Callable, Iterator, Optional, TypeVar
 
@@ -23,21 +22,15 @@ from controller_config import config
 
 T = TypeVar('T')
 
-_COMMANDS_ROUTE = 'commands'
-_LOGS_SUBROUTE = 'logs'
-
-_LOGGER = logging.getLogger('controller')
-_LOGGER.info(f'It is: {config.docker_host}')
-_ECR_CLIENT = boto3.client('ecr')
-_DOCKER_CLIENT = docker.APIClient(base_url=config.docker_host)
+log = logging.getLogger('controller')
+ecr_client = boto3.client('ecr')
+docker_client = docker.APIClient(base_url=config.docker_host)
+autoscaling_group = AutoScalingGroup.get_group(config.aws_autoscaling_group)
 
 app = Flask(__name__)
 
-# TODO: set autoscaling group properly
-_AUTOSCALING_GROUP = AutoScalingGroup.get_group(config.aws_autoscaling_group)
 
-
-@app.route(f'/{_COMMANDS_ROUTE}', methods=['POST'])
+@app.route(f'/commands', methods=['POST'])
 def run_command_entrypoint():
     # Test with:
     # curl -X POST -d '{"command": "ls /" }'
@@ -49,7 +42,7 @@ def run_command_entrypoint():
     if config.run_commands_locally:
         worker_ip = None
     else:
-        instance = _AUTOSCALING_GROUP.get_available_instance_for_execution(
+        instance = autoscaling_group.get_available_instance_for_execution(
             execution_id)
         if instance is None:
             response = jsonify(
@@ -66,7 +59,7 @@ def run_command_entrypoint():
     return response
 
 
-@app.route(f'/{_COMMANDS_ROUTE}/<execution_id>/{_LOGS_SUBROUTE}',
+@app.route(f'/commands/<execution_id>/logs',
            methods=['GET'])
 def get_output_entrypoint(execution_id):
     # Test with:
@@ -76,7 +69,7 @@ def get_output_entrypoint(execution_id):
     return _binary_stream(response)
 
 
-@app.route(f'/{_COMMANDS_ROUTE}/<execution_id>/{_LOGS_SUBROUTE}/stdout')
+@app.route(f'/commands/<execution_id>/logs/stdout')
 def get_stdout_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/commands/some-id/logs/stderr
@@ -84,7 +77,7 @@ def get_stdout_entrypoint(execution_id):
     raise NotImplemented(execution_id)
 
 
-@app.route(f'/{_COMMANDS_ROUTE}/<execution_id>/{_LOGS_SUBROUTE}/stderr')
+@app.route(f'/commands/<execution_id>/logs/stderr')
 def get_stderr_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/commands/some-id/logs/stderr
@@ -92,7 +85,7 @@ def get_stderr_entrypoint(execution_id):
     raise NotImplemented(execution_id)
 
 
-@app.route(f'/{_COMMANDS_ROUTE}/<execution_id>',
+@app.route(f'/commands/<execution_id>',
            methods=['DELETE'])
 def delete_process(execution_id):
     # Test with:
@@ -130,14 +123,14 @@ def create_snapshot():
     tag = f'{metadata["user"]}-{metadata["project"]}:{timestamp}'
 
     # Authenticate with AWS ECR
-    ecr_auth_data = _ECR_CLIENT.get_authorization_token()['authorizationData']
+    ecr_auth_data = ecr_client.get_authorization_token()['authorizationData']
     ecr_encoded_token = ecr_auth_data[0]['authorizationToken']
     ecr_token = base64.b64decode(ecr_encoded_token).decode('utf-8')
     ecr_user, ecr_password = ecr_token.split(':')
 
     # Pass the rest of the stream to docker
-    _DOCKER_CLIENT.login(ecr_user, ecr_password, registry=config.aws_project)
-    response = _DOCKER_CLIENT.build(
+    docker_client.login(ecr_user, ecr_password, registry=config.aws_project)
+    response = docker_client.build(
         fileobj=request.stream,
         custom_context=True,
         encoding='bz2',
@@ -204,7 +197,7 @@ def run_command(worker_ip: str, command: str, snapshot: str,
             f'Exit code: [{p.returncode}]\n'
             f'Stdout is [{stdout}]\n'
             f'Stderr is [{stderr}]\n')
-    _LOGGER.info(f'Container id is: {container_id}')
+    log.info(f'Container id is: {container_id}')
 
 
 def get_ip_for_execution_id(execution_id):
@@ -212,8 +205,7 @@ def get_ip_for_execution_id(execution_id):
         return None
     else:
         return AutoScalingGroup.get_public_ip_of_instance(
-            _AUTOSCALING_GROUP.get_instance_from_execution_id(
-                execution_id))
+            autoscaling_group.get_instance_from_execution_id(execution_id))
 
 
 def is_container_id(container_id: str):
@@ -328,7 +320,7 @@ def delete_container(worker_ip: str, execution_id: str):
         stderr=None,
         check=True)
     if worker_ip is not None:
-        _AUTOSCALING_GROUP.execution_finished(execution_id)
+        autoscaling_group.execution_finished(execution_id)
 
 
 def _binary_stream(generator: Iterator[bytes],
@@ -344,7 +336,7 @@ def _handle_lazy_exceptions(generator: Iterator[T],
             yield value
     except Exception as e:
         yield formatter(str(e) + '\n')
-        traceback.print_exc()
+        log.exception('Exception in response generator')
 
 
 class ControllerException(Exception):
