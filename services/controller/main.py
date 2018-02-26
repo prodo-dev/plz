@@ -55,7 +55,7 @@ def run_command_entrypoint():
     run_command(worker_ip, command, snapshot, execution_id)
 
     response = jsonify({'id': execution_id})
-    response.status_code = requests.codes.accepted
+    response.status_code = requests.codes.ok
     return response
 
 

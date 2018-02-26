@@ -33,8 +33,10 @@ class RunCommand:
             execution_id = self.issue_command(snapshot_id)
             self.display_logs(execution_id)
             self.cleanup(execution_id)
+            log_info('Done and dusted.')
 
     def build_snapshot(self) -> Optional[str]:
+        log_info('Building the program snapshot')
         metadata = json.dumps({
             'user': self.user,
             'project': self.project
@@ -53,6 +55,7 @@ class RunCommand:
                 print(data['stream'].rstrip())
             if 'error' in data:
                 error = True
+                log_error('The snapshot was not successfully created.')
                 print(data['error'].rstrip())
             if 'aux' in data:
                 snapshot_id = data['aux']['ID'][len('sha256:'):]
@@ -61,14 +64,16 @@ class RunCommand:
         return snapshot_id
 
     def issue_command(self, snapshot):
+        log_info('Issuing the command on a new box')
         response = requests.post(self.url('commands'), json={
             'command': self.command,
             'snapshot': snapshot
         })
-        check_status(response, requests.codes.accepted)
+        check_status(response, requests.codes.ok)
         return response.json()['id']
 
     def display_logs(self, execution_id):
+        log_info('Streaming logs...')
         response = requests.get(self.url('commands', execution_id, 'logs'),
                                 stream=True)
         check_status(response, requests.codes.ok)
@@ -76,6 +81,7 @@ class RunCommand:
             print(line.decode('utf-8'), end='')
 
     def cleanup(self, execution_id):
+        log_info('Cleaning up all detritus.')
         response = requests.delete(self.url('commands', execution_id))
         check_status(response, requests.codes.no_content)
 
@@ -103,6 +109,26 @@ COMMANDS = {
 def check_status(response, expected_status):
     if response.status_code != expected_status:
         raise RequestException(response)
+
+
+def log_info(message):
+    if sys.stdout.isatty():
+        print('\x1b[33m', end='')
+    print('=> ', end='')
+    if sys.stdout.isatty():
+        print('\x1b[0m', end='')
+        print('\x1b[32m', end='')
+    print(message, end='')
+    if sys.stdout.isatty():
+        print('\x1b[0m')
+
+
+def log_error(message):
+    if sys.stdout.isatty():
+        print('\x1b[31m', end='')
+    print('❗', message, end='')
+    if sys.stdout.isatty():
+        print('\x1b[0m')
 
 
 def main(args):
