@@ -1,11 +1,11 @@
 # coding=utf-8
 
-import boto3
 import threading
 import time
+from typing import Iterator, Optional, Union
 
+import boto3
 from botocore.exceptions import ClientError
-from typing import Optional
 
 
 class MaxNumberOfInstancesReached(Exception):
@@ -102,7 +102,7 @@ class AutoScalingGroup:
             execution_id: str,
             max_trials: int = 30,
             wait_for_seconds: int = 10) \
-            -> Optional[dict]:
+            -> Iterator[Union[str, dict]]:
         """
         Gets an available instance for the execution with the given id.
 
@@ -124,6 +124,7 @@ class AutoScalingGroup:
                     try:
                         self._increase_desired_capacity()
                         did_increase_capacity = True
+                        yield 'allocated'
                     except ClientError as e:
                         error_code = e.response['Error']['Code']
                         # Might fail if there's a scaling event
@@ -138,7 +139,9 @@ class AutoScalingGroup:
                 time.sleep(wait_for_seconds)
 
                 instance = self._get_available_instance()
+
                 if instance is not None:
+                    yield 'started'
                     self.ec2_client.create_tags(
                         Resources=[instance['InstanceId']],
                         Tags=[
@@ -146,6 +149,7 @@ class AutoScalingGroup:
                              'Value': execution_id}
                         ]
                     )
-                    return instance
+                    yield instance
+                    break
 
-        return None
+                yield 'pending'

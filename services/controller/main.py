@@ -10,7 +10,7 @@ import socket
 import subprocess
 import time
 import uuid
-from typing import Callable, Iterator, Optional, TypeVar
+from typing import Callable, Iterator, Optional, TypeVar, Union
 
 import boto3
 import docker
@@ -39,23 +39,33 @@ def run_command_entrypoint():
     snapshot = request.json['snapshot']
     execution_id = str(get_command_uuid())
 
-    if config.run_commands_locally:
-        worker_ip = None
-    else:
-        instance = autoscaling_group.get_available_instance_for_execution(
-            execution_id)
-        if instance is None:
-            response = jsonify(
-                {'error': 'Couldn\'t get an instance, please retry later'})
-            response.status_code = requests.codes.timeout
-            return response
-        # TODO: use private ip? (It's harder for testing)
-        worker_ip = AutoScalingGroup.get_public_ip_of_instance(instance)
+    def act() -> Iterator[dict]:
+        yield {'id': execution_id}
 
-    run_command(worker_ip, command, snapshot, execution_id)
+        if config.run_commands_locally:
+            worker_ip = None
+        else:
+            instance = None
+            messages = autoscaling_group.get_available_instance_for_execution(
+                execution_id)
+            for message in messages:
+                if type(message) == str:
+                    yield {'status': message}
+                else:
+                    instance = message
+            if instance is None:
+                yield {
+                    'error': 'Couldn\'t get an instance, please retry later',
+                }
+                response.status_code = requests.codes.timeout
+                return response
+            # TODO: use private ip? (It's harder for testing)
+            worker_ip = AutoScalingGroup.get_public_ip_of_instance(instance)
 
-    response = jsonify({'id': execution_id})
-    response.status_code = requests.codes.ok
+        run_command(worker_ip, command, snapshot, execution_id)
+
+    response = _binary_stream(json.dumps(message) + '\n' for message in act())
+    response.status_code = requests.codes.accepted
     return response
 
 
@@ -139,7 +149,7 @@ def create_snapshot():
     return _binary_stream(_handle_lazy_exceptions(
         response,
         formatter=lambda message: json.dumps({'error': message})
-                                      .encode('utf-8')))
+            .encode('utf-8')))
 
 
 def get_command_uuid() -> str:
@@ -155,6 +165,7 @@ def maybe_prepend_ssh(subprocess_token_list: [str], worker_ip):
         return subprocess_token_list
     return \
         ['ssh',
+         '-o', 'LogLevel=ERROR',
          '-o', 'StrictHostKeyChecking=no',
          '-o', 'UserKnownHostsFile=/dev/null',
          f'ubuntu@{worker_ip}'] \
@@ -328,9 +339,14 @@ def delete_container(worker_ip: str, execution_id: str):
         autoscaling_group.execution_finished(execution_id)
 
 
-def _binary_stream(generator: Iterator[bytes],
+def _binary_stream(generator: Iterator[Union[bytes, str]],
                    mimetype: str = 'application/octet-stream') -> Response:
-    return Response(stream_with_context(generator), mimetype=mimetype)
+    return Response(
+        stream_with_context(
+            value if type(value) == bytes else value.encode('utf8')
+            for value
+            in generator),
+        mimetype=mimetype)
 
 
 def _handle_lazy_exceptions(generator: Iterator[T],

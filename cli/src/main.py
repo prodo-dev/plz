@@ -1,7 +1,8 @@
 import argparse
 import json
 import sys
-from typing import Optional
+import traceback
+from typing import Optional, Tuple
 
 import requests
 
@@ -30,9 +31,15 @@ class RunCommand:
     def run(self):
         snapshot_id = self.build_snapshot()
         if snapshot_id:
-            execution_id = self.issue_command(snapshot_id)
-            self.display_logs(execution_id)
-            self.cleanup(execution_id)
+            execution_id, ok = self.issue_command(snapshot_id)
+            try:
+                if ok and execution_id:
+                    self.display_logs(execution_id)
+            except RequestException:
+                log_error('Displaying the logs failed.')
+                traceback.print_exc()
+            if execution_id:
+                self.cleanup(execution_id)
             log_info('Done and dusted.')
 
     def build_snapshot(self) -> Optional[str]:
@@ -63,16 +70,27 @@ class RunCommand:
             return None
         return snapshot_id
 
-    def issue_command(self, snapshot):
+    def issue_command(self, snapshot) -> Tuple[Optional[str], bool]:
         log_info('Issuing the command on a new box')
         response = requests.post(self.url('commands'), json={
             'command': self.command,
             'snapshot': snapshot
-        })
-        check_status(response, requests.codes.ok)
-        return response.json()['id']
+        }, stream=True)
+        check_status(response, requests.codes.accepted)
+        execution_id: Optional[str] = None
+        ok = True
+        for line in response.iter_lines():
+            data = json.loads(line)
+            if 'id' in data:
+                execution_id = data['id']
+            elif 'status' in data:
+                print('Instance status:', data['status'].rstrip())
+            elif 'error' in data:
+                ok = False
+                log_error(data['error'].rstrip())
+        return execution_id, ok
 
-    def display_logs(self, execution_id):
+    def display_logs(self, execution_id: str):
         log_info('Streaming logs...')
         response = requests.get(self.url('commands', execution_id, 'logs'),
                                 stream=True)
@@ -80,7 +98,7 @@ class RunCommand:
         for line in response.raw:
             print(line.decode('utf-8'), end='')
 
-    def cleanup(self, execution_id):
+    def cleanup(self, execution_id: str):
         log_info('Cleaning up all detritus.')
         response = requests.delete(self.url('commands', execution_id))
         check_status(response, requests.codes.no_content)
