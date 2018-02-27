@@ -328,13 +328,11 @@ def delete_container(worker_ip: str, execution_id: str):
     subprocess.run(
         maybe_prepend_ssh(['docker', 'stop', execution_id], worker_ip),
         stdout=None,
-        stderr=None,
-        check=True)
+        stderr=None)
     subprocess.run(
         maybe_prepend_ssh(['docker', 'rm', execution_id], worker_ip),
         stdout=None,
-        stderr=None,
-        check=True)
+        stderr=None)
     if worker_ip is not None:
         autoscaling_group.execution_finished(execution_id)
 
