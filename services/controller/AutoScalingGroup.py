@@ -7,42 +7,36 @@ import time
 from botocore.exceptions import ClientError
 from typing import Optional
 
-# We find available instances by looking at those in which
-# the Execution-Id tag is empty. The autoscaling group has this tag
-# with an empty value, and it is propagated to new instances.
-_EXECUTION_ID_TAG = 'Execution-Id'
-
 
 class MaxNumberOfInstancesReached(Exception):
     pass
 
 
 class AutoScalingGroup:
+    # We find available instances by looking at those in which
+    # the Execution-Id tag is empty. The autoscaling group has this tag
+    # with an empty value, and it is propagated to new instances.
+    _EXECUTION_ID_TAG = 'Execution-Id'
+
     _name_to_group = {}
     _name_to_group_lock = threading.RLock()
 
-    def __init__(self):
-        # This constructor can't be called. We use a private subclass when
-        # creating instances. Members are defined here so that the IDE knows
-        # about them.
-        self.name = None
-        self.auto_scaling_client = None
-        self.ec2_client = None
-        self.lock = None
-        raise TypeError(f'Instances of {AutoScalingGroup.__name__ } '
-                        'can be created only via get_group')
-
-    @staticmethod
-    def get_group(name: str) -> 'AutoScalingGroup':
+    def __new__(cls, name: str):
         with AutoScalingGroup._name_to_group_lock:
             try:
                 return AutoScalingGroup._name_to_group[name]
             except KeyError:
                 pass
             AutoScalingGroup.check_autoscaling_group_exists(name)
-            group = _AutoScalingGroup(name)
+            group = super().__new__(cls)
             AutoScalingGroup._name_to_group[name] = group
             return group
+
+    def __init__(self, name: str):
+        self.name = name
+        self.auto_scaling_client = boto3.client('autoscaling')
+        self.ec2_client = boto3.client('ec2')
+        self.lock = threading.RLock()
 
     @staticmethod
     def check_autoscaling_group_exists(name: str):
@@ -80,7 +74,7 @@ class AutoScalingGroup:
             self, execution_id_tag) -> Optional[dict]:
         response = self.ec2_client.describe_instances(
             Filters=[
-                {'Name': f'tag:{_EXECUTION_ID_TAG}',
+                {'Name': f'tag:{self._EXECUTION_ID_TAG}',
                  'Values': [execution_id_tag]},
                 {'Name': 'tag:aws:autoscaling:groupName',
                  'Values': [self.name]}])
@@ -94,7 +88,7 @@ class AutoScalingGroup:
     def _set_execution_id_tag(self, instance_id: str, execution_id: str):
         self.ec2_client.create_tags(
             Resources=[instance_id],
-            Tags=[{'Key': _EXECUTION_ID_TAG,
+            Tags=[{'Key': self._EXECUTION_ID_TAG,
                    'Value': execution_id}]
         )
 
@@ -148,19 +142,10 @@ class AutoScalingGroup:
                     self.ec2_client.create_tags(
                         Resources=[instance['InstanceId']],
                         Tags=[
-                            {'Key': _EXECUTION_ID_TAG,
+                            {'Key': self._EXECUTION_ID_TAG,
                              'Value': execution_id}
                         ]
                     )
                     return instance
 
         return None
-
-
-class _AutoScalingGroup(AutoScalingGroup):
-    # noinspection PyMissingConstructor
-    def __init__(self, name):
-        self.name = name
-        self.auto_scaling_client = boto3.client('autoscaling')
-        self.ec2_client = boto3.client('ec2')
-        self.lock = threading.RLock()

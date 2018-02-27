@@ -25,7 +25,7 @@ T = TypeVar('T')
 log = logging.getLogger('controller')
 ecr_client = boto3.client('ecr')
 docker_client = docker.APIClient(base_url=config.docker_host)
-autoscaling_group = AutoScalingGroup.get_group(config.aws_autoscaling_group)
+autoscaling_group = AutoScalingGroup(config.aws_autoscaling_group)
 
 app = Flask(__name__)
 
