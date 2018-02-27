@@ -12,6 +12,6 @@ WORKDIR /src
 COPY requirements.txt ./
 RUN pip install --no-cache-dir --requirement=requirements.txt
 
-COPY . ./
+COPY src ./src/
 
-CMD ["python", "main.py"]
+CMD ["python", "./src/main.py"]
