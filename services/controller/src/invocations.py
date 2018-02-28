@@ -21,7 +21,7 @@ def docker_run(name: str, image: str, command: str,
         '--detach',
         '--name', name,
         image,
-        'bash', '-c', command,
+        'sh', '-c', command,
     ]
 
     # noinspection PyArgumentList
