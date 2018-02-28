@@ -11,9 +11,9 @@ class EC2Instance(Instance):
         self.execution_id = execution_id
         self.data = data
 
-    def run(self, command: str, snapshot: str):
+    def run(self, command: str, snapshot_id: str):
         invocations.docker_run(
-            self.execution_id, snapshot, command,
+            self.execution_id, snapshot_id, command,
             prefix=self._ssh_prefix)
 
     def logs(self):

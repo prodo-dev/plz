@@ -11,11 +11,11 @@ class LocalhostInstance(Instance):
     def __init__(self, execution_id: str):
         self.execution_id = execution_id
 
-    def run(self, command: str, snapshot: str):
+    def run(self, command: str, snapshot_id: str):
         """
         Runs a command on the instance.
         """
-        invocations.docker_run(self.execution_id, snapshot, command)
+        invocations.docker_run(self.execution_id, snapshot_id, command)
 
     def logs(self):
         return invocations.docker_logs(self.execution_id, ['sh', '-c'])

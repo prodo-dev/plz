@@ -55,7 +55,7 @@ class RunCommand:
             self.url('snapshots'), request_data, stream=True)
         check_status(response, requests.codes.ok)
         error = False
-        snapshot_id = None
+        snapshot_id: str = None
         for json_bytes in response.raw:
             data = json.loads(json_bytes.decode('utf-8'))
             if 'stream' in data:
@@ -70,11 +70,11 @@ class RunCommand:
             return None
         return snapshot_id
 
-    def issue_command(self, snapshot) -> Tuple[Optional[str], bool]:
+    def issue_command(self, snapshot_id: str) -> Tuple[Optional[str], bool]:
         log_info('Issuing the command on a new box')
         response = requests.post(self.url('commands'), json={
             'command': self.command,
-            'snapshot': snapshot
+            'snapshot_id': snapshot_id,
         }, stream=True)
         check_status(response, requests.codes.accepted)
         execution_id: Optional[str] = None

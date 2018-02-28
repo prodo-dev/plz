@@ -35,7 +35,7 @@ def run_command_entrypoint():
     # curl -X POST -d '{"command": "ls /" }'
     #    -H 'Content-Type: application/json' localhost:5000/commands
     command = request.json['command']
-    snapshot = request.json['snapshot']
+    snapshot_id = request.json['snapshot_id']
     execution_id = str(get_command_uuid())
 
     def act() -> Iterator[dict]:
@@ -53,7 +53,7 @@ def run_command_entrypoint():
                 response.status_code = requests.codes.timeout
                 return response
 
-            instance.run(command, snapshot)
+            instance.run(command, snapshot_id)
         except Exception as e:
             log.exception('Exception running command.')
             yield {'error': str(e)}
