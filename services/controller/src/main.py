@@ -22,9 +22,9 @@ ecr_client = boto3.client('ecr')
 docker_client = docker.APIClient(base_url=config.docker_host)
 
 if config.run_commands_locally:
-    instance_provider = Localhost()
+    instance_provider = Localhost.from_config(config)
 else:
-    instance_provider = AutoScalingGroup(config.aws_autoscaling_group)
+    instance_provider = AutoScalingGroup.from_config(config)
 
 app = Flask(__name__)
 

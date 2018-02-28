@@ -25,6 +25,11 @@ class LocalhostInstance(Instance):
 
 
 class Localhost:
+    # noinspection PyUnusedLocal
+    @staticmethod
+    def from_config(config):
+        return Localhost()
+
     def __init__(self):
         self.execution_ids = set()
 

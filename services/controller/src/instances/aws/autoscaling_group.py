@@ -18,7 +18,17 @@ class AutoScalingGroup:
     _name_to_group = {}
     _name_to_group_lock = threading.RLock()
 
-    def __new__(cls, name: str):
+    @staticmethod
+    def from_config(config):
+        name = config.aws_autoscaling_group
+        client = boto3.client('autoscaling')
+        instances = EC2Instances(
+            client=boto3.client('ec2'),
+            filters=[{'Name': 'tag:aws:autoscaling:groupName',
+                      'Values': [name]}])
+        return AutoScalingGroup(name, client, instances)
+
+    def __new__(cls, name: str, client, instances: EC2Instances):
         with AutoScalingGroup._name_to_group_lock:
             try:
                 return AutoScalingGroup._name_to_group[name]
@@ -29,13 +39,10 @@ class AutoScalingGroup:
             AutoScalingGroup._name_to_group[name] = group
             return group
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, client, instances: EC2Instances):
         self.name = name
-        self.client = boto3.client('autoscaling')
-        self.instances = EC2Instances(
-            client=boto3.client('ec2'),
-            filters=[{'Name': 'tag:aws:autoscaling:groupName',
-                      'Values': [name]}])
+        self.client = client
+        self.instances = instances
         self.lock = threading.RLock()
 
     def acquire_instance(
