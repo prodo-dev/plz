@@ -44,12 +44,12 @@ def docker_run(name: str, image: str, command: str,
 def docker_rm(name: str):
     subprocess.run(
         ['docker', 'stop', name],
-        stdout=None,
-        stderr=None)
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL)
     subprocess.run(
         ['docker', 'rm', name],
-        stdout=None,
-        stderr=None)
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL)
 
 
 def docker_logs(name: str, prefix: Optional[List[str]] = None)\
