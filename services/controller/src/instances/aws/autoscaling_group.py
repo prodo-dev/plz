@@ -65,6 +65,13 @@ class AutoScalingGroup:
             while tries_remaining > 0:
                 tries_remaining -= 1
 
+                instance = self.instances.acquire_for(execution_id)
+                if instance:
+                    yield 'started'
+                    break
+                else:
+                    yield 'pending'
+
                 if not did_increase_capacity:
                     try:
                         self._increase_desired_capacity()
@@ -81,13 +88,6 @@ class AutoScalingGroup:
                             raise
 
                 time.sleep(wait_for_seconds)
-
-                instance = self.instances.acquire_for(execution_id)
-                if instance:
-                    yield 'started'
-                    break
-                else:
-                    yield 'pending'
 
     def release_instance(self, execution_id: str):
         self.instances.release_for(execution_id)
