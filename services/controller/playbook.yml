@@ -8,6 +8,7 @@
         src: "{{ ssh_private_key_file }}"
         dest: /home/ubuntu/.ssh/batman.privkey
         owner: ubuntu
+        group: ubuntu
         mode: 0600
     - name: Log in to AWS ECR
       shell: |
