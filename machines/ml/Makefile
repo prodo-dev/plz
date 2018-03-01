@@ -11,6 +11,7 @@ amis:
 	$(info TAG = $(TAG))
 	$(foreach NAME, $(IMAGE_NAMES), \
 		export AWS_SHARED_CREDENTIALS_FILE=../credentials/root.awscreds; \
+		export AWS_PROFILE=; \
 		packer build \
 			-var aws-region=$(AWS_REGION) \
 			-var tag=$(TAG) \

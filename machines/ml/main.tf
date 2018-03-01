@@ -11,7 +11,7 @@ variable "cidr_block" {
 }
 
 variable "ami_tag" {
-  default = "2018-02-07"
+  default = "2018-03-01"
 }
 
 variable "ec2_role" {

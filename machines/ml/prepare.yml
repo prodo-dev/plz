@@ -68,19 +68,42 @@
   remote_user: root
   become: yes
   tasks:
+    - name: Create the Docker service configuration directory
+      file:
+        path: /etc/systemd/system/docker.service.d
+        state: directory
+    - name: Configure the Docker daemon to open itself over TCP
+      copy:
+        dest: /etc/systemd/system/docker.service.d/override.conf
+        content: |
+          [Service]
+          ExecStart=
+          ExecStart=/usr/bin/dockerd -H fd:// -H unix:///var/run/docker.sock -H tcp://0.0.0.0:2375
     - name: Grab the Docker GPG keys
       shell: |
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
     - name: Add the Docker APT repository
       apt_repository:
         repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
+
+- hosts: build
+  remote_user: root
+  become: yes
+  tasks:
+    - name: Update the APT repositories
+      apt:
+        update_cache: yes
     - name: Install Docker
       apt:
         name: docker-ce
-        update_cache: yes
     - name: Install docker-py
       pip:
         name: docker-py
+    - name: Add the user to the docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
 
 - hosts: worker
   remote_user: root
@@ -91,14 +114,20 @@
         curl -fsSL https://nvidia.github.io/nvidia-docker/gpgkey | apt-key add -
     - name: Add the NVIDIA-Docker APT repository
       shell: curl -fsSL https://nvidia.github.io/nvidia-docker/ubuntu16.04/amd64/nvidia-docker.list > /etc/apt/sources.list.d/nvidia-docker.list
+    - name: Update the APT repositories
+      apt:
+        update_cache: yes
+    - name: Install Docker 17.12.0 # nvidia-docker doesn't yet support 17.12.1
+      apt:
+        name: docker-ce=17.12.0~ce-0~ubuntu
+        force: yes
     - name: Install NVIDIA-Docker
       apt:
         name: nvidia-docker2
-        update_cache: yes
     - name: Install libcuda
       apt:
         name: libcuda1-384
-    - name: Add ubuntu user to docker group
+    - name: Add the user to the docker group
       user:
         name: ubuntu
         groups: docker
