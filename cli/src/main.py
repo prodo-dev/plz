@@ -64,8 +64,8 @@ class RunCommand:
                 error = True
                 log_error('The snapshot was not successfully created.')
                 print(data['error'].rstrip())
-            if 'aux' in data:
-                snapshot_id = data['aux']['ID'][len('sha256:'):]
+            if 'id' in data:
+                snapshot_id = data['id']
         if error:
             return None
         return snapshot_id

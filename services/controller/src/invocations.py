@@ -3,10 +3,13 @@ import select
 import subprocess
 from typing import Iterator, List, Optional
 
+DOCKER_REPOSITORY = \
+    '024444204267.dkr.ecr.eu-west-1.amazonaws.com/batman/builds'
+
 log = logging.getLogger('invocations')
 
 
-def docker_run(name: str, image: str, command: str,
+def docker_run(name: str, tag: str, command: str,
                prefix: Optional[List[str]] = None):
     """
     Runs a command on the instance.
@@ -17,6 +20,7 @@ def docker_run(name: str, image: str, command: str,
     # All suppresions in this function are related to this.
 
     prefix = prefix if prefix else []
+    image = f'{DOCKER_REPOSITORY}:{tag}'
     invocation = prefix + [
         'docker', 'run',
         '--detach',

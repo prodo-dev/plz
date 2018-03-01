@@ -1,17 +1,19 @@
-import socket
 from typing import Dict, Optional, List
 
 import invocations
+from images import Images
 from instances.instance_base import Instance
 
 
 class EC2Instance(Instance):
-    def __init__(self, client, execution_id, data):
+    def __init__(self, client, images: Images, execution_id: str, data: dict):
+        self.images = images
         self.client = client
         self.execution_id = execution_id
         self.data = data
 
     def run(self, command: str, snapshot_id: str):
+        self.images.pull(snapshot_id)
         invocations.docker_run(
             self.execution_id, snapshot_id, command,
             prefix=self._ssh_prefix)
@@ -30,8 +32,7 @@ class EC2Instance(Instance):
 
     @property
     def _ssh_prefix(self):
-        ip_address = self.data.get('PublicIpAddress')
-        _check_ip(ip_address)
+        ip_address = self.data['PrivateIpAddress']
         return [
             'ssh',
             '-o', 'LogLevel=ERROR',
@@ -46,8 +47,9 @@ class EC2Instances:
     # with an empty value, and it is propagated to new instances.
     _EXECUTION_ID_TAG = 'Execution-Id'
 
-    def __init__(self, client, filters: List[Dict[str, str]]):
+    def __init__(self, client, images: Images, filters: List[Dict[str, str]]):
         self.client = client
+        self.images = images
         self.filters = filters
 
     def instance_for(self, execution_id: str) -> Optional[EC2Instance]:
@@ -57,14 +59,18 @@ class EC2Instances:
                  'Values': [execution_id]},
             ])
         try:
+            instance_data = response['Reservations'][0]['Instances'][0]
+            docker_host = f'tcp://{instance_data["PrivateIpAddress"]}:2375'
+            images = self.images.for_host(docker_host)
             return EC2Instance(
                 self.client,
+                images,
                 execution_id,
-                response['Reservations'][0]['Instances'][0])
+                instance_data)
         except (KeyError, IndexError):
             return None
 
-    def acquire_for(self, execution_id: str):
+    def acquire_for(self, execution_id: str) -> Optional[EC2Instance]:
         instance = self.instance_for('')
         if instance:
             instance.set_tags([
@@ -74,21 +80,10 @@ class EC2Instances:
         return instance
 
     def release_for(self, execution_id: str):
-        self.instance_for(execution_id).cleanup()
         instance = self.instance_for(execution_id)
         if instance:
+            instance.cleanup()
             instance.set_tags([
                 {'Key': self._EXECUTION_ID_TAG,
                  'Value': ''}
             ])
-        return instance
-
-
-def _check_ip(ip: Optional[str]):
-    """Throws an exception in the event of a missing or invalid IP address."""
-    if ip is None:
-        raise ValueError('Expected an IP address, got None')
-    try:
-        socket.inet_aton(ip)
-    except OSError:
-        raise ValueError(f'Invalid IP address: [{ip}]')

@@ -2,13 +2,15 @@ import logging
 from typing import Iterator, Optional
 
 import invocations
+from images import Images
 from instances.instance_base import Instance
 
 log = logging.getLogger('localhost')
 
 
 class LocalhostInstance(Instance):
-    def __init__(self, execution_id: str):
+    def __init__(self, images: Images, execution_id: str):
+        self.images = images
         self.execution_id = execution_id
 
     def run(self, command: str, snapshot_id: str):
@@ -28,9 +30,11 @@ class Localhost:
     # noinspection PyUnusedLocal
     @staticmethod
     def from_config(config):
-        return Localhost()
+        images = Images.from_config(config)
+        return Localhost(images)
 
-    def __init__(self):
+    def __init__(self, images: Images):
+        self.images = images
         self.execution_ids = set()
 
     def acquire_instance(self, execution_id: str) -> Iterator[str]:
@@ -58,6 +62,10 @@ class Localhost:
         As we're dealing with `localhost` here, it's always the same instance.
         """
         if execution_id in self.execution_ids:
-            return LocalhostInstance(execution_id)
+            return LocalhostInstance(self.images, execution_id)
         else:
             return None
+
+    # noinspection PyUnusedLocal
+    def push(self, image_tag: str):
+        pass

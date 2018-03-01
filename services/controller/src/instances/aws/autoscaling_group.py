@@ -5,6 +5,7 @@ from typing import Iterator, Optional
 import boto3
 from botocore.exceptions import ClientError
 
+from images import Images
 from instances.aws.ec2_instance import EC2Instances
 from instances.instance_base import Instance
 
@@ -22,13 +23,19 @@ class AutoScalingGroup:
     def from_config(config):
         name = config.aws_autoscaling_group
         client = boto3.client('autoscaling')
+        images = Images.from_config(config)
         instances = EC2Instances(
             client=boto3.client('ec2'),
+            images=images,
             filters=[{'Name': 'tag:aws:autoscaling:groupName',
                       'Values': [name]}])
-        return AutoScalingGroup(name, client, instances)
+        return AutoScalingGroup(name, client, instances, images)
 
-    def __new__(cls, name: str, client, instances: EC2Instances):
+    def __new__(cls,
+                name: str,
+                client,
+                instances: EC2Instances,
+                images: Images):
         with AutoScalingGroup._name_to_group_lock:
             try:
                 return AutoScalingGroup._name_to_group[name]
@@ -39,10 +46,15 @@ class AutoScalingGroup:
             AutoScalingGroup._name_to_group[name] = group
             return group
 
-    def __init__(self, name: str, client, instances: EC2Instances):
+    def __init__(self,
+                 name: str,
+                 client,
+                 instances: EC2Instances,
+                 images: Images):
         self.name = name
         self.client = client
         self.instances = instances
+        self.images = images
         self.lock = threading.RLock()
 
     def acquire_instance(
@@ -69,10 +81,9 @@ class AutoScalingGroup:
                 if instance:
                     yield 'started'
                     break
-                else:
+                elif did_increase_capacity:
                     yield 'pending'
-
-                if not did_increase_capacity:
+                else:
                     try:
                         self._increase_desired_capacity()
                         did_increase_capacity = True
@@ -81,7 +92,7 @@ class AutoScalingGroup:
                         error_code = e.response['Error']['Code']
                         # Might fail if there's a scaling event taking place
                         if error_code == 'ScalingActivityInProgress':
-                            pass
+                            yield 'pending'
                         elif error_code == 'ValidationError':
                             raise MaxNumberOfInstancesReached(e.args)
                         else:
@@ -94,6 +105,9 @@ class AutoScalingGroup:
 
     def instance_for(self, execution_id) -> Optional[Instance]:
         return self.instances.instance_for(execution_id)
+
+    def push(self, image_tag):
+        self.images.push(image_tag)
 
     @staticmethod
     def _check_autoscaling_group_exists(name: str):
