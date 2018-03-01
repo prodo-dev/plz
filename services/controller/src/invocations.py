@@ -16,7 +16,8 @@ def docker_run(name: str, image: str, command: str,
     # both `stdout` and `stderr` are `bytes`, not `str` objects.
     # All suppresions in this function are related to this.
 
-    invocation = (prefix if prefix else []) + [
+    prefix = prefix if prefix else []
+    invocation = prefix + [
         'docker', 'run',
         '--detach',
         '--name', name,
@@ -41,23 +42,26 @@ def docker_run(name: str, image: str, command: str,
     log.info(f'Started container: {container_id}')
 
 
-def docker_rm(name: str):
+def docker_rm(name: str,
+              prefix: Optional[List[str]] = None):
+    prefix = prefix if prefix else []
     subprocess.run(
-        ['docker', 'stop', name],
+        prefix + ['docker', 'stop', name],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL)
     subprocess.run(
-        ['docker', 'rm', name],
+        prefix + ['docker', 'rm', name],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL)
 
 
 def docker_logs(name: str, prefix: Optional[List[str]] = None)\
         -> Iterator[bytes]:
+    prefix = prefix if prefix else []
     process = None
     try:
         command = f'docker logs {name} -f 2>&1'
-        invocation = (prefix if prefix else []) + [command]
+        invocation = prefix + [command]
         process = subprocess.Popen(
             invocation,
             stdout=subprocess.PIPE,

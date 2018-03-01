@@ -22,7 +22,7 @@ class EC2Instance(Instance):
             prefix=self._ssh_prefix)
 
     def cleanup(self):
-        invocations.docker_rm(self.execution_id)
+        invocations.docker_rm(self.execution_id, prefix=self._ssh_prefix)
 
     def set_tags(self, tags):
         instance_id = self.data['InstanceId']
