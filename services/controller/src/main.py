@@ -11,7 +11,7 @@ from flask import Flask, Response, jsonify, request, stream_with_context
 
 from controller_config import config
 from images import Images
-from instances.aws.autoscaling_group import AutoScalingGroup
+from instances.aws import AwsAutoScalingGroup
 from instances.localhost import Localhost
 
 T = TypeVar('T')
@@ -24,7 +24,7 @@ images = Images.from_config(config)
 if config.run_commands_locally:
     instance_provider = Localhost.from_config(config)
 else:
-    instance_provider = AutoScalingGroup.from_config(config)
+    instance_provider = AwsAutoScalingGroup.from_config(config)
 
 app = Flask(__name__)
 
