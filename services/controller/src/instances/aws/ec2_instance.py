@@ -1,3 +1,5 @@
+import socket
+from contextlib import closing
 from typing import Dict, Optional, List
 
 from containers import Containers
@@ -34,10 +36,12 @@ class EC2Instance(Instance):
 
 
 class EC2Instances:
+    DOCKER_PORT = 2375
+
     # We find available instances by looking at those in which
     # the Execution-Id tag is empty. The autoscaling group has this tag
     # with an empty value, and it is propagated to new instances.
-    _EXECUTION_ID_TAG = 'Execution-Id'
+    EXECUTION_ID_TAG = 'Execution-Id'
 
     def __init__(self, client, images: Images, filters: List[Dict[str, str]]):
         self.client = client
@@ -47,15 +51,17 @@ class EC2Instances:
     def instance_for(self, execution_id: str) -> Optional[EC2Instance]:
         response = self.client.describe_instances(
             Filters=self.filters + [
-                {'Name': f'tag:{self._EXECUTION_ID_TAG}',
+                {'Name': f'tag:{self.EXECUTION_ID_TAG}',
                  'Values': [execution_id]},
             ])
         try:
             instance_data = response['Reservations'][0]['Instances'][0]
-            ip_address = instance_data["PrivateIpAddress"]
-            docker_host = f'tcp://{ip_address}:2375'
-            images = self.images.for_host(docker_host)
-            containers = Containers.for_host(docker_host)
+            host = instance_data['PrivateDnsName']
+            if not _is_socket_open(host, self.DOCKER_PORT):
+                return None
+            docker_url = f'tcp://{host}:{self.DOCKER_PORT}'
+            images = self.images.for_host(docker_url)
+            containers = Containers.for_host(docker_url)
             return EC2Instance(
                 self.client,
                 images,
@@ -69,7 +75,7 @@ class EC2Instances:
         instance = self.instance_for('')
         if instance:
             instance.set_tags([
-                {'Key': self._EXECUTION_ID_TAG,
+                {'Key': self.EXECUTION_ID_TAG,
                  'Value': execution_id}
             ])
         return instance
@@ -79,9 +85,14 @@ class EC2Instances:
         if instance:
             instance.cleanup()
             instance.set_tags([
-                {'Key': self._EXECUTION_ID_TAG,
+                {'Key': self.EXECUTION_ID_TAG,
                  'Value': ''}
             ])
+
+
+def _is_socket_open(host: str, port: int) -> bool:
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+        return sock.connect_ex((host, port)) == 0
 
 
 def _ssh_prefix(ip_address):

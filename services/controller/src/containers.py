@@ -11,8 +11,8 @@ class Containers:
     log = logging.getLogger('containers')
 
     @staticmethod
-    def for_host(docker_host):
-        docker_client = docker.DockerClient(base_url=docker_host)
+    def for_host(docker_url):
+        docker_client = docker.DockerClient(base_url=docker_url)
         return Containers(docker_client)
 
     def __init__(self, docker_client: docker.DockerClient):

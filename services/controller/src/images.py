@@ -29,8 +29,8 @@ class Images:
         self.ecr_client = ecr_client
         self.aws_project = aws_project
 
-    def for_host(self, docker_host: str) -> 'Images':
-        new_docker_api_client = docker.APIClient(base_url=docker_host)
+    def for_host(self, docker_url: str) -> 'Images':
+        new_docker_api_client = docker.APIClient(base_url=docker_url)
         return Images(new_docker_api_client, self.ecr_client, self.aws_project)
 
     def build(self, fileobj: BinaryIO, tag: str) -> Iterator[str]:
