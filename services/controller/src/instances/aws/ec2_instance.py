@@ -55,7 +55,7 @@ class EC2Instances:
             ip_address = instance_data["PrivateIpAddress"]
             docker_host = f'tcp://{ip_address}:2375'
             images = self.images.for_host(docker_host)
-            containers = Containers(prefix=_ssh_prefix(ip_address))
+            containers = Containers.for_host(docker_host)
             return EC2Instance(
                 self.client,
                 images,

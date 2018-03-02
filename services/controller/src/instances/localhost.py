@@ -35,10 +35,12 @@ class Localhost:
     @staticmethod
     def from_config(config):
         images = Images.from_config(config)
-        return Localhost(images)
+        containers = Containers.for_host(config.docker_host)
+        return Localhost(images, containers)
 
-    def __init__(self, images: Images):
+    def __init__(self, images: Images, containers: Containers):
         self.images = images
+        self.containers = containers
         self.execution_ids = set()
 
     def acquire_instance(self, execution_id: str) -> Iterator[str]:
@@ -66,8 +68,8 @@ class Localhost:
         As we're dealing with `localhost` here, it's always the same instance.
         """
         if execution_id in self.execution_ids:
-            containers = Containers()
-            return LocalhostInstance(self.images, containers, execution_id)
+            return LocalhostInstance(
+                self.images, self.containers, execution_id)
         else:
             return None
 

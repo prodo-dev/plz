@@ -1,6 +1,8 @@
 import logging
-import subprocess
-from typing import Iterator, List, Optional
+from typing import Iterator
+
+import docker
+import docker.errors
 
 from images import Images
 
@@ -8,8 +10,13 @@ from images import Images
 class Containers:
     log = logging.getLogger('containers')
 
-    def __init__(self, prefix: Optional[List[str]] = None):
-        self.prefix = prefix if prefix else []
+    @staticmethod
+    def for_host(docker_host):
+        docker_client = docker.DockerClient(base_url=docker_host)
+        return Containers(docker_client)
+
+    def __init__(self, docker_client: docker.DockerClient):
+        self.docker_client = docker_client
 
     def run(self, name: str, tag: str, command: str):
         """
@@ -21,52 +28,25 @@ class Containers:
         # All inspection suppressions in this function are related to this.
 
         image = f'{Images.DOCKER_REPOSITORY}:{tag}'
-        invocation = self.prefix + [
-            'docker', 'run',
-            '--detach',
-            '--name', name,
-            image,
-            'sh', '-c', command,
-        ]
-
-        # noinspection PyArgumentList
-        process = subprocess.Popen(
-            invocation,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            encoding='utf-8')
-        stdout, stderr = process.communicate()
-
-        # noinspection PyTypeChecker
-        container_id = stdout.rstrip('\n')
-        # noinspection PyTypeChecker
-        if stderr != '' or process.returncode != 0 or \
-                not self._is_container_id(container_id):
-            raise InvocationException(process, stdout, stderr)
-        self.log.info(f'Started container: {container_id}')
+        container = self.docker_client.containers.run(
+            image=image,
+            command=command,
+            name=name,
+            detach=True,
+        )
+        self.log.info(f'Started container: {container.id}')
 
     def rm(self, name: str):
-        subprocess.run(
-            self.prefix + ['docker', 'stop', name],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL)
-        subprocess.run(
-            self.prefix + ['docker', 'rm', name],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL)
-
-    def logs(self, name: str) -> Iterator[bytes]:
-        process = None
         try:
-            invocation = self.prefix + ['docker', 'logs', '--follow', name]
-            process = subprocess.Popen(
-                invocation,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT)
-            yield from process.stdout
-        finally:
-            if process is not None and process.returncode is None:
-                process.kill()
+            container = self.docker_client.containers.get(name)
+            container.stop()
+            container.remove()
+        except docker.errors.NotFound:
+            pass
+
+    def logs(self, name: str) -> Iterator[str]:
+        container = self.docker_client.containers.get(name)
+        return container.logs(stream=True, follow=True)
 
     @staticmethod
     def _is_container_id(container_id: str):
