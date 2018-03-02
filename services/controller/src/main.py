@@ -38,6 +38,8 @@ def run_command_entrypoint():
     snapshot_id = request.json['snapshot_id']
     execution_id = str(get_command_uuid())
 
+    @_json_stream
+    @stream_with_context
     def act() -> Iterator[dict]:
         yield {'id': execution_id}
 
@@ -58,7 +60,7 @@ def run_command_entrypoint():
             log.exception('Exception running command.')
             yield {'error': str(e)}
 
-    response = _binary_stream(_jsonify_stream(act()))
+    response = Response(act(), mimetype='text/plain')
     response.status_code = requests.codes.accepted
     return response
 
@@ -70,7 +72,7 @@ def get_output_entrypoint(execution_id):
     # curl localhost:5000/commands/some-id/logs
     instance = instance_provider.instance_for(execution_id)
     response = instance.logs()
-    return _binary_stream(response)
+    return Response(response, mimetype='application/octet-stream')
 
 
 @app.route(f'/commands/<execution_id>/logs/stdout')
@@ -122,14 +124,15 @@ def create_snapshot():
     metadata_str = str(b''.join(json_bytes), 'utf-8')
     tag = Images.construct_tag(metadata_str)
 
+    @stream_with_context
+    @_handle_lazy_exceptions(formatter=_format_error)
     def act() -> Iterator[Union[bytes, str]]:
         # Pass the rest of the stream to `docker build`
         yield from images.build(request.stream, tag)
         instance_provider.push(tag)
         yield json.dumps({'id': tag})
 
-    return _binary_stream(
-        _handle_lazy_exceptions(act(), formatter=_format_error))
+    return Response(act(), mimetype='text/plain')
 
 
 def get_command_uuid() -> str:
@@ -139,29 +142,24 @@ def get_command_uuid() -> str:
     return str(uuid.uuid1(node=random_node))
 
 
-def _binary_stream(iterator: Iterator[Union[bytes, str]],
-                   mimetype: str = 'application/octet-stream') -> Response:
-    return Response(
-        stream_with_context(
-            value if type(value) == bytes else value.encode('utf8')
-            for value
-            in iterator),
-        mimetype=mimetype)
+def _json_stream(f: Callable[[], Iterator[Any]]):
+    def wrapped() -> Iterator[str]:
+        return (json.dumps(message) + '\n' for message in f())
+    return wrapped
 
 
-def _jsonify_stream(iterator: Iterator[Any]) -> Iterator[str]:
-    return (json.dumps(message) + '\n' for message in iterator)
-
-
-def _handle_lazy_exceptions(generator: Iterator[T],
-                            formatter: Callable[[str], T]) -> Iterator[T]:
-    # noinspection PyBroadException
-    try:
-        for value in generator:
-            yield value
-    except Exception as e:
-        yield formatter(str(e) + '\n')
-        log.exception('Exception in response generator')
+def _handle_lazy_exceptions(formatter: Callable[[str], T]):
+    def wrapper(f):
+        def wrapped():
+            # noinspection PyBroadException
+            try:
+                for value in f():
+                    yield value
+            except Exception as e:
+                yield formatter(str(e) + '\n')
+                log.exception('Exception in response generator')
+        return wrapped
+    return wrapper
 
 
 def _format_error(message: str) -> bytes:
