@@ -1,44 +1,36 @@
 from typing import Dict, Optional, List
 
-import invocations
+from containers import Containers
 from images import Images
 from instances.instance_base import Instance
 
 
 class EC2Instance(Instance):
-    def __init__(self, client, images: Images, execution_id: str, data: dict):
-        self.images = images
+    def __init__(self,
+                 client,
+                 images: Images,
+                 containers: Containers,
+                 execution_id: str,
+                 data: dict):
         self.client = client
+        self.images = images
+        self.containers = containers
         self.execution_id = execution_id
         self.data = data
 
     def run(self, command: str, snapshot_id: str):
         self.images.pull(snapshot_id)
-        invocations.docker_run(
-            self.execution_id, snapshot_id, command,
-            prefix=self._ssh_prefix)
+        self.containers.run(self.execution_id, snapshot_id, command)
 
     def logs(self):
-        return invocations.docker_logs(
-            self.execution_id,
-            prefix=self._ssh_prefix)
+        return self.containers.logs(self.execution_id)
 
     def cleanup(self):
-        invocations.docker_rm(self.execution_id, prefix=self._ssh_prefix)
+        self.containers.rm(self.execution_id)
 
     def set_tags(self, tags):
         instance_id = self.data['InstanceId']
         self.client.create_tags(Resources=[instance_id], Tags=tags)
-
-    @property
-    def _ssh_prefix(self):
-        ip_address = self.data['PrivateIpAddress']
-        return [
-            'ssh',
-            '-o', 'LogLevel=ERROR',
-            '-o', 'StrictHostKeyChecking=no',
-            '-o', 'UserKnownHostsFile=/dev/null',
-            f'ubuntu@{ip_address}']
 
 
 class EC2Instances:
@@ -60,11 +52,14 @@ class EC2Instances:
             ])
         try:
             instance_data = response['Reservations'][0]['Instances'][0]
-            docker_host = f'tcp://{instance_data["PrivateIpAddress"]}:2375'
+            ip_address = instance_data["PrivateIpAddress"]
+            docker_host = f'tcp://{ip_address}:2375'
             images = self.images.for_host(docker_host)
+            containers = Containers(prefix=_ssh_prefix(ip_address))
             return EC2Instance(
                 self.client,
                 images,
+                containers,
                 execution_id,
                 instance_data)
         except (KeyError, IndexError):
@@ -87,3 +82,12 @@ class EC2Instances:
                 {'Key': self._EXECUTION_ID_TAG,
                  'Value': ''}
             ])
+
+
+def _ssh_prefix(ip_address):
+    return [
+        'ssh',
+        '-o', 'LogLevel=ERROR',
+        '-o', 'StrictHostKeyChecking=no',
+        '-o', 'UserKnownHostsFile=/dev/null',
+        f'ubuntu@{ip_address}']

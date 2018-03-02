@@ -1,7 +1,7 @@
 import logging
 from typing import Iterator, Optional
 
-import invocations
+from containers import Containers
 from images import Images
 from instances.instance_base import Instance
 
@@ -9,21 +9,25 @@ log = logging.getLogger('localhost')
 
 
 class LocalhostInstance(Instance):
-    def __init__(self, images: Images, execution_id: str):
+    def __init__(self,
+                 images: Images,
+                 containers: Containers,
+                 execution_id: str):
         self.images = images
+        self.containers = containers
         self.execution_id = execution_id
 
     def run(self, command: str, snapshot_id: str):
         """
         Runs a command on the instance.
         """
-        invocations.docker_run(self.execution_id, snapshot_id, command)
+        self.containers.run(self.execution_id, snapshot_id, command)
 
     def logs(self):
-        return invocations.docker_logs(self.execution_id, ['sh', '-c'])
+        return self.containers.logs(self.execution_id)
 
     def cleanup(self):
-        invocations.docker_rm(self.execution_id)
+        self.containers.rm(self.execution_id)
 
 
 class Localhost:
@@ -62,7 +66,8 @@ class Localhost:
         As we're dealing with `localhost` here, it's always the same instance.
         """
         if execution_id in self.execution_ids:
-            return LocalhostInstance(self.images, execution_id)
+            containers = Containers()
+            return LocalhostInstance(self.images, containers, execution_id)
         else:
             return None
 
