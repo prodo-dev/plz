@@ -1,6 +1,7 @@
-.envrc
 /cache
 /data
+.envrc
+batman.config
 
 # Python
 env

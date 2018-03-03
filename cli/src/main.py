@@ -6,26 +6,23 @@ from typing import Optional, Tuple
 
 import requests
 
+from configuration import Configuration, ValidationException
+
 
 class RunCommand:
     """Run an arbitrary command on a remote machine."""
 
     @staticmethod
     def prepare_argument_parser(parser):
-        parser.add_argument('command')
-        # TODO(sergio): grab user and project from somewhere
-        # These shouldn't be switches as they are mandatory, but later we'll
-        # retrieve them from a config file, so they'll disappear
-        parser.add_argument('--user', required=True)
-        parser.add_argument('--project', required=True)
         # TODO(sergio): build the Docker context as part of the command
         parser.add_argument('--bz2-file', required=True)
+        parser.add_argument('command')
 
-    def __init__(self, host, port, command, user, project, bz2_file):
-        self.prefix = f'http://{host}:{port}'
+    def __init__(self, configuration, command, bz2_file):
+        self.prefix = f'http://{configuration.host}:{configuration.port}'
+        self.user = configuration.user
+        self.project = configuration.project
         self.command = command
-        self.user = user
-        self.project = project
         self.bz2_file = bz2_file
 
     def run(self):
@@ -150,9 +147,13 @@ def log_error(message):
 
 
 def main(args):
+    try:
+        configuration = Configuration.load()
+    except ValidationException as e:
+        e.print()
+        sys.exit(2)
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--host', default='localhost')
-    parser.add_argument('--port', type=int, default=80)
     subparsers = parser.add_subparsers(title='commands', dest='command_name')
     for name, command in COMMANDS.items():
         subparser = subparsers.add_parser(name, help=command.__doc__)
@@ -161,7 +162,7 @@ def main(args):
     command_name = options.command_name
     option_dict = options.__dict__
     del option_dict['command_name']
-    command = COMMANDS[command_name](**option_dict)
+    command = COMMANDS[command_name](configuration, **option_dict)
     command.run()
 
 
