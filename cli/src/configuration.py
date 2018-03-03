@@ -24,6 +24,11 @@ class ValidationException(Exception):
 
 
 class Property:
+    TYPE_DESCRIPTIONS = {
+        str: 'a string',
+        int: 'an integer',
+    }
+
     def __init__(self,
                  name: str,
                  type: Type[T] = str,
@@ -39,7 +44,8 @@ class Property:
 
     def type_error(self, value) -> ValidationError:
         return ValidationError(
-            f'The property "{self.name}" must be of type {self.type}.\n'
+            f'The property "{self.name}" '
+            f'must be {self.TYPE_DESCRIPTIONS[self.type]}.\n'
             f'Invalid value: {repr(value)}')
 
 
@@ -86,7 +92,10 @@ class Configuration:
                 name = key[len('BATMAN_'):].lower()
                 prop = Configuration.PROPERTIES.get(name)
                 if prop:
-                    data[name] = prop.type(value)
+                    try:
+                        data[name] = prop.type(value)
+                    except ValueError:
+                        data[name] = value
         return Configuration(data)
 
     def __init__(self, data: Dict[str, Any]):
