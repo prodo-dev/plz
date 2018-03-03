@@ -147,21 +147,23 @@ def log_error(message):
 
 
 def main(args):
-    try:
-        configuration = Configuration.load()
-    except ValidationException as e:
-        e.print()
-        sys.exit(2)
-
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(title='commands', dest='command_name')
     for name, command in COMMANDS.items():
         subparser = subparsers.add_parser(name, help=command.__doc__)
         command.prepare_argument_parser(subparser)
     options = parser.parse_args(args)
+
+    try:
+        configuration = Configuration.load()
+    except ValidationException as e:
+        e.print()
+        sys.exit(2)
+
     command_name = options.command_name
     option_dict = options.__dict__
     del option_dict['command_name']
+
     command = COMMANDS[command_name](configuration, **option_dict)
     command.run()
 
