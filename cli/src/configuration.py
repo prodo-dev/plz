@@ -1,7 +1,6 @@
 import json
-from typing import Any, Dict, List, Type, TypeVar
-
 import os
+from typing import Any, Dict, List, Type, TypeVar
 
 T = TypeVar('T')
 
@@ -59,6 +58,8 @@ class Configuration:
     PROPERTIES = {prop.name: prop for prop in PROPERTY_OBJECTS}
 
     CONFIGURATION_FILE = 'batman.config'
+    MISSING_CONFIGURATION_FILE_ERROR = ValidationError(
+        f'You must create a {CONFIGURATION_FILE} file.')
 
     @staticmethod
     def load() -> 'Configuration':
@@ -66,7 +67,8 @@ class Configuration:
             file_configuration = \
                 Configuration.from_file(Configuration.CONFIGURATION_FILE)
         except FileNotFoundError:
-            file_configuration = Configuration({})
+            raise ValidationException(
+                [Configuration.MISSING_CONFIGURATION_FILE_ERROR])
         return Configuration.defaults() \
             .override_with(file_configuration) \
             .override_with(Configuration.from_env()) \
