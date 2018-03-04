@@ -1,5 +1,9 @@
 SHELL := zsh -e -u
 
+.PHONY: check
+check:
+	make -C cli check
+
 .PHONY: vpc
 vpc:
 	make -C machines/vpc deploy

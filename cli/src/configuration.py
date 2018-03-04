@@ -9,8 +9,14 @@ class ValidationError:
     def __init__(self, message):
         self.message = message
 
+    def __eq__(self, other):
+        return self.message == other.message
+
     def __str__(self):
         return self.message
+
+    def __repr__(self):
+        return f'ValidationError({repr(self.message)})'
 
 
 class ValidationException(Exception):
@@ -26,6 +32,7 @@ class Property:
     TYPE_DESCRIPTIONS = {
         str: 'a string',
         int: 'an integer',
+        bool: 'true or false',
     }
 
     def __init__(self,
@@ -49,13 +56,14 @@ class Property:
 
 
 class Configuration:
-    PROPERTY_OBJECTS = [
-        Property('host', default='localhost'),
-        Property('port', type=int, default=80),
-        Property('user', required=True),
-        Property('project', required=True),
-    ]
-    PROPERTIES = {prop.name: prop for prop in PROPERTY_OBJECTS}
+    PROPERTIES = {
+        prop.name: prop for prop in [
+            Property('host', default='localhost'),
+            Property('port', type=int, default=80),
+            Property('user', required=True),
+            Property('project', required=True),
+        ]
+    }
 
     CONFIGURATION_FILE = 'batman.config'
     MISSING_CONFIGURATION_FILE_ERROR = ValidationError(
@@ -63,52 +71,58 @@ class Configuration:
 
     @staticmethod
     def load() -> 'Configuration':
+        default_configuration = Configuration.defaults(
+            Configuration.PROPERTIES)
         try:
-            file_configuration = \
-                Configuration.from_file(Configuration.CONFIGURATION_FILE)
+            file_configuration = Configuration.from_file(
+                Configuration.CONFIGURATION_FILE, Configuration.PROPERTIES)
         except FileNotFoundError:
             raise ValidationException(
                 [Configuration.MISSING_CONFIGURATION_FILE_ERROR])
-        return Configuration.defaults() \
+        env_configuration = Configuration.from_env(Configuration.PROPERTIES)
+
+        return default_configuration \
             .override_with(file_configuration) \
-            .override_with(Configuration.from_env()) \
+            .override_with(env_configuration) \
             .validate()
 
     @staticmethod
-    def defaults() -> 'Configuration':
-        data = {prop.name: prop.default
-                for prop in Configuration.PROPERTY_OBJECTS}
-        return Configuration(data)
+    def defaults(properties: Dict[str, Property]) -> 'Configuration':
+        data = {prop.name: prop.default for prop in properties.values()}
+        return Configuration(properties, data)
 
     @staticmethod
-    def from_file(filepath: str) -> 'Configuration':
+    def from_file(filepath: str, properties: Dict[str, Property]) \
+            -> 'Configuration':
         with open(filepath, 'r') as f:
             data = json.load(f)
-        return Configuration(data)
+        return Configuration(properties, data)
 
     @staticmethod
-    def from_env() -> 'Configuration':
+    def from_env(properties: Dict[str, Property]) -> 'Configuration':
         data = {}
         for key, value in os.environ.items():
             if key.startswith('BATMAN_'):
                 name = key[len('BATMAN_'):].lower()
-                prop = Configuration.PROPERTIES.get(name)
+                prop = properties.get(name)
                 if prop:
                     try:
+                        # noinspection PyCallingNonCallable
                         data[name] = prop.type(value)
                     except ValueError:
                         data[name] = value
-        return Configuration(data)
+        return Configuration(properties, data)
 
-    def __init__(self, data: Dict[str, Any]):
+    def __init__(self, properties: Dict[str, Property], data: Dict[str, Any]):
+        self.properties = properties
         self.data = data
 
     def override_with(self, other: 'Configuration') -> 'Configuration':
-        return Configuration({**self.data, **other.data})
+        return Configuration(self.properties, {**self.data, **other.data})
 
     def validate(self) -> 'Configuration':
         errors = []
-        for prop in self.PROPERTY_OBJECTS:
+        for prop in self.properties.values():
             value = self.data.get(prop.name)
             if value is None and prop.required:
                 errors.append(prop.required_error())
@@ -118,5 +132,8 @@ class Configuration:
             raise ValidationException(errors)
         return self
 
-    def __getattr__(self, item):
-        return self.data[item]
+    def __getattr__(self, name):
+        if name in self.properties:
+            return self.data.get(name, self.properties[name].default)
+        else:
+            raise KeyError(name)
