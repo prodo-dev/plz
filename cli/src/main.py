@@ -18,14 +18,19 @@ class RunCommand:
 
     @staticmethod
     def prepare_argument_parser(parser):
-        parser.add_argument('command')
+        parser.add_argument('--command', type=str)
 
-    def __init__(self, configuration: Configuration, command: str):
+    def __init__(self, configuration: Configuration, command: Optional[str]):
         self.configuration = configuration
         self.prefix = f'http://{configuration.host}:{configuration.port}'
-        self.command = command
+        self.command = \
+            ['sh', '-c', command] if command else self.configuration.command
 
-    def run(self):
+    def run(self) -> bool:
+        if not self.command:
+            log_error('No command specified!')
+            return False
+
         snapshot_id = self.build_snapshot()
         if snapshot_id:
             execution_id, ok = self.issue_command(snapshot_id)
@@ -35,9 +40,11 @@ class RunCommand:
             except RequestException:
                 log_error('Displaying the logs failed.')
                 traceback.print_exc()
+                return False
             if execution_id:
                 self.cleanup(execution_id)
             log_info('Done and dusted.')
+            return True
 
     def build_snapshot(self) -> Optional[str]:
         log_info('Capturing the context')
@@ -45,11 +52,17 @@ class RunCommand:
         dockerfile_path = os.path.join(context_dir, 'Dockerfile')
         try:
             with open(dockerfile_path, mode='x') as dockerfile:
-                dockerfile.write('FROM busybox\n')
+                dockerfile.write(''.join(line + '\n' for line in [
+                    f'FROM {self.configuration.image}',
+                    f'WORKDIR /app',
+                    f'COPY . ./',
+                    f'CMD {self.configuration.command}'
+                ]))
             os.chmod(dockerfile_path, 0o644)
             build_context = docker.utils.build.tar(
                 path='.',
                 exclude=self.configuration.excluded_paths,
+                gzip=True,
             )
         finally:
             os.remove(dockerfile_path)
@@ -180,7 +193,8 @@ def main(args):
     del option_dict['command_name']
 
     command = COMMANDS[command_name](configuration, **option_dict)
-    command.run()
+    if not command.run():
+        sys.exit(1)
 
 
 main(sys.argv[1:])
