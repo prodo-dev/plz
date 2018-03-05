@@ -31,7 +31,11 @@ class RunCommand:
             log_error('No command specified!')
             return False
 
-        snapshot_id = self.build_snapshot()
+        log_info('Capturing the context')
+        build_context = self.capture_build_context()
+        log_info('Building the program snapshot')
+        snapshot_id = self.submit_context_for_building(build_context)
+
         if snapshot_id:
             execution_id, ok = self.issue_command(snapshot_id)
             try:
@@ -46,8 +50,7 @@ class RunCommand:
             log_info('Done and dusted.')
             return True
 
-    def build_snapshot(self) -> Optional[str]:
-        log_info('Capturing the context')
+    def capture_build_context(self):
         context_dir = os.getcwd()
         dockerfile_path = os.path.join(context_dir, 'Dockerfile')
         try:
@@ -66,8 +69,9 @@ class RunCommand:
             )
         finally:
             os.remove(dockerfile_path)
+        return build_context
 
-        log_info('Building the program snapshot')
+    def submit_context_for_building(self, build_context):
         metadata = {
             'user': self.configuration.user,
             'project': self.configuration.project,
