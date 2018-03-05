@@ -53,8 +53,10 @@ class RunCommand:
     def capture_build_context(self):
         context_dir = os.getcwd()
         dockerfile_path = os.path.join(context_dir, 'Dockerfile')
+        dockerfile_created = False
         try:
             with open(dockerfile_path, mode='x') as dockerfile:
+                dockerfile_created = True
                 dockerfile.write(''.join(line + '\n' for line in [
                     f'FROM {self.configuration.image}',
                     f'WORKDIR /app',
@@ -68,7 +70,8 @@ class RunCommand:
                 gzip=True,
             )
         finally:
-            os.remove(dockerfile_path)
+            if dockerfile_created:
+                os.remove(dockerfile_path)
         return build_context
 
     def submit_context_for_building(self, build_context):
