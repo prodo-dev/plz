@@ -2,6 +2,25 @@
 
 *I am the night.*
 
+## Using the CLI
+
+First, create a configuration file called *batman.config* in your project directory:
+
+    {
+      "user": "alice",
+      "project": "danger",
+      "port": 5000,
+      "image": "024444204267.dkr.ecr.eu-west-1.amazonaws.com/ml-pytorch",
+      "command": ["python", "main.py"],
+      "excluded_paths": [
+        "env"
+      ]
+    }
+
+Then run it from the same directory:
+
+    <path to batman>/batman run
+
 ## Deploying a test environment
 
 1. Clone this repository.
