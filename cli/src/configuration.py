@@ -70,7 +70,7 @@ class Configuration:
         ]
     }
 
-    CONFIGURATION_FILE = 'batman.config'
+    CONFIGURATION_FILE = 'batman.config.json'
     MISSING_CONFIGURATION_FILE_ERROR = ValidationError(
         f'You must create a {CONFIGURATION_FILE} file.')
 

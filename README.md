@@ -4,7 +4,7 @@
 
 ## Using the CLI
 
-First, create a configuration file called *batman.config* in your project directory:
+First, create a configuration file called *batman.config.json* in your project directory:
 
     {
       "user": "alice",
