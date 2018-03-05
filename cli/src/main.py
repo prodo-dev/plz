@@ -4,6 +4,7 @@ import sys
 import traceback
 from typing import Optional, Tuple
 
+import itertools
 import requests
 
 from configuration import Configuration, ValidationException
@@ -41,15 +42,17 @@ class RunCommand:
 
     def build_snapshot(self) -> Optional[str]:
         log_info('Building the program snapshot')
-        metadata = json.dumps({
+        metadata = {
             'user': self.user,
-            'project': self.project
-        }).encode('utf-8')
-        with open(self.bz2_file, 'rb') as f:
-            file_content = f.read()
-        request_data = b'\n'.join([metadata, file_content])
-        response = requests.post(
-            self.url('snapshots'), request_data, stream=True)
+            'project': self.project,
+        }
+        metadata_bytes = json.dumps(metadata).encode('utf-8')
+        with open(self.bz2_file, 'rb') as build_context:
+            request_data = itertools.chain(
+                [metadata_bytes, b'\n'],
+                build_context)
+            response = requests.post(
+                self.url('snapshots'), request_data, stream=True)
         check_status(response, requests.codes.ok)
         error = False
         snapshot_id: str = None
