@@ -64,7 +64,8 @@ class Configuration:
             Property('project', required=True),
             Property('image', type=str, required=True),
             Property('command', type=list, required=True),
-            Property('excluded_paths', type=list, default=[])
+            Property('excluded_paths', type=list, default=[]),
+            Property('debug', type=bool, default=False),
         ]
     }
 

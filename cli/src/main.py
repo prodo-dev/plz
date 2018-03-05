@@ -69,6 +69,8 @@ class RunCommand:
                 exclude=self.configuration.excluded_paths,
                 gzip=True,
             )
+        except FileExistsError as e:
+            raise CLIException('The directory cannot have a Dockerfile.', e)
         finally:
             if dockerfile_created:
                 os.remove(dockerfile_path)
@@ -140,7 +142,7 @@ class RunCommand:
 
 
 class RequestException(Exception):
-    def __init__(self, response):
+    def __init__(self, response: requests.Response):
         try:
             body = response.json()
         except ValueError:
@@ -149,6 +151,18 @@ class RequestException(Exception):
             f'Request failed with status code {response.status_code}.\n' +
             f'Response:\n{body}'
         )
+
+
+class CLIException(Exception):
+    def __init__(self, message: str, cause: BaseException):
+        self.message = message
+        self.cause = cause
+
+    def print(self, configuration):
+        log_error(self.message)
+        if configuration.debug:
+            traceback.print_exception(
+                type(self.cause), self.cause, self.cause.__traceback__)
 
 
 COMMANDS = {
@@ -174,10 +188,11 @@ def log_info(message):
 
 
 def log_error(message):
-    if sys.stdout.isatty():
+    isatty = sys.stdout.isatty()
+    if isatty:
         print('\x1b[31m', end='')
-    print('❗', message, end='')
-    if sys.stdout.isatty():
+    print('❗' if isatty else '!  ', message, end='')
+    if isatty:
         print('\x1b[0m')
 
 
@@ -200,7 +215,11 @@ def main(args):
     del option_dict['command_name']
 
     command = COMMANDS[command_name](configuration, **option_dict)
-    if not command.run():
+    try:
+        if not command.run():
+            sys.exit(1)
+    except CLIException as e:
+        e.print(configuration)
         sys.exit(1)
 
 
