@@ -9,13 +9,13 @@ $(error "Could not find $(PYTHON_EXE).")
 endif
 
 $(SITE_PACKAGES): env requirements.txt
-	pip install --requirement=requirements.txt
+	./env/bin/pip install --requirement=requirements.txt
 	touch $(SITE_PACKAGES)
 
 .PHONY: freeze
 freeze: env
-	pip freeze | grep -v '^pkg-resources=' > requirements.txt
+	./env/bin/pip freeze | grep -v '^pkg-resources=' > requirements.txt
 
-env: $(PYTHON)
+env:
 	virtualenv --python=$(PYTHON_EXE) env
 	touch -t 200001010000 $(SITE_PACKAGES)
