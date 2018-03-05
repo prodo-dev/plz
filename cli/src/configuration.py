@@ -62,6 +62,7 @@ class Configuration:
             Property('port', type=int, default=80),
             Property('user', required=True),
             Property('project', required=True),
+            Property('excluded_paths', type=list, default=[])
         ]
     }
 

@@ -1,10 +1,13 @@
 import argparse
+import itertools
 import json
+import os
+import os.path
 import sys
 import traceback
 from typing import Optional, Tuple
 
-import itertools
+import docker.utils.build
 import requests
 
 from configuration import Configuration, ValidationException
@@ -15,16 +18,12 @@ class RunCommand:
 
     @staticmethod
     def prepare_argument_parser(parser):
-        # TODO(sergio): build the Docker context as part of the command
-        parser.add_argument('--bz2-file', required=True)
         parser.add_argument('command')
 
-    def __init__(self, configuration, command, bz2_file):
+    def __init__(self, configuration: Configuration, command: str):
+        self.configuration = configuration
         self.prefix = f'http://{configuration.host}:{configuration.port}'
-        self.user = configuration.user
-        self.project = configuration.project
         self.command = command
-        self.bz2_file = bz2_file
 
     def run(self):
         snapshot_id = self.build_snapshot()
@@ -41,18 +40,31 @@ class RunCommand:
             log_info('Done and dusted.')
 
     def build_snapshot(self) -> Optional[str]:
+        log_info('Capturing the context')
+        context_dir = os.getcwd()
+        dockerfile_path = os.path.join(context_dir, 'Dockerfile')
+        try:
+            with open(dockerfile_path, mode='x') as dockerfile:
+                dockerfile.write('FROM busybox\n')
+            os.chmod(dockerfile_path, 0o644)
+            build_context = docker.utils.build.tar(
+                path='.',
+                exclude=self.configuration.excluded_paths,
+            )
+        finally:
+            os.remove(dockerfile_path)
+
         log_info('Building the program snapshot')
         metadata = {
-            'user': self.user,
-            'project': self.project,
+            'user': self.configuration.user,
+            'project': self.configuration.project,
         }
         metadata_bytes = json.dumps(metadata).encode('utf-8')
-        with open(self.bz2_file, 'rb') as build_context:
-            request_data = itertools.chain(
-                [metadata_bytes, b'\n'],
-                build_context)
-            response = requests.post(
-                self.url('snapshots'), request_data, stream=True)
+        request_data = itertools.chain(
+            [metadata_bytes, b'\n'],
+            build_context)
+        response = requests.post(
+            self.url('snapshots'), request_data, stream=True)
         check_status(response, requests.codes.ok)
         error = False
         snapshot_id: str = None
