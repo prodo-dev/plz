@@ -26,10 +26,9 @@ class RunCommand:
         self.command = \
             ['sh', '-c', command] if command else self.configuration.command
 
-    def run(self) -> bool:
+    def run(self):
         if not self.command:
-            log_error('No command specified!')
-            return False
+            raise CLIException('No command specified!')
 
         log_info('Capturing the context')
         build_context = self.capture_build_context()
@@ -41,14 +40,11 @@ class RunCommand:
             try:
                 if ok and execution_id:
                     self.display_logs(execution_id)
-            except RequestException:
-                log_error('Displaying the logs failed.')
-                traceback.print_exc()
-                return False
+            except RequestException as e:
+                raise CLIException('Displaying the logs failed.', e)
             if execution_id:
                 self.cleanup(execution_id)
             log_info('Done and dusted.')
-            return True
 
     def capture_build_context(self):
         context_dir = os.getcwd()
@@ -154,13 +150,13 @@ class RequestException(Exception):
 
 
 class CLIException(Exception):
-    def __init__(self, message: str, cause: BaseException):
+    def __init__(self, message: str, cause: Optional[BaseException] = None):
         self.message = message
         self.cause = cause
 
     def print(self, configuration):
         log_error(self.message)
-        if configuration.debug:
+        if self.cause and configuration.debug:
             traceback.print_exception(
                 type(self.cause), self.cause, self.cause.__traceback__)
 
@@ -216,8 +212,7 @@ def main(args):
 
     command = COMMANDS[command_name](configuration, **option_dict)
     try:
-        if not command.run():
-            sys.exit(1)
+        command.run()
     except CLIException as e:
         e.print(configuration)
         sys.exit(1)

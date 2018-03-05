@@ -33,6 +33,7 @@ class Property:
         str: 'a string',
         int: 'an integer',
         bool: 'true or false',
+        list: 'a list',
     }
 
     def __init__(self,
@@ -63,7 +64,7 @@ class Configuration:
             Property('user', required=True),
             Property('project', required=True),
             Property('image', type=str, required=True),
-            Property('command', type=list, required=True),
+            Property('command', type=list),
             Property('excluded_paths', type=list, default=[]),
             Property('debug', type=bool, default=False),
         ]
@@ -130,7 +131,7 @@ class Configuration:
             value = self.data.get(prop.name)
             if value is None and prop.required:
                 errors.append(prop.required_error())
-            elif not isinstance(value, prop.type):
+            elif value is not None and not isinstance(value, prop.type):
                 errors.append(prop.type_error(value))
         if errors:
             raise ValidationException(errors)
