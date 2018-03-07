@@ -3,7 +3,7 @@ from typing import Iterator, Optional
 
 from containers import Containers
 from images import Images
-from instances.instance_base import Instance
+from instances.instance_base import Instance, InstanceProvider
 
 log = logging.getLogger('localhost')
 
@@ -30,8 +30,7 @@ class LocalhostInstance(Instance):
         self.containers.rm(self.execution_id)
 
 
-class Localhost:
-    # noinspection PyUnusedLocal
+class Localhost(InstanceProvider):
     @staticmethod
     def from_config(config):
         images = Images.from_config(config)
@@ -73,6 +72,5 @@ class Localhost:
         else:
             return None
 
-    # noinspection PyUnusedLocal
     def push(self, image_tag: str):
         pass
