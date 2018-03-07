@@ -61,6 +61,8 @@ class EC2Instances:
         for i in range(self.max_acquisition_tries):
             response = self.client.describe_instances(
                 Filters=self.filters + [
+                    {'Name': 'instance-state-name',
+                     'Values': ['running']},
                     {'Name': f'tag:{self.EXECUTION_ID_TAG}',
                      'Values': [execution_id]},
                 ])
