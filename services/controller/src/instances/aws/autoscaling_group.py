@@ -7,10 +7,10 @@ from botocore.exceptions import ClientError
 
 from images import Images
 from instances.aws.ec2_instance import EC2Instances
-from instances.instance_base import Instance
+from instances.instance_base import Instance, InstanceProvider
 
 
-class AutoScalingGroup:
+class AutoScalingGroup(InstanceProvider):
     # We find available instances by looking at those in which
     # the Execution-Id tag is empty. The autoscaling group has this tag
     # with an empty value, and it is propagated to new instances.
