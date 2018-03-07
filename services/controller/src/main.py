@@ -55,7 +55,16 @@ def run_command_entrypoint():
                     'error': 'Couldn\'t get an instance.',
                 }
                 return
-            instance.run(command, snapshot_id)
+
+            run_configuration = {
+                'foo': 'bar',
+            }
+            files = {
+                '/configuration.json': json.dumps(run_configuration, indent=2),
+            }
+            instance.run(command=command + ['/configuration.json'],
+                         snapshot_id=snapshot_id,
+                         files=files)
         except Exception as e:
             log.exception('Exception running command.')
             yield {'error': str(e)}

@@ -1,4 +1,8 @@
+import json
+import os.path
+import random
 import socket
+import subprocess
 import time
 from contextlib import closing
 from typing import Dict, Optional, List
@@ -9,6 +13,8 @@ from instances.instance_base import Instance
 
 
 class EC2Instance(Instance):
+    ROOT = os.path.join(os.path.dirname(__file__), '..', '..', '..')
+
     def __init__(self,
                  client,
                  images: Images,
@@ -21,9 +27,23 @@ class EC2Instance(Instance):
         self.execution_id = execution_id
         self.data = data
 
-    def run(self, command: str, snapshot_id: str):
+        self._ssh_host = f'ubuntu@{self.data["PrivateDnsName"]}'
+        ssh_args = ['-q',
+                    '-o', 'StrictHostKeyChecking=no',
+                    '-o', 'UserKnownHostsFile=/dev/null']
+        self._ssh = ['ssh', *ssh_args, self._ssh_host]
+        self._scp = ['scp', *ssh_args]
+
+    def run(self, command: str, snapshot_id: str, files: Dict[str, str]):
+        volume_mounts = json.loads(
+            self.execute(
+                script='src/create_files_for_mounting.py',
+                stdin=json.dumps(files)))
         self.images.pull(snapshot_id)
-        self.containers.run(self.execution_id, snapshot_id, command)
+        self.containers.run(name=self.execution_id,
+                            tag=snapshot_id,
+                            command=command,
+                            volume_mounts=volume_mounts)
 
     def logs(self, stdout: bool = True, stderr: bool = True):
         return self.containers.logs(self.execution_id,
@@ -32,6 +52,22 @@ class EC2Instance(Instance):
 
     def cleanup(self):
         self.containers.rm(self.execution_id)
+
+    def execute(self, script: str, stdin: str) -> str:
+        local_script = os.path.abspath(os.path.join(self.ROOT, script))
+        remote_script = f'/tmp/execute.{random.randint(0, 10000)}'
+        subprocess.run([*self._scp,
+                        local_script,
+                        f'{self._ssh_host}:{remote_script}'],
+                       check=True)
+        process = \
+            subprocess.run([*self._ssh, remote_script],
+                           input=stdin,
+                           stdout=subprocess.PIPE,
+                           encoding='utf-8',
+                           check=True)
+        subprocess.run([*self._ssh, 'rm', '-f', remote_script])
+        return process.stdout
 
     def set_tags(self, tags):
         instance_id = self.data['InstanceId']

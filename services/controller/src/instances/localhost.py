@@ -1,7 +1,8 @@
 import logging
-from typing import Iterator, Optional
+from typing import Dict, Iterator, Optional
 
 from containers import Containers
+from create_files_for_mounting import create_files_for_mounting
 from images import Images
 from instances.instance_base import Instance, InstanceProvider
 
@@ -17,11 +18,12 @@ class LocalhostInstance(Instance):
         self.containers = containers
         self.execution_id = execution_id
 
-    def run(self, command: str, snapshot_id: str):
-        """
-        Runs a command on the instance.
-        """
-        self.containers.run(self.execution_id, snapshot_id, command)
+    def run(self, command: str, snapshot_id: str, files: Dict[str, str]):
+        volume_mounts = create_files_for_mounting(files)
+        self.containers.run(name=self.execution_id,
+                            tag=snapshot_id,
+                            command=command,
+                            volume_mounts=volume_mounts)
 
     def logs(self, stdout: bool = True, stderr: bool = True):
         return self.containers.logs(self.execution_id,

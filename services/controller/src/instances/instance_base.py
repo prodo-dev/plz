@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Iterator, Optional
+from typing import Dict, Iterator, Optional
 
 
 class Instance(ABC):
     @abstractmethod
-    def run(self, command: str, snapshot_id: str):
+    def run(self, command: str, snapshot_id: str, files: Dict[str, str]):
         pass
 
     @abstractmethod

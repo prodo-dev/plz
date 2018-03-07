@@ -1,5 +1,5 @@
 import logging
-from typing import Iterator
+from typing import Dict, Iterator
 
 import docker
 import docker.errors
@@ -18,12 +18,16 @@ class Containers:
     def __init__(self, docker_client: docker.DockerClient):
         self.docker_client = docker_client
 
-    def run(self, name: str, tag: str, command: str):
+    def run(self, name: str, tag: str, command: str,
+            volume_mounts: Dict[str, str]):
         image = f'{Images.DOCKER_REPOSITORY}:{tag}'
+        volumes = {host_path: {'bind': container_path, 'mode': 'ro'}
+                   for host_path, container_path in volume_mounts.items()}
         container = self.docker_client.containers.run(
             image=image,
             command=command,
             name=name,
+            volumes=volumes,
             detach=True,
         )
         self.log.info(f'Started container: {container.id}')
