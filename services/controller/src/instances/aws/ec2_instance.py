@@ -54,8 +54,11 @@ class EC2Instances:
                 {'Name': f'tag:{self.EXECUTION_ID_TAG}',
                  'Values': [execution_id]},
             ])
+        instances = [instance
+                     for reservation in response['Reservations']
+                     for instance in reservation['Instances']]
         try:
-            instance_data = response['Reservations'][0]['Instances'][0]
+            instance_data = instances[0]
             host = instance_data['PrivateDnsName']
             if not _is_socket_open(host, self.DOCKER_PORT):
                 return None
