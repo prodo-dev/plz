@@ -44,7 +44,7 @@ class Localhost(InstanceProvider):
     def __init__(self, images: Images, containers: Containers):
         self.images = images
         self.containers = containers
-        self.execution_ids = set()
+        self.instances = {}
 
     def acquire_instance(self, execution_id: str) -> Iterator[str]:
         """
@@ -52,7 +52,8 @@ class Localhost(InstanceProvider):
 
         As we're dealing with `localhost` here, it's always the same instance.
         """
-        self.execution_ids.add(execution_id)
+        self.instances[execution_id] = LocalhostInstance(
+            self.images, self.containers, execution_id)
         return iter([])
 
     def release_instance(self, execution_id: str):
@@ -62,7 +63,7 @@ class Localhost(InstanceProvider):
         As we're dealing with `localhost` here, this doesn't do much.
         """
         self.instance_for(execution_id).cleanup()
-        self.execution_ids.remove(execution_id)
+        del self.instances[execution_id]
 
     def instance_for(self, execution_id: str) -> Optional[LocalhostInstance]:
         """
@@ -70,11 +71,7 @@ class Localhost(InstanceProvider):
 
         As we're dealing with `localhost` here, it's always the same instance.
         """
-        if execution_id in self.execution_ids:
-            return LocalhostInstance(
-                self.images, self.containers, execution_id)
-        else:
-            return None
+        return self.instances.get(execution_id)
 
     def push(self, image_tag: str):
         pass

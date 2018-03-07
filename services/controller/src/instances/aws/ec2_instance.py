@@ -93,8 +93,14 @@ class EC2Instances:
         self.filters = filters
         self.acquisition_delay_in_seconds = acquisition_delay_in_seconds
         self.max_acquisition_tries = max_acquisition_tries
+        self.instances = {}
 
     def instance_for(self, execution_id: str) -> Optional[EC2Instance]:
+        try:
+            return self.instances[execution_id]
+        except KeyError:
+            pass
+
         # Keep trying until the host has a hostname and the Docker port is open
         for i in range(self.max_acquisition_tries):
             response = self.client.describe_instances(
@@ -121,12 +127,14 @@ class EC2Instances:
             docker_url = f'tcp://{host}:{self.DOCKER_PORT}'
             images = self.images.for_host(docker_url)
             containers = Containers.for_host(docker_url)
-            return EC2Instance(
+            instance = EC2Instance(
                 self.client,
                 images,
                 containers,
                 execution_id,
                 instance_data)
+            self.instances[execution_id] = instance
+            return instance
         except (KeyError, IndexError):
             return None
 
