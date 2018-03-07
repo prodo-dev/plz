@@ -84,6 +84,7 @@ def _create_config():
             val = environ.get(_name_to_env_variable(spec['name']), None)
             if val is not None:
                 if 'from_string' in spec:
+                    # noinspection PyCallingNonCallable
                     val = spec['from_string'](val)
                 elif 'type' in spec['spec']:
                     val = spec['spec']['type'](val)
