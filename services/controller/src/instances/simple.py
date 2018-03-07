@@ -5,7 +5,7 @@ from docker.types import Mount
 from containers import Containers
 from images import Images
 from instances.instance_base import Instance
-from volumes import Volumes, VolumeFile
+from volumes import Volumes, VolumeDirectory, VolumeFile
 
 
 class SimpleInstance(Instance):
@@ -20,12 +20,14 @@ class SimpleInstance(Instance):
         self.execution_id = execution_id
 
     def run(self, command: List[str], snapshot_id: str, files: Dict[str, str]):
-        volume = self.volumes.create(self.volume_name, {
-            path: VolumeFile(contents) for path, contents in files.items()
-        })
+        volume = self.volumes.create(self.volume_name, [
+            VolumeDirectory(Volumes.OUTPUT_DIRECTORY),
+            *[VolumeFile(path, contents) for path, contents in files.items()],
+        ])
+        command_with_arguments = command + [Volumes.CONFIGURATION_FILE_PATH]
         self.containers.run(name=self.execution_id,
                             tag=snapshot_id,
-                            command=command,
+                            command=command_with_arguments,
                             mounts=[Mount(source=volume.name,
                                           target=Volumes.VOLUME_MOUNT)])
 

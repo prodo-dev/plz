@@ -2,7 +2,8 @@ import io
 import os.path
 import tarfile
 import tempfile
-from typing import Dict
+from abc import ABC, abstractmethod
+from typing import List
 
 import docker
 import docker.errors
@@ -10,14 +11,39 @@ from docker.models.volumes import Volume
 from docker.types import Mount
 
 
-class VolumeFile:
-    def __init__(self, contents):
+class VolumeObject(ABC):
+    @abstractmethod
+    def add_to(self, tar: tarfile.TarFile):
+        pass
+
+
+class VolumeFile(VolumeObject):
+    def __init__(self, path: str, contents: str):
+        self.path = path
         self.contents: bytes = contents.encode('utf-8')
+
+    def add_to(self, tar: tarfile.TarFile):
+        tarinfo = tarfile.TarInfo(name=self.path)
+        tarinfo.size = len(self.contents)
+        tar.addfile(tarinfo, fileobj=io.BytesIO(self.contents))
+
+
+class VolumeDirectory(VolumeObject):
+    def __init__(self, path: str):
+        self.path = path
+
+    def add_to(self, tar: tarfile.TarFile):
+        tarinfo = tarfile.TarInfo(name=self.path)
+        tarinfo.type = tarfile.DIRTYPE
+        tar.addfile(tarinfo)
 
 
 class Volumes:
     VOLUME_MOUNT = '/batman'
-    CONFIGURATION_FILE_PATH = os.path.join(VOLUME_MOUNT, 'configuration.json')
+    CONFIGURATION_FILE = 'configuration.json'
+    CONFIGURATION_FILE_PATH = os.path.join(VOLUME_MOUNT, CONFIGURATION_FILE)
+    OUTPUT_DIRECTORY = 'output'
+    OUTPUT_DIRECTORY_PATH = os.path.join(VOLUME_MOUNT, OUTPUT_DIRECTORY)
 
     @staticmethod
     def for_host(docker_url):
@@ -27,14 +53,11 @@ class Volumes:
     def __init__(self, docker_client: docker.DockerClient):
         self.docker_client = docker_client
 
-    def create(self, name: str, files: Dict[str, VolumeFile]) -> Volume:
+    def create(self, name: str, objects: List[VolumeObject]) -> Volume:
         with tempfile.NamedTemporaryFile() as f:
             with tarfile.open(f.name, mode='w') as tar:
-                for filepath, volume_file in files.items():
-                    tarinfo = tarfile.TarInfo(name=filepath)
-                    tarinfo.size = len(volume_file.contents)
-                    tar.addfile(tarinfo=tarinfo,
-                                fileobj=io.BytesIO(volume_file.contents))
+                for volume_object in objects:
+                    volume_object.add_to(tar)
             f.seek(0)
             tarball = f.read()
 

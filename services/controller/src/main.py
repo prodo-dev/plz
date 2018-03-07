@@ -37,7 +37,7 @@ def run_command_entrypoint():
     # Test with:
     # curl -X POST -d '{"command": "ls /" }'
     #    -H 'Content-Type: application/json' localhost:5000/commands
-    command = request.json['command'] + [Volumes.CONFIGURATION_FILE_PATH]
+    command = request.json['command']
     snapshot_id = request.json['snapshot_id']
     execution_id = str(get_command_uuid())
 
@@ -58,10 +58,11 @@ def run_command_entrypoint():
                 return
 
             run_configuration = {
-                'foo': 'bar',
+                'output_directory': Volumes.OUTPUT_DIRECTORY_PATH,
             }
             files = {
-                'configuration.json': json.dumps(run_configuration, indent=2),
+                Volumes.CONFIGURATION_FILE:
+                    json.dumps(run_configuration, indent=2),
             }
             instance.run(command=command,
                          snapshot_id=snapshot_id,
