@@ -41,6 +41,9 @@ class SimpleInstance(Instance):
                                     stdout=stdout,
                                     stderr=stderr)
 
+    def output(self):
+        return self.volumes.extract(self.volume_name, Volumes.OUTPUT_DIRECTORY)
+
     def cleanup(self):
         self.containers.rm(self.execution_id)
         self.volumes.remove(self.volume_name)

@@ -12,6 +12,10 @@ class Instance(ABC):
         pass
 
     @abstractmethod
+    def output(self):
+        pass
+
+    @abstractmethod
     def cleanup(self):
         pass
 

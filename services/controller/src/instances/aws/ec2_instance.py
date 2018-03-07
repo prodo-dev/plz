@@ -33,6 +33,9 @@ class EC2Instance(Instance):
     def logs(self, stdout: bool = True, stderr: bool = True):
         return self.simple.logs(stdout, stderr)
 
+    def output(self):
+        return self.simple.output()
+
     def cleanup(self):
         return self.simple.cleanup()
 

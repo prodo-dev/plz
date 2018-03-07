@@ -2,6 +2,7 @@
 /data
 .envrc
 batman.config.json
+output
 
 # Python
 env
