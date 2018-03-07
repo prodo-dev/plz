@@ -1,4 +1,5 @@
-from typing import Dict, List
+import json
+from typing import List
 
 from docker.types import Mount
 
@@ -19,10 +20,14 @@ class SimpleInstance(Instance):
         self.volumes = volumes
         self.execution_id = execution_id
 
-    def run(self, command: List[str], snapshot_id: str, files: Dict[str, str]):
+    def run(self, command: List[str], snapshot_id: str):
+        configuration = {
+            'output_directory': Volumes.OUTPUT_DIRECTORY_PATH,
+        }
         volume = self.volumes.create(self.volume_name, [
             VolumeDirectory(Volumes.OUTPUT_DIRECTORY),
-            *[VolumeFile(path, contents) for path, contents in files.items()],
+            VolumeFile(Volumes.CONFIGURATION_FILE,
+                       contents=json.dumps(configuration, indent=2)),
         ])
         command_with_arguments = command + [Volumes.CONFIGURATION_FILE_PATH]
         self.containers.run(name=self.execution_id,

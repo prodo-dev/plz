@@ -26,9 +26,9 @@ class EC2Instance(Instance):
         self.simple = SimpleInstance(images, containers, volumes, execution_id)
         self.data = data
 
-    def run(self, command: List[str], snapshot_id: str, files: Dict[str, str]):
+    def run(self, command: List[str], snapshot_id: str):
         self.images.pull(snapshot_id)
-        self.simple.run(command, snapshot_id, files)
+        self.simple.run(command, snapshot_id)
 
     def logs(self, stdout: bool = True, stderr: bool = True):
         return self.simple.logs(stdout, stderr)

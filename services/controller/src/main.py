@@ -14,7 +14,6 @@ from images import Images
 from instances.aws import AwsAutoScalingGroup
 from instances.instance_base import InstanceProvider
 from instances.localhost import Localhost
-from volumes import Volumes
 
 T = TypeVar('T')
 
@@ -57,16 +56,7 @@ def run_command_entrypoint():
                 }
                 return
 
-            run_configuration = {
-                'output_directory': Volumes.OUTPUT_DIRECTORY_PATH,
-            }
-            files = {
-                Volumes.CONFIGURATION_FILE:
-                    json.dumps(run_configuration, indent=2),
-            }
-            instance.run(command=command,
-                         snapshot_id=snapshot_id,
-                         files=files)
+            instance.run(command=command, snapshot_id=snapshot_id)
         except Exception as e:
             log.exception('Exception running command.')
             yield {'error': str(e)}
