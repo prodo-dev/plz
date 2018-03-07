@@ -127,6 +127,7 @@ class RunCommand:
         check_status(response, requests.codes.ok)
         for line in response.raw:
             print(line.decode('utf-8'), end='')
+        print()
 
     def cleanup(self, execution_id: str):
         log_info('Cleaning up all detritus.')
