@@ -34,11 +34,14 @@ class EC2Instance(Instance):
         self._ssh = ['ssh', *ssh_args, self._ssh_host]
         self._scp = ['scp', *ssh_args]
 
+        self.files_to_clean_up = set()
+
     def run(self, command: str, snapshot_id: str, files: Dict[str, str]):
         volume_mounts = json.loads(
             self.execute(
-                script='src/create_files_for_mounting.py',
+                script='src/mounts/create_files.py',
                 stdin=json.dumps(files)))
+        self.files_to_clean_up.update(volume_mounts.keys())
         self.images.pull(snapshot_id)
         self.containers.run(name=self.execution_id,
                             tag=snapshot_id,
@@ -52,6 +55,9 @@ class EC2Instance(Instance):
 
     def cleanup(self):
         self.containers.rm(self.execution_id)
+        self.execute(
+            script='src/mounts/delete_files.py',
+            stdin=json.dumps(list(self.files_to_clean_up)))
 
     def execute(self, script: str, stdin: str) -> str:
         local_script = os.path.abspath(os.path.join(self.ROOT, script))

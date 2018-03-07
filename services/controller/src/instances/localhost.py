@@ -1,8 +1,8 @@
 import logging
 from typing import Dict, Iterator, Optional
 
+import mounts
 from containers import Containers
-from create_files_for_mounting import create_files_for_mounting
 from images import Images
 from instances.instance_base import Instance, InstanceProvider
 
@@ -17,9 +17,11 @@ class LocalhostInstance(Instance):
         self.images = images
         self.containers = containers
         self.execution_id = execution_id
+        self.files_to_clean_up = set()
 
     def run(self, command: str, snapshot_id: str, files: Dict[str, str]):
-        volume_mounts = create_files_for_mounting(files)
+        volume_mounts = mounts.create_files_for_mounting(files)
+        self.files_to_clean_up.update(volume_mounts.keys())
         self.containers.run(name=self.execution_id,
                             tag=snapshot_id,
                             command=command,
@@ -32,6 +34,8 @@ class LocalhostInstance(Instance):
 
     def cleanup(self):
         self.containers.rm(self.execution_id)
+        mounts.delete_files(self.files_to_clean_up)
+        self.files_to_clean_up = set()
 
 
 class Localhost(InstanceProvider):
