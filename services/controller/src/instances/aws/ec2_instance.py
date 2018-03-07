@@ -25,8 +25,10 @@ class EC2Instance(Instance):
         self.images.pull(snapshot_id)
         self.containers.run(self.execution_id, snapshot_id, command)
 
-    def logs(self):
-        return self.containers.logs(self.execution_id)
+    def logs(self, stdout: bool = True, stderr: bool = True):
+        return self.containers.logs(self.execution_id,
+                                    stdout=stdout,
+                                    stderr=stderr)
 
     def cleanup(self):
         self.containers.rm(self.execution_id)

@@ -36,9 +36,11 @@ class Containers:
         except docker.errors.NotFound:
             pass
 
-    def logs(self, name: str) -> Iterator[str]:
+    def logs(self, name: str, stdout: bool = True, stderr: bool = True) \
+            -> Iterator[str]:
         container = self.docker_client.containers.get(name)
-        return container.logs(stream=True, follow=True)
+        return container.logs(stdout=stdout, stderr=stderr,
+                              stream=True, follow=True)
 
     @staticmethod
     def _is_container_id(container_id: str):

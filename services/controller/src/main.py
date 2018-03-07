@@ -67,7 +67,7 @@ def run_command_entrypoint():
 
 @app.route(f'/commands/<execution_id>/logs',
            methods=['GET'])
-def get_output_entrypoint(execution_id):
+def get_logs_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/commands/some-id/logs
     instance = instance_provider.instance_for(execution_id)
@@ -76,19 +76,21 @@ def get_output_entrypoint(execution_id):
 
 
 @app.route(f'/commands/<execution_id>/logs/stdout')
-def get_stdout_entrypoint(execution_id):
+def get_logs_stdout_entrypoint(execution_id):
     # Test with:
-    # curl localhost:5000/commands/some-id/logs/stderr
-    # TODO(sergio): implement
-    raise NotImplemented(execution_id)
+    # curl localhost:5000/commands/some-id/logs/stdout
+    instance = instance_provider.instance_for(execution_id)
+    response = instance.logs(stdout=True, stderr=False)
+    return Response(response, mimetype='application/octet-stream')
 
 
 @app.route(f'/commands/<execution_id>/logs/stderr')
-def get_stderr_entrypoint(execution_id):
+def get_logs_stderr_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/commands/some-id/logs/stderr
-    # TODO(sergio): implement
-    raise NotImplemented(execution_id)
+    instance = instance_provider.instance_for(execution_id)
+    response = instance.logs(stdout=False, stderr=True)
+    return Response(response, mimetype='application/octet-stream')
 
 
 @app.route(f'/commands/<execution_id>',

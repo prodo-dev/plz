@@ -8,7 +8,7 @@ class Instance(ABC):
         pass
 
     @abstractmethod
-    def logs(self):
+    def logs(self, stdout: bool = True, stderr: bool = True):
         pass
 
     @abstractmethod
