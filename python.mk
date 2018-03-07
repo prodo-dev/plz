@@ -12,8 +12,15 @@ $(SITE_PACKAGES): env requirements.txt
 	./env/bin/pip install --requirement=requirements.txt
 	touch $(SITE_PACKAGES)
 
-.PHONY: freeze
-freeze: env
+.PHONY: upgrade-python-dependencies
+upgrade-python-dependencies:
+	packages=($$(pip list --outdated --format=json | jq -r '.[] | .name')); \
+	if [[ $${#packages} -gt 0 ]]; then \
+	  pip install --upgrade $${packages[@]}; \
+	fi
+	./env/bin/pip freeze | grep -v '^pkg-resources=' > requirements.txt
+
+requirements.txt: env
 	./env/bin/pip freeze | grep -v '^pkg-resources=' > requirements.txt
 
 env:
