@@ -28,7 +28,9 @@ class AutoScalingGroup:
             client=boto3.client('ec2'),
             images=images,
             filters=[{'Name': 'tag:aws:autoscaling:groupName',
-                      'Values': [name]}])
+                      'Values': [name]}],
+            max_acquisition_tries=5,
+            acquisition_delay_in_seconds=10)
         return AutoScalingGroup(name, client, instances, images)
 
     def __new__(cls,
@@ -60,8 +62,8 @@ class AutoScalingGroup:
     def acquire_instance(
             self,
             execution_id: str,
-            max_trials: int = 30,
-            wait_for_seconds: int = 10) \
+            max_tries: int = 30,
+            delay_in_seconds: int = 10) \
             -> Iterator[str]:
         """
         Gets an available instance for the execution with the given id.
@@ -71,7 +73,7 @@ class AutoScalingGroup:
         Otherwise, increase the desired capacity of the group and try until
         the maximum number of trials.
         """
-        tries_remaining = max_trials
+        tries_remaining = max_tries
         with self.lock:
             did_increase_capacity = False
             while tries_remaining > 0:
@@ -98,7 +100,7 @@ class AutoScalingGroup:
                         else:
                             raise
 
-                time.sleep(wait_for_seconds)
+                time.sleep(delay_in_seconds)
 
     def release_instance(self, execution_id: str):
         self.instances.release_for(execution_id)

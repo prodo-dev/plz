@@ -1,4 +1,5 @@
 import socket
+import time
 from contextlib import closing
 from typing import Dict, Optional, List
 
@@ -43,25 +44,40 @@ class EC2Instances:
     # with an empty value, and it is propagated to new instances.
     EXECUTION_ID_TAG = 'Execution-Id'
 
-    def __init__(self, client, images: Images, filters: List[Dict[str, str]]):
+    def __init__(self,
+                 client,
+                 images: Images,
+                 filters: List[Dict[str, str]],
+                 acquisition_delay_in_seconds: int,
+                 max_acquisition_tries: int):
         self.client = client
         self.images = images
         self.filters = filters
+        self.acquisition_delay_in_seconds = acquisition_delay_in_seconds
+        self.max_acquisition_tries = max_acquisition_tries
 
     def instance_for(self, execution_id: str) -> Optional[EC2Instance]:
-        response = self.client.describe_instances(
-            Filters=self.filters + [
-                {'Name': f'tag:{self.EXECUTION_ID_TAG}',
-                 'Values': [execution_id]},
-            ])
-        instances = [instance
-                     for reservation in response['Reservations']
-                     for instance in reservation['Instances']]
+        # Keep trying until the host has a hostname and the Docker port is open
+        for i in range(self.max_acquisition_tries):
+            response = self.client.describe_instances(
+                Filters=self.filters + [
+                    {'Name': f'tag:{self.EXECUTION_ID_TAG}',
+                     'Values': [execution_id]},
+                ])
+            instances = [instance
+                         for reservation in response['Reservations']
+                         for instance in reservation['Instances']]
+            if instances:
+                instance_data = instances[0]
+                host = instance_data.get('PrivateDnsName')
+                print(host, self.DOCKER_PORT)
+                if host and _is_socket_open(host, self.DOCKER_PORT):
+                    break
+            time.sleep(self.acquisition_delay_in_seconds)
+        else:
+            return None
+
         try:
-            instance_data = instances[0]
-            host = instance_data['PrivateDnsName']
-            if not _is_socket_open(host, self.DOCKER_PORT):
-                return None
             docker_url = f'tcp://{host}:{self.DOCKER_PORT}'
             images = self.images.for_host(docker_url)
             containers = Containers.for_host(docker_url)
