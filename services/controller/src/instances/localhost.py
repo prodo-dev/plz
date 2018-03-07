@@ -1,41 +1,13 @@
 import logging
-from typing import Dict, Iterator, List, Optional
+from typing import Iterator, Optional
 
-import mounts
 from containers import Containers
 from images import Images
-from instances.instance_base import Instance, InstanceProvider
+from instances.instance_base import InstanceProvider, Instance
+from instances.simple import SimpleInstance
+from volumes import Volumes
 
 log = logging.getLogger('localhost')
-
-
-class LocalhostInstance(Instance):
-    def __init__(self,
-                 images: Images,
-                 containers: Containers,
-                 execution_id: str):
-        self.images = images
-        self.containers = containers
-        self.execution_id = execution_id
-        self.files_to_clean_up = set()
-
-    def run(self, command: List[str], snapshot_id: str, files: Dict[str, str]):
-        volumes = mounts.create_files_for_mounting(files)
-        self.files_to_clean_up.update(volumes.keys())
-        self.containers.run(name=self.execution_id,
-                            tag=snapshot_id,
-                            command=command,
-                            volumes=volumes)
-
-    def logs(self, stdout: bool = True, stderr: bool = True):
-        return self.containers.logs(self.execution_id,
-                                    stdout=stdout,
-                                    stderr=stderr)
-
-    def cleanup(self):
-        self.containers.rm(self.execution_id)
-        mounts.delete_files(self.files_to_clean_up)
-        self.files_to_clean_up = set()
 
 
 class Localhost(InstanceProvider):
@@ -43,11 +15,16 @@ class Localhost(InstanceProvider):
     def from_config(config):
         images = Images.from_config(config)
         containers = Containers.for_host(config.docker_host)
-        return Localhost(images, containers)
+        volumes = Volumes.for_host(config.docker_host)
+        return Localhost(images, containers, volumes)
 
-    def __init__(self, images: Images, containers: Containers):
+    def __init__(self,
+                 images: Images,
+                 containers: Containers,
+                 volumes: Volumes):
         self.images = images
         self.containers = containers
+        self.volumes = volumes
         self.instances = {}
 
     def acquire_instance(self, execution_id: str) -> Iterator[str]:
@@ -56,8 +33,8 @@ class Localhost(InstanceProvider):
 
         As we're dealing with `localhost` here, it's always the same instance.
         """
-        self.instances[execution_id] = LocalhostInstance(
-            self.images, self.containers, execution_id)
+        self.instances[execution_id] = SimpleInstance(
+            self.images, self.containers, self.volumes, execution_id)
         return iter([])
 
     def release_instance(self, execution_id: str):
@@ -69,7 +46,7 @@ class Localhost(InstanceProvider):
         self.instance_for(execution_id).cleanup()
         del self.instances[execution_id]
 
-    def instance_for(self, execution_id: str) -> Optional[LocalhostInstance]:
+    def instance_for(self, execution_id: str) -> Optional[Instance]:
         """
         "Gets" the instance assigned to the execution ID.
 

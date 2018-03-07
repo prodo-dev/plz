@@ -14,6 +14,7 @@ from images import Images
 from instances.aws import AwsAutoScalingGroup
 from instances.instance_base import InstanceProvider
 from instances.localhost import Localhost
+from volumes import Volumes
 
 T = TypeVar('T')
 
@@ -36,7 +37,7 @@ def run_command_entrypoint():
     # Test with:
     # curl -X POST -d '{"command": "ls /" }'
     #    -H 'Content-Type: application/json' localhost:5000/commands
-    command = request.json['command']
+    command = request.json['command'] + [Volumes.CONFIGURATION_FILE_PATH]
     snapshot_id = request.json['snapshot_id']
     execution_id = str(get_command_uuid())
 
@@ -60,9 +61,9 @@ def run_command_entrypoint():
                 'foo': 'bar',
             }
             files = {
-                '/configuration.json': json.dumps(run_configuration, indent=2),
+                'configuration.json': json.dumps(run_configuration, indent=2),
             }
-            instance.run(command=command + ['/configuration.json'],
+            instance.run(command=command,
                          snapshot_id=snapshot_id,
                          files=files)
         except Exception as e:

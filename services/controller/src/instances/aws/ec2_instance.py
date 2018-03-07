@@ -1,8 +1,5 @@
-import json
 import os.path
-import random
 import socket
-import subprocess
 import time
 from contextlib import closing
 from typing import Dict, Optional, List
@@ -10,6 +7,8 @@ from typing import Dict, Optional, List
 from containers import Containers
 from images import Images
 from instances.instance_base import Instance
+from instances.simple import SimpleInstance
+from volumes import Volumes
 
 
 class EC2Instance(Instance):
@@ -19,61 +18,23 @@ class EC2Instance(Instance):
                  client,
                  images: Images,
                  containers: Containers,
+                 volumes: Volumes,
                  execution_id: str,
                  data: dict):
         self.client = client
         self.images = images
-        self.containers = containers
-        self.execution_id = execution_id
+        self.simple = SimpleInstance(images, containers, volumes, execution_id)
         self.data = data
 
-        self._ssh_host = f'ubuntu@{self.data["PrivateDnsName"]}'
-        ssh_args = ['-q',
-                    '-o', 'StrictHostKeyChecking=no',
-                    '-o', 'UserKnownHostsFile=/dev/null']
-        self._ssh = ['ssh', *ssh_args, self._ssh_host]
-        self._scp = ['scp', *ssh_args]
-
-        self.files_to_clean_up = set()
-
     def run(self, command: List[str], snapshot_id: str, files: Dict[str, str]):
-        volumes = json.loads(
-            self.execute(
-                script='src/mounts/create_files.py',
-                stdin=json.dumps(files)))
-        self.files_to_clean_up.update(volumes.keys())
         self.images.pull(snapshot_id)
-        self.containers.run(name=self.execution_id,
-                            tag=snapshot_id,
-                            command=command,
-                            volumes=volumes)
+        self.simple.run(command, snapshot_id, files)
 
     def logs(self, stdout: bool = True, stderr: bool = True):
-        return self.containers.logs(self.execution_id,
-                                    stdout=stdout,
-                                    stderr=stderr)
+        return self.simple.logs(stdout, stderr)
 
     def cleanup(self):
-        self.containers.rm(self.execution_id)
-        self.execute(
-            script='src/mounts/delete_files.py',
-            stdin=json.dumps(list(self.files_to_clean_up)))
-
-    def execute(self, script: str, stdin: str) -> str:
-        local_script = os.path.abspath(os.path.join(self.ROOT, script))
-        remote_script = f'/tmp/execute.{random.randint(0, 10000)}'
-        subprocess.run([*self._scp,
-                        local_script,
-                        f'{self._ssh_host}:{remote_script}'],
-                       check=True)
-        process = \
-            subprocess.run([*self._ssh, remote_script],
-                           input=stdin,
-                           stdout=subprocess.PIPE,
-                           encoding='utf-8',
-                           check=True)
-        subprocess.run([*self._ssh, 'rm', '-f', remote_script])
-        return process.stdout
+        return self.simple.cleanup()
 
     def set_tags(self, tags):
         instance_id = self.data['InstanceId']
@@ -133,10 +94,12 @@ class EC2Instances:
             docker_url = f'tcp://{host}:{self.DOCKER_PORT}'
             images = self.images.for_host(docker_url)
             containers = Containers.for_host(docker_url)
+            volumes = Volumes.for_host(docker_url)
             instance = EC2Instance(
                 self.client,
                 images,
                 containers,
+                volumes,
                 execution_id,
                 instance_data)
             self.instances[execution_id] = instance

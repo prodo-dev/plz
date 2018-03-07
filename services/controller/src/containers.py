@@ -1,8 +1,9 @@
 import logging
-from typing import Dict, Iterator, List
+from typing import Iterator, List
 
 import docker
 import docker.errors
+from docker.types import Mount
 
 from images import Images
 
@@ -22,13 +23,13 @@ class Containers:
             name: str,
             tag: str,
             command: List[str],
-            volumes: Dict[str, Dict[str, str]]):
+            mounts: List[Mount]):
         image = f'{Images.DOCKER_REPOSITORY}:{tag}'
         container = self.docker_client.containers.run(
             image=image,
             command=command,
             name=name,
-            volumes=volumes,
+            mounts=mounts,
             detach=True,
         )
         self.log.info(f'Started container: {container.id}')
