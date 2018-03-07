@@ -23,8 +23,10 @@ class RunCommand:
     def __init__(self, configuration: Configuration, command: Optional[str]):
         self.configuration = configuration
         self.prefix = f'http://{configuration.host}:{configuration.port}'
-        self.command = \
-            ['sh', '-c', command] if command else self.configuration.command
+        if command:
+            self.command = ['sh', '-c', command, '-s']
+        else:
+            self.command = configuration.command
 
     def run(self):
         if not self.command:
