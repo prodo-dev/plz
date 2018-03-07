@@ -52,11 +52,9 @@ def run_command_entrypoint():
             instance = instance_provider.instance_for(execution_id)
             if instance is None:
                 yield {
-                    'error': 'Couldn\'t get an instance, please retry later',
+                    'error': 'Couldn\'t get an instance.',
                 }
-                response.status_code = requests.codes.timeout
-                return response
-
+                return
             instance.run(command, snapshot_id)
         except Exception as e:
             log.exception('Exception running command.')
@@ -147,6 +145,7 @@ def get_command_uuid() -> str:
 def _json_stream(f: Callable[[], Iterator[Any]]):
     def wrapped() -> Iterator[str]:
         return (json.dumps(message) + '\n' for message in f())
+
     return wrapped
 
 
@@ -160,7 +159,9 @@ def _handle_lazy_exceptions(formatter: Callable[[str], T]):
             except Exception as e:
                 yield formatter(str(e) + '\n')
                 log.exception('Exception in response generator')
+
         return wrapped
+
     return wrapper
 
 
