@@ -7,16 +7,16 @@ import sys
 import tempfile
 from typing import Dict
 
-tmp = os.path.join(os.environ['HOME'], '.batman', 'tmp')
+TEMP_DIR = os.path.join(os.environ['HOME'], '.batman', 'tmp')
 
 
 def create_files_for_mounting(files: Dict[str, str]) \
         -> Dict[str, Dict[str, str]]:
     volumes = {}
-    os.makedirs(tmp, exist_ok=True)
+    os.makedirs(TEMP_DIR, exist_ok=True)
     for container_path, file_contents in files.items():
         with tempfile.NamedTemporaryFile(
-                mode='w+', dir=tmp, delete=False) as f:
+                mode='w+', dir=TEMP_DIR, delete=False) as f:
             f.write(file_contents)
             host_path = f.name
             volumes[host_path] = {'bind': container_path, 'mode': 'ro'}

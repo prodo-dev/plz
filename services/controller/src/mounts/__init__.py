@@ -1,2 +1,2 @@
-from mounts.create_files import *
-from mounts.delete_files import *
+from mounts.create_files import create_files_for_mounting
+from mounts.delete_files import delete_files
