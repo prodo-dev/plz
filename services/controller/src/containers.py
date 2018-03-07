@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Iterator
+from typing import Dict, Iterator, List
 
 import docker
 import docker.errors
@@ -21,7 +21,7 @@ class Containers:
     def run(self,
             name: str,
             tag: str,
-            command: str,
+            command: List[str],
             volumes: Dict[str, Dict[str, str]]):
         image = f'{Images.DOCKER_REPOSITORY}:{tag}'
         container = self.docker_client.containers.run(

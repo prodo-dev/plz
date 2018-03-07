@@ -36,7 +36,7 @@ class EC2Instance(Instance):
 
         self.files_to_clean_up = set()
 
-    def run(self, command: str, snapshot_id: str, files: Dict[str, str]):
+    def run(self, command: List[str], snapshot_id: str, files: Dict[str, str]):
         volumes = json.loads(
             self.execute(
                 script='src/mounts/create_files.py',
