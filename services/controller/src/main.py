@@ -12,6 +12,7 @@ from flask import Flask, Response, jsonify, request, stream_with_context
 from controller_config import config
 from images import Images
 from instances.aws import AwsAutoScalingGroup
+from instances.instance_base import InstanceProvider
 from instances.localhost import Localhost
 
 T = TypeVar('T')
@@ -21,6 +22,7 @@ ecr_client = boto3.client('ecr')
 docker_client = docker.APIClient(base_url=config.docker_host)
 images = Images.from_config(config)
 
+instance_provider: InstanceProvider
 if config.run_commands_locally:
     instance_provider = Localhost.from_config(config)
 else:
