@@ -20,12 +20,12 @@ class LocalhostInstance(Instance):
         self.files_to_clean_up = set()
 
     def run(self, command: str, snapshot_id: str, files: Dict[str, str]):
-        volume_mounts = mounts.create_files_for_mounting(files)
-        self.files_to_clean_up.update(volume_mounts.keys())
+        volumes = mounts.create_files_for_mounting(files)
+        self.files_to_clean_up.update(volumes.keys())
         self.containers.run(name=self.execution_id,
                             tag=snapshot_id,
                             command=command,
-                            volume_mounts=volume_mounts)
+                            volumes=volumes)
 
     def logs(self, stdout: bool = True, stderr: bool = True):
         return self.containers.logs(self.execution_id,

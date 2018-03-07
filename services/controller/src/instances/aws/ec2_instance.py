@@ -37,16 +37,16 @@ class EC2Instance(Instance):
         self.files_to_clean_up = set()
 
     def run(self, command: str, snapshot_id: str, files: Dict[str, str]):
-        volume_mounts = json.loads(
+        volumes = json.loads(
             self.execute(
                 script='src/mounts/create_files.py',
                 stdin=json.dumps(files)))
-        self.files_to_clean_up.update(volume_mounts.keys())
+        self.files_to_clean_up.update(volumes.keys())
         self.images.pull(snapshot_id)
         self.containers.run(name=self.execution_id,
                             tag=snapshot_id,
                             command=command,
-                            volume_mounts=volume_mounts)
+                            volumes=volumes)
 
     def logs(self, stdout: bool = True, stderr: bool = True):
         return self.containers.logs(self.execution_id,

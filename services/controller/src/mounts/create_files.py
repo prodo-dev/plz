@@ -10,22 +10,23 @@ from typing import Dict
 tmp = os.path.join(os.environ['HOME'], '.batman', 'tmp')
 
 
-def create_files_for_mounting(files: Dict[str, str]) -> Dict[str, str]:
-    volume_mounts = {}
+def create_files_for_mounting(files: Dict[str, str]) \
+        -> Dict[str, Dict[str, str]]:
+    volumes = {}
     os.makedirs(tmp, exist_ok=True)
     for container_path, file_contents in files.items():
         with tempfile.NamedTemporaryFile(
                 mode='w+', dir=tmp, delete=False) as f:
             f.write(file_contents)
             host_path = f.name
-            volume_mounts[host_path] = container_path
-    return volume_mounts
+            volumes[host_path] = {'bind': container_path, 'mode': 'ro'}
+    return volumes
 
 
 def main():
     files = json.load(sys.stdin)
-    volume_mounts = create_files_for_mounting(files)
-    json.dump(volume_mounts, sys.stdout, indent=2)
+    volumes = create_files_for_mounting(files)
+    json.dump(volumes, sys.stdout, indent=2)
 
 
 if __name__ == '__main__':
