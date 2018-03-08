@@ -34,7 +34,7 @@ def on_exception_reraise(message):
     def wrapper(f):
         def wrapped(*args, **kwargs):
             try:
-                f(*args, **kwargs)
+                return f(*args, **kwargs)
             except Exception as cause:
                 raise CLIException(message, cause)
 
