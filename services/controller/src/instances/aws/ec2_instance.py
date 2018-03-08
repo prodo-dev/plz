@@ -94,22 +94,19 @@ class EC2Instances:
         else:
             return None
 
-        try:
-            docker_url = f'tcp://{host}:{self.DOCKER_PORT}'
-            images = self.images.for_host(docker_url)
-            containers = Containers.for_host(docker_url)
-            volumes = Volumes.for_host(docker_url)
-            instance = EC2Instance(
-                self.client,
-                images,
-                containers,
-                volumes,
-                execution_id,
-                instance_data)
-            self.instances[execution_id] = instance
-            return instance
-        except (KeyError, IndexError):
-            return None
+        docker_url = f'tcp://{host}:{self.DOCKER_PORT}'
+        images = self.images.for_host(docker_url)
+        containers = Containers.for_host(docker_url)
+        volumes = Volumes.for_host(docker_url)
+        instance = EC2Instance(
+            self.client,
+            images,
+            containers,
+            volumes,
+            execution_id,
+            instance_data)
+        self.instances[execution_id] = instance
+        return instance
 
     def acquire_for(self, execution_id: str) -> Optional[EC2Instance]:
         instance = self.instance_for('')
@@ -128,6 +125,7 @@ class EC2Instances:
                 {'Key': self.EXECUTION_ID_TAG,
                  'Value': ''}
             ])
+            del self.instances[execution_id]
 
 
 def _is_socket_open(host: str, port: int) -> bool:
