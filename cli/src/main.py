@@ -186,13 +186,17 @@ class RunCommand:
             tarball.seek(0)
             tar = tarfile.open(fileobj=tarball)
             for tarinfo in tar.getmembers():
-                path = os.path.join(*os.path.split(tarinfo.name)[1:])
-                print(path)
-                source = tar.extractfile(tarinfo.name)
-                if source:
-                    absolute_path = os.path.join(self.output_dir, path)
-                    with open(absolute_path, 'wb') as dest:
-                        shutil.copyfileobj(source, dest)
+                path_segments = tarinfo.name.split(os.sep)[1:]
+                if path_segments:
+                    path = os.path.join(path_segments[0], *path_segments[1:])
+                    print(path)
+                    source = tar.extractfile(tarinfo.name)
+                    if source:
+                        absolute_path = os.path.join(self.output_dir, path)
+                        os.makedirs(os.path.dirname(absolute_path),
+                                    exist_ok=True)
+                        with open(absolute_path, 'wb') as dest:
+                            shutil.copyfileobj(source, dest)
 
     def cleanup(self, execution_id: str):
         log_info('Cleaning up all detritus...')
