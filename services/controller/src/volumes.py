@@ -45,7 +45,10 @@ class Volumes:
     OUTPUT_DIRECTORY = 'output'
     OUTPUT_DIRECTORY_PATH = os.path.join(VOLUME_MOUNT, OUTPUT_DIRECTORY)
 
-    WAIT_COMMAND = 'sleep 600 & PID=$!; trap "kill $PID" TERM'
+    # `cat` will wait around indefinitely until it gets a SIGTERM.
+    # That's all we need, because we're only creating containers to get access
+    # to the volumes.
+    WAIT_COMMAND = ['cat']
 
     @staticmethod
     def for_host(docker_url):
