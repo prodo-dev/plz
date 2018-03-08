@@ -45,11 +45,6 @@ class Volumes:
     OUTPUT_DIRECTORY = 'output'
     OUTPUT_DIRECTORY_PATH = os.path.join(VOLUME_MOUNT, OUTPUT_DIRECTORY)
 
-    # `cat` will wait around indefinitely until it gets a SIGTERM.
-    # That's all we need, because we're only creating containers to get access
-    # to the volumes.
-    WAIT_COMMAND = ['cat']
-
     @staticmethod
     def for_host(docker_url):
         docker_client = docker.DockerClient(base_url=docker_url)
@@ -67,25 +62,21 @@ class Volumes:
             tarball = f.read()
 
         volume = self.docker_client.volumes.create(name)
-        container = self.docker_client.containers.run(
+        container = self.docker_client.containers.create(
             image='busybox',
-            command=self.WAIT_COMMAND,
-            mounts=[Mount(source=volume.name, target='/output')],
-            detach=True)
+            command=['true'],
+            mounts=[Mount(source=volume.name, target='/output')])
         container.put_archive('/output', tarball)
-        container.stop()
         container.remove()
         return volume
 
     def extract(self, volume_name: str, path: str) -> Iterator[bytes]:
-        container = self.docker_client.containers.run(
+        container = self.docker_client.containers.create(
             image='busybox',
-            command=self.WAIT_COMMAND,
-            mounts=[Mount(source=volume_name, target='/input')],
-            detach=True)
+            command=['true'],
+            mounts=[Mount(source=volume_name, target='/input')])
         tar, _ = container.get_archive(os.path.join('/input', path))
         yield from tar
-        container.stop()
         container.remove()
 
     def remove(self, name: str):
