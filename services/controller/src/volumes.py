@@ -70,7 +70,7 @@ class Volumes:
         container.remove()
         return volume
 
-    def extract(self, volume_name: str, path: str) -> Iterator[bytes]:
+    def get_files(self, volume_name: str, path: str) -> Iterator[bytes]:
         container = self.docker_client.containers.create(
             image='busybox',
             command=['true'],

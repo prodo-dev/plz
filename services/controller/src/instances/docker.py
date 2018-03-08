@@ -42,7 +42,8 @@ class DockerInstance(Instance):
                                     stderr=stderr)
 
     def output(self):
-        return self.volumes.extract(self.volume_name, Volumes.OUTPUT_DIRECTORY)
+        return self.volumes.get_files(self.volume_name,
+                                      Volumes.OUTPUT_DIRECTORY)
 
     def cleanup(self):
         self.containers.rm(self.execution_id)
