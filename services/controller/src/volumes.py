@@ -45,6 +45,8 @@ class Volumes:
     OUTPUT_DIRECTORY = 'output'
     OUTPUT_DIRECTORY_PATH = os.path.join(VOLUME_MOUNT, OUTPUT_DIRECTORY)
 
+    _DUMMY_IMAGE_NAME = 'busybox'
+
     @staticmethod
     def for_host(docker_url):
         docker_client = docker.DockerClient(base_url=docker_url)
@@ -63,8 +65,7 @@ class Volumes:
 
         volume = self.docker_client.volumes.create(name)
         container = self.docker_client.containers.create(
-            image='busybox',
-            command=['true'],
+            image=self._dummy_image(),
             mounts=[Mount(source=volume.name, target='/output')])
         container.put_archive('/output', tarball)
         container.remove()
@@ -72,8 +73,7 @@ class Volumes:
 
     def get_files(self, volume_name: str, path: str) -> Iterator[bytes]:
         container = self.docker_client.containers.create(
-            image='busybox',
-            command=['true'],
+            image=self._dummy_image(),
             mounts=[Mount(source=volume_name, target='/input')])
         tar, _ = container.get_archive(os.path.join('/input', path))
         yield from tar
@@ -85,3 +85,10 @@ class Volumes:
             volume.remove()
         except docker.errors.NotFound:
             pass
+
+    def _dummy_image(self):
+        try:
+            self.docker_client.images.get(self._DUMMY_IMAGE_NAME)
+        except docker.errors.NotFound:
+            self.docker_client.images.pull(self._DUMMY_IMAGE_NAME, 'latest')
+        return self._DUMMY_IMAGE_NAME
