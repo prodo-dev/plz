@@ -6,8 +6,8 @@ from typing import Dict, Optional, List
 
 from containers import Containers
 from images import Images
+from instances.docker import DockerInstance
 from instances.instance_base import Instance
-from instances.simple import SimpleInstance
 from volumes import Volumes
 
 
@@ -23,21 +23,22 @@ class EC2Instance(Instance):
                  data: dict):
         self.client = client
         self.images = images
-        self.simple = SimpleInstance(images, containers, volumes, execution_id)
+        self.delegate = DockerInstance(
+            images, containers, volumes, execution_id)
         self.data = data
 
     def run(self, command: List[str], snapshot_id: str):
         self.images.pull(snapshot_id)
-        self.simple.run(command, snapshot_id)
+        self.delegate.run(command, snapshot_id)
 
     def logs(self, stdout: bool = True, stderr: bool = True):
-        return self.simple.logs(stdout, stderr)
+        return self.delegate.logs(stdout, stderr)
 
     def output(self):
-        return self.simple.output()
+        return self.delegate.output()
 
     def cleanup(self):
-        return self.simple.cleanup()
+        return self.delegate.cleanup()
 
     def set_tags(self, tags):
         instance_id = self.data['InstanceId']

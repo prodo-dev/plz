@@ -3,8 +3,8 @@ from typing import Iterator, Optional
 
 from containers import Containers
 from images import Images
+from instances.docker import DockerInstance
 from instances.instance_base import InstanceProvider, Instance
-from instances.simple import SimpleInstance
 from volumes import Volumes
 
 log = logging.getLogger('localhost')
@@ -33,7 +33,7 @@ class Localhost(InstanceProvider):
 
         As we're dealing with `localhost` here, it's always the same instance.
         """
-        self.instances[execution_id] = SimpleInstance(
+        self.instances[execution_id] = DockerInstance(
             self.images, self.containers, self.volumes, execution_id)
         return iter([])
 

@@ -9,7 +9,7 @@ from instances.instance_base import Instance
 from volumes import Volumes, VolumeDirectory, VolumeFile
 
 
-class SimpleInstance(Instance):
+class DockerInstance(Instance):
     def __init__(self,
                  images: Images,
                  containers: Containers,
