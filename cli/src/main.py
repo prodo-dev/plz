@@ -1,4 +1,5 @@
 import argparse
+import io
 import itertools
 import json
 import os
@@ -181,17 +182,27 @@ class RunCommand:
             raise CLIException(
                 f'The output directory "{self.output_dir}" already exists.')
         os.makedirs(self.output_dir)
+        # The response is a tarball we need to extract into `self.output_dir`.
         with tempfile.TemporaryFile() as tarball:
+            # `tarfile.open` needs to read from a real file, so we copy to one.
             shutil.copyfileobj(response.raw, tarball)
+            # And rewind to the start.
             tarball.seek(0)
             tar = tarfile.open(fileobj=tarball)
             for tarinfo in tar.getmembers():
+                # Drop the first segment, because it's just the name of the
+                # directory that was tarred up, and we don't care.
                 path_segments = tarinfo.name.split(os.sep)[1:]
                 if path_segments:
+                    # Unfortunately we can't just pass `*path_segments`
+                    # because `os.path.join` explicitly expects an argument
+                    # for the first parameter.
                     path = os.path.join(path_segments[0], *path_segments[1:])
+                    # Just because it's nice, print the file to be extracted.
                     print(path)
-                    source = tar.extractfile(tarinfo.name)
+                    source: io.BufferedReader = tar.extractfile(tarinfo.name)
                     if source:
+                        # Finally, write the file.
                         absolute_path = os.path.join(self.output_dir, path)
                         os.makedirs(os.path.dirname(absolute_path),
                                     exist_ok=True)
