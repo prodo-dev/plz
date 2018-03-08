@@ -68,6 +68,10 @@ class RunCommand:
         if not self.command:
             raise CLIException('No command specified!')
 
+        if os.path.exists(self.output_dir):
+            raise CLIException(
+                f'The output directory "{self.output_dir}" already exists.')
+
         log_info('Capturing the context')
         build_context = self.capture_build_context()
         log_info('Building the program snapshot')
