@@ -87,7 +87,7 @@ class Volumes:
 
     def remove(self, name: str):
         try:
-            volume = self.docker_client.volumes.get(name + 'x')
+            volume = self.docker_client.volumes.get(name)
             volume.remove()
         except docker.errors.NotFound:
             pass
