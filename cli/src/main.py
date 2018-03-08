@@ -174,8 +174,9 @@ class RunCommand:
     @on_exception_reraise("Retrieving the output failed.")
     def retrieve_output_files(self, execution_id: str):
         log_info('Retrieving the output...')
-        response = requests.get(self.url('commands', execution_id, 'output'),
-                                stream=True)
+        response = requests.get(
+            self.url('commands', execution_id, 'output', 'files'),
+            stream=True)
         try:
             check_status(response, requests.codes.ok)
         except FileExistsError:

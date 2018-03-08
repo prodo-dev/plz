@@ -34,8 +34,8 @@ class EC2Instance(Instance):
     def logs(self, stdout: bool = True, stderr: bool = True):
         return self.delegate.logs(stdout, stderr)
 
-    def output(self):
-        return self.delegate.output()
+    def output_files_tarball(self):
+        return self.delegate.output_files_tarball()
 
     def cleanup(self):
         return self.delegate.cleanup()

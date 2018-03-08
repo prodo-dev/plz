@@ -94,12 +94,12 @@ def get_logs_stderr_entrypoint(execution_id):
     return Response(response, mimetype='application/octet-stream')
 
 
-@app.route(f'/commands/<execution_id>/output')
-def get_output_entrypoint(execution_id):
+@app.route(f'/commands/<execution_id>/output/files')
+def get_output_files_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/commands/some-id/output | tar x -C /tmp/batman-output
     instance = instance_provider.instance_for(execution_id)
-    response = instance.output()
+    response = instance.output_files_tarball()
     return Response(response, mimetype='application/octet-stream')
 
 

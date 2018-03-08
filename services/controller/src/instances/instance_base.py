@@ -12,7 +12,7 @@ class Instance(ABC):
         pass
 
     @abstractmethod
-    def output(self):
+    def output_files_tarball(self):
         pass
 
     @abstractmethod

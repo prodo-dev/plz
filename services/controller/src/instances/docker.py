@@ -41,7 +41,7 @@ class DockerInstance(Instance):
                                     stdout=stdout,
                                     stderr=stderr)
 
-    def output(self):
+    def output_files_tarball(self):
         return self.volumes.get_files(self.volume_name,
                                       Volumes.OUTPUT_DIRECTORY)
 
