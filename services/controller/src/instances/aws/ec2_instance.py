@@ -2,12 +2,12 @@ import os.path
 import socket
 import time
 from contextlib import closing
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional
 
 from containers import Containers
 from images import Images
 from instances.docker import DockerInstance
-from instances.instance_base import Instance
+from instances.instance_base import Instance, Parameters
 from volumes import Volumes
 
 
@@ -27,9 +27,12 @@ class EC2Instance(Instance):
             images, containers, volumes, execution_id)
         self.data = data
 
-    def run(self, command: List[str], snapshot_id: str):
+    def run(self,
+            command: List[str],
+            snapshot_id: str,
+            parameters: Parameters):
         self.images.pull(snapshot_id)
-        self.delegate.run(command, snapshot_id)
+        self.delegate.run(command, snapshot_id, parameters)
 
     def logs(self, stdout: bool = True, stderr: bool = True):
         return self.delegate.logs(stdout, stderr)

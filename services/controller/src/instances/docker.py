@@ -5,8 +5,8 @@ from docker.types import Mount
 
 from containers import Containers
 from images import Images
-from instances.instance_base import Instance
-from volumes import Volumes, VolumeDirectory, VolumeFile
+from instances.instance_base import Instance, Parameters
+from volumes import VolumeDirectory, VolumeFile, Volumes
 
 
 class DockerInstance(Instance):
@@ -20,19 +20,26 @@ class DockerInstance(Instance):
         self.volumes = volumes
         self.execution_id = execution_id
 
-    def run(self, command: List[str], snapshot_id: str):
+    def run(self,
+            command: List[str],
+            snapshot_id: str,
+            parameters: Parameters):
         configuration = {
             'output_directory': Volumes.OUTPUT_DIRECTORY_PATH,
+            'parameters': parameters
         }
         volume = self.volumes.create(self.volume_name, [
             VolumeDirectory(Volumes.OUTPUT_DIRECTORY),
             VolumeFile(Volumes.CONFIGURATION_FILE,
                        contents=json.dumps(configuration, indent=2)),
         ])
-        command_with_arguments = command + [Volumes.CONFIGURATION_FILE_PATH]
+        environment = {
+            'CONFIGURATION_FILE': Volumes.CONFIGURATION_FILE_PATH
+        }
         self.containers.run(name=self.execution_id,
                             tag=snapshot_id,
-                            command=command_with_arguments,
+                            command=command,
+                            environment=environment,
                             mounts=[Mount(source=volume.name,
                                           target=Volumes.VOLUME_MOUNT)])
 

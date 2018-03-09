@@ -1,10 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
+
+Parameters = Dict[str, Any]
 
 
 class Instance(ABC):
     @abstractmethod
-    def run(self, command: List[str], snapshot_id: str):
+    def run(self,
+            command: List[str],
+            snapshot_id: str,
+            parameters: Parameters):
         pass
 
     @abstractmethod

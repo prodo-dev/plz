@@ -3,6 +3,7 @@
 .envrc
 batman.config.json
 output
+parameters.json
 
 # Python
 env
