@@ -2,9 +2,8 @@
 
 import json
 import os.path
-import sys
 
-with open(sys.argv[1]) as c:
+with open(os.environ['CONFIGURATION_FILE']) as c:
     config = json.load(c)
 
 output_file = f'{config["output_directory"]}/foo/bar'

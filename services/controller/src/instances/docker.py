@@ -33,10 +33,13 @@ class DockerInstance(Instance):
             VolumeFile(Volumes.CONFIGURATION_FILE,
                        contents=json.dumps(configuration, indent=2)),
         ])
-        command_with_arguments = command + [Volumes.CONFIGURATION_FILE_PATH]
+        environment = {
+            'CONFIGURATION_FILE': Volumes.CONFIGURATION_FILE_PATH
+        }
         self.containers.run(name=self.execution_id,
                             tag=snapshot_id,
-                            command=command_with_arguments,
+                            command=command,
+                            environment=environment,
                             mounts=[Mount(source=volume.name,
                                           target=Volumes.VOLUME_MOUNT)])
 
