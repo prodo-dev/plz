@@ -38,6 +38,7 @@ def run_command_entrypoint():
     #    -H 'Content-Type: application/json' localhost:5000/commands
     command = request.json['command']
     snapshot_id = request.json['snapshot_id']
+    parameters = request.json['parameters']
     execution_id = str(get_command_uuid())
 
     @_json_stream
@@ -56,7 +57,10 @@ def run_command_entrypoint():
                 }
                 return
 
-            instance.run(command=command, snapshot_id=snapshot_id)
+            instance.run(
+                command=command,
+                snapshot_id=snapshot_id,
+                parameters=parameters)
         except Exception as e:
             log.exception('Exception running command.')
             yield {'error': str(e)}

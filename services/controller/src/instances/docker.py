@@ -1,12 +1,12 @@
 import json
-from typing import List
+from typing import Any, Dict, List
 
 from docker.types import Mount
 
 from containers import Containers
 from images import Images
 from instances.instance_base import Instance
-from volumes import Volumes, VolumeDirectory, VolumeFile
+from volumes import VolumeDirectory, VolumeFile, Volumes
 
 
 class DockerInstance(Instance):
@@ -20,9 +20,13 @@ class DockerInstance(Instance):
         self.volumes = volumes
         self.execution_id = execution_id
 
-    def run(self, command: List[str], snapshot_id: str):
+    def run(self,
+            command: List[str],
+            snapshot_id: str,
+            parameters: Dict[str, Any]):
         configuration = {
             'output_directory': Volumes.OUTPUT_DIRECTORY_PATH,
+            'parameters': parameters
         }
         volume = self.volumes.create(self.volume_name, [
             VolumeDirectory(Volumes.OUTPUT_DIRECTORY),
