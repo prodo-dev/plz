@@ -1,14 +1,18 @@
 from abc import ABC, abstractmethod
-from typing import Iterator, Optional
+from typing import Iterator, List, Optional
 
 
 class Instance(ABC):
     @abstractmethod
-    def run(self, command: str, snapshot_id: str):
+    def run(self, command: List[str], snapshot_id: str):
         pass
 
     @abstractmethod
     def logs(self, stdout: bool = True, stderr: bool = True):
+        pass
+
+    @abstractmethod
+    def output_files_tarball(self):
         pass
 
     @abstractmethod

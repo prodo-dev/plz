@@ -55,7 +55,8 @@ def run_command_entrypoint():
                     'error': 'Couldn\'t get an instance.',
                 }
                 return
-            instance.run(command, snapshot_id)
+
+            instance.run(command=command, snapshot_id=snapshot_id)
         except Exception as e:
             log.exception('Exception running command.')
             yield {'error': str(e)}
@@ -90,6 +91,15 @@ def get_logs_stderr_entrypoint(execution_id):
     # curl localhost:5000/commands/some-id/logs/stderr
     instance = instance_provider.instance_for(execution_id)
     response = instance.logs(stdout=False, stderr=True)
+    return Response(response, mimetype='application/octet-stream')
+
+
+@app.route(f'/commands/<execution_id>/output/files')
+def get_output_files_entrypoint(execution_id):
+    # Test with:
+    # curl localhost:5000/commands/some-id/output | tar x -C /tmp/batman-output
+    instance = instance_provider.instance_for(execution_id)
+    response = instance.output_files_tarball()
     return Response(response, mimetype='application/octet-stream')
 
 

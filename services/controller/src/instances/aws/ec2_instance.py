@@ -1,3 +1,4 @@
+import os.path
 import socket
 import time
 from contextlib import closing
@@ -5,33 +6,39 @@ from typing import Dict, Optional, List
 
 from containers import Containers
 from images import Images
+from instances.docker import DockerInstance
 from instances.instance_base import Instance
+from volumes import Volumes
 
 
 class EC2Instance(Instance):
+    ROOT = os.path.join(os.path.dirname(__file__), '..', '..', '..')
+
     def __init__(self,
                  client,
                  images: Images,
                  containers: Containers,
+                 volumes: Volumes,
                  execution_id: str,
                  data: dict):
         self.client = client
         self.images = images
-        self.containers = containers
-        self.execution_id = execution_id
+        self.delegate = DockerInstance(
+            images, containers, volumes, execution_id)
         self.data = data
 
-    def run(self, command: str, snapshot_id: str):
+    def run(self, command: List[str], snapshot_id: str):
         self.images.pull(snapshot_id)
-        self.containers.run(self.execution_id, snapshot_id, command)
+        self.delegate.run(command, snapshot_id)
 
     def logs(self, stdout: bool = True, stderr: bool = True):
-        return self.containers.logs(self.execution_id,
-                                    stdout=stdout,
-                                    stderr=stderr)
+        return self.delegate.logs(stdout, stderr)
+
+    def output_files_tarball(self):
+        return self.delegate.output_files_tarball()
 
     def cleanup(self):
-        self.containers.rm(self.execution_id)
+        return self.delegate.cleanup()
 
     def set_tags(self, tags):
         instance_id = self.data['InstanceId']
@@ -57,8 +64,14 @@ class EC2Instances:
         self.filters = filters
         self.acquisition_delay_in_seconds = acquisition_delay_in_seconds
         self.max_acquisition_tries = max_acquisition_tries
+        self.instances = {}
 
     def instance_for(self, execution_id: str) -> Optional[EC2Instance]:
+        try:
+            return self.instances[execution_id]
+        except KeyError:
+            pass
+
         # Keep trying until the host has a hostname and the Docker port is open
         for i in range(self.max_acquisition_tries):
             response = self.client.describe_instances(
@@ -81,18 +94,19 @@ class EC2Instances:
         else:
             return None
 
-        try:
-            docker_url = f'tcp://{host}:{self.DOCKER_PORT}'
-            images = self.images.for_host(docker_url)
-            containers = Containers.for_host(docker_url)
-            return EC2Instance(
-                self.client,
-                images,
-                containers,
-                execution_id,
-                instance_data)
-        except (KeyError, IndexError):
-            return None
+        docker_url = f'tcp://{host}:{self.DOCKER_PORT}'
+        images = self.images.for_host(docker_url)
+        containers = Containers.for_host(docker_url)
+        volumes = Volumes.for_host(docker_url)
+        instance = EC2Instance(
+            self.client,
+            images,
+            containers,
+            volumes,
+            execution_id,
+            instance_data)
+        self.instances[execution_id] = instance
+        return instance
 
     def acquire_for(self, execution_id: str) -> Optional[EC2Instance]:
         instance = self.instance_for('')
@@ -111,6 +125,7 @@ class EC2Instances:
                 {'Key': self.EXECUTION_ID_TAG,
                  'Value': ''}
             ])
+            del self.instances[execution_id]
 
 
 def _is_socket_open(host: str, port: int) -> bool:

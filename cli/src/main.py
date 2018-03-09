@@ -1,9 +1,13 @@
 import argparse
+import io
 import itertools
 import json
 import os
 import os.path
+import shutil
 import sys
+import tarfile
+import tempfile
 import traceback
 from typing import Optional, Tuple
 
@@ -13,22 +17,61 @@ import requests
 from configuration import Configuration, ValidationException
 
 
+class CLIException(Exception):
+    def __init__(self, message: str, cause: Optional[BaseException] = None):
+        self.message = message
+        self.cause = cause
+
+    def print(self, configuration):
+        log_error(self.message)
+        if self.cause:
+            print(self.cause)
+            if configuration.debug:
+                traceback.print_exception(
+                    type(self.cause), self.cause, self.cause.__traceback__)
+
+
+def on_exception_reraise(message):
+    def wrapper(f):
+        def wrapped(*args, **kwargs):
+            try:
+                return f(*args, **kwargs)
+            except Exception as cause:
+                raise CLIException(message, cause)
+
+        return wrapped
+
+    return wrapper
+
+
 class RunCommand:
     """Run an arbitrary command on a remote machine."""
 
     @staticmethod
     def prepare_argument_parser(parser):
         parser.add_argument('--command', type=str)
+        parser.add_argument('-o', '--output-dir', type=str,
+                            default=os.path.join(os.getcwd(), 'output'))
 
-    def __init__(self, configuration: Configuration, command: Optional[str]):
+    def __init__(self,
+                 configuration: Configuration,
+                 command: Optional[str],
+                 output_dir: str):
         self.configuration = configuration
+        self.output_dir = output_dir
         self.prefix = f'http://{configuration.host}:{configuration.port}'
-        self.command = \
-            ['sh', '-c', command] if command else self.configuration.command
+        if command:
+            self.command = ['sh', '-c', command, '-s']
+        else:
+            self.command = configuration.command
 
     def run(self):
         if not self.command:
             raise CLIException('No command specified!')
+
+        if os.path.exists(self.output_dir):
+            raise CLIException(
+                f'The output directory "{self.output_dir}" already exists.')
 
         log_info('Capturing the context')
         build_context = self.capture_build_context()
@@ -37,12 +80,10 @@ class RunCommand:
 
         if snapshot_id:
             execution_id, ok = self.issue_command(snapshot_id)
-            try:
-                if ok and execution_id:
-                    self.display_logs(execution_id)
-            except RequestException as e:
-                raise CLIException('Displaying the logs failed.', e)
             if execution_id:
+                if ok:
+                    self.display_logs(execution_id)
+                    self.retrieve_output_files(execution_id)
                 self.cleanup(execution_id)
             log_info('Done and dusted.')
 
@@ -120,6 +161,7 @@ class RunCommand:
                 log_error(data['error'].rstrip())
         return execution_id, ok
 
+    @on_exception_reraise("Displaying the logs failed.")
     def display_logs(self, execution_id: str):
         log_info('Streaming logs...')
         response = requests.get(self.url('commands', execution_id, 'logs'),
@@ -127,9 +169,49 @@ class RunCommand:
         check_status(response, requests.codes.ok)
         for line in response.raw:
             print(line.decode('utf-8'), end='')
+        print()
+
+    @on_exception_reraise("Retrieving the output failed.")
+    def retrieve_output_files(self, execution_id: str):
+        log_info('Retrieving the output...')
+        response = requests.get(
+            self.url('commands', execution_id, 'output', 'files'),
+            stream=True)
+        try:
+            check_status(response, requests.codes.ok)
+        except FileExistsError:
+            raise CLIException(
+                f'The output directory "{self.output_dir}" already exists.')
+        os.makedirs(self.output_dir)
+        # The response is a tarball we need to extract into `self.output_dir`.
+        with tempfile.TemporaryFile() as tarball:
+            # `tarfile.open` needs to read from a real file, so we copy to one.
+            shutil.copyfileobj(response.raw, tarball)
+            # And rewind to the start.
+            tarball.seek(0)
+            tar = tarfile.open(fileobj=tarball)
+            for tarinfo in tar.getmembers():
+                # Drop the first segment, because it's just the name of the
+                # directory that was tarred up, and we don't care.
+                path_segments = tarinfo.name.split(os.sep)[1:]
+                if path_segments:
+                    # Unfortunately we can't just pass `*path_segments`
+                    # because `os.path.join` explicitly expects an argument
+                    # for the first parameter.
+                    path = os.path.join(path_segments[0], *path_segments[1:])
+                    # Just because it's nice, print the file to be extracted.
+                    print(path)
+                    source: io.BufferedReader = tar.extractfile(tarinfo.name)
+                    if source:
+                        # Finally, write the file.
+                        absolute_path = os.path.join(self.output_dir, path)
+                        os.makedirs(os.path.dirname(absolute_path),
+                                    exist_ok=True)
+                        with open(absolute_path, 'wb') as dest:
+                            shutil.copyfileobj(source, dest)
 
     def cleanup(self, execution_id: str):
-        log_info('Cleaning up all detritus.')
+        log_info('Cleaning up all detritus...')
         response = requests.delete(self.url('commands', execution_id))
         check_status(response, requests.codes.no_content)
 
@@ -147,18 +229,6 @@ class RequestException(Exception):
             f'Request failed with status code {response.status_code}.\n' +
             f'Response:\n{body}'
         )
-
-
-class CLIException(Exception):
-    def __init__(self, message: str, cause: Optional[BaseException] = None):
-        self.message = message
-        self.cause = cause
-
-    def print(self, configuration):
-        log_error(self.message)
-        if self.cause and configuration.debug:
-            traceback.print_exception(
-                type(self.cause), self.cause, self.cause.__traceback__)
 
 
 COMMANDS = {
