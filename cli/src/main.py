@@ -9,7 +9,8 @@ import sys
 import tarfile
 import tempfile
 import traceback
-from typing import Optional, Tuple
+from json import JSONDecodeError
+from typing import Optional, Tuple, Any, Dict
 
 import docker.utils.build
 import requests
@@ -50,15 +51,22 @@ class RunCommand:
     @staticmethod
     def prepare_argument_parser(parser):
         parser.add_argument('--command', type=str)
-        parser.add_argument('-o', '--output-dir', type=str,
-                            default=os.path.join(os.getcwd(), 'output'))
+        cwd = os.getcwd()
+        parser.add_argument('-o', '--output-dir',
+                            type=str,
+                            default=os.path.join(cwd, 'output'))
+        parser.add_argument('-p', '--parameters', dest='parameters_file',
+                            type=str,
+                            default=os.path.join(cwd, 'parameters.json'))
 
     def __init__(self,
                  configuration: Configuration,
                  command: Optional[str],
-                 output_dir: str):
+                 output_dir: str,
+                 parameters_file: str):
         self.configuration = configuration
         self.output_dir = output_dir
+        self.parameters_file = parameters_file
         self.prefix = f'http://{configuration.host}:{configuration.port}'
         if command:
             self.command = ['sh', '-c', command, '-s']
@@ -73,13 +81,15 @@ class RunCommand:
             raise CLIException(
                 f'The output directory "{self.output_dir}" already exists.')
 
+        parameters = self.parse_parameters()
+
         log_info('Capturing the context')
         build_context = self.capture_build_context()
         log_info('Building the program snapshot')
         snapshot_id = self.submit_context_for_building(build_context)
 
         if snapshot_id:
-            execution_id, ok = self.issue_command(snapshot_id)
+            execution_id, ok = self.issue_command(snapshot_id, parameters)
             if execution_id:
                 if ok:
                     self.display_logs(execution_id)
@@ -141,11 +151,14 @@ class RunCommand:
             return None
         return snapshot_id
 
-    def issue_command(self, snapshot_id: str) -> Tuple[Optional[str], bool]:
+    def issue_command(self, snapshot_id: str, parameters: Dict[str, Any]) \
+            -> Tuple[Optional[str], bool]:
         log_info('Issuing the command on a new box')
+
         response = requests.post(self.url('commands'), json={
             'command': self.command,
             'snapshot_id': snapshot_id,
+            'parameters': parameters
         }, stream=True)
         check_status(response, requests.codes.accepted)
         execution_id: Optional[str] = None
@@ -214,6 +227,22 @@ class RunCommand:
         log_info('Cleaning up all detritus...')
         response = requests.delete(self.url('commands', execution_id))
         check_status(response, requests.codes.no_content)
+
+    def parse_parameters(self):
+        try:
+            with open(self.parameters_file) as f:
+                parameters = json.load(f)
+        except FileNotFoundError as e:
+            raise CLIException(
+                f'The parameters file "{self.output_dir}" does not exist.', e)
+        except JSONDecodeError as e:
+            raise CLIException(
+                f'There was an error parsing "{self.parameters_file}".', e)
+        if not isinstance(parameters, dict):
+            raise CLIException(
+                f'The parameters in "{self.parameters_file}"'
+                f' must be a JSON object.')
+        return parameters
 
     def url(self, *path_segments):
         return self.prefix + '/' + '/'.join(path_segments)
