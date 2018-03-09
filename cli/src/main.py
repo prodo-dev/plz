@@ -8,28 +8,16 @@ import shutil
 import sys
 import tarfile
 import tempfile
-import traceback
-from json import JSONDecodeError
-from typing import Any, Dict, Optional, Tuple
+from typing import Optional, Tuple
 
 import docker.utils.build
 import requests
 
+import parameters
 from configuration import Configuration, ValidationException
-
-
-class CLIException(Exception):
-    def __init__(self, message: str, cause: Optional[BaseException] = None):
-        self.message = message
-        self.cause = cause
-
-    def print(self, configuration):
-        log_error(self.message)
-        if self.cause:
-            print(self.cause)
-            if configuration.debug:
-                traceback.print_exception(
-                    type(self.cause), self.cause, self.cause.__traceback__)
+from exceptions import CLIException
+from log import log_error, log_info
+from parameters import Parameters
 
 
 def on_exception_reraise(message):
@@ -80,7 +68,7 @@ class RunCommand:
             raise CLIException(
                 f'The output directory "{self.output_dir}" already exists.')
 
-        parameters = self.parse_parameters()
+        params = parameters.parse_file(self.parameters_file)
 
         log_info('Capturing the context')
         build_context = self.capture_build_context()
@@ -88,7 +76,7 @@ class RunCommand:
         snapshot_id = self.submit_context_for_building(build_context)
 
         if snapshot_id:
-            execution_id, ok = self.issue_command(snapshot_id, parameters)
+            execution_id, ok = self.issue_command(snapshot_id, params)
             if execution_id:
                 if ok:
                     self.display_logs(execution_id)
@@ -150,14 +138,14 @@ class RunCommand:
             return None
         return snapshot_id
 
-    def issue_command(self, snapshot_id: str, parameters: Dict[str, Any]) \
+    def issue_command(self, snapshot_id: str, params: Parameters) \
             -> Tuple[Optional[str], bool]:
         log_info('Issuing the command on a new box')
 
         response = requests.post(self.url('commands'), json={
             'command': self.command,
             'snapshot_id': snapshot_id,
-            'parameters': parameters
+            'parameters': params
         }, stream=True)
         check_status(response, requests.codes.accepted)
         execution_id: Optional[str] = None
@@ -227,24 +215,6 @@ class RunCommand:
         response = requests.delete(self.url('commands', execution_id))
         check_status(response, requests.codes.no_content)
 
-    def parse_parameters(self):
-        if self.parameters_file is None:
-            return {}
-        try:
-            with open(self.parameters_file) as f:
-                parameters = json.load(f)
-        except FileNotFoundError as e:
-            raise CLIException(
-                f'The parameters file "{self.output_dir}" does not exist.', e)
-        except JSONDecodeError as e:
-            raise CLIException(
-                f'There was an error parsing "{self.parameters_file}".', e)
-        if not isinstance(parameters, dict):
-            raise CLIException(
-                f'The parameters in "{self.parameters_file}"'
-                f' must be a JSON object.')
-        return parameters
-
     def url(self, *path_segments):
         return self.prefix + '/' + '/'.join(path_segments)
 
@@ -269,27 +239,6 @@ COMMANDS = {
 def check_status(response, expected_status):
     if response.status_code != expected_status:
         raise RequestException(response)
-
-
-def log_info(message):
-    if sys.stdout.isatty():
-        print('\x1b[33m', end='')
-    print('=> ', end='')
-    if sys.stdout.isatty():
-        print('\x1b[0m', end='')
-        print('\x1b[32m', end='')
-    print(message, end='')
-    if sys.stdout.isatty():
-        print('\x1b[0m')
-
-
-def log_error(message):
-    isatty = sys.stdout.isatty()
-    if isatty:
-        print('\x1b[31m', end='')
-    print('❗' if isatty else '!  ', message, end='')
-    if isatty:
-        print('\x1b[0m')
 
 
 def main(args):

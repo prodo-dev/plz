@@ -1,11 +1,11 @@
 import json
-from typing import Any, Dict, List
+from typing import List
 
 from docker.types import Mount
 
 from containers import Containers
 from images import Images
-from instances.instance_base import Instance
+from instances.instance_base import Instance, Parameters
 from volumes import VolumeDirectory, VolumeFile, Volumes
 
 
@@ -23,7 +23,7 @@ class DockerInstance(Instance):
     def run(self,
             command: List[str],
             snapshot_id: str,
-            parameters: Dict[str, Any]):
+            parameters: Parameters):
         configuration = {
             'output_directory': Volumes.OUTPUT_DIRECTORY_PATH,
             'parameters': parameters
