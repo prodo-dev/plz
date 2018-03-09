@@ -94,12 +94,12 @@ class RunCommand:
         try:
             with open(dockerfile_path, mode='x') as dockerfile:
                 dockerfile_created = True
-                dockerfile.write(''.join(line + '\n' for line in [
-                    f'FROM {self.configuration.image}',
-                    f'WORKDIR /app',
-                    f'COPY . ./',
-                    f'CMD {self.configuration.command}'
-                ]))
+                dockerfile.write(
+                    f'FROM {self.configuration.image}\n'
+                    f'WORKDIR /app\n'
+                    f'COPY . ./\n'
+                    f'CMD {self.configuration.command}\n'
+                )
             os.chmod(dockerfile_path, 0o644)
             build_context = docker.utils.build.tar(
                 path='.',
