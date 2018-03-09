@@ -10,7 +10,7 @@ import tarfile
 import tempfile
 import traceback
 from json import JSONDecodeError
-from typing import Optional, Tuple, Any, Dict
+from typing import Any, Dict, Optional, Tuple
 
 import docker.utils.build
 import requests
@@ -56,8 +56,7 @@ class RunCommand:
                             type=str,
                             default=os.path.join(cwd, 'output'))
         parser.add_argument('-p', '--parameters', dest='parameters_file',
-                            type=str,
-                            default=os.path.join(cwd, 'parameters.json'))
+                            type=str)
 
     def __init__(self,
                  configuration: Configuration,
@@ -229,6 +228,8 @@ class RunCommand:
         check_status(response, requests.codes.no_content)
 
     def parse_parameters(self):
+        if self.parameters_file is None:
+            return {}
         try:
             with open(self.parameters_file) as f:
                 parameters = json.load(f)
