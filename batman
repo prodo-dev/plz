@@ -1,0 +1,9 @@
+#!/usr/bin/env zsh
+
+cd ${0:h}
+
+source cli/env/bin/activate
+
+set -eu
+
+python cli/src/main.py $@

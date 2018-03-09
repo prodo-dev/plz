@@ -4,16 +4,20 @@
 
 ## Using the CLI
 
-First, create a configuration file called *batman.config.json* in your project directory:
+First, create a configuration file called *batman.config.json* in your project directory. Here's an example for running a fixture provided:
 
     {
       "user": "alice",
-      "project": "danger",
+      "project": "test",
       "port": 5000,
-      "image": "024444204267.dkr.ecr.eu-west-1.amazonaws.com/ml-pytorch",
-      "command": ["python", "main.py"],
+      "image": "python:3-slim",
+      "command": ["./cli/fixtures/test_configuration.py"],
       "excluded_paths": [
-        "env"
+        ".git",
+        ".git-crypt",
+        "**/.terraform",
+        "**/__pycache__",
+        "**/env"
       ]
     }
 
