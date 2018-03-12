@@ -34,3 +34,18 @@ Then run it from the same directory:
    export ENVIRONMENT_NAME='<YOUR NAME>'
    ```
 4. Run `make deploy-test`.
+
+## Connecting to the VPN
+
+Create yourself a key with:
+
+    ./machines/vpn/new-client-key.sh NAME@prodo.ai OUTPUT-FILE.zip
+
+Unzip the zip file and load *prodo-ai.ovpn* into your favourite OpenVPN client.
+
+  * On Windows, try [the official OpenVPN Client](https://openvpn.net/index.php/open-source/downloads.html).
+  * If you're on macOS, try [Tunnelblick](https://www.tunnelblick.net/).
+  * On Ubuntu, copy the files to */etc/openvpn* and start the *openvpn@prodo-ai* service.
+  * On Linux or macOS, you can install *openvpn* and then run *sudo openvpn prodo-ai.conf*.
+  
+One you're connected, you should be able to access everything inside the AWS VPC.
