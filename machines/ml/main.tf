@@ -6,10 +6,6 @@ variable "environment" {
   default = "Production"
 }
 
-variable "cidr_block" {
-  default = "10.0.1.0/24"
-}
-
 variable "ami_tag" {
   default = "2018-03-01"
 }
@@ -41,10 +37,12 @@ provider "aws" {
 ///
 
 data "aws_vpc" "main" {
-  tags {
-    Name  = "Batman"
-    Owner = "Infrastructure"
-  }
+  default = true
+}
+
+data "aws_subnet" "main" {
+  availability_zone = "${var.availability_zone}"
+  default_for_az    = true
 }
 
 data "aws_security_group" "default" {
@@ -60,19 +58,7 @@ data "aws_security_group" "default" {
 
 data "aws_security_group" "ssh" {
   vpc_id = "${data.aws_vpc.main.id}"
-  name   = "ssh"
-}
-
-resource "aws_subnet" "main" {
-  vpc_id            = "${data.aws_vpc.main.id}"
-  availability_zone = "${var.availability_zone}"
-  cidr_block        = "${var.cidr_block}"
-
-  tags {
-    Name        = "Batman ${var.environment}"
-    Environment = "${var.environment}"
-    Owner       = "Infrastructure"
-  }
+  name   = "Batman SSH"
 }
 
 resource "aws_key_pair" "batman" {
@@ -90,7 +76,7 @@ data "aws_ami" "controller-ami" {
 }
 
 resource "aws_instance" "controller" {
-  subnet_id                   = "${aws_subnet.main.id}"
+  subnet_id                   = "${data.aws_subnet.main.id}"
   instance_type               = "t2.small"
   ami                         = "${data.aws_ami.controller-ami.id}"
   vpc_security_group_ids      = ["${data.aws_security_group.default.id}", "${data.aws_security_group.ssh.id}"]
@@ -132,7 +118,7 @@ resource "aws_iam_role_policy_attachment" "controller-policy-ecr" {
 }
 
 resource "aws_ebs_volume" "build-cache" {
-  availability_zone = "${aws_subnet.main.availability_zone}"
+  availability_zone = "${data.aws_subnet.main.availability_zone}"
   size              = 500
 
   tags {
@@ -192,7 +178,7 @@ resource "aws_launch_configuration" "worker-configuration" {
 
 resource "aws_autoscaling_group" "worker" {
   name                 = "batman-${lower(var.environment)}-worker"
-  vpc_zone_identifier  = ["${aws_subnet.main.id}"]
+  vpc_zone_identifier  = ["${data.aws_subnet.main.id}"]
   availability_zones   = ["${var.availability_zone}"]
   launch_configuration = "${aws_launch_configuration.worker-configuration.name}"
 

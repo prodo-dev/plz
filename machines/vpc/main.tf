@@ -7,39 +7,18 @@ provider "aws" {
   region                  = "${var.region}"
 }
 
-resource "aws_vpc" "main" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_hostnames = true
-
-  tags {
-    Name  = "Batman"
-    Owner = "Infrastructure"
-  }
-}
-
-resource "aws_internet_gateway" "gateway" {
-  vpc_id = "${aws_vpc.main.id}"
-
-  tags {
-    Name  = "Batman"
-    Owner = "Infrastructure"
-  }
-}
-
-resource "aws_route" "gateway-route" {
-  route_table_id         = "${aws_vpc.main.default_route_table_id}"
-  destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = "${aws_internet_gateway.gateway.id}"
+data "aws_vpc" "main" {
+  default = true
 }
 
 resource "aws_default_security_group" "default" {
-  vpc_id = "${aws_vpc.main.id}"
+  vpc_id = "${data.aws_vpc.main.id}"
 
   ingress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["${aws_vpc.main.cidr_block}"]
+    cidr_blocks = ["${data.aws_vpc.main.cidr_block}"]
   }
 
   egress {
@@ -48,15 +27,11 @@ resource "aws_default_security_group" "default" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  tags {
-    Owner = "Infrastructure"
-  }
 }
 
 resource "aws_security_group" "ssh" {
-  vpc_id      = "${aws_vpc.main.id}"
-  name        = "ssh"
+  vpc_id      = "${data.aws_vpc.main.id}"
+  name        = "Batman SSH"
   description = "Allow SSH and Mosh access"
 
   ingress {
