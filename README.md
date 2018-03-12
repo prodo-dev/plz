@@ -32,7 +32,5 @@ Then run it from the same directory:
 3. Create a *.envrc* file in the root of this repository:
    ```
    export ENVIRONMENT_NAME='<YOUR NAME>'
-   export ENVIRONMENT_CIDR_BLOCK='10.0.<UNIQUE>.0/24'
    ```
-   Check with others to make sure the CIDR block is unique and non-overlapping.
 4. Run `make deploy-test`.
