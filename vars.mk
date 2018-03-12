@@ -23,13 +23,12 @@ terraform:
 
 .PHONY: terraform-test
 terraform-test:
-	@ if [[ -z "$$ENVIRONMENT_NAME" || -z "$$ENVIRONMENT_CIDR_BLOCK" ]]; then \
-		echo >&2 'You must set the `ENVIRONMENT_NAME` and `ENVIRONMENT_CIDR_BLOCK` environment variables.'; \
+	@ if [[ -z "$$ENVIRONMENT_NAME" ]]; then \
+		echo >&2 'You must set the `ENVIRONMENT_NAME` environment variable.'; \
 		echo >&2 'You can use `direnv` and the .envrc file to do so.'; \
 		echo 'exit 1'; \
 	else \
 		echo 'export TF_VAR_environment="$$ENVIRONMENT_NAME"'; \
-		echo 'export TF_VAR_cidr_block="$$ENVIRONMENT_CIDR_BLOCK"'; \
 	fi
 
 endif
