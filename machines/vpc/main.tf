@@ -1,7 +1,7 @@
 variable "region" {}
 
 provider "aws" {
-  version                 = "~> 1.8"
+  version                 = "~> 1.11"
   shared_credentials_file = "../credentials/root.awscreds"
   profile                 = "default"
   region                  = "${var.region}"
