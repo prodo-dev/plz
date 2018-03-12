@@ -9,8 +9,6 @@ provider "aws" {
   region                  = "${var.region}"
 }
 
-///
-
 data "aws_vpc" "main" {
   default = true
 }
@@ -18,6 +16,10 @@ data "aws_vpc" "main" {
 data "aws_subnet" "main" {
   availability_zone = "${var.availability_zone}"
   default_for_az    = true
+}
+
+data "aws_route_table" "main" {
+  vpc_id = "${data.aws_vpc.main.id}"
 }
 
 data "aws_security_group" "default" {
@@ -79,6 +81,16 @@ resource "aws_security_group" "openvpn" {
     ]
   }
 
+  ingress {
+    from_port = 60000
+    to_port   = 61000
+    protocol  = "udp"
+
+    cidr_blocks = [
+      "0.0.0.0/0",
+    ]
+  }
+
   tags {
     Name  = "Batman OpenVPN"
     Owner = "Infrastructure"
@@ -116,9 +128,10 @@ data "aws_ami" "ubuntu" {
 }
 
 resource "aws_instance" "server" {
-  subnet_id     = "${data.aws_subnet.main.id}"
-  instance_type = "t2.small"
-  ami           = "${data.aws_ami.ubuntu.id}"
+  subnet_id         = "${data.aws_subnet.main.id}"
+  instance_type     = "t2.small"
+  ami               = "${data.aws_ami.ubuntu.id}"
+  source_dest_check = false
 
   vpc_security_group_ids = [
     "${data.aws_security_group.default.id}",

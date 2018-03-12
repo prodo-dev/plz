@@ -114,6 +114,10 @@
       environment: '{{ easy_rsa_environment }}'
       when: 'not client_key.stat.exists'
 
+    - name: Enable IP forwarding
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: 1
     - name: Create the server configuration
       copy:
         src: server.conf
