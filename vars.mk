@@ -1,3 +1,5 @@
+SHELL := zsh -e -u
+
 ifndef VARS_MK
 VARS_MK = true
 
