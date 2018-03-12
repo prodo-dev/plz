@@ -1,9 +1,5 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 
-cd ${0:h}
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-source cli/env/bin/activate
-
-set -eu
-
-python cli/src/main.py $@
+${ROOT}/cli/env/bin/python ${ROOT}/cli/src/main.py $@
