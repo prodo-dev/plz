@@ -10,7 +10,7 @@ endif
 
 $(SITE_PACKAGES): env requirements.txt
 	./env/bin/pip install --requirement=requirements.txt
-	touch $(SITE_PACKAGES)
+	touch $@
 
 .PHONY: upgrade-python-dependencies
 upgrade-python-dependencies:
@@ -20,7 +20,7 @@ upgrade-python-dependencies:
 	fi
 	./env/bin/pip freeze | grep -v '^pkg-resources=' > requirements.txt
 
-requirements.txt: env
+freeze: env
 	./env/bin/pip freeze | grep -v '^pkg-resources=' > requirements.txt
 
 env:
