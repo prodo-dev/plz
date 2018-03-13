@@ -8,17 +8,23 @@ HERE=${0:a:h}
 ROOT=${HERE:h:h}
 SCRIPT=$0
 
+EMAIL_DOMAIN='prodo.ai'
+SERVER_USER='ubuntu'
+SERVER_HOST='knockknock.prodo.ai'
+VPN_CONFIGURATION_FILE='prodo-ai.ovpn'
+
 function usage {
-  echo "Usage: ${SCRIPT} NAME@prodo.ai OUTPUT-FILE.zip"
+  echo "Usage: ${SCRIPT} NAME@${EMAIL_DOMAIN} OUTPUT-FILE.zip"
   exit 2
 }
 
 [[ $# -eq 2 ]] || usage
 
 EMAIL=$1
-[[ $EMAIL =~ 'prodo\.ai$' ]] || usage
-NAME=${EMAIL%@prodo.ai}
-COMMON_NAME=client-$NAME
+NAME=${EMAIL%@${EMAIL_DOMAIN}}
+# Verify the email address actually ends with $EMAIL_DOMAIN
+[[ "${NAME}@${EMAIL_DOMAIN}" == $EMAIL ]] || usage
+COMMON_NAME="client-${NAME}"
 
 OUTPUT_FILE=$2
 [[ $OUTPUT_FILE =~ '\.zip$' ]] || usage
@@ -43,7 +49,7 @@ ENVIRONMENT=(
   "KEY_COUNTRY='GB'"
 )
 
-SSH_CONNECTION=ubuntu@knockknock.prodo.ai
+SSH_CONNECTION="${SERVER_USER}@${SERVER_HOST}"
 SSH_PRIVATE_KEY_FILE="${ROOT}/machines/keys/batman.privkey"
 SSH=(ssh -i $SSH_PRIVATE_KEY_FILE $SSH_CONNECTION --)
 SCP=(scp -i $SSH_PRIVATE_KEY_FILE --)
@@ -56,11 +62,12 @@ echo 'Copying client files...'
 OUTPUT_DIR=$(mktemp)
 rm $OUTPUT_DIR
 mkdir $OUTPUT_DIR
-cp -v "${HERE}/client.conf" $OUTPUT_DIR/prodo-ai.ovpn
-$SCP ubuntu@knockknock.prodo.ai:${KEY_DIR}/ca.crt $OUTPUT_DIR/ca.crt
-$SCP ubuntu@knockknock.prodo.ai:${KEY_DIR}/${COMMON_NAME}.crt $OUTPUT_DIR/client.crt
-$SCP ubuntu@knockknock.prodo.ai:${KEY_DIR}/${COMMON_NAME}.csr $OUTPUT_DIR/client.csr
-$SCP ubuntu@knockknock.prodo.ai:${KEY_DIR}/${COMMON_NAME}.key $OUTPUT_DIR/client.key
+echo $VPN_CONFIGURATION_FILE
+sed "s/\\\$HOST/${SERVER_HOST}/" < "${HERE}/client.conf" > "${OUTPUT_DIR}/${VPN_CONFIGURATION_FILE}"
+$SCP "${SSH_CONNECTION}:${KEY_DIR}/ca.crt" "${OUTPUT_DIR}/ca.crt"
+$SCP "${SSH_CONNECTION}:${KEY_DIR}/${COMMON_NAME}.crt" "${OUTPUT_DIR}/client.crt"
+$SCP "${SSH_CONNECTION}:${KEY_DIR}/${COMMON_NAME}.csr" "${OUTPUT_DIR}/client.csr"
+$SCP "${SSH_CONNECTION}:${KEY_DIR}/${COMMON_NAME}.key" "${OUTPUT_DIR}/client.key"
 (cd $OUTPUT_DIR && zip $OUTPUT_FILE *)
 rm -rf $OUTPUT_DIR
 echo 'Done.'
