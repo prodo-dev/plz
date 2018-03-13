@@ -10,7 +10,7 @@ SCRIPT=$0
 
 EMAIL_DOMAIN='prodo.ai'
 SERVER_USER='ubuntu'
-SERVER_HOST='knockknock.prodo.ai'
+SERVER_HOST="$(make --no-print-directory --file="${ROOT}/vars.mk" print-subdomain)"
 VPN_CONFIGURATION_FILE='prodo-ai.ovpn'
 
 function usage {
