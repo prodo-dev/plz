@@ -232,6 +232,10 @@ class EC2InstanceGroup:
                     'Value': self.name
                 },
                 {
+                    'Key': EC2InstanceGroup.EXECUTION_ID_TAG,
+                    'Value': ''
+                },
+                {
                     'Key': 'Name',
                     'Value': 'Batman worker - ' + self.name
                 },
