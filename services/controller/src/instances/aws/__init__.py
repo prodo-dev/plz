@@ -1,1 +1,1 @@
-from .autoscaling_group import AutoScalingGroup as AwsAutoScalingGroup
+from .ec2_instance_group import EC2InstanceGroup
