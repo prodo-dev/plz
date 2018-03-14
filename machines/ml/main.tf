@@ -148,7 +148,7 @@ data "aws_ami" "worker-ami" {
 }
 
 resource "aws_launch_configuration" "worker-configuration" {
-  name                        = "batman-${lower(var.environment)}-worker"
+  name_prefix                 = "batman-${lower(var.environment)}-worker-"
   instance_type               = "g2.2xlarge"
   image_id                    = "${data.aws_ami.worker-ami.id}"
   security_groups             = ["${data.aws_security_group.default.id}"]
@@ -171,7 +171,7 @@ resource "aws_launch_configuration" "worker-configuration" {
 }
 
 resource "aws_autoscaling_group" "worker" {
-  name                 = "batman-${lower(var.environment)}-worker"
+  name_prefix          = "batman-${lower(var.environment)}-worker-"
   vpc_zone_identifier  = ["${data.aws_subnet.main.id}"]
   availability_zones   = ["${var.availability_zone}"]
   launch_configuration = "${aws_launch_configuration.worker-configuration.name}"
@@ -181,7 +181,8 @@ resource "aws_autoscaling_group" "worker" {
   desired_capacity = 0
 
   lifecycle {
-    ignore_changes = ["min_size", "desired_capacity"]
+    create_before_destroy = true
+    ignore_changes        = ["min_size", "desired_capacity"]
   }
 
   tags = [

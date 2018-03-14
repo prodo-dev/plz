@@ -53,6 +53,7 @@ resource "aws_route53_record" "vpn_internal" {
     "${data.aws_instance.vpn.public_ip}",
   ]
 }
+
 data "aws_instance" "controller" {
   filter = {
     name   = "tag:Name"
