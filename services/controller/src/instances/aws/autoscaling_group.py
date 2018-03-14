@@ -1,20 +1,20 @@
 import threading
-import time
 from typing import Iterator, Optional
 
 import boto3
-from botocore.exceptions import ClientError
 
 from images import Images
-from instances.aws.ec2_instance import EC2Instances
+from instances.aws.ec2_instance import EC2InstanceGroup
 from instances.instance_base import Instance, InstanceProvider
 
 
 class AutoScalingGroup(InstanceProvider):
+    # Tag used to filter the instances by group
+    _GROUP_ID_TAG = 'Batman:Group-Id'
     # We find available instances by looking at those in which
     # the Execution-Id tag is empty. The autoscaling group has this tag
     # with an empty value, and it is propagated to new instances.
-    _EXECUTION_ID_TAG = 'Execution-Id'
+    _EXECUTION_ID_TAG = 'Batman:Execution-Id'
 
     _name_to_group = {}
     _name_to_group_lock = threading.RLock()
@@ -24,19 +24,13 @@ class AutoScalingGroup(InstanceProvider):
         name = config.aws_autoscaling_group
         client = boto3.client('autoscaling')
         images = Images.from_config(config)
-        instances = EC2Instances(
-            client=boto3.client('ec2'),
-            images=images,
-            filters=[{'Name': 'tag:aws:autoscaling:groupName',
-                      'Values': [name]}],
-            max_acquisition_tries=5,
-            acquisition_delay_in_seconds=10)
+        instances = EC2InstanceGroup.from_config(config)
         return AutoScalingGroup(name, client, instances, images)
 
     def __new__(cls,
                 name: str,
                 client,
-                instances: EC2Instances,
+                instances: EC2InstanceGroup,
                 images: Images):
         with AutoScalingGroup._name_to_group_lock:
             try:
@@ -51,7 +45,7 @@ class AutoScalingGroup(InstanceProvider):
     def __init__(self,
                  name: str,
                  client,
-                 instances: EC2Instances,
+                 instances: EC2InstanceGroup,
                  images: Images):
         self.name = name
         self.client = client
@@ -73,34 +67,7 @@ class AutoScalingGroup(InstanceProvider):
         Otherwise, increase the desired capacity of the group and try until
         the maximum number of trials.
         """
-        tries_remaining = max_tries
-        with self.lock:
-            did_increase_capacity = False
-            while tries_remaining > 0:
-                tries_remaining -= 1
-
-                instance = self.instances.acquire_for(execution_id)
-                if instance:
-                    yield 'started'
-                    break
-                elif did_increase_capacity:
-                    yield 'pending'
-                else:
-                    try:
-                        self._increase_desired_capacity()
-                        did_increase_capacity = True
-                        yield 'allocated'
-                    except ClientError as e:
-                        error_code = e.response['Error']['Code']
-                        # Might fail if there's a scaling event taking place
-                        if error_code == 'ScalingActivityInProgress':
-                            yield 'pending'
-                        elif error_code == 'ValidationError':
-                            raise MaxNumberOfInstancesReached(e.args)
-                        else:
-                            raise
-
-                time.sleep(delay_in_seconds)
+        return self.instances.acquire_instance(execution_id)
 
     def release_instance(self, execution_id: str):
         self.instances.release_for(execution_id)
