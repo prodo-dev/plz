@@ -56,11 +56,6 @@ data "aws_security_group" "default" {
   ]
 }
 
-data "aws_security_group" "ssh" {
-  vpc_id = "${data.aws_vpc.main.id}"
-  name   = "Batman SSH"
-}
-
 resource "aws_key_pair" "batman" {
   key_name   = "batman-${lower(var.environment)}-key"
   public_key = "${file("../keys/batman.pubkey")}"
@@ -79,7 +74,6 @@ resource "aws_instance" "controller" {
   subnet_id                   = "${data.aws_subnet.main.id}"
   instance_type               = "t2.small"
   ami                         = "${data.aws_ami.controller-ami.id}"
-  vpc_security_group_ids      = ["${data.aws_security_group.default.id}", "${data.aws_security_group.ssh.id}"]
   key_name                    = "batman-${lower(var.environment)}-key"
   associate_public_ip_address = true
   iam_instance_profile        = "${aws_iam_instance_profile.controller.name}"
@@ -141,7 +135,7 @@ resource "aws_volume_attachment" "build-cache-attachment" {
 }
 
 output "controller-host" {
-  value = "${aws_instance.controller.public_dns}"
+  value = "${aws_instance.controller.private_dns}"
 }
 
 ///
@@ -157,7 +151,7 @@ resource "aws_launch_configuration" "worker-configuration" {
   name                        = "batman-${lower(var.environment)}-worker"
   instance_type               = "g2.2xlarge"
   image_id                    = "${data.aws_ami.worker-ami.id}"
-  security_groups             = ["${data.aws_security_group.default.id}", "${data.aws_security_group.ssh.id}"]
+  security_groups             = ["${data.aws_security_group.default.id}"]
   key_name                    = "batman-${lower(var.environment)}-key"
   associate_public_ip_address = true
   iam_instance_profile        = "${aws_iam_instance_profile.worker.name}"
