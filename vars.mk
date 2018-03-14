@@ -7,7 +7,7 @@ AWS_REGION = eu-west-1
 AWS_AVAILABILITY_ZONE = eu-west-1a
 AWS_PROJECT = 024444204267.dkr.ecr.eu-west-1.amazonaws.com
 DOMAIN = prodo.ai
-SUBDOMAIN = inside.prodo.ai
+SUBDOMAIN = inside.$(DOMAIN)
 
 .PHONY: no-op
 no-op:
