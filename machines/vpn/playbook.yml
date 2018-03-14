@@ -38,6 +38,9 @@
     - name: Install easy-rsa
       apt:
         name: easy-rsa
+    - name: Install dnsmasq
+      apt:
+        name: dnsmasq
 
     - name: Format the keys volume
       filesystem:
@@ -136,5 +139,28 @@
     - name: Restart OpenVPN
       service:
         name: openvpn@server
+        state: restarted
+        enabled: yes
+
+- hosts: all
+  remote_user: root
+  become: yes
+  tasks:
+    - name: Configure dnsmasq
+      copy:
+        dest: /etc/dnsmasq.d/enabled.conf
+        content: |
+          interface=*
+          listen-address=0.0.0.0
+      notify: 'Restart dnsmasq'
+    - name: Start dnsmasq
+      service:
+        name: dnsmasq
+        state: started
+        enabled: yes
+  handlers:
+    - name: Restart dnsmasq
+      service:
+        name: dnsmasq
         state: restarted
         enabled: yes

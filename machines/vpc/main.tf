@@ -1,5 +1,9 @@
 variable "region" {}
 
+variable "vpn_cidr_block" {
+  default = "10.8.0.0/16"
+}
+
 provider "aws" {
   version                 = "~> 1.11"
   shared_credentials_file = "../credentials/root.awscreds"
@@ -18,7 +22,7 @@ resource "aws_default_security_group" "default" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["${data.aws_vpc.main.cidr_block}"]
+    cidr_blocks = ["${data.aws_vpc.main.cidr_block}", "${var.vpn_cidr_block}"]
   }
 
   egress {
