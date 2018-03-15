@@ -3,7 +3,7 @@
   "project": "test",
   "port": 9000,
   "image": "python:3-slim",
-  "command": ["./cli/fixtures/test_streaming.py"],
+  "command": ["./main.py"],
   "excluded_paths": [
     ".git",
     ".git-crypt",
