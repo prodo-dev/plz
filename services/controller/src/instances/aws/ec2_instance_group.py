@@ -1,4 +1,5 @@
 import boto3
+import os
 import socket
 import threading
 import time
@@ -16,8 +17,10 @@ class EC2InstanceGroup(InstanceProvider):
     DOCKER_PORT = 2375
 
     # We find available instances by looking at those in which
-    # the Execution-Id tag is empty. The autoscaling group has this tag
-    # with an empty value, and it is propagated to new instances.
+    # the Execution-Id tag is the empty string. Instances are
+    # started with an empty value for this tag, the tag is set
+    # when the instance starts executing, and it's emptied again
+    # when the execution finishes
     EXECUTION_ID_TAG = 'Batman:Execution-Id'
     GROUP_NAME_TAG = 'Batman:Group-Id'
 
@@ -68,24 +71,37 @@ class EC2InstanceGroup(InstanceProvider):
         self.lock = threading.RLock()
         self.filters = [{'Name': f'tag:{self.GROUP_NAME_TAG}',
                          'Values': [self.name]}]
-        # Lazily initialized by get_ami_id
+        # Lazily initialized by ami_id
         self._ami_id = None
+        # Lazily initialized by _instance_initialization_code
+        self._instance_initialization_code = None
 
-    def get_ami_id(self):
+    @property
+    def ami_id(self) -> str:
         if self._ami_id is not None:
             return self._ami_id
         response = self.client.describe_images(
             Filters=[
                 {
                     'Name': 'name',
-                    'Values': [
-                        'batman-worker-' + self._AMI_TAG,
-                        ]
+                    'Values': [f'batman-worker-{self._AMI_TAG}']
                 },
             ],
         )
         self._ami_id = response['Images'][0]['ImageId']
         return self._ami_id
+
+    @property
+    def instance_initialization_code(self) -> str:
+        if self._instance_initialization_code is not None:
+            return self._instance_initialization_code
+        path_to_initialization_code = os.path.join(
+            os.path.dirname(__file__), 'scripts', 'initialize-instance')
+        with open(path_to_initialization_code, 'r') as f:
+            initialization_code = f.read()
+        self._instance_initialization_code = \
+            initialization_code.replace('$1', '/dev/xvdx')
+        return self._instance_initialization_code
 
     def acquire_instance(
             self,
@@ -111,10 +127,12 @@ class EC2InstanceGroup(InstanceProvider):
                 yield 'requesting new instance'
                 instance_data = self._ask_aws_for_new_instance()
             dns_name = _get_dns_name(instance_data)
+            yield f'worker dns name is: {dns_name}'
             while tries_remaining > 0:
                 tries_remaining -= 1
-                if _is_socket_open(dns_name, self.DOCKER_PORT):
-                    self._assign_aws_instance_to_execution_id(instance_data, execution_id)
+                instance = self._ec2_instance_from_instance_data(instance_data, execution_id)
+                if instance.is_up():
+                    self._assign_aws_instance_to_execution_id(instance, execution_id)
                     yield 'started'
                     return
                 else:
@@ -126,6 +144,15 @@ class EC2InstanceGroup(InstanceProvider):
 
     def push(self, image_tag):
         self.images.push(image_tag)
+
+    def release_instance(self, execution_id: str):
+        instance = self.instances[execution_id]
+        instance.cleanup()
+        instance.set_tags([
+            {'Key': self.EXECUTION_ID_TAG,
+             'Value': ''}
+        ])
+        del self.instances[execution_id]
 
     def _aws_instances_by_execution_id(self, execution_id):
         response = self.client.describe_instances(
@@ -146,8 +173,7 @@ class EC2InstanceGroup(InstanceProvider):
         return response['Instances'][0]
 
     def _assign_aws_instance_to_execution_id(
-            self, instance_data, execution_id: str) -> EC2Instance:
-        instance = self._ec2_instance_from_instance_data(instance_data, execution_id)
+            self, instance, execution_id: str) -> EC2Instance:
         instance.set_tags([
             {'Key': self.EXECUTION_ID_TAG,
              'Value': execution_id}
@@ -155,7 +181,7 @@ class EC2InstanceGroup(InstanceProvider):
         self.instances[execution_id] = instance
         return instance
 
-    def _ec2_instance_from_instance_data(self, instance_data, execution_id):
+    def _ec2_instance_from_instance_data(self, instance_data, execution_id) -> EC2Instance:
         dns_name = _get_dns_name(instance_data)
         docker_url = f'tcp://{dns_name}:{self.DOCKER_PORT}'
         images = self.images.for_host(docker_url)
@@ -169,18 +195,9 @@ class EC2InstanceGroup(InstanceProvider):
             execution_id,
             instance_data)
 
-    def release_instance(self, execution_id: str):
-        instance = self.instances[execution_id]
-        instance.cleanup()
-        instance.set_tags([
-            {'Key': self.EXECUTION_ID_TAG,
-             'Value': ''}
-        ])
-        del self.instances[execution_id]
-
     def _get_instance_spec(self) -> dict:
         spec = _BASE_INSTANCE_SPEC.copy()
-        spec['ImageId'] = self.get_ami_id()
+        spec['ImageId'] = self.ami_id
         spec['TagSpecifications'] = [{
             'ResourceType': 'instance',
             'Tags': [
@@ -194,25 +211,18 @@ class EC2InstanceGroup(InstanceProvider):
                 },
                 {
                     'Key': 'Name',
-                    'Value': 'Batman worker - ' + self.name
+                    # Name of the group and timestamp
+                    'Value': f'{self.name} - {int(time.time()*1000)}'
                 },
             ]
         }]
+        spec['UserData'] = self.instance_initialization_code
         return spec
 
 
 def _is_socket_open(host: str, port: int) -> bool:
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
         return sock.connect_ex((host, port)) == 0
-
-
-def _ssh_prefix(ip_address: str):
-    return [
-        'ssh',
-        '-o', 'LogLevel=ERROR',
-        '-o', 'StrictHostKeyChecking=no',
-        '-o', 'UserKnownHostsFile=/dev/null',
-        f'ubuntu@{ip_address}']
 
 
 def _get_dns_name(instance_data: dict) -> str:
@@ -223,7 +233,7 @@ _BASE_INSTANCE_SPEC = {
     # TODO(sergio): check with Samir. Should we care about the subnet id?
     # It's getting the same as the workers. Will it always be the case?
 
-    'InstanceType': 't1.micro',
+    'InstanceType': 't2.micro',
     'InstanceMarketOptions': {
         'MarketType': 'spot',
         'SpotOptions': {

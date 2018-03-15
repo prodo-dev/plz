@@ -1,5 +1,4 @@
 import logging
-
 import os.path
 from typing import List
 
@@ -37,6 +36,9 @@ class EC2Instance(Instance):
 
     def logs(self, stdout: bool = True, stderr: bool = True):
         return self.delegate.logs(stdout, stderr)
+
+    def is_up(self):
+        return self.images.can_pull()
 
     def output_files_tarball(self):
         return self.delegate.output_files_tarball()
