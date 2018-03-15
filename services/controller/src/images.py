@@ -5,8 +5,8 @@ import docker
 import json
 import time
 
+from requests.exceptions import ConnectionError
 from typing import BinaryIO, Iterator
-from urllib3 import HTTPConnectionPool
 
 
 Metadata = collections.namedtuple('Metadata', ['user', 'project', 'timestamp'])
@@ -56,7 +56,7 @@ class Images:
         try:
             self.docker_api_client.pull('hello-world')
             return True
-        except HTTPConnectionPool:
+        except ConnectionError:
             return False
 
     @staticmethod
