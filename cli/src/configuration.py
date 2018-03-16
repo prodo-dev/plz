@@ -62,6 +62,7 @@ class Configuration:
             Property('host', default='localhost'),
             Property('port', type=int, default=80),
             Property('user', required=True),
+            Property('instance_type', default='t2.micro'),
             Property('project', required=True),
             Property('image', type=str, required=True),
             Property('command', type=list),

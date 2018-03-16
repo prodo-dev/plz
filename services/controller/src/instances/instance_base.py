@@ -27,7 +27,8 @@ class Instance(ABC):
 
 class InstanceProvider(ABC):
     @abstractmethod
-    def acquire_instance(self, execution_id: str) -> Iterator[str]:
+    def acquire_instance(
+            self, execution_id: str, execution_spec: dict) -> Iterator[str]:
         pass
 
     @abstractmethod
