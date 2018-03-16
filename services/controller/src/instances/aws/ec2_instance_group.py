@@ -24,7 +24,7 @@ class EC2InstanceGroup(InstanceProvider):
     EXECUTION_ID_TAG = 'Batman:Execution-Id'
     GROUP_NAME_TAG = 'Batman:Group-Id'
 
-    # TODO(samir): (or Sergio with help) make this into a proper variable
+    # TODO(sergio): make this into a proper variable
     _AMI_TAG = "2018-03-01"
 
     _name_to_group = {}
@@ -230,8 +230,7 @@ def _get_dns_name(instance_data: dict) -> str:
 
 
 _BASE_INSTANCE_SPEC = {
-    # TODO(sergio): check with Samir. Should we care about the subnet id?
-    # It's getting the same as the workers. Will it always be the case?
+    # TODO(sergio): set subnet id
 
     'InstanceType': 't2.micro',
     'InstanceMarketOptions': {
