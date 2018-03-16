@@ -11,7 +11,8 @@ eval $(make --no-print-directory --file="${ROOT}/vars.mk" bash)
 
 STATE_FILE=$1
 HOST=$(terraform output -state="${ROOT}/machines/ml/${STATE_FILE}" controller-host)
-AWS_AUTOSCALING_GROUP=$(terraform output -state="${ROOT}/machines/ml/${STATE_FILE}" autoscaling-group-name)
+# TODO(sergio): change it downstream so that we always use ENVIRONMENT_NAME
+AWS_AUTOSCALING_GROUP=$ENVIRONMENT_NAME
 SSH_PRIVATE_KEY_FILE="${ROOT}/machines/keys/batman.privkey"
 TAG=$(make --no-print-directory tag)
 IMAGE=$(docker inspect $TAG | jq -r '.[0].RepoDigests[0]')
