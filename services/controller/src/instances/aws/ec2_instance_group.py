@@ -221,7 +221,7 @@ class EC2InstanceGroup(InstanceProvider):
                 {
                     'Key': 'Name',
                     # Name of the group and timestamp
-                    'Value': f'{self.name} - {int(time.time()*1000)}'
+                    'Value': f'Batman {self.name} Worker - {int(time.time()*1000)}'
                 },
             ]
         }]
