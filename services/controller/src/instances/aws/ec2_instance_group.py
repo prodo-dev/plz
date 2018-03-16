@@ -32,7 +32,7 @@ class EC2InstanceGroup(InstanceProvider):
 
     @staticmethod
     def from_config(config):
-        name = config.aws_autoscaling_group
+        name = config.environment_name
         images = Images.from_config(config)
         return EC2InstanceGroup(
             name=name,

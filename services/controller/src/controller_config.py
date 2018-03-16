@@ -16,11 +16,12 @@ _ARGUMENTS_SPEC = [
         }
     },
     {
-        'name': 'aws_autoscaling_group',
+        'name': 'environment_name',
         'spec': {
             'type': str,
-            'help': 'AWS auto-scaling group name'
-                    'Example: batman-production-worker'
+            'help': 'Name used to identify the resources used by this controller. '
+                    'Example: production, sergio'
+
         }
     },
     {
