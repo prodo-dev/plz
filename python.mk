@@ -8,6 +8,14 @@ ifndef PYTHON
 $(error "Could not find $(PYTHON_EXE).")
 endif
 
+.PHONY: dist
+dist: $(SITE_PACKAGES)
+	rm -rf build dist
+	python setup.py bdist_wheel
+
+.PHONY: site-packages
+site-packages: $(SITE_PACKAGES)
+
 $(SITE_PACKAGES): env requirements.txt
 	./env/bin/pip install --requirement=requirements.txt
 	touch $@

@@ -4,26 +4,7 @@
 
 ## Using the CLI
 
-First, create a configuration file called *batman.config.json* in your project directory. Here's an example for running a fixture provided:
-
-    {
-      "user": "alice",
-      "project": "test",
-      "port": 5000,
-      "image": "python:3-slim",
-      "command": ["./cli/fixtures/test_configuration.py"],
-      "excluded_paths": [
-        ".git",
-        ".git-crypt",
-        "**/.terraform",
-        "**/__pycache__",
-        "**/env"
-      ]
-    }
-
-Then run it from the same directory:
-
-    <path to batman>/batman run
+See the CLI's *README.rst*.
 
 ## Deploying a test environment
 
@@ -53,5 +34,5 @@ and then run
 
     sudo systemctl restart systemd-resolved
   * On Linux or macOS, you can install *openvpn* and then run *sudo openvpn prodo-ai.conf*.
-  
+
 One you're connected, you should be able to access everything inside the AWS VPC.
