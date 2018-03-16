@@ -13,11 +13,11 @@ from typing import Optional, Tuple
 import docker.utils.build
 import requests
 
-import parameters
-from configuration import Configuration, ValidationException
-from exceptions import CLIException
-from log import log_error, log_info
-from parameters import Parameters
+from batman.cli import parameters
+from batman.cli.configuration import Configuration, ValidationException
+from batman.cli.exceptions import CLIException
+from batman.cli.log import log_error, log_info
+from batman.cli.parameters import Parameters
 
 
 def on_exception_reraise(message):
@@ -76,7 +76,9 @@ class RunCommand:
         snapshot_id = self.submit_context_for_building(build_context)
 
         if snapshot_id:
-            execution_spec = {'instance_type': self.configuration.instance_type}
+            execution_spec = {
+                'instance_type': self.configuration.instance_type,
+            }
             execution_id, ok = self.issue_command(
                 snapshot_id, params, execution_spec)
             if execution_id:

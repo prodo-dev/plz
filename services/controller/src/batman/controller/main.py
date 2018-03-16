@@ -9,11 +9,11 @@ import docker
 import requests
 from flask import Flask, Response, jsonify, request, stream_with_context
 
-from controller_config import config
-from images import Images
-from instances.aws import EC2InstanceGroup
-from instances.instance_base import InstanceProvider
-from instances.localhost import Localhost
+from batman.controller.controller_config import config
+from batman.controller.images import Images
+from batman.controller.instances.aws import EC2InstanceGroup
+from batman.controller.instances.instance_base import InstanceProvider
+from batman.controller.instances.localhost import Localhost
 
 T = TypeVar('T')
 

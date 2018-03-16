@@ -19,7 +19,8 @@ _ARGUMENTS_SPEC = [
         'name': 'environment_name',
         'spec': {
             'type': str,
-            'help': 'Name used to identify the resources used by this controller. '
+            'help': 'Name used to identify the resources used by this'
+                    'controller. '
                     'Example: production, sergio'
 
         }

@@ -2,11 +2,11 @@ import logging
 import os.path
 from typing import List
 
-from containers import Containers
-from images import Images
-from instances.docker import DockerInstance
-from instances.instance_base import Instance, Parameters
-from volumes import Volumes
+from batman.controller.containers import Containers
+from batman.controller.images import Images
+from batman.controller.instances.docker import DockerInstance
+from batman.controller.instances.instance_base import Instance, Parameters
+from batman.controller.volumes import Volumes
 
 log = logging.getLogger('controller')
 
