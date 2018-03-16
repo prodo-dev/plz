@@ -27,7 +27,9 @@ class Localhost(InstanceProvider):
         self.volumes = volumes
         self.instances = {}
 
-    def acquire_instance(self, execution_id: str) -> Iterator[str]:
+    def acquire_instance(
+            self, execution_id: str, execution_spec: dict) \
+            -> Iterator[str]:
         """
         "Acquires" an instance.
 

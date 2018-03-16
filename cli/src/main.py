@@ -76,7 +76,9 @@ class RunCommand:
         snapshot_id = self.submit_context_for_building(build_context)
 
         if snapshot_id:
-            execution_id, ok = self.issue_command(snapshot_id, params)
+            execution_spec = {'instance_type': self.configuration.instance_type}
+            execution_id, ok = self.issue_command(
+                snapshot_id, params, execution_spec)
             if execution_id:
                 if ok:
                     self.display_logs(execution_id)
@@ -138,14 +140,16 @@ class RunCommand:
             return None
         return snapshot_id
 
-    def issue_command(self, snapshot_id: str, params: Parameters) \
+    def issue_command(
+            self, snapshot_id: str, params: Parameters, execution_spec: dict) \
             -> Tuple[Optional[str], bool]:
         log_info('Issuing the command on a new box')
 
         response = requests.post(self.url('commands'), json={
             'command': self.command,
             'snapshot_id': snapshot_id,
-            'parameters': params
+            'parameters': params,
+            'execution_spec': execution_spec
         }, stream=True)
         check_status(response, requests.codes.accepted)
         execution_id: Optional[str] = None

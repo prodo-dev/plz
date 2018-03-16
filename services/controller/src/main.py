@@ -39,6 +39,7 @@ def run_command_entrypoint():
     command = request.json['command']
     snapshot_id = request.json['snapshot_id']
     parameters = request.json['parameters']
+    execution_spec = request.json['execution_spec']
     execution_id = str(get_command_uuid())
 
     @_json_stream
@@ -47,7 +48,8 @@ def run_command_entrypoint():
         yield {'id': execution_id}
 
         try:
-            messages = instance_provider.acquire_instance(execution_id)
+            messages = instance_provider.acquire_instance(
+                execution_id, execution_spec)
             for message in messages:
                 yield {'status': message}
             instance = instance_provider.instance_for(execution_id)

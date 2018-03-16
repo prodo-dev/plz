@@ -106,6 +106,7 @@ class EC2InstanceGroup(InstanceProvider):
     def acquire_instance(
             self,
             execution_id: str,
+            execution_spec: dict,
             max_tries: int = 30,
             delay_in_seconds: int = 10) \
             -> Iterator[str]:
@@ -120,12 +121,14 @@ class EC2InstanceGroup(InstanceProvider):
         tries_remaining = max_tries
         with self.lock:
             yield 'querying availability'
-            instances_not_assigned = self._aws_instances_by_execution_id('')
+            instance_type = execution_spec.get('instance_type')
+            instances_not_assigned = self._available_aws_instances(
+                execution_id='', instance_type=instance_type)
             if len(instances_not_assigned) > 0:
                 instance_data = instances_not_assigned[0]
             else:
                 yield 'requesting new instance'
-                instance_data = self._ask_aws_for_new_instance()
+                instance_data = self._ask_aws_for_new_instance(instance_type)
             dns_name = _get_dns_name(instance_data)
             yield f'worker dns name is: {dns_name}'
             while tries_remaining > 0:
@@ -154,21 +157,27 @@ class EC2InstanceGroup(InstanceProvider):
         ])
         del self.instances[execution_id]
 
-    def _aws_instances_by_execution_id(self, execution_id):
+    def _available_aws_instances(
+            self, execution_id, instance_type=None):
+        if instance_type is None:
+            instance_type_filter = []
+        else:
+            instance_type_filter = [
+                {'Name': 'instance-type', 'Values': [instance_type]}]
         response = self.client.describe_instances(
             Filters=self.filters + [
                 {'Name': 'instance-state-name',
                  'Values': ['running']},
                 {'Name': f'tag:{self.EXECUTION_ID_TAG}',
                  'Values': [execution_id]}
-            ])
+            ] + instance_type_filter)
         return [instance
                 for reservation in response['Reservations']
                 for instance in reservation['Instances']]
 
-    def _ask_aws_for_new_instance(self) -> dict:
+    def _ask_aws_for_new_instance(self, instance_type: str) -> dict:
         response = self.client.run_instances(
-            **self._get_instance_spec(),
+            **self._get_instance_spec(instance_type),
             MinCount=1, MaxCount=1)
         return response['Instances'][0]
 
@@ -195,7 +204,7 @@ class EC2InstanceGroup(InstanceProvider):
             execution_id,
             instance_data)
 
-    def _get_instance_spec(self) -> dict:
+    def _get_instance_spec(self, instance_type) -> dict:
         spec = _BASE_INSTANCE_SPEC.copy()
         spec['ImageId'] = self.ami_id
         spec['TagSpecifications'] = [{
@@ -212,11 +221,12 @@ class EC2InstanceGroup(InstanceProvider):
                 {
                     'Key': 'Name',
                     # Name of the group and timestamp
-                    'Value': f'{self.name} - {int(time.time()*1000)}'
+                    'Value': f'Batman {self.name} Worker - {int(time.time()*1000)}'
                 },
             ]
         }]
         spec['UserData'] = self.instance_initialization_code
+        spec['InstanceType'] = instance_type
         return spec
 
 
