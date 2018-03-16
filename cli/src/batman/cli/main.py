@@ -76,7 +76,9 @@ class RunCommand:
         snapshot_id = self.submit_context_for_building(build_context)
 
         if snapshot_id:
-            execution_spec = {'instance_type': self.configuration.instance_type}
+            execution_spec = {
+                'instance_type': self.configuration.instance_type,
+            }
             execution_id, ok = self.issue_command(
                 snapshot_id, params, execution_spec)
             if execution_id:

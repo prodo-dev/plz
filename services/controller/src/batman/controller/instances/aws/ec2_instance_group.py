@@ -1,4 +1,3 @@
-import boto3
 import os
 import socket
 import threading
@@ -6,11 +5,13 @@ import time
 from contextlib import closing
 from typing import Iterator
 
-from .ec2_instance import EC2Instance
+import boto3
+
 from batman.controller.containers import Containers
 from batman.controller.images import Images
 from batman.controller.instances.instance_base import InstanceProvider
 from batman.controller.volumes import Volumes
+from .ec2_instance import EC2Instance
 
 
 class EC2InstanceGroup(InstanceProvider):
@@ -133,9 +134,11 @@ class EC2InstanceGroup(InstanceProvider):
             yield f'worker dns name is: {dns_name}'
             while tries_remaining > 0:
                 tries_remaining -= 1
-                instance = self._ec2_instance_from_instance_data(instance_data, execution_id)
+                instance = self._ec2_instance_from_instance_data(
+                    instance_data, execution_id)
                 if instance.is_up():
-                    self._assign_aws_instance_to_execution_id(instance, execution_id)
+                    self._assign_aws_instance_to_execution_id(
+                        instance, execution_id)
                     yield 'started'
                     return
                 else:
@@ -190,7 +193,8 @@ class EC2InstanceGroup(InstanceProvider):
         self.instances[execution_id] = instance
         return instance
 
-    def _ec2_instance_from_instance_data(self, instance_data, execution_id) -> EC2Instance:
+    def _ec2_instance_from_instance_data(self, instance_data, execution_id) \
+            -> EC2Instance:
         dns_name = _get_dns_name(instance_data)
         docker_url = f'tcp://{dns_name}:{self.DOCKER_PORT}'
         images = self.images.for_host(docker_url)
@@ -221,7 +225,8 @@ class EC2InstanceGroup(InstanceProvider):
                 {
                     'Key': 'Name',
                     # Name of the group and timestamp
-                    'Value': f'Batman {self.name} Worker - {int(time.time()*1000)}'
+                    'Value': f'Batman {self.name} Worker - '
+                             f'{int(time.time() * 1000)}'
                 },
             ]
         }]
