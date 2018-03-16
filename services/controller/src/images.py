@@ -1,11 +1,12 @@
 import base64
+import boto3
 import collections
+import docker
 import json
 import time
-from typing import BinaryIO, Iterator
 
-import boto3
-import docker
+from requests.exceptions import ConnectionError
+from typing import BinaryIO, Iterator
 
 
 Metadata = collections.namedtuple('Metadata', ['user', 'project', 'timestamp'])
@@ -50,6 +51,13 @@ class Images:
         self.docker_api_client.pull(
             self.DOCKER_REPOSITORY, tag,
             auth_config=self._aws_ecr_credentials())
+
+    def can_pull(self):
+        try:
+            self.docker_api_client.pull('hello-world')
+            return True
+        except ConnectionError:
+            return False
 
     @staticmethod
     def parse_metadata(json_string: str) -> Metadata:
