@@ -5,7 +5,7 @@ import docker
 import docker.errors
 from docker.types import Mount
 
-from images import Images
+from batman.controller.images import Images
 
 
 class Containers:

@@ -2,4 +2,4 @@
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-${ROOT}/cli/env/bin/python ${ROOT}/cli/src/main.py $@
+PYTHONPATH=${ROOT}/cli/src ${ROOT}/cli/env/bin/python ${ROOT}/cli/src/batman/cli/main.py $@

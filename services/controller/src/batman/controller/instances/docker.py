@@ -3,10 +3,10 @@ from typing import List
 
 from docker.types import Mount
 
-from containers import Containers
-from images import Images
-from instances.instance_base import Instance, Parameters
-from volumes import VolumeDirectory, VolumeFile, Volumes
+from batman.controller.containers import Containers
+from batman.controller.images import Images
+from batman.controller.instances.instance_base import Instance, Parameters
+from batman.controller.volumes import VolumeDirectory, VolumeFile, Volumes
 
 
 class DockerInstance(Instance):

@@ -1,7 +1,7 @@
 import unittest
 
-from configuration import Configuration, Property, ValidationError, \
-    ValidationException
+from batman.cli.configuration import \
+    Configuration, Property, ValidationError, ValidationException
 
 
 # noinspection PyMethodMayBeStatic

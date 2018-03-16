@@ -7,10 +7,10 @@ from contextlib import closing
 from typing import Iterator
 
 from .ec2_instance import EC2Instance
-from containers import Containers
-from images import Images
-from instances.instance_base import InstanceProvider
-from volumes import Volumes
+from batman.controller.containers import Containers
+from batman.controller.images import Images
+from batman.controller.instances.instance_base import InstanceProvider
+from batman.controller.volumes import Volumes
 
 
 class EC2InstanceGroup(InstanceProvider):

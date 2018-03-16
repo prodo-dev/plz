@@ -1,11 +1,12 @@
 import logging
 from typing import Iterator, Optional
 
-from containers import Containers
-from images import Images
-from instances.docker import DockerInstance
-from instances.instance_base import InstanceProvider, Instance
-from volumes import Volumes
+from batman.controller.containers import Containers
+from batman.controller.images import Images
+from batman.controller.instances.docker import DockerInstance
+from batman.controller.instances.instance_base \
+    import Instance, InstanceProvider
+from batman.controller.volumes import Volumes
 
 log = logging.getLogger('localhost')
 
