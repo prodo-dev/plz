@@ -56,6 +56,17 @@ data "aws_security_group" "default" {
   ]
 }
 
+data "aws_security_group" "ssh" {
+  vpc_id = "${data.aws_vpc.main.id}"
+
+  filter = [
+    {
+      name   = "group-name"
+      values = ["Plz SSH"]
+    },
+  ]
+}
+
 resource "aws_key_pair" "plz" {
   key_name   = "plz-${lower(var.environment)}-key"
   public_key = "${file("../keys/plz.pubkey")}"
@@ -77,7 +88,8 @@ resource "aws_instance" "controller" {
   key_name                    = "plz-${lower(var.environment)}-key"
   associate_public_ip_address = true
   iam_instance_profile        = "${aws_iam_instance_profile.controller.name}"
-
+  security_groups             = ["${data.aws_security_group.ssh.id}",
+                                 "${data.aws_security_group.default.id}"]
   tags {
     Name        = "Plz ${var.environment} Controller"
     Environment = "${var.environment}"
@@ -130,7 +142,11 @@ resource "aws_volume_attachment" "build-cache-attachment" {
   skip_destroy = true
 
   provisioner "local-exec" {
-    command = "./on-host ubuntu@${aws_instance.controller.public_dns} ./initialize-cache /dev/xvdx"
+    # TODO: I (Sergio) added the ssh security group to the controller
+    # Otherwise deployment fails when trying to run scripts remotely.
+    # Unless we force being in the vpn? But then we should have the
+    # private IP/DNS here
+    command = "../scripts/on-host ubuntu@${aws_instance.controller.public_dns} ../../services/controller/src/scripts/initialize-cache /dev/xvdx"
   }
 }
 

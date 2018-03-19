@@ -97,7 +97,9 @@ class EC2InstanceGroup(InstanceProvider):
         if self._instance_initialization_code is not None:
             return self._instance_initialization_code
         path_to_initialization_code = os.path.join(
-            os.path.dirname(__file__), 'scripts', 'initialize-instance')
+            os.path.dirname(__file__),
+            '..', '..', '..', '..', 'scripts',
+            'initialize-cache')
         with open(path_to_initialization_code, 'r') as f:
             initialization_code = f.read()
         self._instance_initialization_code = \
