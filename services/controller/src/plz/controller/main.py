@@ -9,11 +9,11 @@ import docker
 import requests
 from flask import Flask, Response, jsonify, request, stream_with_context
 
-from batman.controller.controller_config import config
-from batman.controller.images import Images
-from batman.controller.instances.aws import EC2InstanceGroup
-from batman.controller.instances.instance_base import InstanceProvider
-from batman.controller.instances.localhost import Localhost
+from plz.controller.controller_config import config
+from plz.controller.images import Images
+from plz.controller.instances.aws import EC2InstanceGroup
+from plz.controller.instances.instance_base import InstanceProvider
+from plz.controller.instances.localhost import Localhost
 
 T = TypeVar('T')
 
@@ -103,7 +103,7 @@ def get_logs_stderr_entrypoint(execution_id):
 @app.route(f'/commands/<execution_id>/output/files')
 def get_output_files_entrypoint(execution_id):
     # Test with:
-    # curl localhost:5000/commands/some-id/output | tar x -C /tmp/batman-output
+    # curl localhost:5000/commands/some-id/output | tar x -C /tmp/plz-output
     instance = instance_provider.instance_for(execution_id)
     response = instance.output_files_tarball()
     return Response(response, mimetype='application/octet-stream')

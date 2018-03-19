@@ -2,10 +2,10 @@ SHELL := zsh
 
 include ../../vars.mk
 
-NAME = batman-visdom
+NAME = plz-visdom
 TAG = $(AWS_PROJECT)/visdom
 
-NETWORK = batman
+NETWORK = plz
 PORT = 8097
 export PORT
 

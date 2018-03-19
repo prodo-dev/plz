@@ -39,7 +39,7 @@ class VolumeDirectory(VolumeObject):
 
 
 class Volumes:
-    VOLUME_MOUNT = '/batman'
+    VOLUME_MOUNT = '/plz'
     CONFIGURATION_FILE = 'configuration.json'
     CONFIGURATION_FILE_PATH = os.path.join(VOLUME_MOUNT, CONFIGURATION_FILE)
     OUTPUT_DIRECTORY = 'output'

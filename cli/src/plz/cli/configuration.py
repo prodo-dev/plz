@@ -71,7 +71,7 @@ class Configuration:
         ]
     }
 
-    CONFIGURATION_FILE = 'batman.config.json'
+    CONFIGURATION_FILE = 'plz.config.json'
     MISSING_CONFIGURATION_FILE_ERROR = ValidationError(
         f'You must create a {CONFIGURATION_FILE} file.')
 
@@ -108,8 +108,8 @@ class Configuration:
     def from_env(properties: Dict[str, Property]) -> 'Configuration':
         data = {}
         for key, value in os.environ.items():
-            if key.startswith('BATMAN_'):
-                name = key[len('BATMAN_'):].lower()
+            if key.startswith('PLZ_'):
+                name = key[len('PLZ_'):].lower()
                 prop = properties.get(name)
                 if prop:
                     try:

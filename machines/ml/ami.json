@@ -12,7 +12,7 @@
       "source_ami": "{{user `source-ami`}}",
       "instance_type": "t2.micro",
       "ssh_username": "ubuntu",
-      "ami_name": "batman-{{user `group`}}-{{user `tag`}}",
+      "ami_name": "plz-{{user `group`}}-{{user `tag`}}",
       "tags": {
         "Owner": "Infrastructure"
       }

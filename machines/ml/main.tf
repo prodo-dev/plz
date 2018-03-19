@@ -56,9 +56,9 @@ data "aws_security_group" "default" {
   ]
 }
 
-resource "aws_key_pair" "batman" {
-  key_name   = "batman-${lower(var.environment)}-key"
-  public_key = "${file("../keys/batman.pubkey")}"
+resource "aws_key_pair" "plz" {
+  key_name   = "plz-${lower(var.environment)}-key"
+  public_key = "${file("../keys/plz.pubkey")}"
 }
 
 ///
@@ -66,7 +66,7 @@ resource "aws_key_pair" "batman" {
 data "aws_ami" "controller-ami" {
   filter {
     name   = "name"
-    values = ["batman-build-${var.ami_tag}"]
+    values = ["plz-build-${var.ami_tag}"]
   }
 }
 
@@ -74,24 +74,24 @@ resource "aws_instance" "controller" {
   subnet_id                   = "${data.aws_subnet.main.id}"
   instance_type               = "t2.small"
   ami                         = "${data.aws_ami.controller-ami.id}"
-  key_name                    = "batman-${lower(var.environment)}-key"
+  key_name                    = "plz-${lower(var.environment)}-key"
   associate_public_ip_address = true
   iam_instance_profile        = "${aws_iam_instance_profile.controller.name}"
 
   tags {
-    Name        = "Batman ${var.environment} Controller"
+    Name        = "Plz ${var.environment} Controller"
     Environment = "${var.environment}"
     Owner       = "Infrastructure"
   }
 }
 
 resource "aws_iam_instance_profile" "controller" {
-  name = "batman-${lower(var.environment)}-controller"
+  name = "plz-${lower(var.environment)}-controller"
   role = "${aws_iam_role.controller.name}"
 }
 
 resource "aws_iam_role" "controller" {
-  name = "batman-${lower(var.environment)}-controller"
+  name = "plz-${lower(var.environment)}-controller"
 
   assume_role_policy = "${var.ec2_role}"
 }
@@ -116,7 +116,7 @@ resource "aws_ebs_volume" "build-cache" {
   size              = 500
 
   tags {
-    Name        = "Batman ${var.environment} Build Cache"
+    Name        = "Plz ${var.environment} Build Cache"
     Environment = "${var.environment}"
     Owner       = "Infrastructure"
   }
@@ -143,7 +143,7 @@ output "controller-host" {
 data "aws_ami" "worker-ami" {
   filter {
     name   = "name"
-    values = ["batman-worker-${var.ami_tag}"]
+    values = ["plz-worker-${var.ami_tag}"]
   }
 }
 

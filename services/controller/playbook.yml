@@ -6,7 +6,7 @@
     - name: Copy the SSH private key
       copy:
         src: "{{ ssh_private_key_file }}"
-        dest: /home/ubuntu/.ssh/batman.privkey
+        dest: /home/ubuntu/.ssh/plz.privkey
         owner: ubuntu
         group: ubuntu
         mode: 0600
@@ -31,5 +31,5 @@
           - "{{ service_port }}:{{ service_port }}"
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
-          - /home/ubuntu/.ssh/batman.privkey:/root/.ssh/id_rsa:ro
+          - /home/ubuntu/.ssh/plz.privkey:/root/.ssh/id_rsa:ro
         restart_policy: unless-stopped

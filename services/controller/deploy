@@ -11,7 +11,7 @@ eval $(make --no-print-directory --file="${ROOT}/vars.mk" bash)
 
 STATE_FILE=$1
 HOST=$(terraform output -state="${ROOT}/machines/ml/${STATE_FILE}" controller-host)
-SSH_PRIVATE_KEY_FILE="${ROOT}/machines/keys/batman.privkey"
+SSH_PRIVATE_KEY_FILE="${ROOT}/machines/keys/plz.privkey"
 TAG=$(make --no-print-directory tag)
 IMAGE=$(docker inspect $TAG | jq -r '.[0].RepoDigests[0]')
 SERVICE_PORT=80

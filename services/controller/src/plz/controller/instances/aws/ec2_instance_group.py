@@ -7,10 +7,10 @@ from typing import Iterator
 
 import boto3
 
-from batman.controller.containers import Containers
-from batman.controller.images import Images
-from batman.controller.instances.instance_base import InstanceProvider
-from batman.controller.volumes import Volumes
+from plz.controller.containers import Containers
+from plz.controller.images import Images
+from plz.controller.instances.instance_base import InstanceProvider
+from plz.controller.volumes import Volumes
 from .ec2_instance import EC2Instance
 
 
@@ -22,8 +22,8 @@ class EC2InstanceGroup(InstanceProvider):
     # started with an empty value for this tag, the tag is set
     # when the instance starts executing, and it's emptied again
     # when the execution finishes
-    EXECUTION_ID_TAG = 'Batman:Execution-Id'
-    GROUP_NAME_TAG = 'Batman:Group-Id'
+    EXECUTION_ID_TAG = 'Plz:Execution-Id'
+    GROUP_NAME_TAG = 'Plz:Group-Id'
 
     # TODO(sergio): make this into a proper variable
     _AMI_TAG = "2018-03-01"
@@ -85,7 +85,7 @@ class EC2InstanceGroup(InstanceProvider):
             Filters=[
                 {
                     'Name': 'name',
-                    'Values': [f'batman-worker-{self._AMI_TAG}']
+                    'Values': [f'plz-worker-{self._AMI_TAG}']
                 },
             ],
         )
@@ -225,7 +225,7 @@ class EC2InstanceGroup(InstanceProvider):
                 {
                     'Key': 'Name',
                     # Name of the group and timestamp
-                    'Value': f'Batman {self.name} Worker - '
+                    'Value': f'Plz {self.name} Worker - '
                              f'{int(time.time() * 1000)}'
                 },
             ]

@@ -13,11 +13,11 @@ from typing import Optional, Tuple
 import docker.utils.build
 import requests
 
-from batman.cli import parameters
-from batman.cli.configuration import Configuration, ValidationException
-from batman.cli.exceptions import CLIException
-from batman.cli.log import log_error, log_info
-from batman.cli.parameters import Parameters
+from plz.cli import parameters
+from plz.cli.configuration import Configuration, ValidationException
+from plz.cli.exceptions import CLIException
+from plz.cli.log import log_error, log_info
+from plz.cli.parameters import Parameters
 
 
 def on_exception_reraise(message):

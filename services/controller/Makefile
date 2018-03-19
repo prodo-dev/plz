@@ -2,7 +2,7 @@ SHELL := zsh -e -u
 
 include ../../vars.mk
 
-TAG = $(AWS_PROJECT)/batman-controller
+TAG = $(AWS_PROJECT)/plz-controller
 
 include ../../docker.mk
 include ../../python.mk

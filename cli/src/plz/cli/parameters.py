@@ -2,7 +2,7 @@ import json
 from json import JSONDecodeError
 from typing import Any, Dict
 
-from batman.cli.exceptions import CLIException
+from plz.cli.exceptions import CLIException
 
 Parameters = Dict[str, Any]
 

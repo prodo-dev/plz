@@ -1,3 +1,3 @@
-TAG = batman-dev-python
+TAG = plz-dev-python
 
 include ../../docker.mk

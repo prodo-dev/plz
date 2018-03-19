@@ -3,10 +3,10 @@ from typing import List
 
 from docker.types import Mount
 
-from batman.controller.containers import Containers
-from batman.controller.images import Images
-from batman.controller.instances.instance_base import Instance, Parameters
-from batman.controller.volumes import VolumeDirectory, VolumeFile, Volumes
+from plz.controller.containers import Containers
+from plz.controller.images import Images
+from plz.controller.instances.instance_base import Instance, Parameters
+from plz.controller.volumes import VolumeDirectory, VolumeFile, Volumes
 
 
 class DockerInstance(Instance):
@@ -58,4 +58,4 @@ class DockerInstance(Instance):
 
     @property
     def volume_name(self):
-        return f'batman-{self.execution_id}'
+        return f'plz-{self.execution_id}'

@@ -15,4 +15,4 @@ RUN pip install --no-cache-dir --requirement=requirements.txt
 COPY src ./src/
 
 ENV PYTHONPATH ./src
-CMD ["python", "./src/batman/controller/main.py"]
+CMD ["python", "./src/plz/controller/main.py"]

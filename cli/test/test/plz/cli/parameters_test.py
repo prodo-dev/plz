@@ -2,8 +2,8 @@ import io
 import json
 import unittest
 
-from batman.cli import parameters
-from batman.cli.exceptions import CLIException
+from plz.cli import parameters
+from plz.cli.exceptions import CLIException
 
 
 class ParametersTest(unittest.TestCase):
