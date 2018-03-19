@@ -1,7 +1,7 @@
 import traceback
 from typing import Optional
 
-from batman.cli.log import log_error
+from plz.cli.log import log_error
 
 
 class CLIException(Exception):

@@ -10,7 +10,7 @@ eval $(make --no-print-directory --file="${ROOT}/vars.mk" bash)
 
 HOST=$1
 PLAYBOOK=$2
-SSH_PRIVATE_KEY_FILE="${ROOT}/machines/keys/batman.privkey"
+SSH_PRIVATE_KEY_FILE="${ROOT}/machines/keys/plz.privkey"
 
 ANSIBLE_INVENTORY=$(mktemp "${TMPDIR:-/tmp/}inventory-XXXXX")
 cat > $ANSIBLE_INVENTORY <<EOF

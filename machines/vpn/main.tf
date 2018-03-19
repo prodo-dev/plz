@@ -38,7 +38,7 @@ data "aws_security_group" "default" {
 
 resource "aws_security_group" "openvpn" {
   vpc_id      = "${data.aws_vpc.main.id}"
-  name        = "Batman OpenVPN"
+  name        = "Plz OpenVPN"
   description = "OpenVPN Access Server"
 
   ingress {
@@ -92,14 +92,14 @@ resource "aws_security_group" "openvpn" {
   }
 
   tags {
-    Name  = "Batman OpenVPN"
+    Name  = "Plz OpenVPN"
     Owner = "Infrastructure"
   }
 }
 
-resource "aws_key_pair" "batman" {
-  key_name   = "batman-openvpn-key"
-  public_key = "${file("../keys/batman.pubkey")}"
+resource "aws_key_pair" "plz" {
+  key_name   = "plz-openvpn-key"
+  public_key = "${file("../keys/plz.pubkey")}"
 }
 
 data "aws_ami" "ubuntu" {
@@ -138,11 +138,11 @@ resource "aws_instance" "server" {
     "${aws_security_group.openvpn.id}",
   ]
 
-  key_name                    = "batman-openvpn-key"
+  key_name                    = "plz-openvpn-key"
   associate_public_ip_address = true
 
   tags {
-    Name  = "Batman OpenVPN"
+    Name  = "Plz OpenVPN"
     Owner = "Infrastructure"
   }
 }
@@ -152,7 +152,7 @@ resource "aws_ebs_volume" "keys" {
   size              = 8
 
   tags {
-    Name  = "Batman OpenVPN Keys"
+    Name  = "Plz OpenVPN Keys"
     Owner = "Infrastructure"
   }
 }
@@ -176,7 +176,7 @@ resource "aws_eip" "server" {
   vpc      = true
 
   tags {
-    Name  = "Batman OpenVPN"
+    Name  = "Plz OpenVPN"
     Owner = "Infrastructure"
   }
 }

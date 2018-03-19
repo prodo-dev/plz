@@ -1,6 +1,6 @@
 import unittest
 
-from batman.cli.configuration import \
+from plz.cli.configuration import \
     Configuration, Property, ValidationError, ValidationException
 
 

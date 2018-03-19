@@ -61,7 +61,7 @@ Config = namedtuple('Config', [spec['name'] for spec in _ARGUMENTS_SPEC])
 
 def _create_arg_parser():
     arg_parser = argparse.ArgumentParser(
-        description='Controller for batman workers')
+        description='Controller for plz workers')
     for spec in _ARGUMENTS_SPEC:
         arg_parser.add_argument(f'--{_name_to_cli_parameter(spec["name"])}',
                                 **spec['spec'])

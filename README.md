@@ -1,6 +1,6 @@
-# Batman 🦇
+# plz 🙏
 
-*I am the night.*
+*Say the magic word.*
 
 ## Using the CLI
 

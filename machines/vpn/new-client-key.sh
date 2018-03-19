@@ -50,7 +50,7 @@ ENVIRONMENT=(
 )
 
 SSH_CONNECTION="${SERVER_USER}@${SERVER_HOST}"
-SSH_PRIVATE_KEY_FILE="${ROOT}/machines/keys/batman.privkey"
+SSH_PRIVATE_KEY_FILE="${ROOT}/machines/keys/plz.privkey"
 SSH=(ssh -i $SSH_PRIVATE_KEY_FILE $SSH_CONNECTION --)
 SCP=(scp -i $SSH_PRIVATE_KEY_FILE --)
 

@@ -28,7 +28,7 @@ resource "aws_route53_zone" "internal" {
 data "aws_instance" "vpn" {
   filter = {
     name   = "tag:Name"
-    values = ["Batman OpenVPN"]
+    values = ["Plz OpenVPN"]
   }
 }
 
@@ -57,13 +57,13 @@ resource "aws_route53_record" "vpn_internal" {
 data "aws_instance" "controller" {
   filter = {
     name   = "tag:Name"
-    values = ["Batman Production Controller"]
+    values = ["Plz Production Controller"]
   }
 }
 
 resource "aws_route53_record" "controller" {
   zone_id = "${aws_route53_zone.internal.zone_id}"
-  name    = "batman.${var.subdomain}"
+  name    = "plz.${var.subdomain}"
   type    = "A"
   ttl     = "300"
 

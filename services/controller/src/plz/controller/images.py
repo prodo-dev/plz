@@ -14,7 +14,7 @@ Metadata = collections.namedtuple('Metadata', ['user', 'project', 'timestamp'])
 
 class Images:
     DOCKER_REPOSITORY = \
-        '024444204267.dkr.ecr.eu-west-1.amazonaws.com/batman/builds'
+        '024444204267.dkr.ecr.eu-west-1.amazonaws.com/plz/builds'
 
     @staticmethod
     def from_config(config):

@@ -13,7 +13,7 @@ shift
 LOCAL_EXECUTABLE=$1
 shift
 
-SSH_PRIVATE_KEY_FILE="${HERE:h}/keys/batman.privkey"
+SSH_PRIVATE_KEY_FILE="${HERE:h}/keys/plz.privkey"
 SSH_ARGS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i $SSH_PRIVATE_KEY_FILE)
 REMOTE_EXECUTABLE='~/.on-host-executable'
 

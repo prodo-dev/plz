@@ -15,11 +15,11 @@ with open(path.join(root, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='batman-client',
+    name='plz-client',
     version='0.1.0',
-    description='Send jobs to the Batman server',
+    description='Send jobs to the Plz server',
     long_description=long_description,
-    url='https://github.com/prodo-ai/batman',
+    url='https://github.com/prodo-ai/plz',
     author='Prodo Tech Ltd.',
     author_email='hello@prodo.ai',
     classifiers=[
@@ -31,7 +31,7 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
     package_dir={'': 'src'},
-    packages=['batman.cli'],
+    packages=['plz.cli'],
     python_requires='>= 3.6',
     install_requires=[
         'docker >= 3.1.1',
@@ -45,10 +45,10 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'batman=batman.cli.main:main',
+            'plz=plz.cli.main:main',
         ],
     },
     project_urls={
-        'Bug Reports': 'https://github.com/prodo-ai/batman/issues',
+        'Bug Reports': 'https://github.com/prodo-ai/plz/issues',
     },
 )

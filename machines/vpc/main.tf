@@ -35,7 +35,7 @@ resource "aws_default_security_group" "default" {
 
 resource "aws_security_group" "ssh" {
   vpc_id      = "${data.aws_vpc.main.id}"
-  name        = "Batman SSH"
+  name        = "Plz SSH"
   description = "Allow SSH and Mosh access"
 
   ingress {
@@ -53,7 +53,7 @@ resource "aws_security_group" "ssh" {
   }
 
   tags {
-    Name  = "Batman SSH"
+    Name  = "Plz SSH"
     Owner = "Infrastructure"
   }
 }
