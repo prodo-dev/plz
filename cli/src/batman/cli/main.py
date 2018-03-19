@@ -247,7 +247,7 @@ def check_status(response, expected_status):
         raise RequestException(response)
 
 
-def main(args):
+def main(args=sys.argv[1:]):
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(title='commands', dest='command_name')
     for name, command in COMMANDS.items():
@@ -273,4 +273,5 @@ def main(args):
         sys.exit(1)
 
 
-main(sys.argv[1:])
+if __name__ == '__main__':
+    main()
