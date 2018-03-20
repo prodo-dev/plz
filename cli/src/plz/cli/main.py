@@ -331,7 +331,7 @@ def _exit_and_print_execution_id(execution_id):
     print()
     log_info('Your command is still running')
     # TODO(sergio): and plz kill execution-id to kill it
-    log_info(f'Type: plz logs f{execution_id} to stream the logs')
+    log_info(f'Type: plz logs {execution_id} to stream the logs')
     sys.exit(0)
 
 
