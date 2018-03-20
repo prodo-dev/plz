@@ -7,4 +7,4 @@ deploy:
 	eval $$($(MAKE) --no-print-directory --file=../../vars.mk terraform); \
 	terraform init; \
 	terraform apply
-	../scripts/run-playbook-on-host $(shell terraform output host) playbook.yml
+	../scripts/run-playbook-on-host $$(terraform output host) playbook.yml
