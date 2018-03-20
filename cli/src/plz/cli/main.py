@@ -8,7 +8,8 @@ import shutil
 import sys
 import tarfile
 import tempfile
-from typing import Optional, Tuple
+from abc import ABC, abstractmethod
+from typing import Optional, Tuple, Dict
 
 import docker.utils.build
 import requests
@@ -33,7 +34,39 @@ def on_exception_reraise(message):
     return wrapper
 
 
-class RunCommand:
+class Operation(ABC):
+    def __init__(self, configuration):
+        self.prefix = f'http://{configuration.host}:{configuration.port}'
+
+    @on_exception_reraise("Displaying the logs failed.")
+    def display_logs(self, execution_id: str):
+        log_info('Streaming logs...')
+        response = requests.get(self.url('commands', execution_id, 'logs'),
+                                stream=True)
+        check_status(response, requests.codes.ok)
+        for line in response.raw:
+            print(line.decode('utf-8'), end='')
+        print()
+
+    def url(self, *path_segments):
+        return self.prefix + '/' + '/'.join(path_segments)
+
+    @staticmethod
+    @abstractmethod
+    def prepare_argument_parser(parser):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def new(**kwargs) -> 'Operation':
+        pass
+
+    @abstractmethod
+    def run(self):
+        pass
+
+
+class RunCommand(Operation):
     """Run an arbitrary command on a remote machine."""
 
     @staticmethod
@@ -46,15 +79,22 @@ class RunCommand:
         parser.add_argument('-p', '--parameters', dest='parameters_file',
                             type=str)
 
+    @staticmethod
+    def new(configuration: Configuration,
+            command: Optional[str],
+            output_dir: str,
+            parameters_file: str):
+        return RunCommand(configuration, command, output_dir, parameters_file)
+
     def __init__(self,
                  configuration: Configuration,
                  command: Optional[str],
                  output_dir: str,
                  parameters_file: str):
+        super().__init__(configuration)
         self.configuration = configuration
         self.output_dir = output_dir
         self.parameters_file = parameters_file
-        self.prefix = f'http://{configuration.host}:{configuration.port}'
         if command:
             self.command = ['sh', '-c', command, '-s']
         else:
@@ -167,16 +207,6 @@ class RunCommand:
                 log_error(data['error'].rstrip())
         return execution_id, ok
 
-    @on_exception_reraise("Displaying the logs failed.")
-    def display_logs(self, execution_id: str):
-        log_info('Streaming logs...')
-        response = requests.get(self.url('commands', execution_id, 'logs'),
-                                stream=True)
-        check_status(response, requests.codes.ok)
-        for line in response.raw:
-            print(line.decode('utf-8'), end='')
-        print()
-
     @on_exception_reraise("Retrieving the output failed.")
     def retrieve_output_files(self, execution_id: str):
         log_info('Retrieving the output...')
@@ -221,8 +251,25 @@ class RunCommand:
         response = requests.delete(self.url('commands', execution_id))
         check_status(response, requests.codes.no_content)
 
-    def url(self, *path_segments):
-        return self.prefix + '/' + '/'.join(path_segments)
+
+class LogsCommand(Operation):
+    @staticmethod
+    def prepare_argument_parser(parser):
+        parser.add_argument(dest='execution_id')
+
+    @staticmethod
+    def new(configuration: Configuration,
+            execution_id: str) -> 'Operation':
+        return LogsCommand(configuration, execution_id)
+
+    def __init__(self,
+                 configuration: Configuration,
+                 execution_id: str):
+        super().__init__(configuration)
+        self.execution_id = execution_id
+
+    def run(self):
+        self.display_logs(self.execution_id)
 
 
 class RequestException(Exception):
@@ -237,8 +284,10 @@ class RequestException(Exception):
         )
 
 
-COMMANDS = {
+OPERATIONS: Dict[str, Operation] = {
     'run': RunCommand,
+    'canihazlogs': LogsCommand,
+    'logs': LogsCommand,
 }
 
 
@@ -249,8 +298,8 @@ def check_status(response, expected_status):
 
 def main(args=sys.argv[1:]):
     parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(title='commands', dest='command_name')
-    for name, command in COMMANDS.items():
+    subparsers = parser.add_subparsers(title='operations', dest='operation_name')
+    for name, command in OPERATIONS.items():
         subparser = subparsers.add_parser(name, help=command.__doc__)
         command.prepare_argument_parser(subparser)
     options = parser.parse_args(args)
@@ -261,11 +310,12 @@ def main(args=sys.argv[1:]):
         e.print()
         sys.exit(2)
 
-    command_name = options.command_name
+    operation_name = options.operation_name
     option_dict = options.__dict__
-    del option_dict['command_name']
+    del option_dict['operation_name']
 
-    command = COMMANDS[command_name](configuration, **option_dict)
+    command = OPERATIONS[operation_name].new(
+        **{'configuration': configuration, **option_dict})
     try:
         command.run()
     except CLIException as e:
