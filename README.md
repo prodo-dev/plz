@@ -22,7 +22,7 @@ Create yourself a key with:
 
     ./machines/vpn/new-client-key.sh NAME@prodo.ai OUTPUT-FILE.zip
 
-Unzip the zip file and load *prodo-ai.ovpn* into your favourite OpenVPN client.
+Unzip the file and load *prodo-ai.conf* into your favourite OpenVPN client.
 
   * On Windows, try [the official OpenVPN Client](https://openvpn.net/index.php/open-source/downloads.html).
   * If you're on macOS, try [Tunnelblick](https://www.tunnelblick.net/).
