@@ -256,7 +256,7 @@ class RunCommand(Operation):
         check_status(response, requests.codes.no_content)
 
 
-class LogsCommand(Operation):
+class Logs(Operation):
     @staticmethod
     def prepare_argument_parser(parser):
         parser.add_argument(dest='execution_id')
@@ -264,7 +264,7 @@ class LogsCommand(Operation):
     @staticmethod
     def new(configuration: Configuration,
             execution_id: str) -> 'Operation':
-        return LogsCommand(configuration, execution_id)
+        return Logs(configuration, execution_id)
 
     def __init__(self,
                  configuration: Configuration,
