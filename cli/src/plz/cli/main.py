@@ -5,6 +5,7 @@ import json
 import os
 import os.path
 import shutil
+import signal
 import sys
 import tarfile
 import tempfile
@@ -123,6 +124,9 @@ class RunCommand(Operation):
                 snapshot_id, params, execution_spec)
             if execution_id:
                 if ok:
+                    signal.signal(signal.SIGINT,
+                                  lambda s, _: _exit_and_print_execution_id(
+                                      execution_id))
                     self.display_logs(execution_id)
                     self.retrieve_output_files(execution_id)
                 self.cleanup(execution_id)
@@ -321,6 +325,14 @@ def main(args=sys.argv[1:]):
     except CLIException as e:
         e.print(configuration)
         sys.exit(1)
+
+
+def _exit_and_print_execution_id(execution_id):
+    print()
+    log_info('Your command is still running')
+    # TODO(sergio): and plz kill execution-id to kill it
+    log_info(f'Type: plz logs f{execution_id} to stream the logs')
+    sys.exit(0)
 
 
 if __name__ == '__main__':
