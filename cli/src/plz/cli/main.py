@@ -290,8 +290,8 @@ class RequestException(Exception):
 
 OPERATIONS: Dict[str, Operation] = {
     'run': RunCommand,
-    'canihazlogs': LogsCommand,
-    'logs': LogsCommand,
+    'canihazlogs': Logs,
+    'logs': Logs,
 }
 
 
