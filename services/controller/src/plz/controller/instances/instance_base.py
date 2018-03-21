@@ -26,7 +26,7 @@ class Instance(ABC):
         pass
 
     @abstractmethod
-    def get_container_status(self, execution_id) -> str:
+    def get_container_state(self, execution_id) -> str:
         pass
 
 

@@ -50,5 +50,5 @@ class EC2Instance(Instance):
         instance_id = self.data['InstanceId']
         self.client.create_tags(Resources=[instance_id], Tags=tags)
 
-    def get_container_status(self, execution_id) -> str:
-        return self.delegate.get_container_status(execution_id)
+    def get_container_state(self, execution_id) -> str:
+        return self.delegate.get_container_state(execution_id)

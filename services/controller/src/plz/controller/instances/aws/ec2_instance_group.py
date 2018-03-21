@@ -127,7 +127,7 @@ class EC2InstanceGroup(InstanceProvider):
             instance_type = execution_spec.get('instance_type')
             instances_not_assigned = self._get_running_aws_instances([
                 (f'tag:{self.EXECUTION_ID_TAG}', ''),
-                ('instance_type', instance_type)])
+                ('instance-type', instance_type)])
             if len(instances_not_assigned) > 0:
                 instance_data = instances_not_assigned[0]
             else:
@@ -213,13 +213,13 @@ class EC2InstanceGroup(InstanceProvider):
             if t['Key'] == EC2InstanceGroup.EXECUTION_ID_TAG:
                 execution_id = t['Value']
                 break
-        container_status = self._get_container_status(instance_data, execution_id)
+        container_status = self._get_container_state(instance_data, execution_id)
         return ExecutionInfo(
             instance_type=instance_data['InstanceType'],
             execution_id=execution_id,
             container_status=container_status)
 
-    def _get_container_status(
+    def _get_container_state(
             self, instance_data: dict, execution_id: str) -> str:
         try:
             instance = self.instance_for(execution_id)
@@ -227,7 +227,7 @@ class EC2InstanceGroup(InstanceProvider):
             # Be resilient in case the controller has been restarted
             instance = self._ec2_instance_from_instance_data(
                 instance_data, execution_id)
-        return instance.get_container_status(execution_id)
+        return instance.get_container_state(execution_id)
 
     def _get_instance_spec(self, instance_type) -> dict:
         spec = _BASE_INSTANCE_SPEC.copy()

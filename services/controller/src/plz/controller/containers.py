@@ -1,8 +1,10 @@
 import logging
 from typing import Dict, Iterator, List
 
+import dateutil.parser
 import docker
 import docker.errors
+import time
 from docker.types import Mount
 
 from plz.controller.images import Images
@@ -50,9 +52,18 @@ class Containers:
         return container.logs(stdout=stdout, stderr=stderr,
                               stream=True, follow=True)
 
-    def get_status(self, name):
+    def get_state(self, name):
         container = self.docker_client.containers.get(name)
-        return container.status
+        state = {a: container.attrs['State'][a]
+                 for a in ['Status', 'Running']}
+        finished_at = container.attrs['State'].get('FinishedAt')
+        if finished_at is not None:
+            # Convert from the string provided by docker to a
+            # unix timestamp
+            finished_at = int(time.mktime(
+                dateutil.parser.parse(finished_at).utctimetuple()))
+        state['FinishedAt'] = finished_at
+        return state
 
     @staticmethod
     def _is_container_id(container_id: str):
