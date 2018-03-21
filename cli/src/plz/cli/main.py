@@ -10,7 +10,7 @@ import sys
 import tarfile
 import tempfile
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, Type
 
 import docker.utils.build
 import requests
@@ -39,16 +39,6 @@ class Operation(ABC):
     def __init__(self, configuration):
         self.prefix = f'http://{configuration.host}:{configuration.port}'
 
-    @on_exception_reraise("Displaying the logs failed.")
-    def display_logs(self, execution_id: str):
-        log_info('Streaming logs...')
-        response = requests.get(self.url('commands', execution_id, 'logs'),
-                                stream=True)
-        check_status(response, requests.codes.ok)
-        for line in response.raw:
-            print(line.decode('utf-8'), end='')
-        print()
-
     def url(self, *path_segments):
         return self.prefix + '/' + '/'.join(path_segments)
 
@@ -57,17 +47,12 @@ class Operation(ABC):
     def prepare_argument_parser(parser):
         pass
 
-    @staticmethod
-    @abstractmethod
-    def new(**kwargs) -> 'Operation':
-        pass
-
     @abstractmethod
     def run(self):
         pass
 
 
-class RunCommand(Operation):
+class RunCommandOperation(Operation):
     """Run an arbitrary command on a remote machine."""
 
     @staticmethod
@@ -79,13 +64,6 @@ class RunCommand(Operation):
                             default=os.path.join(cwd, 'output'))
         parser.add_argument('-p', '--parameters', dest='parameters_file',
                             type=str)
-
-    @staticmethod
-    def new(configuration: Configuration,
-            command: Optional[str],
-            output_dir: str,
-            parameters_file: str):
-        return RunCommand(configuration, command, output_dir, parameters_file)
 
     def __init__(self,
                  configuration: Configuration,
@@ -122,12 +100,11 @@ class RunCommand(Operation):
             }
             execution_id, ok = self.issue_command(
                 snapshot_id, params, execution_spec)
+            log_info(f'Execution id is:\n\n        {execution_id}')
             if execution_id:
                 if ok:
-                    signal.signal(signal.SIGINT,
-                                  lambda s, _: _exit_and_print_execution_id(
-                                      execution_id))
-                    self.display_logs(execution_id)
+                    logs = LogsOperation(self.configuration, execution_id)
+                    logs.display_logs(execution_id)
                     self.retrieve_output_files(execution_id)
                 self.cleanup(execution_id)
             log_info('Done and dusted.')
@@ -256,21 +233,29 @@ class RunCommand(Operation):
         check_status(response, requests.codes.no_content)
 
 
-class Logs(Operation):
+class LogsOperation(Operation):
     @staticmethod
     def prepare_argument_parser(parser):
         parser.add_argument(dest='execution_id')
-
-    @staticmethod
-    def new(configuration: Configuration,
-            execution_id: str) -> 'Operation':
-        return Logs(configuration, execution_id)
 
     def __init__(self,
                  configuration: Configuration,
                  execution_id: str):
         super().__init__(configuration)
         self.execution_id = execution_id
+
+    @on_exception_reraise("Displaying the logs failed.")
+    def display_logs(self, execution_id: str):
+        log_info('Streaming logs...')
+        signal.signal(signal.SIGINT,
+                      lambda s, _: _exit_and_print_execution_id(
+                          execution_id))
+        response = requests.get(self.url('commands', execution_id, 'logs'),
+                                stream=True)
+        check_status(response, requests.codes.ok)
+        for line in response.raw:
+            print(line.decode('utf-8'), end='')
+        print()
 
     def run(self):
         self.display_logs(self.execution_id)
@@ -288,10 +273,10 @@ class RequestException(Exception):
         )
 
 
-OPERATIONS: Dict[str, Operation] = {
-    'run': RunCommand,
-    'canihazlogs': Logs,
-    'logs': Logs,
+OPERATIONS: Dict[str, Type[Operation]] = {
+    'run': RunCommandOperation,
+    'canihazlogs': LogsOperation,
+    'logs': LogsOperation,
 }
 
 
@@ -318,8 +303,8 @@ def main(args=sys.argv[1:]):
     option_dict = options.__dict__
     del option_dict['operation_name']
 
-    command = OPERATIONS[operation_name].new(
-        **{'configuration': configuration, **option_dict})
+    command = OPERATIONS[operation_name](
+        configuration=configuration, **option_dict)
     try:
         command.run()
     except CLIException as e:
@@ -329,9 +314,9 @@ def main(args=sys.argv[1:]):
 
 def _exit_and_print_execution_id(execution_id):
     print()
-    log_info('Your command is still running')
-    # TODO(sergio): and plz kill execution-id to kill it
-    log_info(f'Type: plz logs {execution_id} to stream the logs')
+    log_info('Your program is still running. '
+             'To stream the logs, type:\n\n'
+             f'        plz logs {execution_id}')
     sys.exit(0)
 
 
