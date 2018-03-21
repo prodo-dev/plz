@@ -50,6 +50,10 @@ class Containers:
         return container.logs(stdout=stdout, stderr=stderr,
                               stream=True, follow=True)
 
+    def get_status(self, name):
+        container = self.docker_client.containers.get(name)
+        return container.status
+
     @staticmethod
     def _is_container_id(container_id: str):
         if len(container_id) != 64:

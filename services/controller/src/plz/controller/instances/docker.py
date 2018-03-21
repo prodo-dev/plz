@@ -56,6 +56,9 @@ class DockerInstance(Instance):
         self.containers.rm(self.execution_id)
         self.volumes.remove(self.volume_name)
 
+    def get_container_status(self, execution_id) -> str:
+        return self.containers.get_status(execution_id)
+
     @property
     def volume_name(self):
         return f'plz-{self.execution_id}'

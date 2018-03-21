@@ -9,7 +9,7 @@ import boto3
 
 from plz.controller.containers import Containers
 from plz.controller.images import Images
-from plz.controller.instances.instance_base import InstanceProvider
+from plz.controller.instances.instance_base import InstanceProvider, ExecutionInfo
 from plz.controller.volumes import Volumes
 from .ec2_instance import EC2Instance
 
@@ -125,8 +125,9 @@ class EC2InstanceGroup(InstanceProvider):
         with self.lock:
             yield 'querying availability'
             instance_type = execution_spec.get('instance_type')
-            instances_not_assigned = self._available_aws_instances(
-                execution_id='', instance_type=instance_type)
+            instances_not_assigned = self._get_running_aws_instances([
+                (f'tag:{self.EXECUTION_ID_TAG}', ''),
+                ('instance_type', instance_type)])
             if len(instances_not_assigned) > 0:
                 instance_data = instances_not_assigned[0]
             else:
@@ -162,20 +163,16 @@ class EC2InstanceGroup(InstanceProvider):
         ])
         del self.instances[execution_id]
 
-    def _available_aws_instances(
-            self, execution_id, instance_type=None):
-        if instance_type is None:
-            instance_type_filter = []
-        else:
-            instance_type_filter = [
-                {'Name': 'instance-type', 'Values': [instance_type]}]
+    def get_commands(self):
+        return [self._get_execution_info(i)
+                for i in self._get_running_aws_instances([])]
+
+    def _get_running_aws_instances(self, filters: [(str, str)]):
+        new_filters = [{'Name': n, 'Values': [v]} for (n, v) in filters]
+        instance_state_filter = [{'Name': 'instance-state-name',
+                                  'Values': ['running']}]
         response = self.client.describe_instances(
-            Filters=self.filters + [
-                {'Name': 'instance-state-name',
-                 'Values': ['running']},
-                {'Name': f'tag:{self.EXECUTION_ID_TAG}',
-                 'Values': [execution_id]}
-            ] + instance_type_filter)
+            Filters=self.filters + new_filters + instance_state_filter)
         return [instance
                 for reservation in response['Reservations']
                 for instance in reservation['Instances']]
@@ -209,6 +206,28 @@ class EC2InstanceGroup(InstanceProvider):
             volumes,
             execution_id,
             instance_data)
+
+    def _get_execution_info(self, instance_data: dict):
+        execution_id = None
+        for t in instance_data['Tags']:
+            if t['Key'] == EC2InstanceGroup.EXECUTION_ID_TAG:
+                execution_id = t['Value']
+                break
+        container_status = self._get_container_status(instance_data, execution_id)
+        return ExecutionInfo(
+            instance_type=instance_data['InstanceType'],
+            execution_id=execution_id,
+            container_status=container_status)
+
+    def _get_container_status(
+            self, instance_data: dict, execution_id: str) -> str:
+        try:
+            instance = self.instance_for(execution_id)
+        except KeyError:
+            # Be resilient in case the controller has been restarted
+            instance = self._ec2_instance_from_instance_data(
+                instance_data, execution_id)
+        return instance.get_container_status(execution_id)
 
     def _get_instance_spec(self, instance_type) -> dict:
         spec = _BASE_INSTANCE_SPEC.copy()

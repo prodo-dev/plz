@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections import namedtuple
 from typing import Any, Dict, Iterator, List, Optional
 
 Parameters = Dict[str, Any]
@@ -24,6 +25,14 @@ class Instance(ABC):
     def cleanup(self):
         pass
 
+    @abstractmethod
+    def get_container_status(self, execution_id) -> str:
+        pass
+
+
+ExecutionInfo = namedtuple(
+    'ExecutionInfo', ['execution_id', 'container_status', 'instance_type'])
+
 
 class InstanceProvider(ABC):
     @abstractmethod
@@ -41,4 +50,8 @@ class InstanceProvider(ABC):
 
     @abstractmethod
     def push(self, image_tag: str):
+        pass
+
+    @abstractmethod
+    def get_commands(self) -> ExecutionInfo:
         pass
