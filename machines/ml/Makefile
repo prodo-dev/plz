@@ -26,9 +26,9 @@ deploy-production:
 
 .PHONY: deploy-test
 deploy-test:
-	$(MAKE) --no-print-directory --file=../../vars.mk terraform
 	eval $$($(MAKE) --no-print-directory --file=../../vars.mk terraform); \
 	eval $$($(MAKE) --no-print-directory --file=../../vars.mk terraform-test); \
+	env | grep TF_VAR_; \
 	terraform init; \
 	terraform apply -state=test.tfstate
 
