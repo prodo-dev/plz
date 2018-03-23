@@ -86,6 +86,14 @@ def list_commands_entrypoint():
     return response
 
 
+@app.route('/commands/tidy', methods=['GET'])
+def tidy_entry_point():
+    instance_provider.tidy_up()
+    response = jsonify({})
+    response.status_code = requests.codes.no_content
+    return response
+
+
 @app.route(f'/commands/<execution_id>/logs',
            methods=['GET'])
 def get_logs_entrypoint(execution_id):

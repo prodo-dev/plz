@@ -1,5 +1,5 @@
 import logging
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Tuple
 
 from plz.controller.containers import Containers
 from plz.controller.images import Images
@@ -40,7 +40,8 @@ class Localhost(InstanceProvider):
             self.images, self.containers, self.volumes, execution_id)
         return iter([])
 
-    def release_instance(self, execution_id: str):
+    def release_instance(self, execution_id: str,
+                         idle_since_timestamp: Optional[int]=None):
         """
         "Releases" an instance.
 
@@ -59,3 +60,7 @@ class Localhost(InstanceProvider):
 
     def push(self, image_tag: str):
         pass
+
+    def execution_id_and_instance_iterator(self) \
+            -> Iterator[Tuple[str, Instance]]:
+        yield from self.instances.values()

@@ -1,11 +1,11 @@
 import json
-from typing import List
+from typing import List, Optional
 
 from docker.types import Mount
 
 from plz.controller.containers import Containers
 from plz.controller.images import Images
-from plz.controller.instances.instance_base import Instance, Parameters
+from plz.controller.instances.instance_base import Instance, Parameters, ExecutionInfo
 from plz.controller.volumes import VolumeDirectory, VolumeFile, Volumes
 
 
@@ -56,9 +56,24 @@ class DockerInstance(Instance):
         self.containers.rm(self.execution_id)
         self.volumes.remove(self.volume_name)
 
-    def get_container_state(self, execution_id) -> str:
-        return self.containers.get_state(execution_id)
+    def get_container_state(self) -> Optional[dict]:
+        if self.execution_id == '':
+            return None
+        return self.containers.get_state(self.execution_id)
+
+    def dispose(self):
+        # Nothing to do for a docker instance
+        pass
 
     @property
     def volume_name(self):
         return f'plz-{self.execution_id}'
+
+    def get_execution_info(self):
+        container_state = self.get_container_state()
+        return ExecutionInfo(
+            instance_type='local',
+            execution_id=self.execution_id,
+            container_state=container_state,
+            max_idle_seconds=0,
+            idle_since_timestamp=0)
