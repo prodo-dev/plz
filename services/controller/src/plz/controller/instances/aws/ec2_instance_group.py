@@ -86,7 +86,7 @@ class EC2InstanceGroup(InstanceProvider):
         return self._ami_id
 
     def execution_id_and_instance_iterator(self) -> Iterator[Tuple[str, Instance]]:
-        for instance_data in self._get_running_aws_instances(''):
+        for instance_data in self._get_running_aws_instances([]):
             execution_id = get_tag(instance_data, EC2Instance.EXECUTION_ID_TAG)
             yield execution_id, self._create_or_retrieve_instance_for(
                 instance_data, execution_id)
