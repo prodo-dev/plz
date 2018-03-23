@@ -159,6 +159,8 @@ class EC2InstanceGroup(InstanceProvider):
 
     def release_instance(self, execution_id: str,
                          idle_since_timestamp: Optional[int]=None):
+        if idle_since_timestamp is None:
+            idle_since_timestamp = int(time.time())
         with self.lock:
             instance = self.instances[execution_id]
             instance.cleanup()
@@ -166,7 +168,7 @@ class EC2InstanceGroup(InstanceProvider):
                 {'Key': EC2Instance.EXECUTION_ID_TAG,
                  'Value': ''},
                 {'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
-                 'Value': str(int(time.time()))}
+                 'Value': str(idle_since_timestamp)}
             ])
             del self.instances[execution_id]
 
