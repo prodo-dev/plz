@@ -5,7 +5,8 @@ from docker.types import Mount
 
 from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
-from plz.controller.instances.instance_base import Instance, Parameters
+from plz.controller.instances.instance_base import Instance, Parameters, \
+    ExecutionInfo
 from plz.controller.volumes import VolumeDirectory, VolumeFile, Volumes
 
 
@@ -62,8 +63,7 @@ class DockerInstance(Instance):
         return self.containers.get_state(self.execution_id)
 
     def dispose(self):
-        # Nothing to do for a docker instance
-        pass
+        raise RuntimeError('Cannot dispose of a docker instance')
 
     @property
     def volume_name(self):
@@ -83,3 +83,8 @@ class DockerInstance(Instance):
     def get_max_idle_seconds(self) -> int:
         # Doesn't make sense for local instances
         return 0
+
+    def dispose_if_its_time(
+            self, execution_info: Optional[ExecutionInfo]=None):
+        # It's never time for a local instance
+        pass

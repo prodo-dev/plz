@@ -63,4 +63,4 @@ class Localhost(InstanceProvider):
 
     def instance_iterator(self) \
             -> Iterator[Instance]:
-        yield from self.instances.values()
+        return iter(self.instances.values())

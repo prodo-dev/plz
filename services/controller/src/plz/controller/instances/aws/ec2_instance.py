@@ -1,12 +1,13 @@
 import logging
 import os.path
+import time
 from typing import List, Optional
 
 from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
 from plz.controller.instances.docker import DockerInstance
 from plz.controller.instances.instance_base import Instance, \
-    Parameters
+    Parameters, ExecutionInfo
 from plz.controller.volumes import Volumes
 
 log = logging.getLogger('controller')
@@ -90,6 +91,24 @@ class EC2Instance(Instance):
 
     def get_container_state(self) -> Optional[dict]:
         return self.delegate.get_container_state()
+
+    def dispose_if_its_time(
+            self, execution_info: Optional[ExecutionInfo]=None):
+        if execution_info is not None:
+            ei = execution_info
+        else:
+            ei = self.get_execution_info()
+
+        status = ei.status
+        if status != 'exited' and status != 'idle':
+            return
+
+        now = int(time.time())
+        # In weird cases just dispose as well
+        if now - ei.idle_since_timestamp > ei.max_idle_seconds or \
+                ei.idle_since_timestamp > now or \
+                ei.max_idle_seconds < 0:
+            self.dispose()
 
 
 def get_tag(instance_data, tag, default=None) -> Optional[str]:

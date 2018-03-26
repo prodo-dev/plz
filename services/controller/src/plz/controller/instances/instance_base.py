@@ -1,4 +1,3 @@
-import time
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from typing import Any, Dict, Iterator, List, Optional
@@ -57,13 +56,20 @@ class Instance(ABC):
     def get_max_idle_seconds(self) -> int:
         pass
 
+    @abstractmethod
+    def dispose_if_its_time(
+            self, execution_info: Optional[ExecutionInfo]=None):
+        # We happen to have the execution info at hand when calling it,
+        # and getting the info is not free (queries to the docker server in the
+        # workers), so we allow to pass the info as parameter
+        pass
+
     def get_execution_info(self) -> ExecutionInfo:
         container_state = self.get_container_state()
         if container_state is None:
             container_state = ContainerState(
                 running='False', status='idle',
                 finished_at=self.get_idle_since_timestamp())
-
         return ExecutionInfo(
             instance_type=self.get_instance_type(),
             execution_id=self.get_execution_id(),
@@ -98,25 +104,11 @@ class InstanceProvider(ABC):
         pass
 
     def tidy_up(self):
-        now = int(time.time())
         for instance in self.instance_iterator():
-            # TODO(sergio): move to this code to the instance
             ei = instance.get_execution_info()
-            if instance.get_execution_id() == '':
-                status = 'idle'
-            else:
-                status = ei.status
-
-            if status != 'exited' and status != 'idle':
-                return
-
-            if status == 'exited':
-                self.release_instance(ei.execution_id, ei.idle_since_timestamp)
-            # In weird cases just dispose as well
-            if now - ei.idle_since_timestamp > ei.max_idle_seconds or \
-                    ei.idle_since_timestamp > now or \
-                    ei.max_idle_seconds < 0:
-                instance.dispose()
+            if ei.status == 'exited':
+                self.release_instance(
+                    ei.execution_id, ei.idle_since_timestamp)
 
     def get_commands(self) -> [ExecutionInfo]:
         return [
