@@ -109,6 +109,7 @@ class InstanceProvider(ABC):
             if ei.status == 'exited':
                 self.release_instance(
                     ei.execution_id, ei.idle_since_timestamp)
+            instance.dispose_if_its_time(ei)
 
     def get_commands(self) -> [ExecutionInfo]:
         return [
