@@ -1,13 +1,12 @@
 import base64
-import boto3
 import collections
-import docker
 import json
 import time
-
-from requests.exceptions import ConnectionError
 from typing import BinaryIO, Iterator
 
+import boto3
+import docker
+from requests.exceptions import ConnectionError
 
 Metadata = collections.namedtuple('Metadata', ['user', 'project', 'timestamp'])
 

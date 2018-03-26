@@ -40,7 +40,8 @@ class Localhost(InstanceProvider):
             self.images, self.containers, self.volumes, execution_id)
         return iter([])
 
-    def release_instance(self, execution_id: str):
+    def release_instance(self, execution_id: str,
+                         idle_since_timestamp: Optional[int]=None):
         """
         "Releases" an instance.
 
@@ -59,3 +60,7 @@ class Localhost(InstanceProvider):
 
     def push(self, image_tag: str):
         pass
+
+    def instance_iterator(self) \
+            -> Iterator[Instance]:
+        return iter(self.instances.values())

@@ -1,11 +1,13 @@
 import logging
 import os.path
-from typing import List
+import time
+from typing import List, Optional
 
-from plz.controller.containers import Containers
+from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
 from plz.controller.instances.docker import DockerInstance
-from plz.controller.instances.instance_base import Instance, Parameters
+from plz.controller.instances.instance_base import Instance, \
+    Parameters, ExecutionInfo
 from plz.controller.volumes import Volumes
 
 log = logging.getLogger('controller')
@@ -13,6 +15,16 @@ log = logging.getLogger('controller')
 
 class EC2Instance(Instance):
     ROOT = os.path.join(os.path.dirname(__file__), '..', '..', '..')
+
+    # We find available instances by looking at those in which
+    # the Execution-Id tag is the empty string. Instances are
+    # started with an empty value for this tag, the tag is set
+    # when the instance starts executing, and it's emptied again
+    # when the execution finishes
+    EXECUTION_ID_TAG = 'Plz:Execution-Id'
+    GROUP_NAME_TAG = 'Plz:Group-Id'
+    MAX_IDLE_SECONDS_TAG = 'Plz:Max-Idle-Seconds'
+    IDLE_SINCE_TIMESTAMP_TAG = 'Plz:Idle-Since-Timestamp'
 
     def __init__(self,
                  client,
@@ -46,6 +58,61 @@ class EC2Instance(Instance):
     def cleanup(self):
         return self.delegate.cleanup()
 
+    def dispose(self):
+        self.client.terminate_instances(InstanceIds=[self.data['InstanceId']])
+
     def set_tags(self, tags):
         instance_id = self.data['InstanceId']
         self.client.create_tags(Resources=[instance_id], Tags=tags)
+        response = self.client.describe_instances(
+            Filters=[{'Name': 'instance-id',
+                      'Values': [instance_id]}])
+        self.data = [instance
+                     for reservation in response['Reservations']
+                     for instance in reservation['Instances']][0]
+
+    def get_max_idle_seconds(self) -> int:
+        return int(get_tag(
+            self.data, self.MAX_IDLE_SECONDS_TAG, '0'))
+
+    def get_idle_since_timestamp(
+            self, container_state: Optional[ContainerState]=None) -> int:
+        if container_state is not None:
+            return container_state.finished_at
+        return int(get_tag(
+            self.data, self.IDLE_SINCE_TIMESTAMP_TAG, '0'))
+
+    def get_execution_id(self):
+        return get_tag(
+            self.data, self.EXECUTION_ID_TAG, '')
+
+    def get_instance_type(self):
+        return self.data['InstanceType']
+
+    def get_container_state(self) -> Optional[dict]:
+        return self.delegate.get_container_state()
+
+    def dispose_if_its_time(
+            self, execution_info: Optional[ExecutionInfo]=None):
+        if execution_info is not None:
+            ei = execution_info
+        else:
+            ei = self.get_execution_info()
+
+        status = ei.status
+        if status != 'exited' and status != 'idle':
+            return
+
+        now = int(time.time())
+        # In weird cases just dispose as well
+        if now - ei.idle_since_timestamp > ei.max_idle_seconds or \
+                ei.idle_since_timestamp > now or \
+                ei.max_idle_seconds < 0:
+            self.dispose()
+
+
+def get_tag(instance_data, tag, default=None) -> Optional[str]:
+    for t in instance_data['Tags']:
+        if t['Key'] == tag:
+            return t['Value']
+    return default

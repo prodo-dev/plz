@@ -1,11 +1,12 @@
 import json
-from typing import List
+from typing import List, Optional
 
 from docker.types import Mount
 
-from plz.controller.containers import Containers
+from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
-from plz.controller.instances.instance_base import Instance, Parameters
+from plz.controller.instances.instance_base import Instance, Parameters, \
+    ExecutionInfo
 from plz.controller.volumes import VolumeDirectory, VolumeFile, Volumes
 
 
@@ -56,6 +57,34 @@ class DockerInstance(Instance):
         self.containers.rm(self.execution_id)
         self.volumes.remove(self.volume_name)
 
+    def get_container_state(self) -> Optional[dict]:
+        if self.execution_id == '':
+            return None
+        return self.containers.get_state(self.execution_id)
+
+    def dispose(self):
+        raise RuntimeError('Cannot dispose of a docker instance')
+
     @property
     def volume_name(self):
         return f'plz-{self.execution_id}'
+
+    def get_idle_since_timestamp(
+            self, container_state: Optional[ContainerState]=None) -> int:
+        # Doesn't make sense for local instances
+        return 0
+
+    def get_execution_id(self) -> str:
+        return self.execution_id
+
+    def get_instance_type(self) -> str:
+        return 'local'
+
+    def get_max_idle_seconds(self) -> int:
+        # Doesn't make sense for local instances
+        return 0
+
+    def dispose_if_its_time(
+            self, execution_info: Optional[ExecutionInfo]=None):
+        # It's never time for a local instance
+        pass
