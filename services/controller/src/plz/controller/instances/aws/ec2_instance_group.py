@@ -3,14 +3,13 @@ import socket
 import threading
 import time
 from contextlib import closing
-from typing import Iterator, Tuple, Optional
+from typing import Iterator, Optional, Tuple
 
 import boto3
 
 from plz.controller.containers import Containers
 from plz.controller.images import Images
-from plz.controller.instances.instance_base import (
-    InstanceProvider, ExecutionInfo, Instance)
+from plz.controller.instances.instance_base import Instance, InstanceProvider
 from plz.controller.volumes import Volumes
 from .ec2_instance import EC2Instance, get_tag
 
@@ -85,6 +84,7 @@ class EC2InstanceGroup(InstanceProvider):
         self._ami_id = response['Images'][0]['ImageId']
         return self._ami_id
 
+    # TODO(sergio): turn into "instance iterator"
     def execution_id_and_instance_iterator(self) -> Iterator[Tuple[str, Instance]]:
         for instance_data in self._get_running_aws_instances([]):
             execution_id = get_tag(instance_data, EC2Instance.EXECUTION_ID_TAG)
@@ -140,11 +140,11 @@ class EC2InstanceGroup(InstanceProvider):
                     instance_data, execution_id)
                 if instance.is_up():
 
-                    self._assign_aws_instance_to_execution_id(
+                    self._set_execution_id_of_instance(
                         instance, execution_id,
                         # TODO(sergio): hardcoded to 30 minutes now, should
                         # be coming in the request
-                        max_idle_seconds=60*30)
+                        max_idle_seconds=60 * 30)
                     yield 'started'
                     return
                 else:
@@ -158,7 +158,7 @@ class EC2InstanceGroup(InstanceProvider):
         self.images.push(image_tag)
 
     def release_instance(self, execution_id: str,
-                         idle_since_timestamp: Optional[int]=None):
+                         idle_since_timestamp: Optional[int] = None):
         if idle_since_timestamp is None:
             idle_since_timestamp = int(time.time())
         with self.lock:
@@ -171,10 +171,6 @@ class EC2InstanceGroup(InstanceProvider):
                  'Value': str(idle_since_timestamp)}
             ])
             del self.instances[execution_id]
-
-    def get_commands(self) -> [ExecutionInfo]:
-        return [instance.get_execution_info()
-                for _, instance in self.execution_id_and_instance_iterator()]
 
     def _get_running_aws_instances(self, filters: [(str, str)]):
         new_filters = [{'Name': n, 'Values': [v]} for (n, v) in filters]
@@ -192,8 +188,9 @@ class EC2InstanceGroup(InstanceProvider):
             MinCount=1, MaxCount=1)
         return response['Instances'][0]
 
-    def _assign_aws_instance_to_execution_id(
-            self, instance, execution_id: str, max_idle_seconds: int) -> EC2Instance:
+    def _set_execution_id_of_instance(
+            self, instance: EC2Instance, execution_id: str,
+            max_idle_seconds: int) -> EC2Instance:
         instance.set_tags([
             {'Key': EC2Instance.EXECUTION_ID_TAG,
              'Value': execution_id},
@@ -247,7 +244,8 @@ class EC2InstanceGroup(InstanceProvider):
                 },
                 {
                     'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
-                    # Give it one minute as to be claimed before being terminated
+                    # Give it one minute as to be claimed before being
+                    # terminated
                     # by staying idle for too long
                     'Value': '60'
                 },

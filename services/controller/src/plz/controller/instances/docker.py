@@ -3,9 +3,9 @@ from typing import List, Optional
 
 from docker.types import Mount
 
-from plz.controller.containers import Containers
+from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
-from plz.controller.instances.instance_base import Instance, Parameters, ExecutionInfo
+from plz.controller.instances.instance_base import Instance, Parameters
 from plz.controller.volumes import VolumeDirectory, VolumeFile, Volumes
 
 
@@ -69,11 +69,17 @@ class DockerInstance(Instance):
     def volume_name(self):
         return f'plz-{self.execution_id}'
 
-    def get_execution_info(self):
-        container_state = self.get_container_state()
-        return ExecutionInfo(
-            instance_type='local',
-            execution_id=self.execution_id,
-            container_state=container_state,
-            max_idle_seconds=0,
-            idle_since_timestamp=0)
+    def get_idle_since_timestamp(
+            self, container_state: Optional[ContainerState]=None) -> int:
+        # Doesn't make sense for local instances
+        return 0
+
+    def get_execution_id(self) -> str:
+        return self.execution_id
+
+    def get_instance_type(self) -> str:
+        return 'local'
+
+    def get_max_idle_seconds(self) -> int:
+        # Doesn't make sense for local instances
+        return 0

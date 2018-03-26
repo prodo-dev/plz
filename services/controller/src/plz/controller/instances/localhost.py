@@ -63,4 +63,4 @@ class Localhost(InstanceProvider):
 
     def execution_id_and_instance_iterator(self) \
             -> Iterator[Tuple[str, Instance]]:
-        yield from self.instances.values()
+        yield from self.instances.items()

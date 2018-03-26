@@ -2,11 +2,11 @@ import logging
 import os.path
 from typing import List, Optional
 
-from plz.controller.containers import Containers
+from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
 from plz.controller.instances.docker import DockerInstance
-from plz.controller.instances.instance_base import (
-    Instance, Parameters, ExecutionInfo)
+from plz.controller.instances.instance_base import Instance, \
+    Parameters
 from plz.controller.volumes import Volumes
 
 log = logging.getLogger('controller')
@@ -70,26 +70,26 @@ class EC2Instance(Instance):
                      for reservation in response['Reservations']
                      for instance in reservation['Instances']][0]
 
-    def get_container_state(self) -> Optional[dict]:
-        return self.delegate.get_container_state()
-
-    def get_execution_info(self) -> ExecutionInfo:
-        execution_id = get_tag(
-            self.data, self.EXECUTION_ID_TAG, '')
-        max_idle_seconds = int(get_tag(
+    def get_max_idle_seconds(self) -> int:
+        return int(get_tag(
             self.data, self.MAX_IDLE_SECONDS_TAG, '0'))
-        idle_since_timestamp = int(get_tag(
+
+    def get_idle_since_timestamp(
+            self, container_state: Optional[ContainerState]=None) -> int:
+        if container_state is not None:
+            return container_state.finished_at
+        return int(get_tag(
             self.data, self.IDLE_SINCE_TIMESTAMP_TAG, '0'))
 
-        container_state = self.get_container_state()
-        if container_state is not None:
-            idle_since_timestamp = container_state['FinishedAt']
-        return ExecutionInfo(
-            instance_type=self.data['InstanceType'],
-            execution_id=execution_id,
-            container_state=container_state,
-            idle_since_timestamp=idle_since_timestamp,
-            max_idle_seconds=max_idle_seconds)
+    def get_execution_id(self):
+        return get_tag(
+            self.data, self.EXECUTION_ID_TAG, '')
+
+    def get_instance_type(self):
+        return self.data['InstanceType']
+
+    def get_container_state(self) -> Optional[dict]:
+        return self.delegate.get_container_state()
 
 
 def get_tag(instance_data, tag, default=None) -> Optional[str]:

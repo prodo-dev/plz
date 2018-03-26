@@ -1,14 +1,15 @@
 import time
-
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
+from plz.controller.containers import ContainerState
+
 Parameters = Dict[str, Any]
 ExecutionInfo = namedtuple(
     'ExecutionInfo',
-    ['execution_id', 'container_state', 'instance_type',
-     'max_idle_seconds', 'idle_since_timestamp'])
+    ['execution_id', 'running', 'status', 'instance_type', 'max_idle_seconds',
+     'idle_since_timestamp'])
 
 
 class Instance(ABC):
@@ -32,7 +33,7 @@ class Instance(ABC):
         pass
 
     @abstractmethod
-    def get_container_state(self) -> str:
+    def get_container_state(self) -> Optional[ContainerState]:
         pass
 
     @abstractmethod
@@ -40,8 +41,37 @@ class Instance(ABC):
         pass
 
     @abstractmethod
-    def get_execution_info(self) -> ExecutionInfo:
+    def get_idle_since_timestamp(
+            self, container_state: Optional[ContainerState]=None) -> int:
         pass
+
+    @abstractmethod
+    def get_execution_id(self) -> str:
+        pass
+
+    @abstractmethod
+    def get_instance_type(self) -> str:
+        pass
+
+    @abstractmethod
+    def get_max_idle_seconds(self) -> int:
+        pass
+
+    def get_execution_info(self) -> ExecutionInfo:
+        container_state = self.get_container_state()
+        if container_state is None:
+            container_state = ContainerState(
+                running='False', status='idle',
+                finished_at=self.get_idle_since_timestamp())
+
+        return ExecutionInfo(
+            instance_type=self.get_instance_type(),
+            execution_id=self.get_execution_id(),
+            running=container_state.running,
+            status=container_state.status,
+            idle_since_timestamp=
+            self.get_idle_since_timestamp(container_state),
+            max_idle_seconds=self.get_max_idle_seconds())
 
 
 class InstanceProvider(ABC):
@@ -51,7 +81,8 @@ class InstanceProvider(ABC):
         pass
 
     @abstractmethod
-    def release_instance(self, execution_id: str, idle_since_timestamp: Optional[int]=None):
+    def release_instance(
+            self, execution_id: str, idle_since_timestamp: Optional[int]=None):
         pass
 
     @abstractmethod
@@ -69,11 +100,12 @@ class InstanceProvider(ABC):
     def tidy_up(self):
         now = int(time.time())
         for execution_id, instance in self.execution_id_and_instance_iterator():
+            # TODO(sergio): move to this code to the instance
             ei = instance.get_execution_info()
             if execution_id == '':
                 status = 'idle'
             else:
-                status = ei.container_state['Status']
+                status = ei.status
 
             if status != 'exited' and status != 'idle':
                 return

@@ -1,5 +1,6 @@
 import calendar
 import logging
+from collections import namedtuple
 from typing import Dict, Iterator, List, Optional
 
 import dateutil.parser
@@ -8,6 +9,9 @@ import docker.errors
 from docker.types import Mount
 
 from plz.controller.images import Images
+
+ContainerState = namedtuple('ContainerState',
+                            ['running', 'status', 'finished_at'])
 
 
 class Containers:
@@ -52,18 +56,14 @@ class Containers:
         return container.logs(stdout=stdout, stderr=stderr,
                               stream=True, follow=True)
 
-    def get_state(self, name) -> Optional[dict]:
+    def get_state(self, name) -> Optional[ContainerState]:
         container = self.docker_client.containers.get(name)
-        state = {a: container.attrs['State'][a]
-                 for a in ['Status', 'Running']}
-        finished_at = container.attrs['State'].get('FinishedAt')
-        if finished_at is not None:
-            # Convert from the string provided by docker to a
-            # unix timestamp
-            finished_at = int(calendar.timegm(
-                dateutil.parser.parse(finished_at).utctimetuple()))
-        state['FinishedAt'] = finished_at
-        return state
+        container_state = container.attrs['State']
+        return ContainerState(running=container_state['Running'],
+                              status=container_state['Status'],
+                              finished_at=_docker_date_to_timestamp(
+                                  container_state['FinishedAt']
+                              ))
 
     @staticmethod
     def _is_container_id(container_id: str):
@@ -74,3 +74,8 @@ class Containers:
         except ValueError:
             return False
         return True
+
+
+def _docker_date_to_timestamp(docker_date):
+    return int(calendar.timegm(
+        dateutil.parser.parse(docker_date).utctimetuple()))
