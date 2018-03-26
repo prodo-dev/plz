@@ -3,7 +3,7 @@ import socket
 import threading
 import time
 from contextlib import closing
-from typing import Iterator, Optional, Tuple
+from typing import Iterator, Optional
 
 import boto3
 
@@ -84,11 +84,10 @@ class EC2InstanceGroup(InstanceProvider):
         self._ami_id = response['Images'][0]['ImageId']
         return self._ami_id
 
-    # TODO(sergio): turn into "instance iterator"
-    def execution_id_and_instance_iterator(self) -> Iterator[Tuple[str, Instance]]:
+    def instance_iterator(self) -> Iterator[Instance]:
         for instance_data in self._get_running_aws_instances([]):
             execution_id = get_tag(instance_data, EC2Instance.EXECUTION_ID_TAG)
-            yield execution_id, self._create_or_retrieve_instance_for(
+            yield self._create_or_retrieve_instance_for(
                 instance_data, execution_id)
 
     @property

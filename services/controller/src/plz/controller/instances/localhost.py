@@ -1,5 +1,5 @@
 import logging
-from typing import Iterator, Optional, Tuple
+from typing import Iterator, Optional
 
 from plz.controller.containers import Containers
 from plz.controller.images import Images
@@ -61,6 +61,6 @@ class Localhost(InstanceProvider):
     def push(self, image_tag: str):
         pass
 
-    def execution_id_and_instance_iterator(self) \
-            -> Iterator[Tuple[str, Instance]]:
-        yield from self.instances.items()
+    def instance_iterator(self) \
+            -> Iterator[Instance]:
+        yield from self.instances.values()

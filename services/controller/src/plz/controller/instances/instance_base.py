@@ -1,7 +1,7 @@
 import time
 from abc import ABC, abstractmethod
 from collections import namedtuple
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Any, Dict, Iterator, List, Optional
 
 from plz.controller.containers import ContainerState
 
@@ -94,15 +94,15 @@ class InstanceProvider(ABC):
         pass
 
     @abstractmethod
-    def execution_id_and_instance_iterator(self) -> Iterator[Tuple[str, Instance]]:
+    def instance_iterator(self) -> Iterator[Instance]:
         pass
 
     def tidy_up(self):
         now = int(time.time())
-        for execution_id, instance in self.execution_id_and_instance_iterator():
+        for instance in self.instance_iterator():
             # TODO(sergio): move to this code to the instance
             ei = instance.get_execution_info()
-            if execution_id == '':
+            if instance.get_execution_id() == '':
                 status = 'idle'
             else:
                 status = ei.status
@@ -111,7 +111,7 @@ class InstanceProvider(ABC):
                 return
 
             if status == 'exited':
-                self.release_instance(execution_id, ei.idle_since_timestamp)
+                self.release_instance(ei.execution_id, ei.idle_since_timestamp)
             # In weird cases just dispose as well
             if now - ei.idle_since_timestamp > ei.max_idle_seconds or \
                     ei.idle_since_timestamp > now or \
@@ -121,4 +121,4 @@ class InstanceProvider(ABC):
     def get_commands(self) -> [ExecutionInfo]:
         return [
             instance.get_execution_info()
-            for _, instance in self.execution_id_and_instance_iterator()]
+            for instance in self.instance_iterator()]
