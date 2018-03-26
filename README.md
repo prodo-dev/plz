@@ -1,4 +1,4 @@
-# plz 🙏
+# plz 😸
 
 *Say the magic word.*
 
