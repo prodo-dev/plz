@@ -29,7 +29,7 @@ fi
 echo "${DEVICE} ${MOUNTPOINT} ${FSTYPE} defaults 0 0" > /etc/fstab
 mount "$MOUNTPOINT"
 
-addgroup cache
+addgroup --gid=2000 cache
 chown root:cache "$MOUNTPOINT"
 chmod u+rwx,g+rws,o-rwx "$MOUNTPOINT"
 
