@@ -2,9 +2,11 @@ variable "region" {}
 
 variable "availability_zone" {}
 
-variable "environment" {
-  default = "Production"
-}
+variable "internal_domain" {}
+
+variable "subdomain" {}
+
+variable "environment" {}
 
 variable "ami_tag" {
   default = "2018-03-01"
@@ -54,6 +56,11 @@ data "aws_security_group" "default" {
       values = ["default"]
     },
   ]
+}
+
+data "aws_route53_zone" "internal" {
+  name   = "${var.internal_domain}"
+  vpc_id = "${data.aws_vpc.main.id}"
 }
 
 resource "aws_key_pair" "plz" {
@@ -130,8 +137,16 @@ resource "aws_volume_attachment" "build-cache-attachment" {
   }
 }
 
+resource "aws_route53_record" "controller" {
+  zone_id = "${data.aws_route53_zone.internal.zone_id}"
+  name    = "plz.${var.subdomain}"
+  type    = "A"
+  ttl     = "300"
+  records = ["${aws_instance.controller.private_ip}"]
+}
+
 output "controller-host" {
-  value = "${aws_instance.controller.private_dns}"
+  value = "${aws_route53_record.controller.name}"
 }
 
 ///
