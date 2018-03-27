@@ -9,7 +9,7 @@ variable "subdomain" {}
 variable "environment" {}
 
 variable "ami_tag" {
-  default = "2018-03-01"
+  default = "2018-03-27"
 }
 
 variable "ec2_role" {
@@ -73,7 +73,7 @@ resource "aws_key_pair" "plz" {
 data "aws_ami" "controller-ami" {
   filter {
     name   = "name"
-    values = ["plz-build-${var.ami_tag}"]
+    values = ["plz-controller-${var.ami_tag}"]
   }
 }
 

@@ -2,7 +2,7 @@ SHELL := zsh -e -u
 
 include ../../vars.mk
 
-IMAGE_NAMES = build worker
+IMAGE_NAMES = controller worker
 
 TAG = $(shell date '+%F')
 

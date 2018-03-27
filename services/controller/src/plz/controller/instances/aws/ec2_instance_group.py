@@ -17,8 +17,7 @@ from .ec2_instance import EC2Instance, get_tag
 class EC2InstanceGroup(InstanceProvider):
     DOCKER_PORT = 2375
 
-    # TODO(sergio): make this into a proper variable
-    _AMI_TAG = "2018-03-01"
+    _AMI_NAME = 'plz-worker-2018-03-27'
 
     _name_to_group = {}
     _name_to_group_lock = threading.RLock()
@@ -77,7 +76,7 @@ class EC2InstanceGroup(InstanceProvider):
             Filters=[
                 {
                     'Name': 'name',
-                    'Values': [f'plz-worker-{self._AMI_TAG}']
+                    'Values': [self._AMI_NAME],
                 },
             ],
         )
