@@ -1,4 +1,5 @@
 import os
+import shlex
 import socket
 import threading
 import time
@@ -16,6 +17,10 @@ from .ec2_instance import EC2Instance, get_tag
 
 class EC2InstanceGroup(InstanceProvider):
     DOCKER_PORT = 2375
+
+    _INITIALIZATION_CODE_PATH = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), '..', '..', 'startup', 'startup.yml'))
+    _CACHE_DEVICE = '/dev/xvdx'
 
     _name_to_group = {}
     _name_to_group_lock = threading.RLock()
@@ -98,14 +103,28 @@ class EC2InstanceGroup(InstanceProvider):
     def instance_initialization_code(self) -> str:
         if self._instance_initialization_code is not None:
             return self._instance_initialization_code
-        path_to_initialization_code = os.path.join(
-            os.path.dirname(__file__),
-            '..', '..', '..', '..', 'scripts',
-            'initialize-cache')
-        with open(path_to_initialization_code, 'r') as f:
+        with open(self._INITIALIZATION_CODE_PATH, 'r') as f:
             initialization_code = f.read()
-        self._instance_initialization_code = \
-            initialization_code.replace('$1', '/dev/xvdx')
+        self._instance_initialization_code = '\n'.join([
+            '#!/bin/sh',
+            '',
+            'set -e',
+            'set -u',
+            '',
+            'export HOME=/root',
+            '',
+            'cat > /tmp/playbook.yml <<EOF',
+            initialization_code,
+            'EOF',
+            '',
+            ' '.join([shlex.quote(s) for s in [
+                'ansible-playbook',
+                '--inventory=localhost,',
+                '--connection=local',
+                f'--extra-vars=device={self._CACHE_DEVICE}',
+                '/tmp/playbook.yml',
+            ]])
+        ])
         return self._instance_initialization_code
 
     def acquire_instance(
