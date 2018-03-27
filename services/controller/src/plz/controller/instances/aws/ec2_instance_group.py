@@ -27,6 +27,7 @@ class EC2InstanceGroup(InstanceProvider):
             name=config.environment_name,
             client=boto3.client('ec2'),
             aws_worker_ami=config.aws_worker_ami,
+            aws_key_name=config.aws_key_name,
             images=images,
             acquisition_delay_in_seconds=10,
             max_acquisition_tries=5)
@@ -35,6 +36,7 @@ class EC2InstanceGroup(InstanceProvider):
                 name: str,
                 client,
                 aws_worker_ami: str,
+                aws_key_name: str,
                 images: Images,
                 acquisition_delay_in_seconds: int,
                 max_acquisition_tries: int):
@@ -51,12 +53,14 @@ class EC2InstanceGroup(InstanceProvider):
                  name,
                  client,
                  aws_worker_ami: str,
+                 aws_key_name: Optional[str],
                  images: Images,
                  acquisition_delay_in_seconds: int,
                  max_acquisition_tries: int):
         self.name = name
         self.client = client
         self.aws_worker_ami = aws_worker_ami
+        self.aws_key_name = aws_key_name
         self.images = images
         self.acquisition_delay_in_seconds = acquisition_delay_in_seconds
         self.max_acquisition_tries = max_acquisition_tries
@@ -230,6 +234,8 @@ class EC2InstanceGroup(InstanceProvider):
     def _get_instance_spec(self, instance_type) -> dict:
         spec = _BASE_INSTANCE_SPEC.copy()
         spec['ImageId'] = self.ami_id
+        if self.aws_key_name:
+            spec['KeyName'] = self.aws_key_name
         spec['TagSpecifications'] = [{
             'ResourceType': 'instance',
             'Tags': [

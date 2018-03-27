@@ -10,6 +10,8 @@ variable "environment" {}
 
 variable "ami_tag" {}
 
+variable "key_name" {}
+
 variable "ec2_role" {
   default = <<EOF
 {
@@ -62,7 +64,7 @@ data "aws_route53_zone" "internal" {
 }
 
 resource "aws_key_pair" "plz" {
-  key_name   = "plz-${lower(var.environment)}-key"
+  key_name   = "${var.key_name}"
   public_key = "${file("../keys/plz.pubkey")}"
 }
 
@@ -79,7 +81,7 @@ resource "aws_instance" "controller" {
   subnet_id                   = "${data.aws_subnet.main.id}"
   instance_type               = "t2.small"
   ami                         = "${data.aws_ami.controller-ami.id}"
-  key_name                    = "plz-${lower(var.environment)}-key"
+  key_name                    = "${aws_key_pair.plz.key_name}"
   associate_public_ip_address = true
   iam_instance_profile        = "${aws_iam_instance_profile.controller.name}"
 
