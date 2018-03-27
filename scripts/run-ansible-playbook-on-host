@@ -4,17 +4,22 @@ set -e
 set -u
 set -o pipefail
 
-cd ${0:h}
-ROOT=${PWD:h:h:a}
+ROOT=${0:a:h:h}
+
+PLAYBOOK=${1:a}
+HOST=$2
+shift
+shift
+
+PLAYBOOK_ARGS=()
+while [[ $# -gt 0 ]]; do
+  PLAYBOOK_ARGS+=(--extra-vars "@${1}")
+  shift
+done
 
 eval $(make --no-print-directory --file="${ROOT}/vars.mk" bash)
 
-STATE_FILE=$1
-HOST=$(terraform output -state="${ROOT}/machines/ml/${STATE_FILE}" controller-host)
 SSH_PRIVATE_KEY_FILE="${ROOT}/machines/keys/plz.privkey"
-TAG=$(make --no-print-directory tag)
-IMAGE=$(docker inspect $TAG | jq -r '.[0].RepoDigests[0]')
-SERVICE_PORT=80
 
 ANSIBLE_INVENTORY=$(mktemp "${TMPDIR:-/tmp/}inventory-XXXXX")
 cat > $ANSIBLE_INVENTORY <<EOF
@@ -29,12 +34,9 @@ all:
     aws_region: "${AWS_REGION}"
     aws_project: "${AWS_PROJECT}"
     environment_name: "${ENVIRONMENT_NAME}"
-    image: "${IMAGE}"
-    service_port: "${SERVICE_PORT}"
     ssh_private_key_file: "${SSH_PRIVATE_KEY_FILE}"
 EOF
-export ANSIBLE_INVENTORY
 
-ansible-playbook playbook.yml
+ansible-playbook --inventory=$ANSIBLE_INVENTORY $PLAYBOOK_ARGS $PLAYBOOK
 
 rm -f $ANSIBLE_INVENTORY
