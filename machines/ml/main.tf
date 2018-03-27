@@ -8,9 +8,7 @@ variable "subdomain" {}
 
 variable "environment" {}
 
-variable "ami_tag" {
-  default = "2018-03-27"
-}
+variable "ami_tag" {}
 
 variable "ec2_role" {
   default = <<EOF

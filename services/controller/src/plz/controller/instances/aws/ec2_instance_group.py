@@ -17,18 +17,16 @@ from .ec2_instance import EC2Instance, get_tag
 class EC2InstanceGroup(InstanceProvider):
     DOCKER_PORT = 2375
 
-    _AMI_NAME = 'plz-worker-2018-03-27'
-
     _name_to_group = {}
     _name_to_group_lock = threading.RLock()
 
     @staticmethod
     def from_config(config):
-        name = config.environment_name
         images = Images.from_config(config)
         return EC2InstanceGroup(
-            name=name,
+            name=config.environment_name,
             client=boto3.client('ec2'),
+            aws_worker_ami=config.aws_worker_ami,
             images=images,
             acquisition_delay_in_seconds=10,
             max_acquisition_tries=5)
@@ -36,6 +34,7 @@ class EC2InstanceGroup(InstanceProvider):
     def __new__(cls,
                 name: str,
                 client,
+                aws_worker_ami: str,
                 images: Images,
                 acquisition_delay_in_seconds: int,
                 max_acquisition_tries: int):
@@ -51,11 +50,13 @@ class EC2InstanceGroup(InstanceProvider):
     def __init__(self,
                  name,
                  client,
+                 aws_worker_ami: str,
                  images: Images,
                  acquisition_delay_in_seconds: int,
                  max_acquisition_tries: int):
         self.name = name
         self.client = client
+        self.aws_worker_ami = aws_worker_ami
         self.images = images
         self.acquisition_delay_in_seconds = acquisition_delay_in_seconds
         self.max_acquisition_tries = max_acquisition_tries
@@ -76,7 +77,7 @@ class EC2InstanceGroup(InstanceProvider):
             Filters=[
                 {
                     'Name': 'name',
-                    'Values': [self._AMI_NAME],
+                    'Values': [self.aws_worker_ami],
                 },
             ],
         )

@@ -2,9 +2,7 @@ SHELL := zsh -e -u
 
 include ../../vars.mk
 
-IMAGE_NAMES = controller worker
-
-TAG = $(shell date '+%F')
+IMAGE_GROUPS = controller worker
 
 .PHONY: amis
 amis:
@@ -16,15 +14,15 @@ amis:
 			| jq -r '.Images | sort_by(.CreationDate) | last | .ImageId' \
 	))
 	$(info SOURCE_AMI = $(SOURCE_AMI))
-	$(info TAG = $(TAG))
-	$(foreach NAME, $(IMAGE_NAMES), \
+	$(info AMI_TAG = $(AMI_TAG))
+	$(foreach GROUP, $(IMAGE_GROUPS), \
 		export AWS_SHARED_CREDENTIALS_FILE=../credentials/root.awscreds; \
 		export AWS_PROFILE=; \
 		packer build \
 			-var aws-region=$(AWS_REGION) \
 			-var source-ami=$(SOURCE_AMI) \
-			-var tag=$(TAG) \
-			-var group=$(NAME) \
+			-var group=$(GROUP) \
+			-var ami-tag=$(AMI_TAG) \
 			ami.json ${\n})
 
 .PHONY: deploy-production

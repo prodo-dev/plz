@@ -16,6 +16,14 @@ _ARGUMENTS_SPEC = [
         }
     },
     {
+        'name': 'aws_worker_ami',
+        'spec': {
+            'type': str,
+            'help': 'AWS AMI used for constructing worker instances. '
+                    'Example: plz-worker-2018-01-01'
+        }
+    },
+    {
         'name': 'environment_name',
         'spec': {
             'type': str,

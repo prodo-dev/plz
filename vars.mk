@@ -6,6 +6,7 @@ VARS_MK = true
 AWS_REGION = eu-west-1
 AWS_AVAILABILITY_ZONE = eu-west-1a
 AWS_PROJECT = 024444204267.dkr.ecr.eu-west-1.amazonaws.com
+AMI_TAG = 2018-03-27
 DOMAIN = prodo.ai
 INTERNAL_DOMAIN = inside.$(DOMAIN)
 
@@ -18,6 +19,7 @@ bash:
 	@ echo 'export AWS_REGION="$(AWS_REGION)"'
 	@ echo 'export AWS_AVAILABILITY_ZONE="$(AWS_AVAILABILITY_ZONE)"'
 	@ echo 'export AWS_PROJECT="$(AWS_PROJECT)"'
+	@ echo 'export AWS_WORKER_AMI="plz-worker-$(AMI_TAG)"'
 
 .PHONY: terraform
 terraform:
@@ -25,6 +27,7 @@ terraform:
 	@ echo 'export TF_VAR_region="$(AWS_REGION)"'
 	@ echo 'export TF_VAR_availability_zone="$(AWS_AVAILABILITY_ZONE)"'
 	@ echo 'export TF_VAR_project="$(AWS_PROJECT)"'
+	@ echo 'export TF_VAR_ami_tag="$(AMI_TAG)"'
 	@ echo 'export TF_VAR_internal_domain="$(INTERNAL_DOMAIN)"'
 	@ echo 'export TF_VAR_subdomain="$(INTERNAL_DOMAIN)"'
 

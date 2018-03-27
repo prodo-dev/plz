@@ -2,8 +2,8 @@
   "variables": {
     "aws-region": null,
     "source-ami": null,
-    "tag": null,
-    "group": null
+    "group": null,
+    "ami-tag": null
   },
   "builders": [
     {
@@ -12,7 +12,7 @@
       "source_ami": "{{user `source-ami`}}",
       "instance_type": "t2.micro",
       "ssh_username": "ubuntu",
-      "ami_name": "plz-{{user `group`}}-{{user `tag`}}",
+      "ami_name": "plz-{{user `group`}}-{{user `ami-tag`}}",
       "tags": {
         "Owner": "Infrastructure"
       }
