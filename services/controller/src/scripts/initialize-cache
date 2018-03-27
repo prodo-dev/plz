@@ -26,7 +26,7 @@ if [[ "$(file -s "$DEVICE")" == "${DEVICE}: data" ]]; then
   mkfs -t "$FSTYPE" "$DEVICE"
 fi
 
-echo "${DEVICE} ${MOUNTPOINT} ${FSTYPE} defaults 0 0" > /etc/fstab
+echo "${DEVICE} ${MOUNTPOINT} ${FSTYPE} defaults 0 0" >> /etc/fstab
 mount "$MOUNTPOINT"
 
 addgroup --gid=2000 cache
