@@ -84,7 +84,6 @@ resource "aws_instance" "controller" {
   key_name                    = "plz-${lower(var.environment)}-key"
   associate_public_ip_address = true
   iam_instance_profile        = "${aws_iam_instance_profile.controller.name}"
-  security_groups             = ["${data.aws_security_group.default.id}"]
 
   tags {
     Name        = "Plz ${var.environment} Controller"
