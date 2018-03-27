@@ -26,7 +26,11 @@ deploy-test: push vars-file
 .PHONY: vars-file
 vars-file:
 	$(eval VARS_FILE = $(shell mktemp "$(TMPDIR)ansible-vars-XXXXX"))
-	IMAGE=$$(docker inspect $(TAG) | jq -r '.[0].RepoDigests[0]'); \
-	SERVICE_PORT=80; \
-	echo "image: \"$${IMAGE}\"" >> $(VARS_FILE); \
-	echo "service_port: \"$${SERVICE_PORT}\"" >> $(VARS_FILE)
+	jq \
+		--arg image $$(docker inspect $(TAG) | jq -r '.[0].RepoDigests[0]') \
+		--arg service_port 80 \
+		--arg aws_worker_ami "$(AWS_WORKER_AMI)" \
+		--arg aws_key_name "$(KEY_NAME)" \
+		--null-input \
+		'{"image": $$image, "service_port": $$service_port, "aws_worker_ami": $$aws_worker_ami, "aws_key_name", $$aws_key_name}' \
+		> $(VARS_FILE)
