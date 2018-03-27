@@ -1,8 +1,10 @@
 #!/usr/bin/env python
+
+import sys
 import time
 
-for i in range(20):
-    print(i, flush=True)
-    if i > 15:
-        time.sleep(1)
+n = int(sys.argv[1]) if len(sys.argv) > 1 else 10
 
+for i in range(n):
+    print(i, flush=True)
+    time.sleep(1)

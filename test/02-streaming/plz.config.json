@@ -4,7 +4,10 @@
   "port": 9000,
   "image": "python:3-slim",
   "instance_type": "t2.small",
-  "command": ["./main.py"],
+  "command": [
+    "./main.py",
+    "20"
+  ],
   "excluded_paths": [
     ".git",
     ".git-crypt",
