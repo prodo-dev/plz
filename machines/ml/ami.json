@@ -1,7 +1,7 @@
 {
   "variables": {
     "aws-region": null,
-    "source-ami": "ami-4d46d534",
+    "source-ami": null,
     "tag": null,
     "group": null
   },
