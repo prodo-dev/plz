@@ -1,0 +1,52 @@
+---
+- hosts: all
+  remote_user: root
+  become: yes
+  vars:
+    mount_point: '/cache'
+    filesystem_type: 'ext4'
+  tasks:
+    - name: 'Format {{ device }}'
+      filesystem:
+        dev: '{{ device }}'
+        fstype: '{{ filesystem_type }}'
+    - name: 'Mount {{ device }} into {{ mount_point }}'
+      mount:
+        path: '{{ mount_point }}'
+        src: '{{ device }}'
+        fstype: '{{ filesystem_type }}'
+        state: mounted
+    - name: 'Create the "cache" group'
+      group:
+        name: cache
+        gid: 2000
+    - name: 'Set the permissions on {{ mount_point }}'
+      file:
+        path: '{{ mount_point }}'
+        state: directory
+        owner: root
+        group: cache
+        mode: u=rwx,g=rws,o=
+        recurse: yes
+
+    - name: 'Create the Docker directory'
+      file:
+        path: '{{ mount_point}}/docker'
+        state: directory
+    - name: 'Temporarily stop the Docker service'
+      service:
+        name: docker
+        state: stopped
+    - name: 'Delete /var/lib/docker'
+      file:
+        path: /var/lib/docker
+        state: absent
+    - name: 'Create a symbolic link from /var/lib/docker to {{ mount_point }}/docker'
+      file:
+        src: '{{ mount_point }}/docker'
+        dest: /var/lib/docker
+        state: link
+    - name: 'Start the Docker service'
+      service:
+        name: docker
+        state: started

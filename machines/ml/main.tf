@@ -131,23 +131,8 @@ resource "aws_volume_attachment" "build-cache-attachment" {
 
   skip_destroy = true
 
-  connection {
-    type        = "ssh"
-    user        = "ubuntu"
-    host        = "${aws_instance.controller.private_dns}"
-    private_key = "${file("../keys/plz.privkey")}"
-  }
-
-  provisioner "file" {
-    source      = "../../services/controller/src/scripts/initialize-cache"
-    destination = "/tmp/initialize-cache"
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "chmod +x /tmp/initialize-cache",
-      "/tmp/initialize-cache /dev/xvdx",
-    ]
+  provisioner "local-exec" {
+    command = "../../scripts/run-ansible-playbook-on-host startup.yml ${aws_instance.controller.private_dns} /dev/stdin <<< 'device: /dev/xvdx'"
   }
 }
 
