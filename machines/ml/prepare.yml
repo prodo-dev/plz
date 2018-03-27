@@ -33,7 +33,7 @@
         name: awscli
 
 # Build packages
-- hosts: build
+- hosts: controller
   remote_user: root
   become: yes
   vars:
@@ -86,7 +86,7 @@
       apt_repository:
         repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
 
-- hosts: build
+- hosts: controller
   remote_user: root
   become: yes
   tasks:

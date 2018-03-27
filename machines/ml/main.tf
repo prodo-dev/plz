@@ -113,20 +113,20 @@ resource "aws_iam_role_policy_attachment" "controller-policy-ecr" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
 }
 
-resource "aws_ebs_volume" "build-cache" {
+resource "aws_ebs_volume" "controller-cache" {
   availability_zone = "${data.aws_subnet.main.availability_zone}"
   size              = 500
 
   tags {
-    Name        = "Plz ${var.environment} Build Cache"
+    Name        = "Plz ${var.environment} Controller Cache"
     Environment = "${var.environment}"
     Owner       = "Infrastructure"
   }
 }
 
-resource "aws_volume_attachment" "build-cache-attachment" {
+resource "aws_volume_attachment" "controller-cache-attachment" {
   instance_id = "${aws_instance.controller.id}"
-  volume_id   = "${aws_ebs_volume.build-cache.id}"
+  volume_id   = "${aws_ebs_volume.controller-cache.id}"
   device_name = "/dev/sdx"
 
   skip_destroy = true
