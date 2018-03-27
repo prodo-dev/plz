@@ -131,8 +131,23 @@ resource "aws_volume_attachment" "build-cache-attachment" {
 
   skip_destroy = true
 
-  provisioner "local-exec" {
-    command = "../scripts/on-host ubuntu@${aws_instance.controller.private_dns} ../../services/controller/src/scripts/initialize-cache /dev/xvdx"
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    host        = "${aws_instance.controller.private_dns}"
+    private_key = "${file("../keys/plz.privkey")}"
+  }
+
+  provisioner "file" {
+    source      = "../../services/controller/src/scripts/initialize-cache"
+    destination = "/tmp/initialize-cache"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /tmp/initialize-cache",
+      "/tmp/initialize-cache /dev/xvdx",
+    ]
   }
 }
 
