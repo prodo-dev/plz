@@ -41,7 +41,7 @@ class Instance(ABC):
 
     @abstractmethod
     def get_idle_since_timestamp(
-            self, container_state: Optional[ContainerState]=None) -> int:
+            self, container_state: Optional[ContainerState] = None) -> int:
         pass
 
     @abstractmethod
@@ -58,7 +58,7 @@ class Instance(ABC):
 
     @abstractmethod
     def dispose_if_its_time(
-            self, execution_info: Optional[ExecutionInfo]=None):
+            self, execution_info: Optional[ExecutionInfo] = None):
         # We happen to have the execution info at hand when calling it,
         # and getting the info is not free (queries to the docker server in the
         # workers), so we allow to pass the info as parameter
@@ -75,8 +75,8 @@ class Instance(ABC):
             execution_id=self.get_execution_id(),
             running=container_state.running,
             status=container_state.status,
-            idle_since_timestamp=
-            self.get_idle_since_timestamp(container_state),
+            idle_since_timestamp=self.get_idle_since_timestamp(
+                container_state),
             max_idle_seconds=self.get_max_idle_seconds())
 
 
@@ -88,7 +88,8 @@ class InstanceProvider(ABC):
 
     @abstractmethod
     def release_instance(
-            self, execution_id: str, idle_since_timestamp: Optional[int]=None):
+            self, execution_id: str,
+            idle_since_timestamp: Optional[int] = None):
         pass
 
     @abstractmethod

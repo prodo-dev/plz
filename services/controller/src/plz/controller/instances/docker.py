@@ -5,8 +5,8 @@ from docker.types import Mount
 
 from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
-from plz.controller.instances.instance_base import Instance, Parameters, \
-    ExecutionInfo
+from plz.controller.instances.instance_base import \
+    ExecutionInfo, Instance, Parameters
 from plz.controller.volumes import VolumeDirectory, VolumeFile, Volumes
 
 
@@ -70,7 +70,7 @@ class DockerInstance(Instance):
         return f'plz-{self.execution_id}'
 
     def get_idle_since_timestamp(
-            self, container_state: Optional[ContainerState]=None) -> int:
+            self, container_state: Optional[ContainerState] = None) -> int:
         # Doesn't make sense for local instances
         return 0
 
@@ -85,6 +85,6 @@ class DockerInstance(Instance):
         return 0
 
     def dispose_if_its_time(
-            self, execution_info: Optional[ExecutionInfo]=None):
+            self, execution_info: Optional[ExecutionInfo] = None):
         # It's never time for a local instance
         pass
