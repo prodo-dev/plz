@@ -1,5 +1,9 @@
 SHELL := zsh -e -u
 
+.PHONY: lint
+lint: environment
+	pipenv run flake8 src
+
 .PHONY: dist
 dist: environment
 	rm -rf build dist

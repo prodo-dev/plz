@@ -3,6 +3,7 @@ SHELL := zsh -e -u
 .PHONY: check
 check:
 	make -C cli check
+	make -C services/controller check
 
 .PHONY: environment
 environment:
