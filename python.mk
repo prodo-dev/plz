@@ -6,8 +6,11 @@ dist: environment
 	pipenv run python setup.py bdist_wheel
 
 .PHONY: environment
-environment: Pipfile.lock
+environment: .environment
+
+.environment: Pipfile.lock
 	pipenv install --keep-outdated --dev
+	touch $@
 
 Pipfile.lock: Pipfile
 	pipenv lock

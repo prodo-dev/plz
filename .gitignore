@@ -4,10 +4,11 @@
 output
 
 # Python
+*.egg-info
+.environment
+__pycache__
 build
 dist
-__pycache__
-*.egg-info
 
 # Intellij
 .idea
