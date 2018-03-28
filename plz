@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
 
+set -e
+set -u
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-PYTHONPATH=${ROOT}/cli/src ${ROOT}/cli/env/bin/python ${ROOT}/cli/src/plz/cli/main.py $@
+if ! command -v pipenv > /dev/null; then
+  echo >&2 'Could not find `pipenv`.'
+  exit 2
+fi
+
+PYTHON="$(cd "${ROOT}/cli" && pipenv --venv)/bin/python"
+
+PYTHONPATH="${ROOT}/cli/src" "${PYTHON}" "${ROOT}/cli/src/plz/cli/main.py" "$@"
