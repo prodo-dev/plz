@@ -12,8 +12,25 @@ _ARGUMENTS_SPEC = [
         'spec': {
             'type': str,
             'help': 'AWS project in the Elastic Container Registry. '
-                    'Example: 024444204267.dkr.ecr.eu-west-1.amazonaws.com'
-        }
+                    'Example: 024444204267.dkr.ecr.eu-west-1.amazonaws.com',
+        },
+    },
+    {
+        'name': 'aws_worker_ami',
+        'spec': {
+            'type': str,
+            'help': 'AWS AMI used for constructing worker instances. '
+                    'Example: plz-worker-2018-01-01',
+        },
+    },
+    {
+        'name': 'aws_key_name',
+        'spec': {
+            'type': str,
+            'help': 'AWS key pair for debugging worker instances. '
+                    'Example: plz-production-key',
+        },
+        'default': None,
     },
     {
         'name': 'environment_name',
@@ -21,9 +38,8 @@ _ARGUMENTS_SPEC = [
             'type': str,
             'help': 'Name used to identify the resources used by this'
                     'controller. '
-                    'Example: production, sergio'
-
-        }
+                    'Example: production, sergio',
+        },
     },
     {
         'name': 'docker_host',
@@ -32,25 +48,25 @@ _ARGUMENTS_SPEC = [
             'help': 'url pointing at the docker server. '
                     'Example: tcp://127.0.0.1:1234'
         },
-        'default': None
+        'default': None,
     },
     {
         'name': 'port',
         'spec': {
             'type': int,
-            'help': 'port where the controller listens for HTTP requests'
+            'help': 'port where the controller listens for HTTP requests',
         },
-        'default': 8080
+        'default': 8080,
     },
     {
         'name': 'run_commands_locally',
         'spec': {
             'action': 'store_const',
             'const': True,
-            'help': 'don\'t spawn workers, run the commands locally'
+            'help': 'don\'t spawn workers, run the commands locally',
         },
         'from_string': strtobool,
-        'default': False
+        'default': False,
     }
 
 ]

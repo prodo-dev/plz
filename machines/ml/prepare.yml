@@ -4,6 +4,9 @@
   remote_user: root
   become: yes
   tasks:
+    - name: Add the Ansible APT repository
+      apt_repository:
+        repo: ppa:ansible/ansible
     - name: Update the APT repositories
       apt:
         update_cache: yes
@@ -13,27 +16,22 @@
     - name: Upgrade everything
       apt:
         upgrade: full
-    - name: Install apt-transport-https
+    - name: Install the fundamentals
       apt:
-        name: apt-transport-https
-    - name: Install ca-certificates
-      apt:
-        name: ca-certificates
-    - name: Install curl
-      apt:
-        name: curl
-    - name: Install mosh
-      apt:
-        name: mosh
-    - name: Install python-pip
-      apt:
-        name: python-pip
+        name: '{{ item }}'
+      with_items:
+        - ansible
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - mosh
+        - python-pip
     - name: Install awscli
       pip:
         name: awscli
 
 # Build packages
-- hosts: build
+- hosts: controller
   remote_user: root
   become: yes
   vars:
@@ -86,7 +84,7 @@
       apt_repository:
         repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
 
-- hosts: build
+- hosts: controller
   remote_user: root
   become: yes
   tasks:

@@ -1,4 +1,5 @@
 import os
+import shlex
 import socket
 import threading
 import time
@@ -17,19 +18,21 @@ from .ec2_instance import EC2Instance, get_tag
 class EC2InstanceGroup(InstanceProvider):
     DOCKER_PORT = 2375
 
-    # TODO(sergio): make this into a proper variable
-    _AMI_TAG = "2018-03-01"
+    _INITIALIZATION_CODE_PATH = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), '..', '..', 'startup', 'startup.yml'))
+    _CACHE_DEVICE = '/dev/xvdx'
 
     _name_to_group = {}
     _name_to_group_lock = threading.RLock()
 
     @staticmethod
     def from_config(config):
-        name = config.environment_name
         images = Images.from_config(config)
         return EC2InstanceGroup(
-            name=name,
+            name=config.environment_name,
             client=boto3.client('ec2'),
+            aws_worker_ami=config.aws_worker_ami,
+            aws_key_name=config.aws_key_name,
             images=images,
             acquisition_delay_in_seconds=10,
             max_acquisition_tries=5)
@@ -37,6 +40,8 @@ class EC2InstanceGroup(InstanceProvider):
     def __new__(cls,
                 name: str,
                 client,
+                aws_worker_ami: str,
+                aws_key_name: str,
                 images: Images,
                 acquisition_delay_in_seconds: int,
                 max_acquisition_tries: int):
@@ -52,11 +57,15 @@ class EC2InstanceGroup(InstanceProvider):
     def __init__(self,
                  name,
                  client,
+                 aws_worker_ami: str,
+                 aws_key_name: Optional[str],
                  images: Images,
                  acquisition_delay_in_seconds: int,
                  max_acquisition_tries: int):
         self.name = name
         self.client = client
+        self.aws_worker_ami = aws_worker_ami
+        self.aws_key_name = aws_key_name
         self.images = images
         self.acquisition_delay_in_seconds = acquisition_delay_in_seconds
         self.max_acquisition_tries = max_acquisition_tries
@@ -77,7 +86,7 @@ class EC2InstanceGroup(InstanceProvider):
             Filters=[
                 {
                     'Name': 'name',
-                    'Values': [f'plz-worker-{self._AMI_TAG}']
+                    'Values': [self.aws_worker_ami],
                 },
             ],
         )
@@ -94,14 +103,28 @@ class EC2InstanceGroup(InstanceProvider):
     def instance_initialization_code(self) -> str:
         if self._instance_initialization_code is not None:
             return self._instance_initialization_code
-        path_to_initialization_code = os.path.join(
-            os.path.dirname(__file__),
-            '..', '..', '..', '..', 'scripts',
-            'initialize-cache')
-        with open(path_to_initialization_code, 'r') as f:
+        with open(self._INITIALIZATION_CODE_PATH, 'r') as f:
             initialization_code = f.read()
-        self._instance_initialization_code = \
-            initialization_code.replace('$1', '/dev/xvdx')
+        self._instance_initialization_code = '\n'.join([
+            '#!/bin/sh',
+            '',
+            'set -e',
+            'set -u',
+            '',
+            'export HOME=/root',
+            '',
+            'cat > /tmp/playbook.yml <<EOF',
+            initialization_code,
+            'EOF',
+            '',
+            ' '.join([shlex.quote(s) for s in [
+                'ansible-playbook',
+                '--inventory=localhost,',
+                '--connection=local',
+                f'--extra-vars=device={self._CACHE_DEVICE}',
+                '/tmp/playbook.yml',
+            ]])
+        ])
         return self._instance_initialization_code
 
     def acquire_instance(
@@ -230,6 +253,8 @@ class EC2InstanceGroup(InstanceProvider):
     def _get_instance_spec(self, instance_type) -> dict:
         spec = _BASE_INSTANCE_SPEC.copy()
         spec['ImageId'] = self.ami_id
+        if self.aws_key_name:
+            spec['KeyName'] = self.aws_key_name
         spec['TagSpecifications'] = [{
             'ResourceType': 'instance',
             'Tags': [

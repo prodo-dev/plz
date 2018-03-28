@@ -8,9 +8,9 @@ variable "subdomain" {}
 
 variable "environment" {}
 
-variable "ami_tag" {
-  default = "2018-03-01"
-}
+variable "ami_tag" {}
+
+variable "key_name" {}
 
 variable "ec2_role" {
   default = <<EOF
@@ -64,7 +64,7 @@ data "aws_route53_zone" "internal" {
 }
 
 resource "aws_key_pair" "plz" {
-  key_name   = "plz-${lower(var.environment)}-key"
+  key_name   = "${var.key_name}"
   public_key = "${file("../keys/plz.pubkey")}"
 }
 
@@ -73,7 +73,7 @@ resource "aws_key_pair" "plz" {
 data "aws_ami" "controller-ami" {
   filter {
     name   = "name"
-    values = ["plz-build-${var.ami_tag}"]
+    values = ["plz-controller-${var.ami_tag}"]
   }
 }
 
@@ -81,7 +81,7 @@ resource "aws_instance" "controller" {
   subnet_id                   = "${data.aws_subnet.main.id}"
   instance_type               = "t2.small"
   ami                         = "${data.aws_ami.controller-ami.id}"
-  key_name                    = "plz-${lower(var.environment)}-key"
+  key_name                    = "${aws_key_pair.plz.key_name}"
   associate_public_ip_address = true
   iam_instance_profile        = "${aws_iam_instance_profile.controller.name}"
 
@@ -113,26 +113,26 @@ resource "aws_iam_role_policy_attachment" "controller-policy-ecr" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
 }
 
-resource "aws_ebs_volume" "build-cache" {
+resource "aws_ebs_volume" "controller-cache" {
   availability_zone = "${data.aws_subnet.main.availability_zone}"
   size              = 500
 
   tags {
-    Name        = "Plz ${var.environment} Build Cache"
+    Name        = "Plz ${var.environment} Controller Cache"
     Environment = "${var.environment}"
     Owner       = "Infrastructure"
   }
 }
 
-resource "aws_volume_attachment" "build-cache-attachment" {
+resource "aws_volume_attachment" "controller-cache-attachment" {
   instance_id = "${aws_instance.controller.id}"
-  volume_id   = "${aws_ebs_volume.build-cache.id}"
+  volume_id   = "${aws_ebs_volume.controller-cache.id}"
   device_name = "/dev/sdx"
 
   skip_destroy = true
 
   provisioner "local-exec" {
-    command = "../scripts/on-host ubuntu@${aws_instance.controller.private_dns} ../../services/controller/src/scripts/initialize-cache /dev/xvdx"
+    command = "../../scripts/run-ansible-playbook-on-host ../../services/controller/src/plz/controller/startup/startup.yml ${aws_instance.controller.private_dns} /dev/stdin <<< 'device: /dev/xvdx'"
   }
 }
 

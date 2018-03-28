@@ -23,10 +23,12 @@
         image: "{{ image }}"
         pull: yes
         env:
-          AWS_DEFAULT_REGION: "{{ aws_region }}"
-          AWS_PROJECT: "{{ aws_project }}"
           ENVIRONMENT_NAME: "{{ environment_name }}"
           PORT: "{{ service_port }}"
+          AWS_DEFAULT_REGION: "{{ aws_region }}"
+          AWS_PROJECT: "{{ aws_project }}"
+          AWS_WORKER_AMI: "{{ aws_worker_ami }}"
+          AWS_KEY_NAME: "{{ aws_key_name }}"
         published_ports:
           - "{{ service_port }}:{{ service_port }}"
         volumes:
