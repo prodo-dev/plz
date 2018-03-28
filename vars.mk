@@ -28,21 +28,25 @@ bash:
 	@ echo 'export AWS_WORKER_AMI="$(AWS_WORKER_AMI)"'
 	@ echo 'export AWS_KEY_NAME="$(KEY_NAME)"'
 
-.PHONY: terraform
-terraform:
-	@ echo 'export TF_VAR_environment="Production"'
+.PHONY: terraform-common
+terraform-common:
 	@ echo 'export TF_VAR_region="$(AWS_REGION)"'
 	@ echo 'export TF_VAR_availability_zone="$(AWS_AVAILABILITY_ZONE)"'
 	@ echo 'export TF_VAR_project="$(AWS_PROJECT)"'
 	@ echo 'export TF_VAR_ami_tag="$(AMI_TAG)"'
-	@ echo 'export TF_VAR_key_name="$(KEY_NAME)"'
+
+.PHONY: terraform-production
+terraform-production: terraform-common
+	@ echo 'export TF_VAR_environment="Production"'
+	@ echo 'export TF_VAR_key_name="plz-production-key"'
 	@ echo 'export TF_VAR_internal_domain="$(INTERNAL_DOMAIN)"'
 	@ echo 'export TF_VAR_subdomain="$(INTERNAL_DOMAIN)"'
 
 .PHONY: terraform-test
-terraform-test:
+terraform-test: terraform-common
 	@ # Given an environment named "Alice", sets the subdomain to "alice.test.inside.prodo.ai".
 	@ echo 'export TF_VAR_environment="$(ENVIRONMENT_NAME)"'
+	@ echo 'export TF_VAR_key_name="$(KEY_NAME)"'
 	@ echo 'export TF_VAR_internal_domain="$(INTERNAL_DOMAIN)"'
 	@ echo 'export TF_VAR_subdomain="$(shell echo $(ENVIRONMENT_NAME) | tr -d -C '[A-Za-z0-9_-]' | tr '[:upper:]' '[:lower:]').test.inside.$(DOMAIN)"'
 
