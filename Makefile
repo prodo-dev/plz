@@ -4,6 +4,11 @@ SHELL := zsh -e -u
 check:
 	make -C cli check
 
+.PHONY: environment
+environment:
+	make -C cli environment
+	make -C services/controller environment
+
 .PHONY: ml-production
 ml-production:
 	make -C machines/ml deploy-production

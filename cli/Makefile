@@ -3,9 +3,9 @@ check: test lint
 include ../python.mk
 
 .PHONY: test
-test: $(SITE_PACKAGES)
-	./env/bin/nosetests
+test: environment
+	pipenv run nosetests
 
 .PHONY: lint
-lint: $(SITE_PACKAGES)
-	./env/bin/flake8 src/**/*.py
+lint: environment
+	pipenv run flake8 src/**/*.py

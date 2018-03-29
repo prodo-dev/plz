@@ -2,6 +2,13 @@
 
 *Say the magic word.*
 
+## Installing dependencies
+
+1. Run `pip install pipenv` to install [`pipenv`](https://docs.pipenv.org/).
+2. Run `make environment` to create the virtual environments and install the dependencies.
+
+For more information, take a look at [the `pipenv` documentation](https://docs.pipenv.org/).
+
 ## Using the CLI
 
 See the CLI's *README.rst*.
