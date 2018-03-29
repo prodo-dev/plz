@@ -27,13 +27,12 @@ amis:
 
 .PHONY: deploy-production
 deploy-production:
-	eval $$($(MAKE) --no-print-directory --file=../../vars.mk terraform); \
+	eval $$($(MAKE) --no-print-directory --file=../../vars.mk terraform-production); \
 	terraform init; \
 	terraform apply -state=production.tfstate
 
 .PHONY: deploy-test
 deploy-test:
-	eval $$($(MAKE) --no-print-directory --file=../../vars.mk terraform); \
 	eval $$($(MAKE) --no-print-directory --file=../../vars.mk terraform-test); \
 	terraform init; \
 	terraform apply -state=test.tfstate
