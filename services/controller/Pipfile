@@ -13,3 +13,4 @@ flask = "*"
 requests = "*"
 
 [dev-packages]
+"flake8" = "*"

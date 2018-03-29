@@ -6,8 +6,8 @@ from typing import List, Optional
 from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
 from plz.controller.instances.docker import DockerInstance
-from plz.controller.instances.instance_base import Instance, \
-    Parameters, ExecutionInfo
+from plz.controller.instances.instance_base \
+    import ExecutionInfo, Instance, Parameters
 from plz.controller.volumes import Volumes
 
 log = logging.getLogger('controller')
@@ -76,7 +76,7 @@ class EC2Instance(Instance):
             self.data, self.MAX_IDLE_SECONDS_TAG, '0'))
 
     def get_idle_since_timestamp(
-            self, container_state: Optional[ContainerState]=None) -> int:
+            self, container_state: Optional[ContainerState] = None) -> int:
         if container_state is not None:
             return container_state.finished_at
         return int(get_tag(
@@ -93,7 +93,7 @@ class EC2Instance(Instance):
         return self.delegate.get_container_state()
 
     def dispose_if_its_time(
-            self, execution_info: Optional[ExecutionInfo]=None):
+            self, execution_info: Optional[ExecutionInfo] = None):
         if execution_info is not None:
             ei = execution_info
         else:

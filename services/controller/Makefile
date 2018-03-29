@@ -1,5 +1,7 @@
 SHELL := zsh -e -u
 
+check: lint
+
 include ../../vars.mk
 
 TAG = $(AWS_PROJECT)/plz-controller

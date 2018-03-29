@@ -41,7 +41,7 @@ class Localhost(InstanceProvider):
         return iter([])
 
     def release_instance(self, execution_id: str,
-                         idle_since_timestamp: Optional[int]=None):
+                         idle_since_timestamp: Optional[int] = None):
         """
         "Releases" an instance.
 

@@ -10,7 +10,7 @@ import sys
 import tarfile
 import tempfile
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Dict, Type
+from typing import Dict, Optional, Tuple, Type
 
 import docker.utils.build
 import requests
@@ -287,7 +287,8 @@ def check_status(response, expected_status):
 
 def main(args=sys.argv[1:]):
     parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(title='operations', dest='operation_name')
+    subparsers = parser.add_subparsers(title='operations',
+                                       dest='operation_name')
     for name, command in OPERATIONS.items():
         subparser = subparsers.add_parser(name, help=command.__doc__)
         command.prepare_argument_parser(subparser)
