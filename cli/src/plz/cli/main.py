@@ -10,10 +10,12 @@ import sys
 import tarfile
 import tempfile
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Dict, Optional, Tuple, Type
 
 import docker.utils.build
 import requests
+from prettytable import PrettyTable
 
 from plz.cli import parameters
 from plz.cli.configuration import Configuration, ValidationException
@@ -261,6 +263,34 @@ class LogsOperation(Operation):
         self.display_logs(self.execution_id)
 
 
+class ListCommandsOperation(Operation):
+    @staticmethod
+    def prepare_argument_parser(parser):
+        pass
+
+    def run(self):
+        response = requests.get(self.url('commands', 'list'))
+        check_status(response, requests.codes.ok)
+        table = PrettyTable(['Execution Id', 'Running', 'Status',
+                             'Type', 'Idle since', 'Disposal time'])
+        for command in json.loads(response.content)['commands']:
+            execution_id = command['execution_id']
+            running = command['running']
+            status = command['status']
+            instance_type = command['instance_type']
+            if status == 'idle':
+                idle_since_timestamp = command['idle_since_timestamp']
+                idle_since = _timestamp_to_string(idle_since_timestamp)
+                disposal_time = _timestamp_to_string(
+                    idle_since_timestamp + command['max_idle_seconds'])
+            else:
+                idle_since = ''
+                disposal_time = ''
+            table.add_row([execution_id, running, status, instance_type,
+                           idle_since, disposal_time])
+        print(table)
+
+
 class RequestException(Exception):
     def __init__(self, response: requests.Response):
         try:
@@ -275,8 +305,8 @@ class RequestException(Exception):
 
 OPERATIONS: Dict[str, Type[Operation]] = {
     'run': RunCommandOperation,
-    'canihazlogs': LogsOperation,
     'logs': LogsOperation,
+    'ps': ListCommandsOperation,
 }
 
 
@@ -319,6 +349,10 @@ def _exit_and_print_execution_id(execution_id):
              'To stream the logs, type:\n\n'
              f'        plz logs {execution_id}')
     sys.exit(0)
+
+
+def _timestamp_to_string(timestamp: int) -> str:
+    return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
 
 if __name__ == '__main__':
