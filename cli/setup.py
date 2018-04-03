@@ -36,6 +36,7 @@ setup(
     install_requires=[
         'docker >= 3.1.1',
         'requests >= 2.18.4',
+        'prettytable >= 0.7.2',
     ],
     extras_require={
         'test': [
