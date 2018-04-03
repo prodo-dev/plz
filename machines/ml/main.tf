@@ -132,7 +132,7 @@ resource "aws_volume_attachment" "controller-cache-attachment" {
   skip_destroy = true
 
   provisioner "local-exec" {
-    command = "../../scripts/run-ansible-playbook-on-host ../../services/controller/src/plz/controller/startup/startup.yml ${aws_instance.controller.private_ip} /dev/stdin <<< 'device: /dev/xvdx'"
+    command = "../../scripts/run-ansible-playbook-on-host ../../services/controller/src/plz/controller/startup/startup.yml ${aws_instance.controller.private_dns} /dev/stdin <<< 'device: /dev/xvdx'"
   }
 }
 
