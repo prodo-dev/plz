@@ -7,6 +7,7 @@ from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
 from plz.controller.instances.instance_base import \
     ExecutionInfo, Instance, Parameters
+from plz.controller.instances.instance_cache import InstanceCache
 from plz.controller.volumes import VolumeDirectory, VolumeFile, Volumes
 
 
@@ -88,3 +89,26 @@ class DockerInstance(Instance):
             self, execution_info: Optional[ExecutionInfo] = None):
         # It's never time for a local instance
         pass
+
+
+class DockerInstanceCache(InstanceCache):
+    def __init__(self,
+                 images: Images,
+                 containers: Containers,
+                 volumes: Volumes):
+        super().__init__()
+        self.images = images
+        self.containers = containers
+        self.volumes = volumes
+
+    def find_instance(self, execution_id: str) -> Optional[Instance]:
+        return DockerInstance(
+            self.images, self.containers, self.volumes, execution_id)
+
+    def instance_exists(self, execution_id: str) -> bool:
+        return self.containers.exists(execution_id)
+
+    def list_instances(self) -> List[Instance]:
+        return [self.find_instance(container.id)
+                for container
+                in self.containers.list()]

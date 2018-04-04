@@ -1,58 +1,73 @@
-import multiprocessing
-from typing import Callable, Dict, Optional
+import threading
+from abc import ABC, abstractmethod
+from typing import Dict, Iterator, Optional
 
 import collections.abc
 
 from plz.controller.instances.instance_base import Instance
 
 
-class InstanceCache(collections.abc.MutableMapping):
+class InstanceCache(collections.abc.MutableMapping, ABC):
     """
-    Because Gunicorn spawns a new subprocess per worker, we can't just store
-    useful information in dictionaries. We need to share the data across
-    processes. However, `Instance` objects can't be pickled, so we store the
-    IDs and recreate the cache for each worker.
+    Because Gunicorn spawns a new process per worker, we can't just store
+    useful information in dictionaries. We need to keep it externally, and
+    cache information per-process.
     """
 
-    multiprocessing_manager = multiprocessing.Manager()
-
-    def __init__(self, create: Callable[[str], Optional[Instance]]):
-        self.create = create
-        self.ids: Dict[str, bool] = self.multiprocessing_manager.dict()
+    def __init__(self):
         self.cache: Dict[str, Instance] = {}
-        self.lock = multiprocessing.RLock()
+        self.lock = threading.RLock()
+
+    @abstractmethod
+    def find_instance(self, execution_id: str) -> Optional[Instance]:
+        pass
+
+    @abstractmethod
+    def instance_exists(self, execution_id: str) -> bool:
+        pass
+
+    @abstractmethod
+    def list_instances(self) -> Iterator[Instance]:
+        pass
 
     def __contains__(self, key):
-        return key in self.ids
+        with self.lock:
+            value = self.instance_exists(key)
+            self[key] = value
+            return bool(value)
 
     def __getitem__(self, key):
-        try:
-            return self.cache[key]
-        except KeyError:
-            return self.__missing__(key)
-
-    def __missing__(self, key):
         with self.lock:
-            value = self.create(key)
-            if value:
-                self.__setitem__(key, value)
+            try:
+                return self.cache[key]
+            except KeyError:
+                value = self.find_instance(key)
+                self[key] = value
                 return value
 
     def __setitem__(self, key, value):
         with self.lock:
-            self.ids[key] = True
-            self.cache[key] = value
+            if value:
+                self.cache[key] = value
+            else:
+                del self[key]
 
     def __delitem__(self, key):
         with self.lock:
-            del self.ids[key]
-            del self.cache[key]
+            try:
+                del self.cache[key]
+            except KeyError:
+                pass
 
     def __iter__(self):
-        return iter(self.ids)
+        return self.list_instances()
 
     def __len__(self):
-        return len(self.ids)
+        """
+        This is necessary to implement `MutableMapping`.
+        :return: a useless number (probably 0)
+        """
+        return len(self.cache)
 
     def keys(self):
         return self.ids.keys()

@@ -1,7 +1,7 @@
 import logging
 import os.path
 import time
-from typing import List, Optional
+from typing import Iterator, List, Optional
 
 from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images

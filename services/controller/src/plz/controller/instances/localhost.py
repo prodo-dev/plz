@@ -3,8 +3,7 @@ from typing import Iterator, Optional
 
 from plz.controller.containers import Containers
 from plz.controller.images import Images
-from plz.controller.instances.instance_cache import InstanceCache
-from plz.controller.instances.docker import DockerInstance
+from plz.controller.instances.docker import DockerInstanceCache
 from plz.controller.instances.instance_base \
     import Instance, InstanceProvider
 from plz.controller.volumes import Volumes
@@ -27,7 +26,7 @@ class Localhost(InstanceProvider):
         self.images = images
         self.containers = containers
         self.volumes = volumes
-        self.instances = InstanceCache(self._construct_instance)
+        self.instances = DockerInstanceCache(images, containers, volumes)
 
     def acquire_instance(
             self, execution_id: str, execution_spec: dict) \
@@ -37,7 +36,8 @@ class Localhost(InstanceProvider):
 
         As we're dealing with `localhost` here, it's always the same instance.
         """
-        self.instances[execution_id] = self.instance_for(execution_id)
+        self.instances[execution_id] = self.instances.find_instance(
+            execution_id)
         return iter([])
 
     def release_instance(self, execution_id: str,
@@ -61,10 +61,5 @@ class Localhost(InstanceProvider):
     def push(self, image_tag: str):
         pass
 
-    def instance_iterator(self) \
-            -> Iterator[Instance]:
+    def instance_iterator(self) -> Iterator[Instance]:
         return iter(self.instances.values())
-
-    def _construct_instance(self, execution_id: str):
-        return DockerInstance(
-                self.images, self.containers, self.volumes, execution_id)
