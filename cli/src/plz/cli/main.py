@@ -306,7 +306,7 @@ class RequestException(Exception):
 OPERATIONS: Dict[str, Type[Operation]] = {
     'run': RunCommandOperation,
     'logs': LogsOperation,
-    'ps': ListCommandsOperation,
+    'list': ListCommandsOperation,
 }
 
 
