@@ -7,7 +7,7 @@ set -o pipefail
 ROOT=${0:a:h:h}
 
 PLAYBOOK=${1:a}
-HOST=$2
+HOSTNAME=$2
 shift
 shift
 
@@ -19,6 +19,12 @@ done
 
 eval $(make --no-print-directory --file="${ROOT}/vars.mk" bash)
 
+HOST_IP=$(dig +short $HOSTNAME)
+if [[ -z $HOST_IP ]]; then
+  echo >&2 "Could not resolve ${HOSTNAME}."
+  exit 1
+fi
+
 SSH_PRIVATE_KEY_FILE="${ROOT}/machines/keys/plz.privkey"
 
 ANSIBLE_INVENTORY=$(mktemp "${TMPDIR:-/tmp/}inventory-XXXXX")
@@ -26,7 +32,7 @@ cat > $ANSIBLE_INVENTORY <<EOF
 ---
 all:
   hosts:
-    ${HOST}:
+    ${HOST_IP}:
       ansible_user: "ubuntu"
       ansible_ssh_private_key_file: "${SSH_PRIVATE_KEY_FILE}"
       ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
