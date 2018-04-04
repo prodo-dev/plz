@@ -6,11 +6,13 @@ RUN set -ex; \
 
 RUN apt-get install -qqy openssh-client
 
+RUN pip install pipenv
+
 RUN mkdir -p /src
 WORKDIR /src
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir --requirement=requirements.txt
+COPY Pipfile Pipfile.lock ./
+RUN pipenv install --system --deploy
 
 COPY src ./src/
 
