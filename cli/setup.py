@@ -33,8 +33,10 @@ setup(
     package_dir={'': 'src'},
     packages=['plz.cli'],
     python_requires='>= 3.6',
+    # TODO: generate from Pipfile
     install_requires=[
         'docker >= 3.1.1',
+        'prettytable >= 0.7.2',
         'requests >= 2.18.4',
     ],
     extras_require={
