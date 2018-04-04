@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -e
+set -u
+
+export PYTHONPATH=./src
+
+exec gunicorn \
+  --bind="0.0.0.0:${PORT:-8080}" \
+  --pythonpath=${PYTHONPATH} \
+  plz.controller.main:app \
+  -- $@

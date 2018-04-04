@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "89f6210c17cba674e43fbaccca1722bc1131138357d987ead6e6338ad048cf7b"
+            "sha256": "f5720d2e755665075d88651fb9a4121533ba51a2ff57abff7cd71c4372ca4f1f"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -18,18 +18,18 @@
     "default": {
         "boto3": {
             "hashes": [
-                "sha256:0a8f271a21be3ac91ff50de6f3146131d8ab2a37d0209dfca3e7caadf8315abb",
-                "sha256:bad2282138d8b656f9acb172dd8fd9c0704839fa6338bda440b4ccfe9cef014d"
+                "sha256:523f23434b628dfead797c6aca53ba9805be791a695fa61e070c67c7d1b64864",
+                "sha256:f270f058f46aff9208fe29cffee79a46a7020cd186308c13c76db59d9e087fa6"
             ],
             "index": "pypi",
-            "version": "==1.6.18"
+            "version": "==1.6.23"
         },
         "botocore": {
             "hashes": [
-                "sha256:254803eaca91bf28fa277641039bc06d335faa638862b54454170600a9ed0b5c",
-                "sha256:380272df75f6ee23a18c6b87ab3ad31b91f3c8bf17cc5d0d733a0a0ee72c2c3b"
+                "sha256:158012844c7a385ef49a93354124878bee7f400e3597dea57202ea87faeefa90",
+                "sha256:fa84972784e55ae5f89c2d33b1b10b6ba028cb3733b350df7ed1461e0680ab40"
             ],
-            "version": "==1.9.18"
+            "version": "==1.9.23"
         },
         "certifi": {
             "hashes": [
@@ -54,11 +54,11 @@
         },
         "docker": {
             "hashes": [
-                "sha256:753251b142d56f243fba53ba321a37740a6b6583c528437f45df4d28ba3d4d5d",
-                "sha256:add59251aa15a54c49d1514d576718d762ea5e3d79c2616b6dfaa3fad8d4c9fe"
+                "sha256:0d698c3dc4df66c988de5df21a62cdc3450de2fa8523772779e5e23799c41f43",
+                "sha256:f1a512a0dbc518459159d4584572ebc6de2cc8006b2e376eff02cfae7d72aff0"
             ],
             "index": "pypi",
-            "version": "==3.1.4"
+            "version": "==3.2.1"
         },
         "docker-pycreds": {
             "hashes": [
@@ -82,6 +82,14 @@
             ],
             "index": "pypi",
             "version": "==0.12.2"
+        },
+        "gunicorn": {
+            "hashes": [
+                "sha256:75af03c99389535f218cc596c7de74df4763803f7b63eb09d77e92b3956b36c6",
+                "sha256:eee1169f0ca667be05db3351a0960765620dad53f53434262ff8901b68a1b622"
+            ],
+            "index": "pypi",
+            "version": "==19.7.1"
         },
         "idna": {
             "hashes": [

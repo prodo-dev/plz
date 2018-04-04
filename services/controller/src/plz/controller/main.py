@@ -209,4 +209,5 @@ def _format_error(message: str) -> bytes:
     return json.dumps({'error': message}).encode('utf-8')
 
 
-app.run(host='0.0.0.0', port=config.port)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=config.port)
