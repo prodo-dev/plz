@@ -96,8 +96,7 @@ class EC2InstanceGroup(InstanceProvider):
     def instance_iterator(self) -> Iterator[Instance]:
         for instance_data in self._get_running_aws_instances([]):
             execution_id = get_tag(instance_data, EC2Instance.EXECUTION_ID_TAG)
-            yield self._create_or_retrieve_instance_for(
-                instance_data, execution_id)
+            yield self.instance_for(execution_id, instance_data)
 
     @property
     def instance_initialization_code(self) -> str:
@@ -156,12 +155,11 @@ class EC2InstanceGroup(InstanceProvider):
                 instance_data = self._ask_aws_for_new_instance(instance_type)
             dns_name = _get_dns_name(instance_data)
             yield f'worker dns name is: {dns_name}'
+            instance = self._construct_instance_from_data(
+                execution_id, instance_data)
             while tries_remaining > 0:
                 tries_remaining -= 1
-                instance = self._ec2_instance_from_instance_data(
-                    instance_data, execution_id)
                 if instance.is_up():
-
                     self._set_execution_id_of_instance(
                         instance, execution_id,
                         # TODO(sergio): hardcoded to 30 minutes now, should
@@ -173,8 +171,19 @@ class EC2InstanceGroup(InstanceProvider):
                     yield 'pending'
                     time.sleep(delay_in_seconds)
 
-    def instance_for(self, execution_id):
-        return self.instances[execution_id]
+    def instance_for(self,
+                     execution_id: str,
+                     instance_data: Optional[dict] = None) \
+            -> Optional[EC2Instance]:
+        try:
+            instance = self.instances[execution_id]
+        except KeyError:
+            instance = self._construct_instance_from_data(
+                execution_id, instance_data)
+            with self.lock:
+                if execution_id:
+                    self.instances[execution_id] = instance
+        return instance
 
     def push(self, image_tag):
         self.images.push(image_tag)
@@ -222,8 +231,16 @@ class EC2InstanceGroup(InstanceProvider):
         self.instances[execution_id] = instance
         return instance
 
-    def _ec2_instance_from_instance_data(self, instance_data, execution_id) \
-            -> EC2Instance:
+    def _construct_instance_from_data(
+            self,
+            execution_id: str,
+            instance_data: Optional[dict]) -> Optional[EC2Instance]:
+        if not instance_data:
+            try:
+                instance_data = self._get_running_aws_instances([
+                    (f'tag:{EC2Instance.EXECUTION_ID_TAG}', execution_id)])[0]
+            except KeyError:
+                return None
         dns_name = _get_dns_name(instance_data)
         docker_url = f'tcp://{dns_name}:{self.DOCKER_PORT}'
         images = self.images.for_host(docker_url)
@@ -236,19 +253,6 @@ class EC2InstanceGroup(InstanceProvider):
             volumes,
             execution_id,
             instance_data)
-
-    def _create_or_retrieve_instance_for(
-            self, instance_data: dict, execution_id: str) -> EC2Instance:
-        try:
-            instance = self.instance_for(execution_id)
-        except KeyError:
-            # Be resilient in case the controller has been restarted
-            instance = self._ec2_instance_from_instance_data(
-                instance_data, execution_id)
-            with self.lock:
-                if execution_id is not None and execution_id != '':
-                    self.instances[execution_id] = instance
-        return instance
 
     def _get_instance_spec(self, instance_type) -> dict:
         spec = _BASE_INSTANCE_SPEC.copy()
