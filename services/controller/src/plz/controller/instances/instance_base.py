@@ -64,6 +64,10 @@ class Instance(ABC):
         # workers), so we allow to pass the info as parameter
         pass
 
+    @abstractmethod
+    def stop_command(self):
+        pass
+
     def get_execution_info(self) -> ExecutionInfo:
         container_state = self.get_container_state()
         if container_state is None:
@@ -102,6 +106,10 @@ class InstanceProvider(ABC):
 
     @abstractmethod
     def instance_iterator(self) -> Iterator[Instance]:
+        pass
+
+    @abstractmethod
+    def stop_command(self, execution_id: str):
         pass
 
     def tidy_up(self):
