@@ -157,7 +157,7 @@ def create_snapshot():
     b = None
     json_bytes = []
     while b != b'\n':
-        b = request.stream.read(1)
+        b = request.input_stream.read(1)
         if len(b) == 0:
             raise ValueError('Expected json at the beginning of request')
         json_bytes.append(b)
@@ -168,7 +168,7 @@ def create_snapshot():
     @_handle_lazy_exceptions(formatter=_format_error)
     def act() -> Iterator[Union[bytes, str]]:
         # Pass the rest of the stream to `docker build`
-        yield from images.build(request.stream, tag)
+        yield from images.build(request.input_stream, tag)
         instance_provider.push(tag)
         yield json.dumps({'id': tag})
 
