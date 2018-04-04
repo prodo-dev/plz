@@ -1,3 +1,4 @@
+import multiprocessing
 import os
 import shlex
 import socket
@@ -11,6 +12,7 @@ import boto3
 from plz.controller.containers import Containers
 from plz.controller.images import Images
 from plz.controller.instances.instance_base import Instance, InstanceProvider
+from plz.controller.instances.instance_cache import InstanceCache
 from plz.controller.volumes import Volumes
 from .ec2_instance import EC2Instance, get_tag
 
@@ -69,8 +71,8 @@ class EC2InstanceGroup(InstanceProvider):
         self.images = images
         self.acquisition_delay_in_seconds = acquisition_delay_in_seconds
         self.max_acquisition_tries = max_acquisition_tries
-        self.instances = {}
-        self.lock = threading.RLock()
+        self.instances = InstanceCache(self._construct_instance)
+        self.lock = multiprocessing.RLock()
         self.filters = [{'Name': f'tag:{EC2Instance.GROUP_NAME_TAG}',
                          'Values': [self.name]}]
         # Lazily initialized by ami_id
@@ -175,15 +177,7 @@ class EC2InstanceGroup(InstanceProvider):
                      execution_id: str,
                      instance_data: Optional[dict] = None) \
             -> Optional[EC2Instance]:
-        try:
-            instance = self.instances[execution_id]
-        except KeyError:
-            instance = self._construct_instance_from_data(
-                execution_id, instance_data)
-            with self.lock:
-                if execution_id:
-                    self.instances[execution_id] = instance
-        return instance
+        return self.instances[execution_id]
 
     def push(self, image_tag):
         self.images.push(image_tag)
@@ -194,13 +188,14 @@ class EC2InstanceGroup(InstanceProvider):
             idle_since_timestamp = int(time.time())
         with self.lock:
             instance = self.instances[execution_id]
-            instance.cleanup()
-            instance.set_tags([
-                {'Key': EC2Instance.EXECUTION_ID_TAG,
-                 'Value': ''},
-                {'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
-                 'Value': str(idle_since_timestamp)}
-            ])
+            if instance:
+                instance.cleanup()
+                instance.set_tags([
+                    {'Key': EC2Instance.EXECUTION_ID_TAG,
+                     'Value': ''},
+                    {'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
+                     'Value': str(idle_since_timestamp)}
+                ])
             del self.instances[execution_id]
 
     def _get_running_aws_instances(self, filters: [(str, str)]):
@@ -231,6 +226,9 @@ class EC2InstanceGroup(InstanceProvider):
         self.instances[execution_id] = instance
         return instance
 
+    def _construct_instance(self, execution_id: str) -> Optional[EC2Instance]:
+        return self._construct_instance_from_data(execution_id, None)
+
     def _construct_instance_from_data(
             self,
             execution_id: str,
@@ -239,7 +237,7 @@ class EC2InstanceGroup(InstanceProvider):
             try:
                 instance_data = self._get_running_aws_instances([
                     (f'tag:{EC2Instance.EXECUTION_ID_TAG}', execution_id)])[0]
-            except KeyError:
+            except IndexError:
                 return None
         dns_name = _get_dns_name(instance_data)
         docker_url = f'tcp://{dns_name}:{self.DOCKER_PORT}'
