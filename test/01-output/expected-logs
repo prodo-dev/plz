@@ -6,6 +6,7 @@
 foo = None
 bar = None
 
+=> Execution succeeded.
 => Retrieving the output...
 foo
 foo/bar

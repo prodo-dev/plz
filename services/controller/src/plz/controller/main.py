@@ -99,6 +99,25 @@ def tidy_entry_point():
     return response
 
 
+@app.route(f'/commands/<execution_id>/status',
+           methods=['GET'])
+def get_status_entrypoint(execution_id):
+    # Test with:
+    # curl localhost:5000/commands/some-id/status
+    instance = instance_provider.instance_for(execution_id)
+    state = instance.get_container_state()
+    if state.running:
+        return jsonify({
+            'running': True,
+        })
+    else:
+        return jsonify({
+            'running': False,
+            'success': state.success,
+            'code': state.exit_code,
+        })
+
+
 @app.route(f'/commands/<execution_id>/logs',
            methods=['GET'])
 def get_logs_entrypoint(execution_id):

@@ -40,7 +40,8 @@ def main(args=sys.argv[1:]):
     command = OPERATIONS[operation_name](
         configuration=configuration, **option_dict)
     try:
-        command.run()
+        exit_status = command.run()
+        sys.exit(exit_status)
     except CLIException as e:
         e.print(configuration)
         sys.exit(1)

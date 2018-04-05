@@ -1,3 +1,4 @@
+import collections
 import io
 import itertools
 import json
@@ -18,6 +19,11 @@ from plz.cli.log import log_error, log_info
 from plz.cli.logs_operation import LogsOperation
 from plz.cli.operation import Operation, check_status, on_exception_reraise
 from plz.cli.parameters import Parameters
+
+
+ExecutionStatus = collections.namedtuple(
+    'ExecutionStatus',
+    ['running', 'success', 'code'])
 
 
 class RunCommandOperation(Operation):
@@ -62,6 +68,9 @@ class RunCommandOperation(Operation):
         log_info('Building the program snapshot')
         snapshot_id = self.submit_context_for_building(build_context)
 
+        status = None
+        ok = False
+
         if snapshot_id:
             execution_spec = {
                 'instance_type': self.configuration.instance_type,
@@ -74,9 +83,26 @@ class RunCommandOperation(Operation):
                 if ok:
                     logs = LogsOperation(self.configuration, execution_id)
                     logs.display_logs(execution_id)
-                    self.retrieve_output_files(execution_id)
+                    status = self.get_status(execution_id)
+                    if status.running:
+                        log_error('Execution has not finished.'
+                                  ' This should not happen.'
+                                  ' Please report it.')
+                    elif status.success:
+                        log_info('Execution succeeded.')
+                        self.retrieve_output_files(execution_id)
+                    else:
+                        log_error('Execution failed'
+                                  f' with an exit status of {status.code}.')
                 self.cleanup(execution_id)
             log_info('Done and dusted.')
+
+        if status:
+            return status.code
+        elif ok:
+            return 0
+        else:
+            return 1
 
     def capture_build_context(self):
         context_dir = os.getcwd()
@@ -158,7 +184,17 @@ class RunCommandOperation(Operation):
                 log_error(data['error'].rstrip())
         return execution_id, ok
 
-    @on_exception_reraise("Retrieving the output failed.")
+    @on_exception_reraise('Retrieving the status failed.')
+    def get_status(self, execution_id):
+        response = requests.get(self.url('commands', execution_id, 'status'))
+        check_status(response, requests.codes.ok)
+        body = response.json()
+        return ExecutionStatus(
+            running=body['running'],
+            success=body['success'],
+            code=body['code'])
+
+    @on_exception_reraise('Retrieving the output failed.')
     def retrieve_output_files(self, execution_id: str):
         log_info('Retrieving the output...')
         response = requests.get(

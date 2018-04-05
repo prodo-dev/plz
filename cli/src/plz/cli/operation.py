@@ -1,18 +1,20 @@
 import json
 from abc import ABC, abstractmethod
+from typing import Optional
 
 import requests
 
+from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
 
 
 class Operation(ABC):
-    def __init__(self, configuration):
+    def __init__(self, configuration: Configuration):
         self.prefix = f'http://{configuration.host}:{configuration.port}'
         self.user = configuration.user
         self.execution_id = None
 
-    def url(self, *path_segments):
+    def url(self, *path_segments: str):
         return self.prefix + '/' + '/'.join(path_segments)
 
     def get_execution_id(self):
@@ -33,7 +35,7 @@ class Operation(ABC):
         pass
 
     @abstractmethod
-    def run(self):
+    def run(self) -> Optional[int]:
         pass
 
 
@@ -49,12 +51,12 @@ class RequestException(Exception):
         )
 
 
-def check_status(response, expected_status):
+def check_status(response: requests.Response, expected_status: int):
     if response.status_code != expected_status:
         raise RequestException(response)
 
 
-def on_exception_reraise(message):
+def on_exception_reraise(message: str):
     def wrapper(f):
         def wrapped(*args, **kwargs):
             try:
