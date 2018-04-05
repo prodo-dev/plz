@@ -36,13 +36,28 @@ cd ${0:a:h:h}
 PLZ="${PWD}/plz"
 
 test_directory=${0:a:h}
-tests=($(find $test_directory -mindepth 1 -maxdepth 1 -type d | sort))
-bless=false
 
 # In "bless mode", instead of comparing the actual output against expected
 # output, we save the output.
+bless=false
 if [[ $# -gt 0 && $1 == '--bless' ]]; then
   bless=true
+  shift
+fi
+
+if [[ $# -eq 0 ]]; then
+  # Run all tests.
+  tests=($(find $test_directory -mindepth 1 -maxdepth 1 -type d | sort))
+else
+  # Run selected tests.
+  # But first, verify all arguments are actually test directories.
+  for dir in $@; do
+    if [[ ${dir:a} != "${test_directory}/${dir:t}" ]]; then
+      echo "\"${dir}\" is not a test directory."
+      exit 2
+    fi
+  done
+  tests=($@)
 fi
 
 function start_controller {
@@ -94,6 +109,7 @@ trap stop_controller EXIT INT TERM
 
 success=true
 for test in $tests; do
+  test=${test:a}
   echo
   info "Running ${test:t}..."
 
