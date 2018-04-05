@@ -35,3 +35,7 @@
           - /var/run/docker.sock:/var/run/docker.sock
           - /home/ubuntu/.ssh/plz.privkey:/root/.ssh/id_rsa:ro
         restart_policy: unless-stopped
+    - name: Set cron job for tidying
+      cron:
+        name: "Tyding"
+        job: "curl localhost:{{service_port}}/commands/tidy"
