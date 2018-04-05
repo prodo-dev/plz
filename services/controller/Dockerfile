@@ -14,7 +14,7 @@ WORKDIR /src
 COPY Pipfile Pipfile.lock ./
 RUN pipenv install --system --deploy
 
+COPY run ./
 COPY src ./src/
 
-ENV PYTHONPATH ./src
-CMD ["python", "./src/plz/controller/main.py"]
+ENTRYPOINT ["./run"]

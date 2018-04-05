@@ -1,0 +1,5 @@
+#!/bin/bash
+
+export PYTHONPATH=./src
+
+exec python ./src/plz/controller/main.py "$@"
