@@ -143,45 +143,35 @@ class EC2InstanceGroup(InstanceProvider):
         the maximum number of trials.
         """
         tries_remaining = max_tries
-        yield 'querying availability'
-        instance_type = execution_spec.get('instance_type')
-        instances_not_assigned = self._get_running_aws_instances([
-            (f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
-            ('instance-type', instance_type)])
-        if len(instances_not_assigned) > 0:
-            instance_data = instances_not_assigned[0]
-        else:
-            yield 'requesting new instance'
-            instance_data = self._ask_aws_for_new_instance(instance_type)
-        dns_name = _get_dns_name(instance_data)
-        yield f'worker dns name is: {dns_name}'
-        while tries_remaining > 0:
-            tries_remaining -= 1
-            instance = self._ec2_instance_from_instance_data(
-                instance_data, execution_id)
-            if instance.is_up():
-                with self.lock:
-                    # Checking if it's still free
-                    if self._is_instance_free(instance_data['InstanceId']):
-                        self._set_execution_id_of_instance(
-                            instance, execution_id,
-                            # TODO(sergio): hardcoded to 30 minutes now,
-                            # should be coming in the request
-                            max_idle_seconds=60 * 30)
-                        yield 'started'
-                        return
-                yield 'taken while waiting'
-                instance_data = self._ask_aws_for_new_instance(instance_type)
+        with self.lock:
+            yield 'querying availability'
+            instance_type = execution_spec.get('instance_type')
+            instances_not_assigned = self._get_running_aws_instances([
+                (f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
+                ('instance-type', instance_type)])
+            if len(instances_not_assigned) > 0:
+                instance_data = instances_not_assigned[0]
             else:
-                yield 'pending'
-                time.sleep(delay_in_seconds)
+                yield 'requesting new instance'
+                instance_data = self._ask_aws_for_new_instance(instance_type)
+            dns_name = _get_dns_name(instance_data)
+            yield f'worker dns name is: {dns_name}'
+            while tries_remaining > 0:
+                tries_remaining -= 1
+                instance = self._ec2_instance_from_instance_data(
+                    instance_data, execution_id)
+                if instance.is_up():
 
-    def _is_instance_free(self, instance_id):
-        instances = self._get_running_aws_instances(
-            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
-                     ('instance-id', instance_id)])
-        return len(instances) > 0
-
+                    self._set_execution_id_of_instance(
+                        instance, execution_id,
+                        # TODO(sergio): hardcoded to 30 minutes now, should
+                        # be coming in the request
+                        max_idle_seconds=60 * 30)
+                    yield 'started'
+                    return
+                else:
+                    yield 'pending'
+                    time.sleep(delay_in_seconds)
 
     def instance_for(self, execution_id):
         return self.instances[execution_id]
