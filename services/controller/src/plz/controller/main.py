@@ -31,6 +31,18 @@ else:
 app = Flask(__name__)
 
 
+@app.before_request
+def handle_chunked_input():
+    """
+    Sets the "wsgi.input_terminated" environment flag to tell Werkzeug to pass
+    chunked requests as streams.
+    The Gunicorn server should set the flag, but doesn't.
+    """
+    transfer_encoding = request.headers.get('Transfer-Encoding', None)
+    if transfer_encoding == 'chunked':
+        request.environ['wsgi.input_terminated'] = True
+
+
 @app.route(f'/commands', methods=['POST'])
 def run_command_entrypoint():
     # Test with:
@@ -144,14 +156,14 @@ def delete_process(execution_id):
 
 @app.route('/snapshots', methods=['POST'])
 def create_snapshot():
-    metadata_str = request.input_stream.readline().decode('utf-8')
+    metadata_str = request.stream.readline().decode('utf-8')
     tag = Images.construct_tag(metadata_str)
 
     @stream_with_context
     @_handle_lazy_exceptions(formatter=_format_error)
     def act() -> Iterator[Union[bytes, str]]:
         # Pass the rest of the stream to `docker build`
-        yield from images.build(request.input_stream, tag)
+        yield from images.build(request.stream, tag)
         instance_provider.push(tag)
         yield json.dumps({'id': tag})
 
