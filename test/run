@@ -85,6 +85,10 @@ function controller_running {
   docker container inspect $CONTAINER >& /dev/null
 }
 
+function redact_uuids {
+  sed 's/[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}/<UUID>/'
+}
+
 start_controller
 trap stop_controller EXIT INT TERM
 
@@ -103,12 +107,11 @@ for test in $tests; do
   (
     cd $test
     (
-      PLZ_HOST=localhost PLZ_PORT=$PORT \
-        $PLZ run \
-        --output=$actual_output_directory \
+      PLZ_HOST=localhost PLZ_PORT=$PORT PLZ_QUIET_BUILD=true \
+        $PLZ run --output=$actual_output_directory \
       && echo $? > $exit_status_file \
       || echo $? > $exit_status_file
-    ) |& tee $actual_logs
+    ) |& redact_uuids | tee $actual_logs
   )
   exit_status=$(cat $exit_status_file)
 
