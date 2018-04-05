@@ -164,12 +164,12 @@ class RunCommandOperation(Operation):
         response = requests.get(
             self.url('commands', execution_id, 'output', 'files'),
             stream=True)
+        check_status(response, requests.codes.ok)
         try:
-            check_status(response, requests.codes.ok)
+            os.makedirs(self.output_dir)
         except FileExistsError:
             raise CLIException(
                 f'The output directory "{self.output_dir}" already exists.')
-        os.makedirs(self.output_dir)
         # The response is a tarball we need to extract into `self.output_dir`.
         with tempfile.TemporaryFile() as tarball:
             # `tarfile.open` needs to read from a real file, so we copy to one.
