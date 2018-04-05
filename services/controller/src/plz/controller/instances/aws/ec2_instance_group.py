@@ -184,7 +184,6 @@ class EC2InstanceGroup(InstanceProvider):
                      ('instance-id', instance_id)])
         return len(instances) > 0
 
-
     def instance_for(self, execution_id):
         return self.instances[execution_id]
 
