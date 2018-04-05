@@ -91,7 +91,7 @@ def list_commands_entrypoint():
     return response
 
 
-@app.route('/commands/tidy', methods=['GET'])
+@app.route('/commands/tidy', methods=['POST'])
 def tidy_entry_point():
     instance_provider.tidy_up()
     response = jsonify({})
