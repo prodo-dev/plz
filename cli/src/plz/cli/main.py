@@ -323,7 +323,7 @@ class StopOperation(Operation):
         self.execution_id = execution_id
 
     def run(self):
-        response = requests.get(
+        response = requests.post(
             self.url('commands', self.get_execution_id(), 'stop'))
         check_status(response, requests.codes.no_content)
         log_info('Stopped')
