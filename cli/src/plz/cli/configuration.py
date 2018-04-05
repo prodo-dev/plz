@@ -61,6 +61,7 @@ class Configuration:
         prop.name: prop for prop in [
             Property('host', default='localhost'),
             Property('port', type=int, default=80),
+            Property('quiet_build', type=bool, default=False),
             Property('user', required=True),
             Property('instance_type', default='t2.micro'),
             Property('project', required=True),

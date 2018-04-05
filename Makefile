@@ -4,6 +4,7 @@ SHELL := zsh -e -u
 check:
 	$(MAKE) -C cli check
 	$(MAKE) -C services/controller check
+	./test/run
 
 .PHONY: environment
 environment:

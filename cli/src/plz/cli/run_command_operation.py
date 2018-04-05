@@ -121,7 +121,8 @@ class RunCommandOperation(Operation):
         for json_bytes in response.raw:
             data = json.loads(json_bytes.decode('utf-8'))
             if 'stream' in data:
-                print(data['stream'].rstrip())
+                if not self.configuration.quiet_build:
+                     print(data['stream'].rstrip())
             if 'error' in data:
                 error = True
                 log_error('The snapshot was not successfully created.')
