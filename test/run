@@ -47,7 +47,7 @@ fi
 
 if [[ $# -eq 0 ]]; then
   # Run all tests.
-  tests=($(find $test_directory -mindepth 1 -maxdepth 1 -type d | sort))
+  tests=($(find $test_directory -mindepth 1 -maxdepth 1 -type d -not -name '*.ignored' | sort))
 else
   # Run selected tests.
   # But first, verify all arguments are actually test directories.
