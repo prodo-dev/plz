@@ -10,7 +10,8 @@ def log_info(message):
         print('\x1b[32m', end='')
     print(message, end='')
     if sys.stdout.isatty():
-        print('\x1b[0m')
+        print('\x1b[0m', end='')
+    print()
 
 
 def log_error(message):
@@ -19,4 +20,5 @@ def log_error(message):
         print('\x1b[31m', end='')
     print('❗' if isatty else '!  ', message, end='')
     if isatty:
-        print('\x1b[0m')
+        print('\x1b[0m', end='')
+    print()
