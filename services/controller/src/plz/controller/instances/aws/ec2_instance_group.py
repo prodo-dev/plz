@@ -4,7 +4,7 @@ import socket
 import threading
 import time
 from contextlib import closing
-from typing import Iterator, Optional
+from typing import Dict, Iterator, Optional
 
 import boto3
 
@@ -69,7 +69,7 @@ class EC2InstanceGroup(InstanceProvider):
         self.images = images
         self.acquisition_delay_in_seconds = acquisition_delay_in_seconds
         self.max_acquisition_tries = max_acquisition_tries
-        self.instances = {}
+        self.instances: Dict[str, EC2Instance] = {}
         self.lock = threading.RLock()
         self.filters = [{'Name': f'tag:{EC2Instance.GROUP_NAME_TAG}',
                          'Values': [self.name]}]
@@ -193,6 +193,10 @@ class EC2InstanceGroup(InstanceProvider):
                  'Value': str(idle_since_timestamp)}
             ])
             del self.instances[execution_id]
+
+    def stop_command(self, execution_id: str):
+        instance = self.instances[execution_id]
+        instance.stop_command()
 
     def _get_running_aws_instances(self, filters: [(str, str)]):
         new_filters = [{'Name': n, 'Values': [v]} for (n, v) in filters]

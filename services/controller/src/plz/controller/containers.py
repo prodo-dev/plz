@@ -44,7 +44,7 @@ class Containers:
 
     def rm(self, name: str):
         try:
-            container = self.docker_client.containers.get(name)
+            container = self._get_container(name)
             container.stop()
             container.remove()
         except docker.errors.NotFound:
@@ -52,18 +52,22 @@ class Containers:
 
     def logs(self, name: str, stdout: bool = True, stderr: bool = True) \
             -> Iterator[str]:
-        container = self.docker_client.containers.get(name)
-        return container.logs(stdout=stdout, stderr=stderr,
-                              stream=True, follow=True)
+        return self._get_container(name).logs(
+            stdout=stdout, stderr=stderr, stream=True, follow=True)
 
     def get_state(self, name) -> Optional[ContainerState]:
-        container = self.docker_client.containers.get(name)
-        container_state = container.attrs['State']
+        container_state = self._get_container(name).attrs['State']
         return ContainerState(running=container_state['Running'],
                               status=container_state['Status'],
                               finished_at=_docker_date_to_timestamp(
                                   container_state['FinishedAt']
                               ))
+
+    def stop(self, name):
+        self._get_container(name).stop()
+
+    def _get_container(self, name: str):
+        return self.docker_client.containers.get(name)
 
     @staticmethod
     def _is_container_id(container_id: str):

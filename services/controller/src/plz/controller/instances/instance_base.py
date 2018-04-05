@@ -36,6 +36,10 @@ class Instance(ABC):
         pass
 
     @abstractmethod
+    def stop_command(self):
+        pass
+
+    @abstractmethod
     def dispose(self) -> str:
         pass
 
@@ -102,6 +106,10 @@ class InstanceProvider(ABC):
 
     @abstractmethod
     def instance_iterator(self) -> Iterator[Instance]:
+        pass
+
+    @abstractmethod
+    def stop_command(self, execution_id: str):
         pass
 
     def tidy_up(self):

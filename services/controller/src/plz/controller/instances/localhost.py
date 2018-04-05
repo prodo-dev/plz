@@ -64,3 +64,6 @@ class Localhost(InstanceProvider):
     def instance_iterator(self) \
             -> Iterator[Instance]:
         return iter(self.instances.values())
+
+    def stop_command(self, execution_id):
+        self.containers.stop(execution_id)
