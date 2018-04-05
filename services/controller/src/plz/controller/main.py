@@ -180,7 +180,7 @@ def create_snapshot():
     return Response(act(), mimetype='text/plain')
 
 
-@app.route(f'/commands/<execution_id>/stop')
+@app.route(f'/commands/<execution_id>/stop', methods=['POST'])
 def stop_command_entrypoint(execution_id: str):
     instance_provider.stop_command(execution_id)
     response = jsonify({})

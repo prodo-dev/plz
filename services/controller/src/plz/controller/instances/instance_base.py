@@ -36,6 +36,10 @@ class Instance(ABC):
         pass
 
     @abstractmethod
+    def stop_command(self):
+        pass
+
+    @abstractmethod
     def dispose(self) -> str:
         pass
 
@@ -62,10 +66,6 @@ class Instance(ABC):
         # We happen to have the execution info at hand when calling it,
         # and getting the info is not free (queries to the docker server in the
         # workers), so we allow to pass the info as parameter
-        pass
-
-    @abstractmethod
-    def stop_command(self):
         pass
 
     def get_execution_info(self) -> ExecutionInfo:
