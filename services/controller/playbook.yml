@@ -37,5 +37,5 @@
         restart_policy: unless-stopped
     - name: Set cron job for tidying
       cron:
-        name: "Tyding"
-        job: "curl localhost:{{service_port}}/commands/tidy"
+        name: "Tidying each minute"
+        job: "curl -X POST localhost:{{service_port}}/commands/tidy"
