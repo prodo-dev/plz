@@ -153,12 +153,12 @@ class EC2InstanceGroup(InstanceProvider):
         else:
             yield 'requesting new instance'
             instance_data = self._ask_aws_for_new_instance(instance_type)
+        instance = self._ec2_instance_from_instance_data(
+            instance_data, execution_id)
         dns_name = _get_dns_name(instance_data)
         yield f'worker dns name is: {dns_name}'
         while tries_remaining > 0:
             tries_remaining -= 1
-            instance = self._ec2_instance_from_instance_data(
-                instance_data, execution_id)
             if instance.is_up():
                 with self.lock:
                     # Checking if it's still free
@@ -172,6 +172,8 @@ class EC2InstanceGroup(InstanceProvider):
                         return
                 yield 'taken while waiting'
                 instance_data = self._ask_aws_for_new_instance(instance_type)
+                instance = self._ec2_instance_from_instance_data(
+                    instance_data, execution_id)
             else:
                 yield 'pending'
                 time.sleep(delay_in_seconds)
