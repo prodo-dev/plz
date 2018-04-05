@@ -40,13 +40,27 @@ def on_exception_reraise(message):
 class Operation(ABC):
     def __init__(self, configuration):
         self.prefix = f'http://{configuration.host}:{configuration.port}'
+        self.user = configuration.user
+        self.execution_id = None
 
     def url(self, *path_segments):
         return self.prefix + '/' + '/'.join(path_segments)
 
+    def get_execution_id(self):
+        if self.execution_id is not None:
+            return self.execution_id
+        response = requests.get(
+                self.url('users', self.user, 'last_execution_id'))
+        check_status(response, requests.codes.ok)
+        response_object = json.loads(response.content)
+        if 'execution_id' in response_object:
+            return response_object['execution_id']
+        else:
+            raise ValueError('Expected an execution id')
+
     @staticmethod
     @abstractmethod
-    def prepare_argument_parser(parser):
+    def prepare_argument_parser(parser, args):
         pass
 
     @abstractmethod
@@ -58,7 +72,7 @@ class RunCommandOperation(Operation):
     """Run an arbitrary command on a remote machine."""
 
     @staticmethod
-    def prepare_argument_parser(parser):
+    def prepare_argument_parser(parser, args):
         parser.add_argument('--command', type=str)
         cwd = os.getcwd()
         parser.add_argument('-o', '--output-dir',
@@ -99,6 +113,7 @@ class RunCommandOperation(Operation):
         if snapshot_id:
             execution_spec = {
                 'instance_type': self.configuration.instance_type,
+                'user': self.configuration.user,
             }
             execution_id, ok = self.issue_command(
                 snapshot_id, params, execution_spec)
@@ -240,12 +255,16 @@ class RunCommandOperation(Operation):
 
 class LogsOperation(Operation):
     @staticmethod
-    def prepare_argument_parser(parser):
-        parser.add_argument(dest='execution_id')
+    def prepare_argument_parser(parser, args):
+        # Positional arguments cannot be optional, so we check whether the
+        # execution id was specified and specify the argument only in that
+        # case
+        if len(args) > 1:
+            parser.add_argument('execution_id')
 
     def __init__(self,
                  configuration: Configuration,
-                 execution_id: str):
+                 execution_id: Optional[str] = None):
         super().__init__(configuration)
         self.execution_id = execution_id
 
@@ -263,12 +282,12 @@ class LogsOperation(Operation):
         print()
 
     def run(self):
-        self.display_logs(self.execution_id)
+        self.display_logs(self.get_execution_id())
 
 
 class ListCommandsOperation(Operation):
     @staticmethod
-    def prepare_argument_parser(parser):
+    def prepare_argument_parser(parser, args):
         pass
 
     def run(self):
@@ -294,6 +313,25 @@ class ListCommandsOperation(Operation):
         print(table)
 
 
+class StopOperation(Operation):
+    @staticmethod
+    def prepare_argument_parser(parser, args):
+        if len(args) > 1:
+            # Execution id was specified
+            parser.add_argument(dest='execution_id')
+
+    def __init__(self, configuration: Configuration,
+                 execution_id: Optional[str] = None):
+        super().__init__(configuration)
+        self.execution_id = execution_id
+
+    def run(self):
+        response = requests.post(
+            self.url('commands', self.get_execution_id(), 'stop'))
+        check_status(response, requests.codes.no_content)
+        log_info('Stopped')
+
+
 class RequestException(Exception):
     def __init__(self, response: requests.Response):
         try:
@@ -312,6 +350,7 @@ OPERATIONS: Dict[str, Type[Operation]] = {
     'run': RunCommandOperation,
     'logs': LogsOperation,
     'list': ListCommandsOperation,
+    'stop': StopOperation,
 }
 
 
@@ -326,7 +365,7 @@ def main(args=sys.argv[1:]):
                                        dest='operation_name')
     for name, command in OPERATIONS.items():
         subparser = subparsers.add_parser(name, help=command.__doc__)
-        command.prepare_argument_parser(subparser)
+        command.prepare_argument_parser(subparser, args)
     options = parser.parse_args(args)
 
     try:

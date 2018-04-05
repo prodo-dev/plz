@@ -1,6 +1,7 @@
 import json
 import logging
 import random
+import threading
 import uuid
 from typing import Any, Callable, Iterator, TypeVar, Union
 
@@ -27,6 +28,9 @@ if config.run_commands_locally:
     instance_provider = Localhost.from_config(config)
 else:
     instance_provider = EC2InstanceGroup.from_config(config)
+
+_user_last_execution_id_lock = threading.RLock()
+_user_last_execution_id = dict()
 
 app = Flask(__name__)
 
@@ -81,6 +85,7 @@ def run_command_entrypoint():
 
     response = Response(act(), mimetype='text/plain')
     response.status_code = requests.codes.accepted
+    _set_user_last_execution_id(execution_spec['user'], execution_id)
     return response
 
 
@@ -170,6 +175,25 @@ def create_snapshot():
     return Response(act(), mimetype='text/plain')
 
 
+@app.route(f'/commands/<execution_id>/stop', methods=['POST'])
+def stop_command_entrypoint(execution_id: str):
+    instance_provider.stop_command(execution_id)
+    response = jsonify({})
+    response.status_code = requests.codes.no_content
+    return response
+
+
+@app.route(f'/users/<user>/last_execution_id')
+def last_execution_id_entrypoint(user: str):
+    last_execution_id = _get_user_last_execution_id(user)
+    response_object = {}
+    if last_execution_id is not None:
+        response_object['execution_id'] = last_execution_id
+    response = jsonify(response_object)
+    response.status_code = requests.codes.ok
+    return response
+
+
 def get_command_uuid() -> str:
     # Recommended method for the node if you don't want to disclose the
     # physical address (see Python uuid docs)
@@ -202,6 +226,21 @@ def _handle_lazy_exceptions(formatter: Callable[[str], T]):
 
 def _format_error(message: str) -> bytes:
     return json.dumps({'error': message}).encode('utf-8')
+
+
+def _set_user_last_execution_id(user: str, execution_id: str):
+    _user_last_execution_id_lock.acquire()
+    _user_last_execution_id[user] = execution_id
+    _user_last_execution_id_lock.release()
+
+
+def _get_user_last_execution_id(user: str):
+    last_execution_id = None
+    _user_last_execution_id_lock.acquire()
+    if user in _user_last_execution_id:
+        last_execution_id = _user_last_execution_id[user]
+    _user_last_execution_id_lock.release()
+    return last_execution_id
 
 
 if __name__ == '__main__':

@@ -1,4 +1,3 @@
-import multiprocessing
 import os
 import shlex
 import socket
@@ -81,7 +80,7 @@ class EC2InstanceGroup(InstanceProvider):
                  'Values': [self.name]}
             ],
         )
-        self.lock = multiprocessing.RLock()
+        self.lock = threading.RLock()
         # Lazily initialized by ami_id
         self._ami_id = None
         # Lazily initialized by _instance_initialization_code
@@ -205,6 +204,10 @@ class EC2InstanceGroup(InstanceProvider):
                      'Value': str(idle_since_timestamp)},
                 ])
             del self.instances[execution_id]
+
+    def stop_command(self, execution_id: str):
+        instance = self.instances[execution_id]
+        instance.stop_command()
 
     def _ask_aws_for_new_instance(self, instance_type: str) -> dict:
         response = self.client.run_instances(

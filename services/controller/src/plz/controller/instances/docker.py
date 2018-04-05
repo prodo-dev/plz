@@ -45,6 +45,9 @@ class DockerInstance(Instance):
                             mounts=[Mount(source=volume.name,
                                           target=Volumes.VOLUME_MOUNT)])
 
+    def stop_command(self):
+        self.containers.stop(self.execution_id)
+
     def logs(self, stdout: bool = True, stderr: bool = True):
         return self.containers.logs(self.execution_id,
                                     stdout=stdout,
