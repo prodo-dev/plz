@@ -69,7 +69,7 @@ class RunCommandOperation(Operation):
             }
             execution_id, ok = self.issue_command(
                 snapshot_id, params, execution_spec)
-            log_info(f'Execution id is:\n\n        {execution_id}')
+            log_info(f'Execution ID is: {execution_id}')
             if execution_id:
                 if ok:
                     logs = LogsOperation(self.configuration, execution_id)

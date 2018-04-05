@@ -13,7 +13,7 @@ class LogsOperation(Operation):
     @staticmethod
     def prepare_argument_parser(parser, args):
         # Positional arguments cannot be optional, so we check whether the
-        # execution id was specified and specify the argument only in that
+        # execution ID was specified and specify the argument only in that
         # case
         if len(args) > 1:
             parser.add_argument('execution_id')

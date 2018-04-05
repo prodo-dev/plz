@@ -11,7 +11,7 @@ class StopCommandOperation(Operation):
     @staticmethod
     def prepare_argument_parser(parser, args):
         if len(args) > 1:
-            # Execution id was specified
+            # Execution ID was specified
             parser.add_argument(dest='execution_id')
 
     def __init__(self, configuration: Configuration,

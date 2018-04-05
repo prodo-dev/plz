@@ -1,9 +1,7 @@
 => Capturing the context
 => Building the program snapshot
 => Issuing the command on a new box
-=> Execution id is:
-
-        <UUID>
+=> Execution ID is: <UUID>
 => Streaming logs...
 0
 1

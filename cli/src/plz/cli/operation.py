@@ -25,7 +25,7 @@ class Operation(ABC):
         if 'execution_id' in response_object:
             return response_object['execution_id']
         else:
-            raise ValueError('Expected an execution id')
+            raise ValueError('Expected an execution ID')
 
     @staticmethod
     @abstractmethod
