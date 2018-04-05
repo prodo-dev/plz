@@ -1,0 +1,38 @@
+=> Capturing the context
+=> Building the program snapshot
+Step 1/4 : FROM python:3-slim
+
+ ---> e7455bcafa38
+Step 2/4 : WORKDIR /app
+
+ ---> Using cache
+ ---> 25b3952e7fe8
+Step 3/4 : COPY . ./
+
+ ---> 61cbcfc343d8
+Step 4/4 : CMD ['./main.py']
+
+ ---> Running in ad65c1fc7c52
+Removing intermediate container ad65c1fc7c52
+ ---> 58ab4710008a
+Successfully built 58ab4710008a
+Successfully tagged 024444204267.dkr.ecr.eu-west-1.amazonaws.com/plz/builds:plz-test-02-output-1522938117820
+=> Issuing the command on a new box
+=> Execution id is:
+
+        b3362078-38dc-11e8-8cdb-cd5dd2101fa8
+=> Streaming logs...
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+
+=> Retrieving the output...
+=> Cleaning up all detritus...
+=> Done and dusted.

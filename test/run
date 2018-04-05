@@ -1,0 +1,145 @@
+#!/usr/bin/env zsh
+
+set -e
+set -u
+set -o pipefail
+
+autoload -U colors && colors
+
+IMAGE=plz-controller-test
+CONTAINER=plz-controller-test
+PORT=5050
+
+if [[ -t 1 ]]; then
+  function info {
+    echo "${fg[green]}>${reset_color} $@"
+  }
+  function warning {
+    echo "${fg[yellow]}>${reset_color} $@"
+  }
+  function error {
+    echo "${fg[red]}>${reset_color} $@"
+  }
+else
+  function info {
+    echo > $@
+  }
+  function warning {
+    echo > $@
+  }
+  function error {
+    echo > $@
+  }
+fi
+
+cd ${0:a:h:h}
+PLZ="${PWD}/plz"
+
+test_directory=${0:a:h}
+tests=($(find $test_directory -mindepth 1 -maxdepth 1 -type d | sort))
+bless=false
+
+# In "bless mode", instead of comparing the actual output against expected
+# output, we save the output.
+if [[ $# -gt 0 && $1 == '--bless' ]]; then
+  bless=true
+fi
+
+function start_controller {
+  info "Building the controller..."
+  docker image build --quiet --tag=$IMAGE services/controller
+
+  if controller_running; then
+    warning "Controller already exists. Stopping..."
+    stop_controller
+  fi
+
+  info "Starting the controller..."
+  docker container run \
+    --name=$CONTAINER \
+    --detach \
+    --publish=$PORT:8080 \
+    --env=AWS_DEFAULT_REGION=eu-west-1 \
+    --volume=/var/run/docker.sock:/var/run/docker.sock \
+    $IMAGE \
+    --run-commands-locally \
+    --environment-name=ignore --aws-project=ignore --aws-worker-ami=ignore --aws-key-name=ignore
+  sleep 5
+  info "Controller started."
+}
+
+function stop_controller {
+  exit_status=$?
+  if ! controller_running; then
+    return $exit_status
+  fi
+  docker container stop $CONTAINER > /dev/null || :
+  info "Controller logs:"
+  docker container logs $CONTAINER || :
+  docker container rm $CONTAINER > /dev/null || :
+  info "Controller stopped."
+  return $exit_status
+}
+
+function controller_running {
+  docker container inspect $CONTAINER >& /dev/null
+}
+
+start_controller
+trap stop_controller EXIT INT TERM
+
+success=true
+for test in $tests; do
+  echo
+  info "Running ${test:t}..."
+
+  exit_status_file=$(mktemp "${TMPDIR:-/tmp/}/plz-test-status.XXXXX")
+  expected_logs="${test}/expected-logs"
+  actual_logs=$(mktemp "${TMPDIR:-/tmp/}/plz-test-logs.XXXXX")
+  expected_output_directory="${test}/expected-output"
+  actual_output_directory=$(mktemp "${TMPDIR:-/tmp/}/plz-test-output.XXXXX")
+  rm $actual_output_directory # It's been created as a file.
+
+  (
+    cd $test
+    (
+      PLZ_HOST=localhost PLZ_PORT=$PORT \
+        $PLZ run \
+        --output=$actual_output_directory \
+      && echo $? > $exit_status_file \
+      || echo $? > $exit_status_file
+    ) |& tee $actual_logs
+  )
+  exit_status=$(cat $exit_status_file)
+
+  if $bless; then
+    if [[ $exit_status -eq 0 ]]; then
+      info "Blessing output..."
+      cp $actual_logs $expected_logs
+      rm -rf $expected_output_directory
+      cp -R $actual_output_directory $expected_output_directory
+      info 'Test blessed.'
+    else
+      error "Exited with a status code of ${exit_status}."
+      success=false
+    fi
+  else
+    if [[ $exit_status -gt 0 ]]; then
+      success=false
+      error "Exited with a status code of ${exit_status}."
+      error 'Test failed.'
+    else
+      info "Comparing output..."
+      if git diff --no-index $expected_logs $actual_logs && \
+         git diff --no-index $expected_output_directory $actual_output_directory; then
+        info 'Test passed.'
+      else
+        success=false
+        error 'Test failed.'
+      fi
+    fi
+  fi
+done
+
+echo
+$success
