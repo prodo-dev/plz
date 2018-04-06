@@ -284,8 +284,10 @@ def _get_ignored_git_files() -> [str]:
     # want to commit files and instruct the test to ignore them. If it's
     # annoying for users this can be changed in the future
     try:
+        all_files = os.linesep.join(iglob('**', recursive=True))
         result = subprocess.run(
-            ['bash', '-c', 'find | git check-ignore --stdin --no-index'],
+            ['git', 'check-ignore', '--stdin', '--no-index'],
+            input=all_files,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             encoding='utf-8')
