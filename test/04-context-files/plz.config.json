@@ -1,0 +1,16 @@
+{
+  "user": "plz-test",
+  "project": "03-context-files",
+  "port": 9000,
+  "image": "python:3-slim",
+  "instance_type": "t2.small",
+  "command": [
+    "./main.py"
+  ],
+  "excluded_paths": [
+    "file_managed_by_git"
+  ],
+  "included_paths": [
+    "file_ignored_by_git"
+  ]
+}

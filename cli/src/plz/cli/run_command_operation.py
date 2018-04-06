@@ -239,6 +239,10 @@ def _get_excluded_paths(configuration: Configuration):
 
 
 def _get_ignored_git_files() -> [str]:
+    # Using --no-index, so that .gitignored but indexed files need to be
+    # included explicitly. This is easy for development as, when testing, we
+    # want to commit files and instruct the test to ignore them. If it's
+    # annoying for users this can be changed in the future
     result = subprocess.run(
         ['bash', '-c', 'find | git check-ignore --stdin --no-index'],
         stdout=subprocess.PIPE,
