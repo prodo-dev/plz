@@ -3,18 +3,8 @@
 => Issuing the command on a new box
 => Execution ID is: <UUID>
 => Streaming logs...
-0
-1
-2
-3
-4
-5
-6
-7
-8
-9
+Exiting with a status code of 42.
 
-=> Execution succeeded.
-=> Retrieving the output...
+!   Execution failed with an exit status of 42.
 => Cleaning up all detritus...
 => Done and dusted.
