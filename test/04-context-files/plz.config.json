@@ -1,9 +1,7 @@
 {
   "user": "plz-test",
-  "project": "03-context-files",
-  "port": 9000,
+  "project": "04-context-files",
   "image": "python:3-slim",
-  "instance_type": "t2.small",
   "command": [
     "./main.py"
   ],

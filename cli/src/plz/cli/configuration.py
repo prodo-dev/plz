@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Dict, List, Type, TypeVar, Optional
+from typing import Any, Dict, List, Optional, Type, TypeVar
 
 T = TypeVar('T')
 
