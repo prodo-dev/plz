@@ -81,7 +81,7 @@ class LocalInputData(InputData):
     def publish(self):
         input_id = self._compute_input_id()
         if not self._has_input(input_id):
-            self._put_tarball()
+            self._put_tarball(input_id)
         return input_id
 
     def _compute_input_id(self):
@@ -94,14 +94,14 @@ class LocalInputData(InputData):
             file_hash.update(data)
         return file_hash.hexdigest()
 
-    def _has_input(self, input_id):
+    def _has_input(self, input_id: str):
         response = requests.head(self.url('data', 'input', input_id))
         return response.status_code == requests.codes.ok
 
-    def _put_tarball(self):
+    def _put_tarball(self, input_id: str):
         self.tarball.seek(0)
-        response = requests.post(self.url('data', 'input'),
-                                 data=self.tarball,
-                                 stream=True)
+        response = requests.put(self.url('data', 'input', input_id),
+                                data=self.tarball,
+                                stream=True)
         check_status(response, requests.codes.ok)
         return response.json()['id']

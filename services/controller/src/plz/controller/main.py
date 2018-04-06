@@ -226,8 +226,15 @@ def check_input_data(input_id: str):
         abort(404)
 
 
-@app.route('/data/input', methods=['POST'])
-def publish_input_data():
+@app.route('/data/input/<expected_input_id>', methods=['PUT'])
+def publish_input_data(expected_input_id: str):
+    input_file_path = os.path.join(input_dir, expected_input_id)
+    if os.path.exists(input_file_path):
+        request.stream.close()
+        return jsonify({
+            'id': expected_input_id,
+        })
+
     file_hash = hashlib.sha256()
     fd, temp_file_path = tempfile.mkstemp(dir=temp_data_dir)
     try:
@@ -238,8 +245,12 @@ def publish_input_data():
                     break
                 f.write(data)
                 file_hash.update(data)
+
         input_id = file_hash.hexdigest()
-        os.rename(temp_file_path, os.path.join(input_dir, input_id))
+        if input_id != expected_input_id:
+            abort(400, 'The input ID was incorrect.')
+
+        os.rename(temp_file_path, input_file_path)
         return jsonify({
             'id': input_id,
         })
