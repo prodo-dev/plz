@@ -54,8 +54,6 @@ class Volumes:
     OUTPUT_DIRECTORY = 'output'
     OUTPUT_DIRECTORY_PATH = os.path.join(VOLUME_MOUNT, OUTPUT_DIRECTORY)
 
-    _DUMMY_IMAGE_NAME = 'busybox'
-
     @staticmethod
     def for_host(docker_url):
         docker_client = docker.DockerClient(base_url=docker_url)
@@ -67,21 +65,29 @@ class Volumes:
     def create(self, name: str, objects: List[VolumeObject]) -> Volume:
         root = '/output'
         volume = self.docker_client.volumes.create(name)
-        container = self.docker_client.containers.create(
-            image=self._dummy_image(),
-            mounts=[Mount(source=volume.name, target=root)])
-        for volume_object in objects:
-            volume_object.put_in(container, root)
-        container.remove()
+        container = self.docker_client.containers.run(
+            image=self._busybox_image(),
+            command=['cat'],  # wait forever
+            mounts=[Mount(source=volume.name, target=root)],
+            stdin_open=True,
+            remove=True,
+            detach=True)
+        try:
+            for volume_object in objects:
+                volume_object.put_in(container, root)
+        finally:
+            container.stop()
         return volume
 
     def get_files(self, volume_name: str, path: str) -> Iterator[bytes]:
         container = self.docker_client.containers.create(
-            image=self._dummy_image(),
+            image=self._busybox_image(),
             mounts=[Mount(source=volume_name, target='/input')])
-        tar, _ = container.get_archive(os.path.join('/input', path))
-        yield from tar
-        container.remove()
+        try:
+            tar, _ = container.get_archive(os.path.join('/input', path))
+            yield from tar
+        finally:
+            container.remove()
 
     def remove(self, name: str):
         try:
@@ -90,9 +96,9 @@ class Volumes:
         except docker.errors.NotFound:
             pass
 
-    def _dummy_image(self):
+    def _busybox_image(self):
         try:
-            self.docker_client.images.get(self._DUMMY_IMAGE_NAME)
+            self.docker_client.images.get('busybox')
         except docker.errors.NotFound:
-            self.docker_client.images.pull(self._DUMMY_IMAGE_NAME, 'latest')
-        return self._DUMMY_IMAGE_NAME
+            self.docker_client.images.pull('busybox', 'latest')
+        return 'busybox'
