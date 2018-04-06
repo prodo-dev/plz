@@ -14,7 +14,7 @@ import requests
 
 from plz.cli import parameters
 from plz.cli.configuration import Configuration
-from plz.cli.exceptions import CLIException
+from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
 from plz.cli.log import log_error, log_info
 from plz.cli.logs_operation import LogsOperation
 from plz.cli.operation import Operation, check_status, on_exception_reraise
@@ -67,42 +67,43 @@ class RunCommandOperation(Operation):
         build_context = self.capture_build_context()
         log_info('Building the program snapshot')
         snapshot_id = self.submit_context_for_building(build_context)
+        if not snapshot_id:
+            raise CLIException('We did not receive a snapshot ID.')
 
-        status = None
-        ok = False
+        execution_spec = {
+            'instance_type': self.configuration.instance_type,
+            'user': self.configuration.user,
+        }
+        execution_id, ok = self.issue_command(
+            snapshot_id, params, execution_spec)
+        if not execution_id:
+            raise CLIException('We did not receive an execution ID.')
+        log_info(f'Execution ID is: {execution_id}')
 
-        if snapshot_id:
-            execution_spec = {
-                'instance_type': self.configuration.instance_type,
-                'user': self.configuration.user,
-            }
-            execution_id, ok = self.issue_command(
-                snapshot_id, params, execution_spec)
-            log_info(f'Execution ID is: {execution_id}')
-            if execution_id:
-                if ok:
-                    logs = LogsOperation(self.configuration, execution_id)
-                    logs.display_logs(execution_id)
-                    status = self.get_status(execution_id)
-                    if status.running:
-                        log_error('Execution has not finished.'
-                                  ' This should not happen.'
-                                  ' Please report it.')
-                    elif status.success:
-                        log_info('Execution succeeded.')
-                        self.retrieve_output_files(execution_id)
-                    else:
-                        log_error('Execution failed'
-                                  f' with an exit status of {status.code}.')
-                self.cleanup(execution_id)
+        try:
+            if not ok:
+                raise CLIException('The command failed.')
+            logs = LogsOperation(self.configuration, execution_id)
+            logs.display_logs(execution_id)
+            status = self.get_status(execution_id)
+            if status.running:
+                raise CLIException(
+                    'Execution has not finished. This should not happen.'
+                    ' Please report it.')
+            elif status.success:
+                log_info('Execution succeeded.')
+                self.retrieve_output_files(execution_id)
+                return status.code
+            else:
+                raise CLIException(
+                    f'Execution failed with an exit status of {status.code}.',
+                    exit_code=status.code)
+        except CLIException as e:
+            e.print(self.configuration)
+            raise ExitWithStatusCodeException(e.exit_code)
+        finally:
+            self.cleanup(execution_id)
             log_info('Done and dusted.')
-
-        if status:
-            return status.code
-        elif ok:
-            return 0
-        else:
-            return 1
 
     def capture_build_context(self):
         context_dir = os.getcwd()

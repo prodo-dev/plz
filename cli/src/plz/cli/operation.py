@@ -1,6 +1,5 @@
 import json
 from abc import ABC, abstractmethod
-from typing import Optional
 
 import requests
 
@@ -10,6 +9,7 @@ from plz.cli.exceptions import CLIException
 
 class Operation(ABC):
     def __init__(self, configuration: Configuration):
+        self.configuration = configuration
         self.prefix = f'http://{configuration.host}:{configuration.port}'
         self.user = configuration.user
         self.execution_id = None
@@ -35,7 +35,7 @@ class Operation(ABC):
         pass
 
     @abstractmethod
-    def run(self) -> Optional[int]:
+    def run(self):
         pass
 
 
