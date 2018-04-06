@@ -114,6 +114,11 @@ for test in $tests; do
   info "Running ${test:t}..."
 
   exit_status_file=$(mktemp "${TMPDIR:-/tmp/}/plz-test-status.XXXXX")
+  if [[ -f "${test}/expected-status" ]]; then
+    expected_exit_status=$(cat "${test}/expected-status")
+  else
+    expected_exit_status=0
+  fi
   expected_logs="${test}/expected-logs"
   actual_logs=$(mktemp "${TMPDIR:-/tmp/}/plz-test-logs.XXXXX")
   expected_output_directory="${test}/expected-output"
@@ -129,28 +134,32 @@ for test in $tests; do
       || echo $? > $exit_status_file
     ) |& redact_uuids | tee $actual_logs
   )
-  exit_status=$(cat $exit_status_file)
+  actual_exit_status=$(cat $exit_status_file)
 
   if $bless; then
-    if [[ $exit_status -eq 0 ]]; then
+    if [[ $actual_exit_status -eq $expected_exit_status ]]; then
       info "Blessing output..."
       cp $actual_logs $expected_logs
       rm -rf $expected_output_directory
-      cp -R $actual_output_directory $expected_output_directory
+      if [[ -e $actual_output_directory ]]; then
+        cp -R $actual_output_directory $expected_output_directory
+      fi
       info 'Test blessed.'
     else
-      error "Exited with a status code of ${exit_status}."
+      error "Exited with a status code of ${actual_exit_status}."
       success=false
     fi
   else
-    if [[ $exit_status -gt 0 ]]; then
+    if [[ $actual_exit_status -ne $expected_exit_status ]]; then
       success=false
-      error "Exited with a status code of ${exit_status}."
+      error "Exited with a status code of ${actual_exit_status}."
+      error "Expected a status code of ${expected_exit_status}."
       error 'Test failed.'
     else
       info "Comparing output..."
       if git diff --no-index $expected_logs $actual_logs && \
-         git diff --no-index $expected_output_directory $actual_output_directory; then
+         ( ! [[ -e $expected_output_directory ]] || \
+           git diff --no-index $expected_output_directory $actual_output_directory ); then
         info 'Test passed.'
       else
         success=false

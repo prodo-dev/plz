@@ -138,7 +138,7 @@ class EC2InstanceGroup(InstanceProvider):
         Gets an available instance for the execution with the given id.
 
         If there's at least one instance in the group that is not running
-        a command, assign the execution id to one of them and return it.
+        a command, assign the execution ID to one of them and return it.
         Otherwise, increase the desired capacity of the group and try until
         the maximum number of trials.
         """
