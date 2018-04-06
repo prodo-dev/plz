@@ -68,9 +68,10 @@ class LocalInputData(InputData):
         self.tarball = tempfile.NamedTemporaryFile()
         with tarfile.open(self.tarball.name, mode='w:bz2') as tar:
             for file in files:
+                name = os.path.relpath(file, self.path)
+                stats = os.stat(file)
                 with open(file, 'rb') as f:
-                    stats = os.stat(file)
-                    tarinfo = tarfile.TarInfo(name=self.path)
+                    tarinfo = tarfile.TarInfo(name=name)
                     tarinfo.size = stats.st_size
                     tar.addfile(tarinfo, fileobj=f)
         return self
