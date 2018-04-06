@@ -3,7 +3,7 @@ import sys
 from typing import Dict, Type
 
 from plz.cli.configuration import Configuration, ValidationException
-from plz.cli.exceptions import CLIException
+from plz.cli.exceptions import CLIException, ExitCodeException
 from plz.cli.list_commands_operation import ListCommandsOperation
 from plz.cli.logs_operation import LogsOperation
 from plz.cli.operation import Operation
@@ -40,11 +40,12 @@ def main(args=sys.argv[1:]):
     command = OPERATIONS[operation_name](
         configuration=configuration, **option_dict)
     try:
-        exit_status = command.run()
-        sys.exit(exit_status)
+        command.run()
     except CLIException as e:
         e.print(configuration)
-        sys.exit(1)
+        sys.exit(e.exit_code)
+    except ExitCodeException as e:
+        sys.exit(e.exit_code)
 
 
 if __name__ == '__main__':
