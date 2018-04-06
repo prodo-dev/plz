@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import tarfile
 import tempfile
+import traceback
 from glob import iglob
 from typing import Optional, Tuple
 
@@ -242,8 +243,9 @@ class RunCommandOperation(Operation):
 
 
 class GitError(Exception):
-    def __init__(self, msg):
-        super().__init__(msg)
+    def __init__(self, cause):
+        super().__init__()
+        self.__cause__ = cause
 
 
 def _get_excluded_paths(configuration: Configuration):
@@ -253,22 +255,23 @@ def _get_excluded_paths(configuration: Configuration):
     included_paths = set(os.path.abspath(ip)
                          for p in configuration.included_paths
                          for ip in iglob(p, recursive=True))
-    ignored_git_files = []
-    if configuration.use_git_for_context is None \
-            or configuration.use_git_for_context:
+    git_ignored_files = []
+    if configuration.exclude_gitignored_files is None \
+            or configuration.exclude_gitignored_files:
         try:
-            ignored_git_files = _get_ignored_git_files()
+            git_ignored_files = _get_ignored_git_files()
         except GitError as e:
             # User explicitly asked for git, raise exception
-            if configuration.use_git_for_context:
+            if configuration.exclude_gitignored_files:
                 raise e
             # User didn't ask for git explicitly, inform the user in case this
             # is unexpected
-            log_info('Can\'t use git for determining excluded files. '
-                     'You can avoid this message by running plz inside a git '
-                     'repository or setting use_git_for_context to false '
-                     'in the configuration')
-    excluded_paths += ignored_git_files
+            log_info('Couldn\'t use git for determining excluded files.\n'
+                     'You can avoid this message by running `plz` inside a\n'
+                     'git repository or setting "exclude_gitignored_files"\n'
+                     'to `false` in the configuration. Exception info:\n')
+            print(traceback.format_exc())
+    excluded_paths += git_ignored_files
     ep = [p[len(os.path.abspath('.')) + 1:]
           for p in excluded_paths if p not in included_paths]
     return ep
@@ -279,17 +282,20 @@ def _get_ignored_git_files() -> [str]:
     # included explicitly. This is easy for development as, when testing, we
     # want to commit files and instruct the test to ignore them. If it's
     # annoying for users this can be changed in the future
-    result = subprocess.run(
-        ['bash', '-c', 'find | git check-ignore --stdin --no-index'],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding='utf-8')
-    return_code = result.returncode
-    # When there are no ignored files it returns with exit code 1
-    correct_return_code = return_code == 0 or (
-            return_code == 1 and result.stdout == '')
-    if not correct_return_code or result.stderr != '':
-        raise SystemError('Cannot list files from git.\n'
-                          f'Return code is: {result.returncode}\n'
-                          f'Stderr: [{result.stderr}]')
-    return [os.path.abspath(p) for p in result.stdout.splitlines()]
+    try:
+        result = subprocess.run(
+            ['bash', '-c', 'find | git check-ignore --stdin --no-index'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding='utf-8')
+        return_code = result.returncode
+        # When there are no ignored files it returns with exit code 1
+        correct_return_code = return_code == 0 or (
+                return_code == 1 and result.stdout == '')
+        if not correct_return_code or result.stderr != '':
+            raise SystemError('Cannot list files from git.\n'
+                              f'Return code is: {result.returncode}\n'
+                              f'Stderr: [{result.stderr}]')
+        return [os.path.abspath(p) for p in result.stdout.splitlines()]
+    except Exception as e:
+        raise GitError(e)

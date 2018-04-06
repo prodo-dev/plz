@@ -1,4 +1,1 @@
-This file is ignored by git, but we wanna have it.
-It could be something we need at the moment but we
-don't want to put it our repo, or something like
-that, y'know...
+This shouldn't be present in the snapshot

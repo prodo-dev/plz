@@ -6,9 +6,9 @@
     "./main.py"
   ],
   "excluded_paths": [
-    "file_managed_by_git"
+    "file_managed_by_git_excluded"
   ],
   "included_paths": [
-    "file_ignored_by_git"
+    "file_ignored_by_git_included_explicitly"
   ]
 }

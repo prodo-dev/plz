@@ -7,6 +7,9 @@ This file is ignored by git, but we wanna have it.
 It could be something we need at the moment but we
 don't want to put it our repo, or something like
 that, y'know...
+A file managed by git that we want in the snapshot.
+Source code? Data? Some silly text typed by a bored
+developer?
 
 => Execution succeeded.
 => Retrieving the output...

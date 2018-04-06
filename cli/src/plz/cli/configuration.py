@@ -72,7 +72,8 @@ class Configuration:
             # Whether to consider the files ignored by git as excluded,
             # (save for when they are included explicitly).
             # Value of None means "use git if available"
-            Property('use_git_for_context', type=Optional[bool], default=None),
+            Property('exclude_gitignored_files',
+                     type=Optional[bool], default=None),
             # Paths to include, as to override exclusion (must be paths under
             # the current work directory)
             Property('included_paths', type=list, default=[]),
