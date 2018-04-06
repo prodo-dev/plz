@@ -11,7 +11,7 @@ from typing import Any, Callable, Iterator, TypeVar, Union
 import boto3
 import docker
 import requests
-from flask import Flask, Response, jsonify, request, stream_with_context
+from flask import Flask, Response, abort, jsonify, request, stream_with_context
 
 from plz.controller.controller_config import config
 from plz.controller.images import Images
@@ -213,6 +213,17 @@ def create_snapshot():
         yield json.dumps({'id': tag})
 
     return Response(act(), mimetype='text/plain')
+
+
+@app.route('/data/input/<input_id>', methods=['HEAD'])
+def check_input_data(input_id: str):
+    input_file_path = os.path.join(input_dir, input_id)
+    if os.path.exists(input_file_path):
+        return jsonify({
+            'id': input_id,
+        })
+    else:
+        abort(404)
 
 
 @app.route('/data/input', methods=['POST'])

@@ -75,8 +75,8 @@ class RunCommandOperation(Operation):
 
         if self.configuration.input:
             log_info('Capturing the input')
-        with InputData.from_string(self.configuration.input) as input_data:
-            input_id = input_data.publish(self.url)
+        with InputData.from_configuration(self.configuration) as input_data:
+            input_id = input_data.publish()
             execution_spec = {
                 'instance_type': self.configuration.instance_type,
                 'user': self.configuration.user,
