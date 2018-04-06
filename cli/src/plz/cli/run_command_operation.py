@@ -14,7 +14,7 @@ import requests
 
 from plz.cli import parameters
 from plz.cli.configuration import Configuration
-from plz.cli.exceptions import CLIException, ExitCodeException
+from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
 from plz.cli.log import log_error, log_info
 from plz.cli.logs_operation import LogsOperation
 from plz.cli.operation import Operation, check_status, on_exception_reraise
@@ -100,7 +100,7 @@ class RunCommandOperation(Operation):
                     exit_code=status.code)
         except CLIException as e:
             e.print(self.configuration)
-            raise ExitCodeException(e.exit_code)
+            raise ExitWithStatusCodeException(e.exit_code)
         finally:
             self.cleanup(execution_id)
             log_info('Done and dusted.')
