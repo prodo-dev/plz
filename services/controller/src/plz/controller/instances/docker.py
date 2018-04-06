@@ -7,7 +7,7 @@ from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
 from plz.controller.instances.instance_base import \
     ExecutionInfo, Instance, Parameters
-from plz.controller.volumes import VolumeDirectory, VolumeFile, Volumes
+from plz.controller.volumes import VolumeEmptyDirectory, VolumeFile, Volumes
 
 
 class DockerInstance(Instance):
@@ -30,7 +30,7 @@ class DockerInstance(Instance):
             'parameters': parameters
         }
         volume = self.volumes.create(self.volume_name, [
-            VolumeDirectory(Volumes.OUTPUT_DIRECTORY),
+            VolumeEmptyDirectory(Volumes.OUTPUT_DIRECTORY),
             VolumeFile(Volumes.CONFIGURATION_FILE,
                        contents=json.dumps(configuration, indent=2)),
         ])

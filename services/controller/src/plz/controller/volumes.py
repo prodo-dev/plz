@@ -7,13 +7,14 @@ from typing import Iterator, List
 
 import docker
 import docker.errors
+from docker.models.containers import Container
 from docker.models.volumes import Volume
 from docker.types import Mount
 
 
 class VolumeObject(ABC):
     @abstractmethod
-    def add_to(self, tar: tarfile.TarFile):
+    def put_in(self, container: Container, root: str):
         pass
 
 
@@ -22,20 +23,28 @@ class VolumeFile(VolumeObject):
         self.path = path
         self.contents: bytes = contents.encode('utf-8')
 
-    def add_to(self, tar: tarfile.TarFile):
-        tarinfo = tarfile.TarInfo(name=self.path)
-        tarinfo.size = len(self.contents)
-        tar.addfile(tarinfo, fileobj=io.BytesIO(self.contents))
+    def put_in(self, container: Container, root: str):
+        with tempfile.NamedTemporaryFile() as f:
+            with tarfile.open(f.name, mode='w') as tar:
+                tarinfo = tarfile.TarInfo(name=self.path)
+                tarinfo.size = len(self.contents)
+                tar.addfile(tarinfo, fileobj=io.BytesIO(self.contents))
+            f.seek(0)
+            container.put_archive(root, f)
 
 
-class VolumeDirectory(VolumeObject):
+class VolumeEmptyDirectory(VolumeObject):
     def __init__(self, path: str):
         self.path = path
 
-    def add_to(self, tar: tarfile.TarFile):
-        tarinfo = tarfile.TarInfo(name=self.path)
-        tarinfo.type = tarfile.DIRTYPE
-        tar.addfile(tarinfo)
+    def put_in(self, container: Container, root: str):
+        with tempfile.NamedTemporaryFile() as f:
+            with tarfile.open(f.name, mode='w') as tar:
+                tarinfo = tarfile.TarInfo(name=self.path)
+                tarinfo.type = tarfile.DIRTYPE
+                tar.addfile(tarinfo)
+            f.seek(0)
+            container.put_archive(root, f)
 
 
 class Volumes:
@@ -56,18 +65,13 @@ class Volumes:
         self.docker_client = docker_client
 
     def create(self, name: str, objects: List[VolumeObject]) -> Volume:
-        with tempfile.NamedTemporaryFile() as f:
-            with tarfile.open(f.name, mode='w') as tar:
-                for volume_object in objects:
-                    volume_object.add_to(tar)
-            f.seek(0)
-            tarball = f.read()
-
+        root = '/output'
         volume = self.docker_client.volumes.create(name)
         container = self.docker_client.containers.create(
             image=self._dummy_image(),
-            mounts=[Mount(source=volume.name, target='/output')])
-        container.put_archive('/output', tarball)
+            mounts=[Mount(source=volume.name, target=root)])
+        for volume_object in objects:
+            volume_object.put_in(container, root)
         container.remove()
         return volume
 
