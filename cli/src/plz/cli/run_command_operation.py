@@ -5,8 +5,10 @@ import json
 import os
 import os.path
 import shutil
+import subprocess
 import tarfile
 import tempfile
+from glob import iglob
 from typing import Optional, Tuple
 
 import docker.utils.build
@@ -121,7 +123,7 @@ class RunCommandOperation(Operation):
             os.chmod(dockerfile_path, 0o644)
             build_context = docker.utils.build.tar(
                 path='.',
-                exclude=self.configuration.excluded_paths,
+                exclude=_get_excluded_paths(self.configuration),
                 gzip=True,
             )
         except FileExistsError as e:
@@ -238,3 +240,62 @@ class RunCommandOperation(Operation):
         log_info('Cleaning up all detritus...')
         response = requests.delete(self.url('commands', execution_id))
         check_status(response, requests.codes.no_content)
+
+
+def _is_git_present() -> bool:
+    # noinspection PyBroadException
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', '--show-toplevel'],
+            input=None,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding='utf-8')
+        return result.returncode == 0 and result.stderr == '' and \
+            len(result.stdout) > 0
+    except Exception:
+        return False
+
+
+def _get_excluded_paths(configuration: Configuration):
+    excluded_paths = [os.path.abspath(ep)
+                      for p in configuration.excluded_paths
+                      for ep in iglob(p, recursive=True)]
+    included_paths = set(os.path.abspath(ip)
+                         for p in configuration.included_paths
+                         for ip in iglob(p, recursive=True))
+    git_ignored_files = []
+
+    # A value of None means "exclude if git is available"
+    use_git = configuration.exclude_gitignored_files or (
+        configuration.exclude_gitignored_files is None and _is_git_present())
+
+    if use_git:
+        git_ignored_files = _get_ignored_git_files()
+    excluded_paths += git_ignored_files
+    ep = [p[len(os.path.abspath('.')) + 1:]
+          for p in excluded_paths if p not in included_paths]
+    return ep
+
+
+def _get_ignored_git_files() -> [str]:
+    all_files = os.linesep.join(iglob('**', recursive=True))
+    # Using --no-index, so that .gitignored but indexed files need to be
+    # included explicitly. This is easy for development as, when testing, we
+    # want to commit files and instruct the test to ignore them. If it's
+    # annoying for users this can be changed in the future
+    result = subprocess.run(
+        ['git', 'check-ignore', '--stdin', '--no-index'],
+        input=all_files,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        encoding='utf-8')
+    return_code = result.returncode
+    # When there are no ignored files it returns with exit code 1
+    correct_return_code = return_code == 0 or (
+            return_code == 1 and result.stdout == '')
+    if not correct_return_code or result.stderr != '':
+        raise SystemError('Cannot list files from git.\n'
+                          f'Return code is: {result.returncode}\n'
+                          f'Stderr: [{result.stderr}]')
+    return [os.path.abspath(p) for p in result.stdout.splitlines()]

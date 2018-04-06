@@ -71,16 +71,20 @@ class Instance(ABC):
     def get_execution_info(self) -> ExecutionInfo:
         container_state = self.get_container_state()
         if container_state is None:
-            container_state = ContainerState(
-                running='False', status='idle',
-                finished_at=self.get_idle_since_timestamp())
+            running = False
+            status = 'idle'
+            idle_since_timestamp = self.get_idle_since_timestamp()
+        else:
+            running = container_state.running
+            status = container_state.status
+            idle_since_timestamp = self.get_idle_since_timestamp(
+                container_state)
         return ExecutionInfo(
             instance_type=self.get_instance_type(),
             execution_id=self.get_execution_id(),
-            running=container_state.running,
-            status=container_state.status,
-            idle_since_timestamp=self.get_idle_since_timestamp(
-                container_state),
+            running=running,
+            status=status,
+            idle_since_timestamp=idle_since_timestamp,
             max_idle_seconds=self.get_max_idle_seconds())
 
 
