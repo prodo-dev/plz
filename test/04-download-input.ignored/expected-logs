@@ -4,10 +4,13 @@
 => Issuing the command on a new box
 => Execution ID is: <UUID>
 => Streaming logs...
-Copied "directory/another-file.txt".
-Copied "file.txt".
+file.txt
+directory/another-file.txt
 
 => Execution succeeded.
 => Retrieving the output...
+directory
+directory/another-file.txt
+file.txt
 => Cleaning up all detritus...
 => Done and dusted.
