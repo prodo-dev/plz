@@ -67,6 +67,7 @@ class Configuration:
             Property('project', required=True),
             Property('image', type=str, required=True),
             Property('command', type=list),
+            Property('input', type=str),
             # Paths to exclude when creating a snapshot. List of python globs
             Property('excluded_paths', type=list, default=[]),
             # Whether to consider the files ignored by git as excluded,

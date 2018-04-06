@@ -14,3 +14,4 @@ for filename in os.listdir(input_directory):
         with open(os.path.join(output_directory, filename)) as output_file:
             contents: str = input_file.read()
             output_file.write(contents.upper())
+    print(filename)

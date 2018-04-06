@@ -75,10 +75,11 @@ function start_controller {
     --detach \
     --publish=$PORT:8080 \
     --env=AWS_DEFAULT_REGION=eu-west-1 \
+    --volume="${PWD}/cache/controller:/cache/controller" \
     --volume=/var/run/docker.sock:/var/run/docker.sock \
     $IMAGE \
     --run-commands-locally \
-    --environment-name=ignore --aws-project=ignore --aws-worker-ami=ignore --aws-key-name=ignore
+    --environment-name=ignore --data-dir=/cache/controller --aws-project=ignore --aws-worker-ami=ignore --aws-key-name=ignore
   sleep 5
   info "Controller started."
 }

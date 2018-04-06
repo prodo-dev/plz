@@ -1,6 +1,9 @@
+import hashlib
 import json
 import logging
+import os
 import random
+import tempfile
 import threading
 import uuid
 from typing import Any, Callable, Iterator, TypeVar, Union
@@ -16,7 +19,12 @@ from plz.controller.instances.aws import EC2InstanceGroup
 from plz.controller.instances.instance_base import InstanceProvider
 from plz.controller.instances.localhost import Localhost
 
+READ_BUFFER_SIZE = 16384
+
 T = TypeVar('T')
+
+input_dir = os.path.join(config.data_dir, 'input')
+temp_data_dir = os.path.join(config.data_dir, 'tmp')
 
 log = logging.getLogger('controller')
 ecr_client = boto3.client('ecr')
@@ -166,6 +174,14 @@ def delete_process(execution_id):
     return response
 
 
+@app.route(f'/commands/<execution_id>/stop', methods=['POST'])
+def stop_command_entrypoint(execution_id: str):
+    instance_provider.stop_command(execution_id)
+    response = jsonify({})
+    response.status_code = requests.codes.no_content
+    return response
+
+
 @app.route('/snapshots', methods=['POST'])
 def create_snapshot():
     # Test with
@@ -199,12 +215,34 @@ def create_snapshot():
     return Response(act(), mimetype='text/plain')
 
 
-@app.route(f'/commands/<execution_id>/stop', methods=['POST'])
-def stop_command_entrypoint(execution_id: str):
-    instance_provider.stop_command(execution_id)
-    response = jsonify({})
-    response.status_code = requests.codes.no_content
-    return response
+@app.route('/data/input', methods=['POST'])
+def publish_input_data():
+    file_hash = hashlib.sha256()
+    fd, temp_file_path = tempfile.mkstemp(dir=temp_data_dir)
+    try:
+        with os.fdopen(fd, 'wb') as f:
+            while True:
+                data = request.stream.read(READ_BUFFER_SIZE)
+                if not data:
+                    break
+                f.write(data)
+                file_hash.update(data)
+        input_id = file_hash.hexdigest()
+        os.rename(temp_file_path, os.path.join(input_dir, input_id))
+        return jsonify({
+            'id': input_id,
+        })
+    except Exception:
+        os.remove(temp_file_path)
+        raise
+
+
+@app.route('/data/input/<input_id>', methods=['DELETE'])
+def delete_input_data(input_id: str):
+    try:
+        os.remove(os.path.join(input_dir, input_id))
+    except FileNotFoundError:
+        pass
 
 
 @app.route(f'/users/<user>/last_execution_id')
@@ -267,4 +305,7 @@ def _get_user_last_execution_id(user: str):
     return last_execution_id
 
 
-app.run(host='0.0.0.0', port=config.port)
+if __name__ == '__main__':
+    os.makedirs(input_dir, exist_ok=True)
+    os.makedirs(temp_data_dir, exist_ok=True)
+    app.run(host='0.0.0.0', port=config.port)
