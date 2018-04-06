@@ -4,8 +4,10 @@ import json
 import os
 import os.path
 import shutil
+import subprocess
 import tarfile
 import tempfile
+from glob import iglob
 from typing import Optional, Tuple
 
 import docker.utils.build
@@ -94,7 +96,7 @@ class RunCommandOperation(Operation):
             os.chmod(dockerfile_path, 0o644)
             build_context = docker.utils.build.tar(
                 path='.',
-                exclude=self.configuration.excluded_paths,
+                exclude=_get_excluded_paths(self.configuration),
                 gzip=True,
             )
         except FileExistsError as e:
@@ -201,3 +203,53 @@ class RunCommandOperation(Operation):
         log_info('Cleaning up all detritus...')
         response = requests.delete(self.url('commands', execution_id))
         check_status(response, requests.codes.no_content)
+
+
+class GitError(Exception):
+    def __init__(self, msg):
+        super().__init__(msg)
+
+
+def _get_excluded_paths(configuration: Configuration):
+    excluded_paths = [os.path.abspath(ep)
+                      for p in configuration.excluded_paths
+                      for ep in iglob(p, recursive=True)]
+    included_paths = set(os.path.abspath(ip)
+                         for p in configuration.included_paths
+                         for ip in iglob(p, recursive=True))
+    ignored_git_files = []
+    if configuration.use_git_for_context is None \
+            or configuration.use_git_for_context:
+        try:
+            ignored_git_files = _get_ignored_git_files()
+        except GitError as e:
+            # User explicitly asked for git, raise exception
+            if configuration.use_git_for_context:
+                raise e
+            # User didn't ask for git explicitly, inform the user in case this
+            # is unexpected
+            log_info('Can\'t use git for determining excluded files. '
+                     'You can avoid this message by running plz inside a git '
+                     'repository or setting use_git_for_context to false '
+                     'in the configuration')
+    excluded_paths += ignored_git_files
+    ep = [p[len(os.path.abspath('.')) + 1:]
+          for p in excluded_paths if p not in included_paths]
+    return ep
+
+
+def _get_ignored_git_files() -> [str]:
+    result = subprocess.run(
+        ['bash', '-c', 'find | git check-ignore --stdin --no-index'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        encoding='utf-8')
+    return_code = result.returncode
+    # When there are no ignored files it returns with exit code 1
+    correct_return_code = return_code == 0 or (
+            return_code == 1 and result.stdout == '')
+    if not correct_return_code or result.stderr != '':
+        raise SystemError('Cannot list files from git.\n'
+                          f'Return code is: {result.returncode}\n'
+                          f'Stderr: [{result.stderr}]')
+    return [os.path.abspath(p) for p in result.stdout.splitlines()]

@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Dict, List, Type, TypeVar
+from typing import Any, Dict, List, Type, TypeVar, Optional
 
 T = TypeVar('T')
 
@@ -67,7 +67,15 @@ class Configuration:
             Property('project', required=True),
             Property('image', type=str, required=True),
             Property('command', type=list),
+            # Paths to exclude when creating a snapshot. List of python globs
             Property('excluded_paths', type=list, default=[]),
+            # Whether to consider the files ignored by git as excluded,
+            # (save for when they are included explicitly).
+            # Value of None means "use git if available"
+            Property('use_git_for_context', type=Optional[bool], default=None),
+            # Paths to include, as to override exclusion (must be paths under
+            # the current work directory)
+            Property('included_paths', type=list, default=[]),
             Property('debug', type=bool, default=False),
         ]
     }
