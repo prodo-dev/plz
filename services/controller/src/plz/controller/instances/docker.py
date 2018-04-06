@@ -1,3 +1,4 @@
+import io
 import json
 from typing import List, Optional
 
@@ -7,7 +8,8 @@ from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
 from plz.controller.instances.instance_base import \
     ExecutionInfo, Instance, Parameters
-from plz.controller.volumes import VolumeEmptyDirectory, VolumeFile, Volumes
+from plz.controller.volumes import \
+    VolumeDirectory, VolumeEmptyDirectory, VolumeFile, Volumes
 
 
 class DockerInstance(Instance):
@@ -24,19 +26,24 @@ class DockerInstance(Instance):
     def run(self,
             command: List[str],
             snapshot_id: str,
-            parameters: Parameters):
+            parameters: Parameters,
+            input_stream: Optional[io.RawIOBase]):
         configuration = {
+            'input_directory': Volumes.INPUT_DIRECTORY_PATH,
             'output_directory': Volumes.OUTPUT_DIRECTORY_PATH,
             'parameters': parameters
         }
+        environment = {
+            'CONFIGURATION_FILE': Volumes.CONFIGURATION_FILE_PATH
+        }
         volume = self.volumes.create(self.volume_name, [
+            VolumeDirectory(
+                Volumes.INPUT_DIRECTORY,
+                contents_tarball=input_stream or io.BytesIO()),
             VolumeEmptyDirectory(Volumes.OUTPUT_DIRECTORY),
             VolumeFile(Volumes.CONFIGURATION_FILE,
                        contents=json.dumps(configuration, indent=2)),
         ])
-        environment = {
-            'CONFIGURATION_FILE': Volumes.CONFIGURATION_FILE_PATH
-        }
         self.containers.run(name=self.execution_id,
                             tag=snapshot_id,
                             command=command,

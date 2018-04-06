@@ -1,3 +1,4 @@
+import io
 import logging
 import os.path
 import time
@@ -42,9 +43,10 @@ class EC2Instance(Instance):
     def run(self,
             command: List[str],
             snapshot_id: str,
-            parameters: Parameters):
+            parameters: Parameters,
+            input_stream: Optional[io.BytesIO]):
         self.images.pull(snapshot_id)
-        self.delegate.run(command, snapshot_id, parameters)
+        self.delegate.run(command, snapshot_id, parameters, input_stream)
 
     def logs(self, stdout: bool = True, stderr: bool = True):
         return self.delegate.logs(stdout, stderr)

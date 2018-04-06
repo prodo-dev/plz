@@ -1,3 +1,4 @@
+import io
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from typing import Any, Dict, Iterator, List, Optional
@@ -16,7 +17,8 @@ class Instance(ABC):
     def run(self,
             command: List[str],
             snapshot_id: str,
-            parameters: Parameters):
+            parameters: Parameters,
+            input_stream: Optional[io.BytesIO]):
         pass
 
     @abstractmethod

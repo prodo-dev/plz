@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import random
+import re
 import tempfile
 import threading
 import uuid
@@ -71,10 +72,12 @@ def run_command_entrypoint():
                 }
                 return
 
+            input_stream = prepare_input_stream(execution_spec)
             instance.run(
                 command=command,
                 snapshot_id=snapshot_id,
-                parameters=parameters)
+                parameters=parameters,
+                input_stream=input_stream)
         except Exception as e:
             log.exception('Exception running command.')
             yield {'error': str(e)}
@@ -217,8 +220,7 @@ def create_snapshot():
 
 @app.route('/data/input/<input_id>', methods=['HEAD'])
 def check_input_data(input_id: str):
-    input_file_path = os.path.join(input_dir, input_id)
-    if os.path.exists(input_file_path):
+    if os.path.exists(input_file(input_id)):
         return jsonify({
             'id': input_id,
         })
@@ -228,7 +230,7 @@ def check_input_data(input_id: str):
 
 @app.route('/data/input/<expected_input_id>', methods=['PUT'])
 def publish_input_data(expected_input_id: str):
-    input_file_path = os.path.join(input_dir, expected_input_id)
+    input_file_path = input_file(expected_input_id)
     if os.path.exists(input_file_path):
         request.stream.close()
         return jsonify({
@@ -262,7 +264,7 @@ def publish_input_data(expected_input_id: str):
 @app.route('/data/input/<input_id>', methods=['DELETE'])
 def delete_input_data(input_id: str):
     try:
-        os.remove(os.path.join(input_dir, input_id))
+        os.remove(input_file(input_id))
     except FileNotFoundError:
         pass
 
@@ -276,6 +278,24 @@ def last_execution_id_entrypoint(user: str):
     response = jsonify(response_object)
     response.status_code = requests.codes.ok
     return response
+
+
+def input_file(input_id: str):
+    if not re.match(r'^\w{64}$', input_id):
+        abort(400, 'Invalid input ID.')
+    input_file_path = os.path.join(input_dir, input_id)
+    return input_file_path
+
+
+def prepare_input_stream(execution_spec: dict):
+    input_id = execution_spec.get('input_id')
+    if not input_id:
+        return None
+    try:
+        input_file_path = input_file(input_id)
+        return open(input_file_path, 'rb')
+    except FileNotFoundError:
+        abort(400, 'Invalid input ID.')
 
 
 def get_command_uuid() -> str:
