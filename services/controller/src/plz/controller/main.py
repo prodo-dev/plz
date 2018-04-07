@@ -250,7 +250,7 @@ def publish_input_data(expected_input_id: str):
 
         input_id = file_hash.hexdigest()
         if input_id != expected_input_id:
-            abort(400, 'The input ID was incorrect.')
+            abort(requests.codes.bad_request, 'The input ID was incorrect.')
 
         os.rename(temp_file_path, input_file_path)
         return jsonify({
@@ -282,7 +282,7 @@ def last_execution_id_entrypoint(user: str):
 
 def input_file(input_id: str):
     if not re.match(r'^\w{64}$', input_id):
-        abort(400, 'Invalid input ID.')
+        abort(requests.codes.bad_request, 'Invalid input ID.')
     input_file_path = os.path.join(input_dir, input_id)
     return input_file_path
 
@@ -295,7 +295,7 @@ def prepare_input_stream(execution_spec: dict):
         input_file_path = input_file(input_id)
         return open(input_file_path, 'rb')
     except FileNotFoundError:
-        abort(400, 'Invalid input ID.')
+        abort(requests.codes.bad_request, 'Invalid input ID.')
 
 
 def get_command_uuid() -> str:
