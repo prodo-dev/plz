@@ -1,8 +1,9 @@
+import contextlib
 import hashlib
 import os
 import tarfile
 import tempfile
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
 import requests
 
@@ -13,7 +14,7 @@ from plz.cli.operation import check_status
 READ_BUFFER_SIZE = 16384
 
 
-class InputData(ABC):
+class InputData(contextlib.AbstractContextManager):
     @staticmethod
     def from_configuration(configuration: Configuration):
         if not configuration.input:
@@ -30,14 +31,6 @@ class InputData(ABC):
         return self.prefix + '/' + '/'.join(path_segments)
 
     @abstractmethod
-    def __enter__(self):
-        pass
-
-    @abstractmethod
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
-
-    @abstractmethod
     def publish(self) -> str:
         pass
 
@@ -45,9 +38,6 @@ class InputData(ABC):
 class NoInputData(InputData):
     def __init__(self, configuration: Configuration):
         super().__init__(configuration)
-
-    def __enter__(self):
-        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
