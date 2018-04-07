@@ -50,6 +50,7 @@ class LocalInputData(InputData):
     def __init__(self, configuration: Configuration, path: str):
         super().__init__(configuration)
         self.path = path
+        self.tarball = None
 
     def __enter__(self):
         files = (os.path.join(directory, file)
@@ -59,10 +60,10 @@ class LocalInputData(InputData):
         with tarfile.open(self.tarball.name, mode='w:bz2') as tar:
             for file in files:
                 name = os.path.relpath(file, self.path)
-                stats = os.stat(file)
+                size = os.stat(file).st_size
                 with open(file, 'rb') as f:
                     tarinfo = tarfile.TarInfo(name=name)
-                    tarinfo.size = stats.st_size
+                    tarinfo.size = size
                     tar.addfile(tarinfo, fileobj=f)
         return self
 
