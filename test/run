@@ -8,7 +8,13 @@ autoload -U colors && colors
 
 IMAGE=plz-controller-test
 CONTAINER=plz-controller-test
+
 PORT=5050
+if (( ${+DOCKER_HOST} )) && [[ $DOCKER_HOST =~ '^tcp://' ]]; then
+  HOST=$(echo $DOCKER_HOST | sed 's/^tcp:\/\/\([^:]*\).*/\1/')
+else
+  HOST=localhost
+fi
 
 if [[ -t 1 ]]; then
   function info {
@@ -129,7 +135,7 @@ for test in $tests; do
   (
     cd $test
     (
-      PLZ_HOST=localhost PLZ_PORT=$PORT PLZ_QUIET_BUILD=true \
+      PLZ_HOST=$HOST PLZ_PORT=$PORT PLZ_QUIET_BUILD=true \
         $PLZ run --output=$actual_output_directory \
       && echo $? > $exit_status_file \
       || echo $? > $exit_status_file
