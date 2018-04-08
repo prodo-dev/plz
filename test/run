@@ -137,14 +137,16 @@ function run_cli {
     docker:stable-git \
     /bin/true \
     > /dev/null
-  docker cp $app_directory $VOLUME_CONTAINER:/data/app
+  docker container cp $app_directory $VOLUME_CONTAINER:/data/app
+
   # Initialize a Git repository to make excludes work.
-  docker run \
+  docker container run \
     --rm \
     --volume=$VOLUME:/data \
     docker:stable-git \
     git init --quiet /data/app
 
+  # Start the CLI process.
   docker container run \
     --name=$CLI_CONTAINER \
     --detach \
@@ -164,7 +166,7 @@ function run_cli {
   docker container rm $CLI_CONTAINER > /dev/null
 
   # Extract the output.
-  docker cp $VOLUME_CONTAINER:/data/output $output_directory
+  docker container cp $VOLUME_CONTAINER:/data/output $output_directory
   remove_volume
 
   return $exit_status
