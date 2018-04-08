@@ -17,6 +17,7 @@ import requests
 from plz.cli import parameters
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
+from plz.cli.input_data import InputData
 from plz.cli.log import log_error, log_info
 from plz.cli.logs_operation import LogsOperation
 from plz.cli.operation import Operation, check_status, on_exception_reraise
@@ -72,12 +73,18 @@ class RunCommandOperation(Operation):
         if not snapshot_id:
             raise CLIException('We did not receive a snapshot ID.')
 
-        execution_spec = {
-            'instance_type': self.configuration.instance_type,
-            'user': self.configuration.user,
-        }
-        execution_id, ok = self.issue_command(
-            snapshot_id, params, execution_spec)
+        if self.configuration.input:
+            log_info('Capturing the input')
+        with InputData.from_configuration(self.configuration) as input_data:
+            input_id = input_data.publish()
+            execution_spec = {
+                'instance_type': self.configuration.instance_type,
+                'user': self.configuration.user,
+                'input_id': input_id,
+            }
+            execution_id, ok = self.issue_command(
+                snapshot_id, params, execution_spec)
+
         if not execution_id:
             raise CLIException('We did not receive an execution ID.')
         log_info(f'Execution ID is: {execution_id}')
@@ -163,7 +170,10 @@ class RunCommandOperation(Operation):
         return snapshot_id
 
     def issue_command(
-            self, snapshot_id: str, params: Parameters, execution_spec: dict) \
+            self,
+            snapshot_id: str,
+            params: Parameters,
+            execution_spec: dict) \
             -> Tuple[Optional[str], bool]:
         log_info('Issuing the command on a new box')
 

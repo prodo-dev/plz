@@ -1,6 +1,10 @@
+import hashlib
 import json
 import logging
+import os
 import random
+import re
+import tempfile
 import threading
 import uuid
 from typing import Any, Callable, Iterator, TypeVar, Union
@@ -8,7 +12,7 @@ from typing import Any, Callable, Iterator, TypeVar, Union
 import boto3
 import docker
 import requests
-from flask import Flask, Response, jsonify, request, stream_with_context
+from flask import Flask, Response, abort, jsonify, request, stream_with_context
 
 from plz.controller.controller_config import config
 from plz.controller.images import Images
@@ -16,7 +20,12 @@ from plz.controller.instances.aws import EC2InstanceGroup
 from plz.controller.instances.instance_base import InstanceProvider
 from plz.controller.instances.localhost import Localhost
 
+READ_BUFFER_SIZE = 16384
+
 T = TypeVar('T')
+
+input_dir = os.path.join(config.data_dir, 'input')
+temp_data_dir = os.path.join(config.data_dir, 'tmp')
 
 log = logging.getLogger('controller')
 ecr_client = boto3.client('ecr')
@@ -63,10 +72,12 @@ def run_command_entrypoint():
                 }
                 return
 
+            input_stream = prepare_input_stream(execution_spec)
             instance.run(
                 command=command,
                 snapshot_id=snapshot_id,
-                parameters=parameters)
+                parameters=parameters,
+                input_stream=input_stream)
         except Exception as e:
             log.exception('Exception running command.')
             yield {'error': str(e)}
@@ -166,6 +177,14 @@ def delete_process(execution_id):
     return response
 
 
+@app.route(f'/commands/<execution_id>/stop', methods=['POST'])
+def stop_command_entrypoint(execution_id: str):
+    instance_provider.stop_command(execution_id)
+    response = jsonify({})
+    response.status_code = requests.codes.no_content
+    return response
+
+
 @app.route('/snapshots', methods=['POST'])
 def create_snapshot():
     # Test with
@@ -199,12 +218,55 @@ def create_snapshot():
     return Response(act(), mimetype='text/plain')
 
 
-@app.route(f'/commands/<execution_id>/stop', methods=['POST'])
-def stop_command_entrypoint(execution_id: str):
-    instance_provider.stop_command(execution_id)
-    response = jsonify({})
-    response.status_code = requests.codes.no_content
-    return response
+@app.route('/data/input/<input_id>', methods=['HEAD'])
+def check_input_data(input_id: str):
+    if os.path.exists(input_file(input_id)):
+        return jsonify({
+            'id': input_id,
+        })
+    else:
+        abort(404)
+
+
+@app.route('/data/input/<expected_input_id>', methods=['PUT'])
+def publish_input_data(expected_input_id: str):
+    input_file_path = input_file(expected_input_id)
+    if os.path.exists(input_file_path):
+        request.stream.close()
+        return jsonify({
+            'id': expected_input_id,
+        })
+
+    file_hash = hashlib.sha256()
+    fd, temp_file_path = tempfile.mkstemp(dir=temp_data_dir)
+    try:
+        with os.fdopen(fd, 'wb') as f:
+            while True:
+                data = request.stream.read(READ_BUFFER_SIZE)
+                if not data:
+                    break
+                f.write(data)
+                file_hash.update(data)
+
+        input_id = file_hash.hexdigest()
+        if input_id != expected_input_id:
+            abort(requests.codes.bad_request, 'The input ID was incorrect.')
+
+        os.rename(temp_file_path, input_file_path)
+        return jsonify({
+            'id': input_id,
+        })
+    except Exception:
+        os.remove(temp_file_path)
+        raise
+
+
+@app.route('/data/input/<input_id>', methods=['DELETE'])
+def delete_input_data(input_id: str):
+    try:
+        os.remove(input_file(input_id))
+    except FileNotFoundError:
+        pass
 
 
 @app.route(f'/users/<user>/last_execution_id')
@@ -216,6 +278,24 @@ def last_execution_id_entrypoint(user: str):
     response = jsonify(response_object)
     response.status_code = requests.codes.ok
     return response
+
+
+def input_file(input_id: str):
+    if not re.match(r'^\w{64}$', input_id):
+        abort(requests.codes.bad_request, 'Invalid input ID.')
+    input_file_path = os.path.join(input_dir, input_id)
+    return input_file_path
+
+
+def prepare_input_stream(execution_spec: dict):
+    input_id = execution_spec.get('input_id')
+    if not input_id:
+        return None
+    try:
+        input_file_path = input_file(input_id)
+        return open(input_file_path, 'rb')
+    except FileNotFoundError:
+        abort(requests.codes.bad_request, 'Invalid input ID.')
 
 
 def get_command_uuid() -> str:
@@ -267,4 +347,7 @@ def _get_user_last_execution_id(user: str):
     return last_execution_id
 
 
-app.run(host='0.0.0.0', port=config.port)
+if __name__ == '__main__':
+    os.makedirs(input_dir, exist_ok=True)
+    os.makedirs(temp_data_dir, exist_ok=True)
+    app.run(host='0.0.0.0', port=config.port)

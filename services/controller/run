@@ -1,5 +1,17 @@
 #!/bin/bash
 
+set -e
+set -u
+
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
+mkdir -p ../../cache/controller
+DEFAULT_DATA_DIR="$(cd ../../cache/controller && pwd)"
+
+if [[ -z "${DATA_DIR:-}" ]]; then
+  export DATA_DIR="$DEFAULT_DATA_DIR"
+fi
+
 export PYTHONPATH=./src
 
 exec python ./src/plz/controller/main.py "$@"

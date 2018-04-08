@@ -7,13 +7,14 @@ from typing import Iterator, List
 
 import docker
 import docker.errors
+from docker.models.containers import Container
 from docker.models.volumes import Volume
 from docker.types import Mount
 
 
 class VolumeObject(ABC):
     @abstractmethod
-    def add_to(self, tar: tarfile.TarFile):
+    def put_in(self, container: Container, root: str):
         pass
 
 
@@ -22,30 +23,54 @@ class VolumeFile(VolumeObject):
         self.path = path
         self.contents: bytes = contents.encode('utf-8')
 
-    def add_to(self, tar: tarfile.TarFile):
-        tarinfo = tarfile.TarInfo(name=self.path)
-        tarinfo.size = len(self.contents)
-        tar.addfile(tarinfo, fileobj=io.BytesIO(self.contents))
+    def put_in(self, container: Container, root: str):
+        with tempfile.NamedTemporaryFile() as f:
+            with tarfile.open(f.name, mode='w') as tar:
+                tarinfo = tarfile.TarInfo(name=self.path)
+                tarinfo.size = len(self.contents)
+                tar.addfile(tarinfo, fileobj=io.BytesIO(self.contents))
+            f.seek(0)
+            container.put_archive(root, f)
 
 
-class VolumeDirectory(VolumeObject):
+class VolumeEmptyDirectory(VolumeObject):
     def __init__(self, path: str):
         self.path = path
 
-    def add_to(self, tar: tarfile.TarFile):
-        tarinfo = tarfile.TarInfo(name=self.path)
-        tarinfo.type = tarfile.DIRTYPE
-        tar.addfile(tarinfo)
+    def put_in(self, container: Container, root: str):
+        with tempfile.NamedTemporaryFile() as f:
+            with tarfile.open(f.name, mode='w') as tar:
+                tarinfo = tarfile.TarInfo(name=self.path)
+                tarinfo.type = tarfile.DIRTYPE
+                tar.addfile(tarinfo)
+            f.seek(0)
+            container.put_archive(root, f)
+
+
+class VolumeDirectory(VolumeObject):
+    def __init__(self, path: str, contents_tarball: io.IOBase):
+        self.path = path
+        self.contents_tarball = contents_tarball
+
+    def put_in(self, container: Container, root: str):
+        full_path = os.path.join(root, self.path)
+        exit_code, output = container.exec_run(['mkdir', full_path])
+        if exit_code > 0:
+            raise VolumeCreationError(output.decode('utf-8'))
+        # noinspection PyTypeChecker
+        # (the tarball can be an `IOBase` too,
+        #  but the docker-py documentation says it must be `bytes`)
+        container.put_archive(full_path, self.contents_tarball)
 
 
 class Volumes:
     VOLUME_MOUNT = '/plz'
     CONFIGURATION_FILE = 'configuration.json'
     CONFIGURATION_FILE_PATH = os.path.join(VOLUME_MOUNT, CONFIGURATION_FILE)
+    INPUT_DIRECTORY = 'input'
+    INPUT_DIRECTORY_PATH = os.path.join(VOLUME_MOUNT, INPUT_DIRECTORY)
     OUTPUT_DIRECTORY = 'output'
     OUTPUT_DIRECTORY_PATH = os.path.join(VOLUME_MOUNT, OUTPUT_DIRECTORY)
-
-    _DUMMY_IMAGE_NAME = 'busybox'
 
     @staticmethod
     def for_host(docker_url):
@@ -56,28 +81,31 @@ class Volumes:
         self.docker_client = docker_client
 
     def create(self, name: str, objects: List[VolumeObject]) -> Volume:
-        with tempfile.NamedTemporaryFile() as f:
-            with tarfile.open(f.name, mode='w') as tar:
-                for volume_object in objects:
-                    volume_object.add_to(tar)
-            f.seek(0)
-            tarball = f.read()
-
+        root = '/output'
         volume = self.docker_client.volumes.create(name)
-        container = self.docker_client.containers.create(
-            image=self._dummy_image(),
-            mounts=[Mount(source=volume.name, target='/output')])
-        container.put_archive('/output', tarball)
-        container.remove()
+        container = self.docker_client.containers.run(
+            image=self._busybox_image(),
+            command=['cat'],  # wait forever
+            mounts=[Mount(source=volume.name, target=root)],
+            stdin_open=True,
+            remove=True,
+            detach=True)
+        try:
+            for volume_object in objects:
+                volume_object.put_in(container, root)
+        finally:
+            container.stop()
         return volume
 
     def get_files(self, volume_name: str, path: str) -> Iterator[bytes]:
         container = self.docker_client.containers.create(
-            image=self._dummy_image(),
+            image=self._busybox_image(),
             mounts=[Mount(source=volume_name, target='/input')])
-        tar, _ = container.get_archive(os.path.join('/input', path))
-        yield from tar
-        container.remove()
+        try:
+            tar, _ = container.get_archive(os.path.join('/input', path))
+            yield from tar
+        finally:
+            container.remove()
 
     def remove(self, name: str):
         try:
@@ -86,9 +114,13 @@ class Volumes:
         except docker.errors.NotFound:
             pass
 
-    def _dummy_image(self):
+    def _busybox_image(self):
         try:
-            self.docker_client.images.get(self._DUMMY_IMAGE_NAME)
+            self.docker_client.images.get('busybox')
         except docker.errors.NotFound:
-            self.docker_client.images.pull(self._DUMMY_IMAGE_NAME, 'latest')
-        return self._DUMMY_IMAGE_NAME
+            self.docker_client.images.pull('busybox', 'latest')
+        return 'busybox'
+
+
+class VolumeCreationError(Exception):
+    pass
