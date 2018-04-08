@@ -89,6 +89,7 @@ class RunExecutionOperation(Operation):
             raise CLIException('We did not receive an execution ID.')
         log_info(f'Execution ID is: {execution_id}')
 
+        skip_cleanup = False
         try:
             if not ok:
                 raise CLIException('The command failed.')
@@ -110,9 +111,12 @@ class RunExecutionOperation(Operation):
         except CLIException as e:
             e.print(self.configuration)
             raise ExitWithStatusCodeException(e.exit_code)
+        except KeyboardInterrupt:
+            skip_cleanup = True
         finally:
-            self.cleanup(execution_id)
-            log_info('Done and dusted.')
+            if not skip_cleanup:
+                self.cleanup(execution_id)
+                log_info('Done and dusted.')
 
     def capture_build_context(self):
         context_dir = os.getcwd()

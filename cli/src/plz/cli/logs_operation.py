@@ -1,8 +1,6 @@
-import signal
 from typing import Optional
 
 import requests
-import sys
 
 from plz.cli.configuration import Configuration
 from plz.cli.log import log_info
@@ -27,23 +25,22 @@ class LogsOperation(Operation):
     @on_exception_reraise("Displaying the logs failed.")
     def display_logs(self, execution_id: str):
         log_info('Streaming logs...')
-        signal.signal(signal.SIGINT,
-                      lambda s, _: _exit_and_print_execution_id(
-                          execution_id))
         response = requests.get(self.url('executions', execution_id, 'logs'),
                                 stream=True)
         check_status(response, requests.codes.ok)
-        for line in response.raw:
-            print(line.decode('utf-8'), end='')
+        try:
+            for line in response.raw:
+                print(line.decode('utf-8'), end='')
+        except KeyboardInterrupt:
+            print()
+            log_info('Your program is still running. '
+                     'To stream the logs, type:\n\n'
+                     f'        plz logs {execution_id}\n')
+            raise
         print()
 
     def run(self):
-        self.display_logs(self.get_execution_id())
-
-
-def _exit_and_print_execution_id(execution_id):
-    print()
-    log_info('Your program is still running. '
-             'To stream the logs, type:\n\n'
-             f'        plz logs {execution_id}')
-    sys.exit(0)
+        try:
+            self.display_logs(self.get_execution_id())
+        except KeyboardInterrupt:
+            pass
