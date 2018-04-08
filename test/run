@@ -188,7 +188,7 @@ function cleanup {
   stop_controller
   stop_cli
   remove_volume
-  docker network rm $NETWORK
+  docker network rm $NETWORK > /dev/null || :
   return $exit_status
 }
 
