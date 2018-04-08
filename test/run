@@ -6,15 +6,18 @@ set -o pipefail
 
 autoload -U colors && colors
 
-IMAGE=plz-controller-test
-CONTAINER=plz-controller-test
+NETWORK=plz-test
+CLI_IMAGE=plz-cli-test
+CLI_CONTAINER=plz-cli-test
+CONTROLLER_IMAGE=plz-controller-test
+CONTROLLER_CONTAINER=plz-controller-test
+CONTROLLER_PORT=8080
+TEST_DIRECTORY=${0:a:h}
+OUTPUT_PREFIX="${PWD}/cache/test"
 
-PORT=5050
-if (( ${+DOCKER_HOST} )) && [[ $DOCKER_HOST =~ '^tcp://' ]]; then
-  HOST=$(echo $DOCKER_HOST | sed 's/^tcp:\/\/\([^:]*\).*/\1/')
-else
-  HOST=localhost
-fi
+cd ${0:a:h:h}
+
+mkdir -p $OUTPUT_PREFIX
 
 if [[ -t 1 ]]; then
   function info {
@@ -38,11 +41,6 @@ else
   }
 fi
 
-cd ${0:a:h:h}
-PLZ="${PWD}/plz"
-
-test_directory=${0:a:h}
-
 # In "bless mode", instead of comparing the actual output against expected
 # output, we save the output.
 bless=false
@@ -53,12 +51,12 @@ fi
 
 if [[ $# -eq 0 ]]; then
   # Run all tests.
-  tests=($(find $test_directory -mindepth 1 -maxdepth 1 -type d -not -name '*.ignored' | sort))
+  tests=($(find $TEST_DIRECTORY -mindepth 1 -maxdepth 1 -type d -not -name '*.ignored' | sort))
 else
   # Run selected tests.
   # But first, verify all arguments are actually test directories.
   for dir in $@; do
-    if [[ ${dir:a} != "${test_directory}/${dir:t}" ]]; then
+    if [[ ${dir:a} != "${TEST_DIRECTORY}/${dir:t}" ]]; then
       echo "\"${dir}\" is not a test directory."
       exit 2
     fi
@@ -67,8 +65,11 @@ else
 fi
 
 function start_controller {
+  docker network inspect $NETWORK >& /dev/null \
+    || docker network create $NETWORK
+
   info "Building the controller..."
-  docker image build --quiet --tag=$IMAGE services/controller
+  docker image build --quiet --tag=$CONTROLLER_IMAGE services/controller
 
   if controller_running; then
     warning "Controller already exists. Stopping..."
@@ -77,13 +78,14 @@ function start_controller {
 
   info "Starting the controller..."
   docker container run \
-    --name=$CONTAINER \
+    --name=$CONTROLLER_CONTAINER \
     --detach \
-    --publish=$PORT:8080 \
+    --network=$NETWORK \
+    --env=PORT=$CONTROLLER_PORT \
     --env=AWS_DEFAULT_REGION=eu-west-1 \
     --volume="${PWD}/cache/controller:/cache/controller" \
     --volume=/var/run/docker.sock:/var/run/docker.sock \
-    $IMAGE \
+    $CONTROLLER_IMAGE \
     --run-commands-locally \
     --environment-name=ignore --data-dir=/cache/controller --aws-project=ignore --aws-worker-ami=ignore --aws-key-name=ignore
   sleep 5
@@ -91,28 +93,83 @@ function start_controller {
 }
 
 function stop_controller {
-  exit_status=$?
   if ! controller_running; then
-    return $exit_status
+    return
   fi
-  docker container stop $CONTAINER > /dev/null || :
+  docker container stop $CONTROLLER_CONTAINER > /dev/null || :
   info "Controller logs:"
-  docker container logs $CONTAINER || :
-  docker container rm $CONTAINER > /dev/null || :
+  docker container logs $CONTROLLER_CONTAINER || :
+  docker container rm $CONTROLLER_CONTAINER > /dev/null || :
   info "Controller stopped."
-  return $exit_status
 }
 
 function controller_running {
-  docker container inspect $CONTAINER >& /dev/null
+  docker container inspect $CONTROLLER_CONTAINER >& /dev/null
+}
+
+function build_cli {
+  info "Building the CLI..."
+  docker image build --quiet --tag=$CLI_IMAGE cli
+}
+
+function run_cli {
+  if cli_running; then
+    warning "CLI container already exists. Stopping..."
+    stop_cli
+  fi
+
+  app_directory=${1:a}
+  logs_file=${2:a}
+  output_directory=${3:a}
+
+  docker container run \
+    --name=$CLI_CONTAINER \
+    --detach \
+    --network=$NETWORK \
+    --env=PLZ_HOST=$CONTROLLER_CONTAINER \
+    --env=PLZ_PORT=$CONTROLLER_PORT \
+    --env=PLZ_QUIET_BUILD=true \
+    --workdir=/app \
+    --volume="${app_directory}:/app" \
+    --volume="${output_directory:h}:/data" \
+    $CLI_IMAGE \
+    run --output="/data/${output_directory:t}" \
+    > /dev/null
+
+  docker container logs --follow $CLI_CONTAINER |& redact_uuids | tee $logs_file
+  exit_status=$(docker wait $CLI_CONTAINER)
+  docker container rm $CLI_CONTAINER > /dev/null
+  return $exit_status
+}
+
+function stop_cli {
+  if ! cli_running; then
+    return
+  fi
+  docker container stop $CLI_CONTAINER > /dev/null || :
+  docker container rm $CLI_CONTAINER > /dev/null || :
+  info "CLI stopped."
+}
+
+function cli_running {
+  docker container inspect $CLI_CONTAINER >& /dev/null
+}
+
+function cleanup {
+  exit_status=$?
+  stop_controller
+  stop_cli
+  docker network rm $NETWORK
+  return $exit_status
 }
 
 function redact_uuids {
   sed 's/[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}/<UUID>/'
 }
 
+build_cli
 start_controller
-trap stop_controller EXIT INT TERM
+trap cleanup EXIT INT TERM
 
 success=true
 for test in $tests; do
@@ -120,28 +177,21 @@ for test in $tests; do
   echo
   info "Running ${test:t}..."
 
-  exit_status_file=$(mktemp "${TMPDIR:-/tmp/}/plz-test-status.XXXXX")
   if [[ -f "${test}/expected-status" ]]; then
     expected_exit_status=$(cat "${test}/expected-status")
   else
     expected_exit_status=0
   fi
   expected_logs="${test}/expected-logs"
-  actual_logs=$(mktemp "${TMPDIR:-/tmp/}/plz-test-logs.XXXXX")
+  actual_logs=$(mktemp "${OUTPUT_PREFIX}/plz-test-logs.XXXXX")
   expected_output_directory="${test}/expected-output"
-  actual_output_directory=$(mktemp "${TMPDIR:-/tmp/}/plz-test-output.XXXXX")
+  actual_output_directory=$(mktemp "${OUTPUT_PREFIX}/plz-test-output.XXXXX")
   rm $actual_output_directory # It's been created as a file.
 
-  (
-    cd $test
-    (
-      PLZ_HOST=$HOST PLZ_PORT=$PORT PLZ_QUIET_BUILD=true \
-        $PLZ run --output=$actual_output_directory \
-      && echo $? > $exit_status_file \
-      || echo $? > $exit_status_file
-    ) |& redact_uuids | tee $actual_logs
-  )
-  actual_exit_status=$(cat $exit_status_file)
+  set +e
+  run_cli $test $actual_logs $actual_output_directory
+  actual_exit_status=$?
+  set -e
 
   if $bless; then
     if [[ $actual_exit_status -eq $expected_exit_status ]]; then
