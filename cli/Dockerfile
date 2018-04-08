@@ -1,19 +1,8 @@
 # Build
 FROM python:3-slim
 
-RUN set -ex; \
-    apt-get update -qq; \
-    apt-get upgrade -qqy
-
-RUN apt-get install -qqy make
-
-RUN pip install pipenv
-
 RUN mkdir -p /src
 WORKDIR /src
-
-COPY Pipfile Pipfile.lock ./
-RUN pipenv install --system --deploy
 
 COPY LICENSE MANIFEST.in README.rst setup.py ./
 COPY src src/
