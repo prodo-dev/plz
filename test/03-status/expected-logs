@@ -5,6 +5,6 @@
 => Streaming logs...
 Exiting with a status code of 42.
 
-!   Execution failed with an exit status of 42.
+!! Execution failed with an exit status of 42.
 => Cleaning up all detritus...
 => Done and dusted.
