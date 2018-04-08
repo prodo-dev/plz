@@ -142,46 +142,55 @@ class EC2InstanceGroup(InstanceProvider):
         """
         Gets an available instance for the execution with the given id.
 
-        If there's at least one instance in the group that is not running
-        a command, assign the execution id to one of them and return it.
-        Otherwise, increase the desired capacity of the group and try until
-        the maximum number of trials.
+        If there's at least one instance in the group that is idle, assign the
+        execution ID to it and return it. Otherwise, start a new box.
         """
         tries_remaining = max_tries
-        with self.lock:
-            yield 'querying availability'
-            instance_type = execution_spec.get('instance_type')
-            instances_not_assigned = self.instances.running(
-                filters=[
-                    (f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
-                    ('instance-type', instance_type),
-                ])
-            if len(instances_not_assigned) > 0:
-                instance_data = instances_not_assigned[0]
-            else:
-                yield 'requesting new instance'
-                instance_data = self._ask_aws_for_new_instance(instance_type)
-            dns_name = _get_dns_name(instance_data)
-            yield f'worker dns name is: {dns_name}'
-
-            instance = self.instances.construct_instance(
-                execution_id, instance_data)
-            instance.set_tags([
-                {'Key': EC2Instance.EXECUTION_ID_TAG,
-                 'Value': execution_id},
-                {'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
-                 'Value': str(self.MAX_IDLE_SECONDS)},
+        yield 'querying availability'
+        instance_type = execution_spec.get('instance_type')
+        instances_not_assigned = self.instances.running(
+            filters=[
+                (f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
+                ('instance-type', instance_type),
             ])
-            self.instances[execution_id] = instance
-
+        if len(instances_not_assigned) > 0:
+            instance_data = instances_not_assigned[0]
+        else:
+            yield 'requesting new instance'
+            instance_data = self._ask_aws_for_new_instance(instance_type)
+        instance = self.instances.construct_instance(
+            execution_id, instance_data)
+        dns_name = _get_dns_name(instance_data)
+        yield f'worker dns name is: {dns_name}'
         while tries_remaining > 0:
             tries_remaining -= 1
             if instance.is_up():
-                yield 'started'
-                return
+                with self.lock:
+                    # Checking if it's still free
+                    if self._is_instance_free(instance_data['InstanceId']):
+                        instance.set_tags([
+                            {'Key': EC2Instance.EXECUTION_ID_TAG,
+                             'Value': execution_id},
+                            {'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
+                             'Value': str(self.MAX_IDLE_SECONDS)},
+                        ])
+                        yield 'started'
+                        return
+                yield 'taken while waiting'
+                instance_data = self._ask_aws_for_new_instance(instance_type)
+                instance = self.instances.construct_instance(
+                    execution_id, instance_data)
             else:
                 yield 'pending'
                 time.sleep(delay_in_seconds)
+
+    def _is_instance_free(self, instance_id):
+        instances = self.instances.running(
+            filters=[
+                (f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
+                ('instance-id', instance_id),
+            ])
+        return len(instances) > 0
 
     def instance_for(self, execution_id: str) -> Optional[EC2Instance]:
         return self.instances[execution_id]
@@ -205,9 +214,9 @@ class EC2InstanceGroup(InstanceProvider):
                 ])
             del self.instances[execution_id]
 
-    def stop_command(self, execution_id: str):
+    def stop_execution(self, execution_id: str):
         instance = self.instances[execution_id]
-        instance.stop_command()
+        instance.stop_execution()
 
     def _ask_aws_for_new_instance(self, instance_type: str) -> dict:
         response = self.client.run_instances(

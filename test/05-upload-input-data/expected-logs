@@ -1,0 +1,16 @@
+=> Capturing the context
+=> Building the program snapshot
+=> Capturing the input
+=> Sending request to start execution
+=> Execution ID is: <UUID>
+=> Streaming logs...
+file.txt
+directory/another-file.txt
+
+=> Execution succeeded.
+=> Retrieving the output...
+directory
+directory/another-file.txt
+file.txt
+=> Cleaning up all detritus...
+=> Done and dusted.

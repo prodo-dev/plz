@@ -1,10 +1,10 @@
 import argparse
+import os
 import sys
 import threading
 
 from collections import namedtuple
 from distutils.util import strtobool
-from os import environ
 
 _ARGUMENTS_SPEC = [
     {
@@ -59,16 +59,22 @@ _ARGUMENTS_SPEC = [
         'default': 8080,
     },
     {
-        'name': 'run_commands_locally',
+        'name': 'run_executions_locally',
         'spec': {
             'action': 'store_const',
             'const': True,
-            'help': 'don\'t spawn workers, run the commands locally',
+            'help': 'don\'t spawn workers, run the executions locally',
         },
         'from_string': strtobool,
         'default': False,
+    },
+    {
+        'name': 'data_dir',
+        'spec': {
+            'type': str,
+            'help': 'Directory to store input data',
+        },
     }
-
 ]
 _CONFIG_LOCK = threading.Lock()
 
@@ -104,7 +110,7 @@ def _create_config():
     for spec in _ARGUMENTS_SPEC:
         val = getattr(args, spec['name'], None)
         if val is None:
-            val = environ.get(_name_to_env_variable(spec['name']), None)
+            val = os.environ.get(_name_to_env_variable(spec['name']), None)
             if val is not None:
                 if 'from_string' in spec:
                     # noinspection PyCallingNonCallable

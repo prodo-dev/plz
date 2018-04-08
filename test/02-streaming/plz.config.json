@@ -5,8 +5,7 @@
   "image": "python:3-slim",
   "instance_type": "t2.small",
   "command": [
-    "./main.py",
-    "20"
+    "./main.py"
   ],
   "excluded_paths": [
     ".git",

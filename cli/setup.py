@@ -15,7 +15,7 @@ with open(path.join(root, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='plz-client',
+    name='plz-cli',
     version='0.1.0',
     description='Send jobs to the Plz server',
     long_description=long_description,

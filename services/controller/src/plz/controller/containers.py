@@ -1,7 +1,7 @@
 import calendar
+import collections
 import logging
-from collections import namedtuple
-from typing import Dict, Iterator, List, Optional, Iterable
+from typing import Dict, Iterable, Iterator, List, Optional
 
 import dateutil.parser
 import docker
@@ -11,8 +11,9 @@ from docker.types import Mount
 
 from plz.controller.images import Images
 
-ContainerState = namedtuple('ContainerState',
-                            ['running', 'status', 'finished_at'])
+ContainerState = collections.namedtuple(
+    'ContainerState',
+    ['running', 'status', 'success', 'exit_code', 'finished_at'])
 
 
 class Containers:
@@ -68,11 +69,14 @@ class Containers:
 
     def get_state(self, name) -> Optional[ContainerState]:
         container_state = self._get_container(name).attrs['State']
-        return ContainerState(running=container_state['Running'],
-                              status=container_state['Status'],
-                              finished_at=_docker_date_to_timestamp(
-                                  container_state['FinishedAt']
-                              ))
+        success = container_state['ExitCode'] == 0
+        finished_at = _docker_date_to_timestamp(container_state['FinishedAt'])
+        return ContainerState(
+            running=container_state['Running'],
+            status=container_state['Status'],
+            success=success,
+            exit_code=container_state['ExitCode'],
+            finished_at=finished_at)
 
     def stop(self, name):
         self._get_container(name).stop()

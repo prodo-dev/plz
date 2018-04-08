@@ -4,8 +4,17 @@ from typing import Optional
 from plz.cli.log import log_error
 
 
-class CLIException(Exception):
-    def __init__(self, message: str, cause: Optional[BaseException] = None):
+class ExitWithStatusCodeException(Exception):
+    def __init__(self, exit_code: int):
+        self.exit_code = exit_code
+
+
+class CLIException(ExitWithStatusCodeException):
+    def __init__(self,
+                 message: str,
+                 cause: Optional[BaseException] = None,
+                 exit_code: int = 1):
+        super().__init__(exit_code)
         self.message = message
         self.cause = cause
 

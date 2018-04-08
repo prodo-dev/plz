@@ -1,0 +1,20 @@
+=> Capturing the context
+=> Building the program snapshot
+=> Sending request to start execution
+=> Execution ID is: <UUID>
+=> Streaming logs...
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+
+=> Execution succeeded.
+=> Retrieving the output...
+=> Cleaning up all detritus...
+=> Done and dusted.

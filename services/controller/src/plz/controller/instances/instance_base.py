@@ -1,3 +1,4 @@
+import io
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from typing import Any, Dict, Iterator, List, Optional
@@ -16,7 +17,8 @@ class Instance(ABC):
     def run(self,
             command: List[str],
             snapshot_id: str,
-            parameters: Parameters):
+            parameters: Parameters,
+            input_stream: Optional[io.BytesIO]):
         pass
 
     @abstractmethod
@@ -36,7 +38,7 @@ class Instance(ABC):
         pass
 
     @abstractmethod
-    def stop_command(self):
+    def stop_execution(self):
         pass
 
     @abstractmethod
@@ -71,16 +73,20 @@ class Instance(ABC):
     def get_execution_info(self) -> ExecutionInfo:
         container_state = self.get_container_state()
         if container_state is None:
-            container_state = ContainerState(
-                running='False', status='idle',
-                finished_at=self.get_idle_since_timestamp())
+            running = False
+            status = 'idle'
+            idle_since_timestamp = self.get_idle_since_timestamp()
+        else:
+            running = container_state.running
+            status = container_state.status
+            idle_since_timestamp = self.get_idle_since_timestamp(
+                container_state)
         return ExecutionInfo(
             instance_type=self.get_instance_type(),
             execution_id=self.get_execution_id(),
-            running=container_state.running,
-            status=container_state.status,
-            idle_since_timestamp=self.get_idle_since_timestamp(
-                container_state),
+            running=running,
+            status=status,
+            idle_since_timestamp=idle_since_timestamp,
             max_idle_seconds=self.get_max_idle_seconds())
 
 
@@ -109,7 +115,7 @@ class InstanceProvider(ABC):
         pass
 
     @abstractmethod
-    def stop_command(self, execution_id: str):
+    def stop_execution(self, execution_id: str):
         pass
 
     def tidy_up(self):
@@ -120,7 +126,7 @@ class InstanceProvider(ABC):
                     ei.execution_id, ei.idle_since_timestamp)
             instance.dispose_if_its_time(ei)
 
-    def get_commands(self) -> [ExecutionInfo]:
+    def get_executions(self) -> [ExecutionInfo]:
         return [
             instance.get_execution_info()
             for instance in self.instance_iterator()]

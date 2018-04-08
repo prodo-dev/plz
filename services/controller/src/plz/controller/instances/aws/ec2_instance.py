@@ -1,7 +1,8 @@
+import io
 import logging
 import os.path
 import time
-from typing import Iterator, List, Optional
+from typing import List, Optional
 
 from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
@@ -42,9 +43,10 @@ class EC2Instance(Instance):
     def run(self,
             command: List[str],
             snapshot_id: str,
-            parameters: Parameters):
+            parameters: Parameters,
+            input_stream: Optional[io.BytesIO]):
         self.images.pull(snapshot_id)
-        self.delegate.run(command, snapshot_id, parameters)
+        self.delegate.run(command, snapshot_id, parameters, input_stream)
 
     def logs(self, stdout: bool = True, stderr: bool = True):
         return self.delegate.logs(stdout, stderr)
@@ -110,8 +112,8 @@ class EC2Instance(Instance):
                 ei.max_idle_seconds < 0:
             self.dispose()
 
-    def stop_command(self):
-        return self.delegate.stop_command()
+    def stop_execution(self):
+        return self.delegate.stop_execution()
 
 
 def get_tag(instance_data, tag, default=None) -> Optional[str]:

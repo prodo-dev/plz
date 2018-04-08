@@ -18,7 +18,7 @@ def log_error(message):
     isatty = sys.stdout.isatty()
     if isatty:
         print('\x1b[31m', end='')
-    print('!! ' if isatty else '!  ', message, end='')
+    print('!!', message, end='')
     if isatty:
         print('\x1b[0m', end='')
     print()
