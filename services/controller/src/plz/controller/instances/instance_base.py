@@ -38,7 +38,7 @@ class Instance(ABC):
         pass
 
     @abstractmethod
-    def stop_command(self):
+    def stop_execution(self):
         pass
 
     @abstractmethod
@@ -115,7 +115,7 @@ class InstanceProvider(ABC):
         pass
 
     @abstractmethod
-    def stop_command(self, execution_id: str):
+    def stop_execution(self, execution_id: str):
         pass
 
     def tidy_up(self):
@@ -126,7 +126,7 @@ class InstanceProvider(ABC):
                     ei.execution_id, ei.idle_since_timestamp)
             instance.dispose_if_its_time(ei)
 
-    def get_commands(self) -> [ExecutionInfo]:
+    def get_executions(self) -> [ExecutionInfo]:
         return [
             instance.get_execution_info()
             for instance in self.instance_iterator()]

@@ -137,10 +137,8 @@ class EC2InstanceGroup(InstanceProvider):
         """
         Gets an available instance for the execution with the given id.
 
-        If there's at least one instance in the group that is not running
-        a command, assign the execution ID to one of them and return it.
-        Otherwise, increase the desired capacity of the group and try until
-        the maximum number of trials.
+        If there's at least one instance in the group that is idle, assign the
+        execution ID to it and return it. Otherwise, start a new box.
         """
         tries_remaining = max_tries
         yield 'querying availability'
@@ -205,9 +203,9 @@ class EC2InstanceGroup(InstanceProvider):
             ])
             del self.instances[execution_id]
 
-    def stop_command(self, execution_id: str):
+    def stop_execution(self, execution_id: str):
         instance = self.instances[execution_id]
-        instance.stop_command()
+        instance.stop_execution()
 
     def _get_running_aws_instances(self, filters: [(str, str)]):
         new_filters = [{'Name': n, 'Values': [v]} for (n, v) in filters]

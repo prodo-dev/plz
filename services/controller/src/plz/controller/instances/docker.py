@@ -96,5 +96,5 @@ class DockerInstance(Instance):
         # It's never time for a local instance
         pass
 
-    def stop_command(self):
+    def stop_execution(self):
         self.containers.stop(self.execution_id)

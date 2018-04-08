@@ -7,7 +7,7 @@ from plz.cli.log import log_info
 from plz.cli.operation import check_status, Operation
 
 
-class StopCommandOperation(Operation):
+class StopExecutionOperation(Operation):
     @staticmethod
     def prepare_argument_parser(parser, args):
         if len(args) > 1:
@@ -21,6 +21,6 @@ class StopCommandOperation(Operation):
 
     def run(self):
         response = requests.post(
-            self.url('commands', self.get_execution_id(), 'stop'))
+            self.url('executions', self.get_execution_id(), 'stop'))
         check_status(response, requests.codes.no_content)
         log_info('Stopped')

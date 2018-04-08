@@ -40,4 +40,4 @@
     - name: Set cron job for tidying
       cron:
         name: "Tidying each minute"
-        job: "curl -X POST localhost:{{service_port}}/commands/tidy"
+        job: "curl -X POST localhost:{{service_port}}/executions/tidy"

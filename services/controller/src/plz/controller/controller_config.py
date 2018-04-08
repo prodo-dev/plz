@@ -59,11 +59,11 @@ _ARGUMENTS_SPEC = [
         'default': 8080,
     },
     {
-        'name': 'run_commands_locally',
+        'name': 'run_executions_locally',
         'spec': {
             'action': 'store_const',
             'const': True,
-            'help': 'don\'t spawn workers, run the commands locally',
+            'help': 'don\'t spawn workers, run the executions locally',
         },
         'from_string': strtobool,
         'default': False,
