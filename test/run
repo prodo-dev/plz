@@ -13,11 +13,11 @@ CONTROLLER_IMAGE=plz-controller-test
 CONTROLLER_CONTAINER=plz-controller-test
 CONTROLLER_PORT=8080
 TEST_DIRECTORY=${0:a:h}
-OUTPUT_PREFIX="${PWD}/cache/test"
+TEMP_DIRECTORY="${PWD}/cache/test"
 
 cd ${0:a:h:h}
 
-mkdir -p $OUTPUT_PREFIX
+mkdir -p $TEMP_DIRECTORY
 
 if [[ -t 1 ]]; then
   function info {
@@ -122,6 +122,11 @@ function run_cli {
   logs_file=${2:a}
   output_directory=${3:a}
 
+  temp_app_directory="${TEMP_DIRECTORY}/app"
+  rm -rf $temp_app_directory
+  cp -R $app_directory $temp_app_directory
+  git init --quiet $temp_app_directory
+
   docker container run \
     --name=$CLI_CONTAINER \
     --detach \
@@ -130,7 +135,7 @@ function run_cli {
     --env=PLZ_PORT=$CONTROLLER_PORT \
     --env=PLZ_QUIET_BUILD=true \
     --workdir=/app \
-    --volume="${app_directory}:/app" \
+    --volume="${temp_app_directory}:/app" \
     --volume="${output_directory:h}:/data" \
     $CLI_IMAGE \
     run --output="/data/${output_directory:t}" \
@@ -139,6 +144,7 @@ function run_cli {
   docker container logs --follow $CLI_CONTAINER |& redact_uuids | tee $logs_file
   exit_status=$(docker wait $CLI_CONTAINER)
   docker container rm $CLI_CONTAINER > /dev/null
+  rm -rf $temp_app_directory
   return $exit_status
 }
 
@@ -183,9 +189,9 @@ for test in $tests; do
     expected_exit_status=0
   fi
   expected_logs="${test}/expected-logs"
-  actual_logs=$(mktemp "${OUTPUT_PREFIX}/plz-test-logs.XXXXX")
+  actual_logs=$(mktemp "${TEMP_DIRECTORY}/plz-test-logs.XXXXX")
   expected_output_directory="${test}/expected-output"
-  actual_output_directory=$(mktemp "${OUTPUT_PREFIX}/plz-test-output.XXXXX")
+  actual_output_directory=$(mktemp "${TEMP_DIRECTORY}/plz-test-output.XXXXX")
   rm $actual_output_directory # It's been created as a file.
 
   set +e
