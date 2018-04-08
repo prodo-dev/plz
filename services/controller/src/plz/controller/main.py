@@ -33,7 +33,7 @@ docker_client = docker.APIClient(base_url=config.docker_host)
 images = Images.from_config(config)
 
 instance_provider: InstanceProvider
-if config.run_commands_locally:
+if config.run_executions_locally:
     instance_provider = Localhost.from_config(config)
 else:
     instance_provider = EC2InstanceGroup.from_config(config)
@@ -44,16 +44,16 @@ _user_last_execution_id = dict()
 app = Flask(__name__)
 
 
-@app.route(f'/commands', methods=['POST'])
-def run_command_entrypoint():
+@app.route(f'/executions', methods=['POST'])
+def run_execution_entrypoint():
     # Test with:
     # curl -X POST -d '{"command": "ls /" }'
-    #    -H 'Content-Type: application/json' localhost:5000/commands
+    #    -H 'Content-Type: application/json' localhost:5000/executions
     command = request.json['command']
     snapshot_id = request.json['snapshot_id']
     parameters = request.json['parameters']
     execution_spec = request.json['execution_spec']
-    execution_id = str(get_command_uuid())
+    execution_id = str(get_execution_uuid())
 
     @_json_stream
     @stream_with_context
@@ -88,21 +88,21 @@ def run_command_entrypoint():
     return response
 
 
-@app.route('/commands/list', methods=['GET'])
-def list_commands_entrypoint():
+@app.route('/executions/list', methods=['GET'])
+def list_executions_entrypoint():
     # It's not protected, it's preceded by underscore as to avoid
     # name conflicts, see docs
     # noinspection PyProtectedMember
     as_dict = [info._asdict()
-               for info in instance_provider.get_commands()]
+               for info in instance_provider.get_executions()]
     response = Response(
-        json.dumps({'commands': as_dict}),
+        json.dumps({'executions': as_dict}),
         mimetype='application/json')
     response.status_code = requests.codes.ok
     return response
 
 
-@app.route('/commands/tidy', methods=['POST'])
+@app.route('/executions/tidy', methods=['POST'])
 def tidy_entry_point():
     instance_provider.tidy_up()
     response = jsonify({})
@@ -110,11 +110,11 @@ def tidy_entry_point():
     return response
 
 
-@app.route(f'/commands/<execution_id>/status',
+@app.route(f'/executions/<execution_id>/status',
            methods=['GET'])
 def get_status_entrypoint(execution_id):
     # Test with:
-    # curl localhost:5000/commands/some-id/status
+    # curl localhost:5000/executions/some-id/status
     instance = instance_provider.instance_for(execution_id)
     state = instance.get_container_state()
     if state.running:
@@ -129,57 +129,57 @@ def get_status_entrypoint(execution_id):
         })
 
 
-@app.route(f'/commands/<execution_id>/logs',
+@app.route(f'/executions/<execution_id>/logs',
            methods=['GET'])
 def get_logs_entrypoint(execution_id):
     # Test with:
-    # curl localhost:5000/commands/some-id/logs
+    # curl localhost:5000/executions/some-id/logs
     instance = instance_provider.instance_for(execution_id)
     response = instance.logs()
     return Response(response, mimetype='application/octet-stream')
 
 
-@app.route(f'/commands/<execution_id>/logs/stdout')
+@app.route(f'/executions/<execution_id>/logs/stdout')
 def get_logs_stdout_entrypoint(execution_id):
     # Test with:
-    # curl localhost:5000/commands/some-id/logs/stdout
+    # curl localhost:5000/executions/some-id/logs/stdout
     instance = instance_provider.instance_for(execution_id)
     response = instance.logs(stdout=True, stderr=False)
     return Response(response, mimetype='application/octet-stream')
 
 
-@app.route(f'/commands/<execution_id>/logs/stderr')
+@app.route(f'/executions/<execution_id>/logs/stderr')
 def get_logs_stderr_entrypoint(execution_id):
     # Test with:
-    # curl localhost:5000/commands/some-id/logs/stderr
+    # curl localhost:5000/executions/some-id/logs/stderr
     instance = instance_provider.instance_for(execution_id)
     response = instance.logs(stdout=False, stderr=True)
     return Response(response, mimetype='application/octet-stream')
 
 
-@app.route(f'/commands/<execution_id>/output/files')
+@app.route(f'/executions/<execution_id>/output/files')
 def get_output_files_entrypoint(execution_id):
     # Test with:
-    # curl localhost:5000/commands/some-id/output | tar x -C /tmp/plz-output
+    # curl localhost:5000/executions/some-id/output | tar x -C /tmp/plz-output
     instance = instance_provider.instance_for(execution_id)
     response = instance.output_files_tarball()
     return Response(response, mimetype='application/octet-stream')
 
 
-@app.route(f'/commands/<execution_id>',
+@app.route(f'/executions/<execution_id>',
            methods=['DELETE'])
 def delete_process(execution_id):
     # Test with:
-    # curl -XDELETE localhost:5000/commands/some-id
+    # curl -XDELETE localhost:5000/executions/some-id
     instance_provider.release_instance(execution_id)
     response = jsonify({})
     response.status_code = requests.codes.no_content
     return response
 
 
-@app.route(f'/commands/<execution_id>/stop', methods=['POST'])
-def stop_command_entrypoint(execution_id: str):
-    instance_provider.stop_command(execution_id)
+@app.route(f'/executions/<execution_id>/stop', methods=['POST'])
+def stop_execution_entrypoint(execution_id: str):
+    instance_provider.stop_execution(execution_id)
     response = jsonify({})
     response.status_code = requests.codes.no_content
     return response
@@ -298,7 +298,7 @@ def prepare_input_stream(execution_spec: dict):
         abort(requests.codes.bad_request, 'Invalid input ID.')
 
 
-def get_command_uuid() -> str:
+def get_execution_uuid() -> str:
     # Recommended method for the node if you don't want to disclose the
     # physical address (see Python uuid docs)
     random_node = random.getrandbits(48) | 0x010000000000

@@ -29,7 +29,7 @@ ExecutionStatus = collections.namedtuple(
     ['running', 'success', 'code'])
 
 
-class RunCommandOperation(Operation):
+class RunExecutionOperation(Operation):
     """Run an arbitrary command on a remote machine."""
 
     @staticmethod
@@ -82,7 +82,7 @@ class RunCommandOperation(Operation):
                 'user': self.configuration.user,
                 'input_id': input_id,
             }
-            execution_id, ok = self.issue_command(
+            execution_id, ok = self.post_execution_request(
                 snapshot_id, params, execution_spec)
 
         if not execution_id:
@@ -169,15 +169,15 @@ class RunCommandOperation(Operation):
             return None
         return snapshot_id
 
-    def issue_command(
+    def post_execution_request(
             self,
             snapshot_id: str,
             params: Parameters,
             execution_spec: dict) \
             -> Tuple[Optional[str], bool]:
-        log_info('Issuing the command on a new box')
+        log_info('Sending request to start execution')
 
-        response = requests.post(self.url('commands'), json={
+        response = requests.post(self.url('executions'), json={
             'command': self.command,
             'snapshot_id': snapshot_id,
             'parameters': params,
@@ -199,7 +199,7 @@ class RunCommandOperation(Operation):
 
     @on_exception_reraise('Retrieving the status failed.')
     def get_status(self, execution_id):
-        response = requests.get(self.url('commands', execution_id, 'status'))
+        response = requests.get(self.url('executions', execution_id, 'status'))
         check_status(response, requests.codes.ok)
         body = response.json()
         return ExecutionStatus(
@@ -211,7 +211,7 @@ class RunCommandOperation(Operation):
     def retrieve_output_files(self, execution_id: str):
         log_info('Retrieving the output...')
         response = requests.get(
-            self.url('commands', execution_id, 'output', 'files'),
+            self.url('executions', execution_id, 'output', 'files'),
             stream=True)
         check_status(response, requests.codes.ok)
         try:
@@ -248,7 +248,7 @@ class RunCommandOperation(Operation):
 
     def cleanup(self, execution_id: str):
         log_info('Cleaning up all detritus...')
-        response = requests.delete(self.url('commands', execution_id))
+        response = requests.delete(self.url('executions', execution_id))
         check_status(response, requests.codes.no_content)
 
 
