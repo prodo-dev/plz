@@ -7,26 +7,26 @@ from prettytable import PrettyTable
 from plz.cli.operation import Operation, check_status
 
 
-class ListCommandsOperation(Operation):
+class ListExecutionsOperation(Operation):
     @staticmethod
     def prepare_argument_parser(parser, args):
         pass
 
     def run(self):
-        response = requests.get(self.url('commands', 'list'))
+        response = requests.get(self.url('executions', 'list'))
         check_status(response, requests.codes.ok)
         table = PrettyTable(['Execution Id', 'Running', 'Status',
                              'Type', 'Idle since', 'Disposal time'])
-        for command in json.loads(response.content)['commands']:
-            execution_id = command['execution_id']
-            running = command['running']
-            status = command['status']
-            instance_type = command['instance_type']
+        for execution in json.loads(response.content)['executions']:
+            execution_id = execution['execution_id']
+            running = execution['running']
+            status = execution['status']
+            instance_type = execution['instance_type']
             if status == 'idle':
-                idle_since_timestamp = command['idle_since_timestamp']
+                idle_since_timestamp = execution['idle_since_timestamp']
                 idle_since = _timestamp_to_string(idle_since_timestamp)
                 disposal_time = _timestamp_to_string(
-                    idle_since_timestamp + command['max_idle_seconds'])
+                    idle_since_timestamp + execution['max_idle_seconds'])
             else:
                 idle_since = ''
                 disposal_time = ''

@@ -78,7 +78,7 @@ function start_controller {
     --volume="${PWD}/cache/controller:/cache/controller" \
     --volume=/var/run/docker.sock:/var/run/docker.sock \
     $IMAGE \
-    --run-commands-locally \
+    --run-executions-locally \
     --environment-name=ignore --data-dir=/cache/controller --aws-project=ignore --aws-worker-ami=ignore --aws-key-name=ignore
   sleep 5
   info "Controller started."

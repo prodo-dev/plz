@@ -30,7 +30,7 @@ class LogsOperation(Operation):
         signal.signal(signal.SIGINT,
                       lambda s, _: _exit_and_print_execution_id(
                           execution_id))
-        response = requests.get(self.url('commands', execution_id, 'logs'),
+        response = requests.get(self.url('executions', execution_id, 'logs'),
                                 stream=True)
         check_status(response, requests.codes.ok)
         for line in response.raw:

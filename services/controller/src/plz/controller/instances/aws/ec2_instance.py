@@ -112,8 +112,8 @@ class EC2Instance(Instance):
                 ei.max_idle_seconds < 0:
             self.dispose()
 
-    def stop_command(self):
-        return self.delegate.stop_command()
+    def stop_execution(self):
+        return self.delegate.stop_execution()
 
 
 def get_tag(instance_data, tag, default=None) -> Optional[str]:
