@@ -7,17 +7,19 @@ set -o pipefail
 autoload -U colors && colors
 
 NETWORK=plz-test
+VOLUME=plz-data
+VOLUME_CONTAINER=plz-data
 CLI_IMAGE=plz-cli-test
 CLI_CONTAINER=plz-cli-test
 CONTROLLER_IMAGE=plz-controller-test
 CONTROLLER_CONTAINER=plz-controller-test
 CONTROLLER_PORT=8080
 TEST_DIRECTORY=${0:a:h}
-TEMP_DIRECTORY="${PWD}/cache/test"
+DATA_DIRECTORY="${PWD}/cache/test"
 
 cd ${0:a:h:h}
 
-mkdir -p $TEMP_DIRECTORY
+mkdir -p $DATA_DIRECTORY
 
 if [[ -t 1 ]]; then
   function info {
@@ -118,14 +120,30 @@ function run_cli {
     stop_cli
   fi
 
+  if volume_exists; then
+    warning "Volume already exists. Stopping..."
+    remove_volume
+  fi
+
   app_directory=${1:a}
   logs_file=${2:a}
   output_directory=${3:a}
 
-  temp_app_directory="${TEMP_DIRECTORY}/app"
-  rm -rf $temp_app_directory
-  cp -R $app_directory $temp_app_directory
-  git init --quiet $temp_app_directory
+  # Add the app directory to a Docker volume.
+  docker volume create $VOLUME > /dev/null
+  docker create \
+    --name=$VOLUME_CONTAINER \
+    --volume=$VOLUME:/data \
+    docker:stable-git \
+    /bin/true \
+    > /dev/null
+  docker cp $app_directory $VOLUME_CONTAINER:/data/app
+  # Initialize a Git repository to make excludes work.
+  docker run \
+    --rm \
+    --volume=$VOLUME:/data \
+    docker:stable-git \
+    git init --quiet /data/app
 
   docker container run \
     --name=$CLI_CONTAINER \
@@ -134,17 +152,21 @@ function run_cli {
     --env=PLZ_HOST=$CONTROLLER_CONTAINER \
     --env=PLZ_PORT=$CONTROLLER_PORT \
     --env=PLZ_QUIET_BUILD=true \
-    --workdir=/app \
-    --volume="${temp_app_directory}:/app" \
-    --volume="${output_directory:h}:/data" \
+    --workdir=/data/app \
+    --volume="${VOLUME}:/data" \
     $CLI_IMAGE \
-    run --output="/data/${output_directory:t}" \
+    run --output="/data/output" \
     > /dev/null
 
+  # Capture the logs and exit status.
   docker container logs --follow $CLI_CONTAINER |& redact_uuids | tee $logs_file
   exit_status=$(docker wait $CLI_CONTAINER)
   docker container rm $CLI_CONTAINER > /dev/null
-  rm -rf $temp_app_directory
+
+  # Extract the output.
+  docker cp $VOLUME_CONTAINER:/data/output $output_directory
+  remove_volume
+
   return $exit_status
 }
 
@@ -165,8 +187,22 @@ function cleanup {
   exit_status=$?
   stop_controller
   stop_cli
+  remove_volume
   docker network rm $NETWORK
   return $exit_status
+}
+
+function remove_volume {
+  if ! volume_exists; then
+    return
+  fi
+  docker container rm $VOLUME_CONTAINER > /dev/null || :
+  docker volume rm $VOLUME > /dev/null || :
+}
+
+function volume_exists {
+  docker container inspect $VOLUME_CONTAINER >& /dev/null \
+    || docker volume inspect $VOLUME >& /dev/null
 }
 
 function redact_uuids {
@@ -189,9 +225,9 @@ for test in $tests; do
     expected_exit_status=0
   fi
   expected_logs="${test}/expected-logs"
-  actual_logs=$(mktemp "${TEMP_DIRECTORY}/plz-test-logs.XXXXX")
+  actual_logs=$(mktemp "${DATA_DIRECTORY}/plz-test-logs.XXXXX")
   expected_output_directory="${test}/expected-output"
-  actual_output_directory=$(mktemp "${TEMP_DIRECTORY}/plz-test-output.XXXXX")
+  actual_output_directory=$(mktemp "${DATA_DIRECTORY}/plz-test-output.XXXXX")
   rm $actual_output_directory # It's been created as a file.
 
   set +e
