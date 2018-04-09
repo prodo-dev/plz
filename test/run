@@ -226,10 +226,11 @@ trap cleanup EXIT INT TERM
 
 build_cli
 
-docker network inspect $NETWORK >& /dev/null \
-  || docker network create $NETWORK
-
-if (( ! ${+PLZ_HOST} )) && (( ! ${+PLZ_PORT} )); then
+if (( ${+PLZ_HOST} )) && (( ${+PLZ_PORT} )); then
+  NETWORK=host
+else
+  docker network inspect $NETWORK >& /dev/null \
+    || docker network create $NETWORK
   start_controller
   PLZ_HOST=$CONTROLLER_CONTAINER
   PLZ_PORT=$CONTROLLER_PORT
