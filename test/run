@@ -195,16 +195,20 @@ function cleanup {
 }
 
 function remove_volume {
-  if ! volume_exists; then
-    return
+  if volume_container_exists; then
+    docker container rm $VOLUME_CONTAINER > /dev/null
+   fi
+  if volume_exists; then
+    docker volume rm $VOLUME > /dev/null
   fi
-  docker container rm $VOLUME_CONTAINER > /dev/null || :
-  docker volume rm $VOLUME > /dev/null || :
+}
+
+function volume_container_exists {
+  docker container inspect $VOLUME_CONTAINER >& /dev/null
 }
 
 function volume_exists {
-  docker container inspect $VOLUME_CONTAINER >& /dev/null \
-    || docker volume inspect $VOLUME >& /dev/null
+  docker volume inspect $VOLUME >& /dev/null
 }
 
 function redact_uuids {
