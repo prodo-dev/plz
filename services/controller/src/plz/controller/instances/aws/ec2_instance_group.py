@@ -1,7 +1,6 @@
 import os
 import shlex
 import socket
-import threading
 import time
 from contextlib import closing
 from typing import Dict, Iterator, Optional
