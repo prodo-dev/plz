@@ -131,11 +131,13 @@ function run_cli {
 
   # Add the app directory to a Docker volume.
   docker volume create $VOLUME > /dev/null
-  docker create \
+  docker run \
     --name=$VOLUME_CONTAINER \
+    --detach \
+    --interactive \
     --volume=$VOLUME:/data \
     docker:stable-git \
-    /bin/true \
+    /bin/cat \
     > /dev/null
   docker container cp $app_directory $VOLUME_CONTAINER:/data/app
 
@@ -166,7 +168,8 @@ function run_cli {
   docker container rm $CLI_CONTAINER > /dev/null
 
   # Extract the output.
-  docker container cp $VOLUME_CONTAINER:/data/output $output_directory
+  docker container exec $VOLUME_CONTAINER sh -c '[ ! -d /data/output ]' \
+    || docker container cp $VOLUME_CONTAINER:/data/output $output_directory
   remove_volume
 
   return $exit_status
@@ -196,6 +199,7 @@ function cleanup {
 
 function remove_volume {
   if volume_container_exists; then
+    docker container kill $VOLUME_CONTAINER > /dev/null
     docker container rm $VOLUME_CONTAINER > /dev/null
    fi
   if volume_exists; then
