@@ -17,11 +17,17 @@ from plz.controller.volumes import Volumes
 def load() -> pyhocon.ConfigTree:
     if os.environ.get('CONFIGURATION'):
         return load_from_string(os.environ['CONFIGURATION'])
-    if len(sys.argv) != 1:
-        return load_from_file(sys.argv[1])
-    else:
-        print(f'Usage: {sys.argv[0]} CONFIGURATION-FILE')
-        sys.exit(2)
+
+    try:
+        start = sys.argv.index('--') + 1
+    except ValueError:
+        start = 0
+    args = sys.argv[start:]
+    if len(args) == 1:
+        return load_from_file(args[0])
+
+    print(f'Usage: controller CONFIGURATION-FILE')
+    sys.exit(2)
 
 
 def load_from_string(string) -> pyhocon.ConfigTree:
