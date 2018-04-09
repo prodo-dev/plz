@@ -29,15 +29,6 @@ class Localhost(InstanceProvider):
             self.images, self.containers, self.volumes, execution_id)
         return iter([{'instance': instance}])
 
-    def release_instance(self, execution_id: str,
-                         idle_since_timestamp: Optional[int] = None):
-        """
-        "Releases" an instance.
-
-        As we're dealing with `localhost` here, this doesn't do much.
-        """
-        self.instance_for(execution_id).cleanup()
-
     def instance_for(self, execution_id: str) -> Optional[Instance]:
         """
         "Gets" the instance assigned to the execution ID.
@@ -49,7 +40,19 @@ class Localhost(InstanceProvider):
             log.error(f'Names are:{self.containers.execution_ids()}')
             return None
         return DockerInstance(
-                self.images, self.containers, self.volumes, execution_id)
+            self.images, self.containers, self.volumes, execution_id)
+
+    def stop_execution(self, execution_id):
+        self.containers.stop(execution_id)
+
+    def release_instance(self, execution_id: str,
+                         idle_since_timestamp: Optional[int] = None):
+        """
+        "Releases" an instance.
+
+        As we're dealing with `localhost` here, this doesn't do much.
+        """
+        self.instance_for(execution_id).cleanup()
 
     def push(self, image_tag: str):
         pass
@@ -58,6 +61,3 @@ class Localhost(InstanceProvider):
             -> Iterator[Instance]:
         return iter(self.instance_for(execution_id)
                     for execution_id in self.containers.execution_ids())
-
-    def stop_execution(self, execution_id):
-        self.containers.stop(execution_id)

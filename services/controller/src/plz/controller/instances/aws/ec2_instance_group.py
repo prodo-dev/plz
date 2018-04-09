@@ -176,12 +176,6 @@ class EC2InstanceGroup(InstanceProvider):
                 yield _msg('pending')
                 time.sleep(delay_in_seconds)
 
-    def _is_instance_free(self, instance_id):
-        instances = self._get_running_aws_instances(
-            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
-                     ('instance-id', instance_id)])
-        return len(instances) > 0
-
     def instance_for(self, execution_id: str) -> Optional[EC2Instance]:
         instance_data_list = self._get_running_aws_instances(
             filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', execution_id)])
@@ -192,8 +186,8 @@ class EC2InstanceGroup(InstanceProvider):
                 f'More than one instance for execution ID {execution_id}')
         return self._ec2_instance_from_instance_data(instance_data_list[0])
 
-    def push(self, image_tag):
-        self.images.push(image_tag)
+    def stop_execution(self, execution_id: str):
+        self.instance_for(execution_id).stop_execution()
 
     def release_instance(self, execution_id: str,
                          idle_since_timestamp: Optional[int] = None):
@@ -207,8 +201,14 @@ class EC2InstanceGroup(InstanceProvider):
                  'Value': str(idle_since_timestamp)}
             ])
 
-    def stop_execution(self, execution_id: str):
-        self.instance_for(execution_id).stop_execution()
+    def push(self, image_tag):
+        self.images.push(image_tag)
+
+    def _is_instance_free(self, instance_id):
+        instances = self._get_running_aws_instances(
+            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
+                     ('instance-id', instance_id)])
+        return len(instances) > 0
 
     def _get_running_aws_instances(self, filters: [(str, str)]):
         new_filters = [{'Name': n, 'Values': [v]} for (n, v) in filters]

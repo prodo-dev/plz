@@ -101,13 +101,17 @@ class InstanceProvider(ABC):
         pass
 
     @abstractmethod
-    def release_instance(
-            self, execution_id: str,
-            idle_since_timestamp: Optional[int] = None):
+    def instance_for(self, execution_id: str) -> Optional[Instance]:
         pass
 
     @abstractmethod
-    def instance_for(self, execution_id: str) -> Optional[Instance]:
+    def stop_execution(self, execution_id: str):
+        pass
+
+    @abstractmethod
+    def release_instance(
+            self, execution_id: str,
+            idle_since_timestamp: Optional[int] = None):
         pass
 
     @abstractmethod
@@ -118,17 +122,13 @@ class InstanceProvider(ABC):
     def instance_iterator(self) -> Iterator[Instance]:
         pass
 
-    @abstractmethod
-    def stop_execution(self, execution_id: str):
-        pass
-
     def tidy_up(self):
         for instance in self.instance_iterator():
-            ei = instance.get_execution_info()
-            if ei.status == 'exited':
+            info = instance.get_execution_info()
+            if info.status == 'exited':
                 self.release_instance(
-                    ei.execution_id, ei.idle_since_timestamp)
-            instance.dispose_if_its_time(ei)
+                    info.execution_id, info.idle_since_timestamp)
+            instance.dispose_if_its_time(info)
 
     def get_executions(self) -> [ExecutionInfo]:
         return [
