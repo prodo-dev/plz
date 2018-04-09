@@ -30,8 +30,8 @@
               provider = aws-ec2
               region = "{{ aws_region }}"
               project = "{{ aws_project }}"
-              worker_ami = "{{ aws_worker_ami }}"
-              key_name = "{{ aws_key_name }}"
+              worker_ami = "{{ worker_ami }}"
+              key_name = "{{ key_name }}"
               group_name = "{{ environment_name }}"
             }
             images = {

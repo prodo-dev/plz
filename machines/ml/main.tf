@@ -1,16 +1,17 @@
-variable "region" {}
+variable "environment_name" {}
 
-variable "availability_zone" {}
+variable "aws_region" {}
 
-variable "internal_domain" {}
+variable "aws_availability_zone" {}
+
+variable "aws_dns_zone" {}
 
 variable "subdomain" {}
-
-variable "environment" {}
 
 variable "ami_tag" {}
 
 variable "key_name" {}
+variable "ssh_public_key_file" {}
 
 variable "ec2_role" {
   default = <<EOF
@@ -30,10 +31,8 @@ EOF
 }
 
 provider "aws" {
-  version                 = "~> 1.11"
-  shared_credentials_file = "../credentials/root.awscreds"
-  profile                 = "default"
-  region                  = "${var.region}"
+  version = "~> 1.11"
+  region  = "${var.aws_region}"
 }
 
 ///
@@ -43,7 +42,7 @@ data "aws_vpc" "main" {
 }
 
 data "aws_subnet" "main" {
-  availability_zone = "${var.availability_zone}"
+  availability_zone = "${var.aws_availability_zone}"
   default_for_az    = true
 }
 
@@ -59,13 +58,13 @@ data "aws_security_group" "default" {
 }
 
 data "aws_route53_zone" "internal" {
-  name   = "${var.internal_domain}"
+  name   = "${var.aws_dns_zone}"
   vpc_id = "${data.aws_vpc.main.id}"
 }
 
 resource "aws_key_pair" "plz" {
   key_name   = "${var.key_name}"
-  public_key = "${file("../keys/plz.pubkey")}"
+  public_key = "${file("${var.ssh_public_key_file}")}"
 }
 
 ///
@@ -86,19 +85,19 @@ resource "aws_instance" "controller" {
   iam_instance_profile        = "${aws_iam_instance_profile.controller.name}"
 
   tags {
-    Name        = "Plz ${var.environment} Controller"
-    Environment = "${var.environment}"
+    Name        = "Plz ${var.environment_name} Controller"
+    Environment = "${var.environment_name}"
     Owner       = "Infrastructure"
   }
 }
 
 resource "aws_iam_instance_profile" "controller" {
-  name = "plz-${lower(var.environment)}-controller"
+  name = "plz-${lower(var.environment_name)}-controller"
   role = "${aws_iam_role.controller.name}"
 }
 
 resource "aws_iam_role" "controller" {
-  name = "plz-${lower(var.environment)}-controller"
+  name = "plz-${lower(var.environment_name)}-controller"
 
   assume_role_policy = "${var.ec2_role}"
 }
@@ -118,8 +117,8 @@ resource "aws_ebs_volume" "controller-cache" {
   size              = 500
 
   tags {
-    Name        = "Plz ${var.environment} Controller Cache"
-    Environment = "${var.environment}"
+    Name        = "Plz ${var.environment_name} Controller Cache"
+    Environment = "${var.environment_name}"
     Owner       = "Infrastructure"
   }
 }
@@ -138,7 +137,7 @@ resource "aws_volume_attachment" "controller-cache-attachment" {
 
 resource "aws_route53_record" "controller" {
   zone_id = "${data.aws_route53_zone.internal.zone_id}"
-  name    = "plz.${var.subdomain}"
+  name    = "${var.subdomain}"
   type    = "A"
   ttl     = "300"
   records = ["${aws_instance.controller.private_ip}"]

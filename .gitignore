@@ -1,5 +1,5 @@
 /cache
-/data
+/secrets
 .envrc
 output
 
@@ -16,9 +16,7 @@ dist
 
 # Ansible
 *.retry
-/machines/*/inventory
 
 # Terraform
 .terraform
-*.backup
-test.tfstate
+*.tfstate.backup
