@@ -1,16 +1,13 @@
 import base64
-import collections
-import json
-import time
 from typing import BinaryIO, Iterator
 
 import docker
 from requests.exceptions import ConnectionError
 
-Metadata = collections.namedtuple('Metadata', ['user', 'project', 'timestamp'])
+from plz.controller.images.images_base import Images
 
 
-class Images:
+class ECRImages(Images):
     def __init__(self,
                  docker_api_client: docker.APIClient,
                  ecr_client,
@@ -19,9 +16,10 @@ class Images:
         self.ecr_client = ecr_client
         self.repository = repository
 
-    def for_host(self, docker_url: str) -> 'Images':
+    def for_host(self, docker_url: str) -> 'ECRImages':
         new_docker_api_client = docker.APIClient(base_url=docker_url)
-        return Images(new_docker_api_client, self.ecr_client, self.repository)
+        return ECRImages(
+            new_docker_api_client, self.ecr_client, self.repository)
 
     def build(self, fileobj: BinaryIO, tag: str) -> Iterator[str]:
         return self.docker_api_client.build(
@@ -47,17 +45,6 @@ class Images:
             return True
         except ConnectionError:
             return False
-
-    @staticmethod
-    def parse_metadata(json_string: str) -> Metadata:
-        data = json.loads(json_string)
-        timestamp = str(int(time.time() * 1000))
-        return Metadata(data['user'], data['project'], timestamp)
-
-    @staticmethod
-    def construct_tag(metadata_string: str) -> str:
-        metadata = Images.parse_metadata(metadata_string)
-        return f'{metadata.user}-{metadata.project}-{metadata.timestamp}'
 
     def _aws_ecr_credentials(self) -> dict:
         authorization_token = self.ecr_client.get_authorization_token()

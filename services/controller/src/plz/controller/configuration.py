@@ -6,7 +6,8 @@ import docker
 import pyhocon
 
 from plz.controller.containers import Containers
-from plz.controller.images import Images
+from plz.controller.images import ECRImages
+from plz.controller.images.local import LocalImages
 from plz.controller.instances.aws import EC2InstanceGroup
 from plz.controller.instances.instance_base import InstanceProvider
 from plz.controller.instances.localhost import Localhost
@@ -32,14 +33,14 @@ def load_from_file(path) -> pyhocon.ConfigTree:
 
 
 def instance_provider_from_config(config) -> InstanceProvider:
-    provider_type = config['instances.provider']
+    provider = config['instances.provider']
     docker_host = config.get('images.docker_host', None)
     images = images_from_config(config)
-    if provider_type == 'localhost':
+    if provider == 'localhost':
         containers = Containers.for_host(docker_host)
         volumes = Volumes.for_host(docker_host)
         return Localhost(images, containers, volumes)
-    elif provider_type == 'aws-ec2':
+    elif provider == 'aws-ec2':
         return EC2InstanceGroup(
             name=config['instances.group_name'],
             client=boto3.client(
@@ -55,13 +56,16 @@ def instance_provider_from_config(config) -> InstanceProvider:
 
 
 def images_from_config(config):
-    if config['images.provider'] == 'aws-ecr':
-        docker_api_client = docker.APIClient(
-            base_url=config.get('images.docker_host', None))
+    provider = config['images.provider']
+    docker_api_client = docker.APIClient(
+        base_url=config.get('images.docker_host', None))
+    if provider == 'local':
+        return LocalImages(docker_api_client)
+    elif provider == 'aws-ecr':
         ecr_client = boto3.client(
             service_name='ecr',
             region_name=config['images.region'])
         repository = config['images.repository']
-        return Images(docker_api_client, ecr_client, repository)
+        return ECRImages(docker_api_client, ecr_client, repository)
     else:
         raise ValueError('Invalid image provider.')
