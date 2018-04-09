@@ -117,6 +117,8 @@ def get_status_entrypoint(execution_id):
     # curl localhost:5000/executions/some-id/status
     instance = instance_provider.instance_for(execution_id)
     state = instance.get_container_state()
+    if not state:
+        abort(requests.codes.not_found)
     if state.running:
         return jsonify({
             'running': True,
