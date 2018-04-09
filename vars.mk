@@ -7,7 +7,7 @@ ifndef ENVIRONMENT_NAME
 $(error 'You must set the `ENVIRONMENT_NAME` environment variable.\nYou can use `direnv` and the .envrc file to do so.')
 endif
 
-AWS_REGION = eu-west-1
+AWS_DEFAULT_REGION = eu-west-1
 AWS_AVAILABILITY_ZONE = eu-west-1a
 AWS_PROJECT = 024444204267.dkr.ecr.eu-west-1.amazonaws.com
 AMI_TAG = 2018-03-27
@@ -22,7 +22,7 @@ no-op:
 
 .PHONY: bash
 bash:
-	@ echo 'export AWS_REGION="$(AWS_REGION)"'
+	@ echo 'export AWS_DEFAULT_REGION="$(AWS_DEFAULT_REGION)"'
 	@ echo 'export AWS_AVAILABILITY_ZONE="$(AWS_AVAILABILITY_ZONE)"'
 	@ echo 'export AWS_PROJECT="$(AWS_PROJECT)"'
 	@ echo 'export AWS_WORKER_AMI="$(AWS_WORKER_AMI)"'
@@ -30,7 +30,7 @@ bash:
 
 .PHONY: terraform-common
 terraform-common:
-	@ echo 'export TF_VAR_region="$(AWS_REGION)"'
+	@ echo 'export TF_VAR_region="$(AWS_DEFAULT_REGION)"'
 	@ echo 'export TF_VAR_availability_zone="$(AWS_AVAILABILITY_ZONE)"'
 	@ echo 'export TF_VAR_project="$(AWS_PROJECT)"'
 	@ echo 'export TF_VAR_ami_tag="$(AMI_TAG)"'

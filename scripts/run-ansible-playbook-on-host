@@ -37,7 +37,7 @@ all:
       ansible_ssh_private_key_file: "${SSH_PRIVATE_KEY_FILE}"
       ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
   vars:
-    aws_region: "${AWS_REGION}"
+    aws_region: "${AWS_DEFAULT_REGION}"
     aws_project: "${AWS_PROJECT}"
     environment_name: "${ENVIRONMENT_NAME}"
     ssh_private_key_file: "${SSH_PRIVATE_KEY_FILE}"

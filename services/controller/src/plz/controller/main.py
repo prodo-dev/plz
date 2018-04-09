@@ -9,36 +9,28 @@ import threading
 import uuid
 from typing import Any, Callable, Iterator, TypeVar, Union
 
-import boto3
-import docker
 import requests
 from flask import Flask, Response, abort, jsonify, request, stream_with_context
 
-from plz.controller.controller_config import config
+from plz.controller import configuration
 from plz.controller.images import Images
-from plz.controller.instances.aws import EC2InstanceGroup
-from plz.controller.instances.instance_base import InstanceProvider
-from plz.controller.instances.localhost import Localhost
 
 READ_BUFFER_SIZE = 16384
 
 T = TypeVar('T')
 
-input_dir = os.environ.get('INPUT_DIR',
-                           os.path.join(config.data_dir, 'input'))
-temp_data_dir = os.environ.get('TEMP_DATA_DIR',
-                               os.path.join(config.data_dir, 'tmp'))
+config = configuration.load()
+port = config.get_int('port', 8080)
+data_dir = config['data_dir']
+input_dir = os.path.join(data_dir, 'input')
+temp_data_dir = os.path.join(data_dir, 'tmp')
+images = configuration.images_from_config(config)
+instance_provider = configuration.instance_provider_from_config(config)
+
+os.makedirs(input_dir, exist_ok=True)
+os.makedirs(temp_data_dir, exist_ok=True)
 
 log = logging.getLogger('controller')
-ecr_client = boto3.client('ecr')
-docker_client = docker.APIClient(base_url=config.docker_host)
-images = Images.from_config(config)
-
-instance_provider: InstanceProvider
-if config.run_executions_locally:
-    instance_provider = Localhost.from_config(config)
-else:
-    instance_provider = EC2InstanceGroup.from_config(config)
 
 _user_last_execution_id_lock = threading.RLock()
 _user_last_execution_id = dict()
@@ -347,6 +339,4 @@ def _get_user_last_execution_id(user: str):
 
 
 if __name__ == '__main__':
-    os.makedirs(input_dir, exist_ok=True)
-    os.makedirs(temp_data_dir, exist_ok=True)
-    app.run(host='0.0.0.0', port=config.port)
+    app.run(host='0.0.0.0', port=port)

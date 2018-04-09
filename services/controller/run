@@ -5,18 +5,6 @@ set -u
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-mkdir -p ../../cache/controller
-DEFAULT_DATA_DIR="$(cd ../../cache/controller && pwd)"
-
-if [[ -z "${DATA_DIR:-}" ]]; then
-  export DATA_DIR="$DEFAULT_DATA_DIR"
-fi
-
-export INPUT_DIR="${DATA_DIR}/input"
-export TEMP_DATA_DIR="${DATA_DIR}/tmp"
-mkdir -p "${INPUT_DIR}"
-mkdir -p "${TEMP_DATA_DIR}"
-
 export PYTHONPATH=./src
 
 exec gunicorn \

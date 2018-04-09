@@ -12,7 +12,7 @@ build:
 
 .PHONY: push
 push: build
-	eval $$(aws ecr get-login --no-include-email --region $(AWS_REGION))
+	eval $$(aws ecr get-login --no-include-email --region $(AWS_DEFAULT_REGION))
 	docker push $(TAG)
 
 .PHONY: tag

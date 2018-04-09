@@ -12,13 +12,6 @@ log = logging.getLogger('localhost')
 
 
 class Localhost(InstanceProvider):
-    @staticmethod
-    def from_config(config):
-        images = Images.from_config(config)
-        containers = Containers.for_host(config.docker_host)
-        volumes = Volumes.for_host(config.docker_host)
-        return Localhost(images, containers, volumes)
-
     def __init__(self,
                  images: Images,
                  containers: Containers,

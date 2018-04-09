@@ -45,6 +45,7 @@ class DockerInstance(Instance):
                        contents=json.dumps(configuration, indent=2)),
         ])
         self.containers.run(name=self.execution_id,
+                            repository=self.images.repository,
                             tag=snapshot_id,
                             command=command,
                             environment=environment,

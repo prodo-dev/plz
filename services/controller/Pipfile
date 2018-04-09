@@ -11,6 +11,7 @@ boto3 = "*"
 docker = "*"
 flask = "*"
 gunicorn = "*"
+pyhocon = "*"
 requests = "*"
 
 [dev-packages]
