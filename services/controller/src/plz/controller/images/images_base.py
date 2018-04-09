@@ -36,5 +36,6 @@ class Images(ABC):
     def pull(self, tag: str):
         pass
 
-    def can_pull(self):
+    @abstractmethod
+    def can_pull(self) -> bool:
         pass

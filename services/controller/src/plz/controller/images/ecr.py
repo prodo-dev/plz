@@ -39,7 +39,7 @@ class ECRImages(Images):
             self.repository, tag,
             auth_config=self._aws_ecr_credentials())
 
-    def can_pull(self):
+    def can_pull(self) -> bool:
         try:
             self.docker_api_client.pull('hello-world')
             return True
