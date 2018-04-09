@@ -23,17 +23,25 @@
         image: "{{ image }}"
         pull: yes
         env:
-          ENVIRONMENT_NAME: "{{ environment_name }}"
-          PORT: "{{ service_port }}"
-          DATA_DIR: '/data'
-          AWS_DEFAULT_REGION: "{{ aws_region }}"
-          AWS_PROJECT: "{{ aws_project }}"
-          AWS_WORKER_AMI: "{{ aws_worker_ami }}"
-          AWS_KEY_NAME: "{{ aws_key_name }}"
+          CONFIG: |
+            port = 80
+            data_dir = "/data"
+            instances = {
+              provider = "aws-ec2"
+              region = "{{ aws_region }}"
+              project = "{{ aws_project }}"
+              worker_ami = "{{ aws_worker_ami }}"
+              key_name = "{{ aws_key_name }}"
+              group_name = "{{ environment_name }}"
+            }
+            images = {
+              provider = "aws-ecr"
+              region = "{{ aws_region }}"
+            }
         published_ports:
-          - "{{ service_port }}:{{ service_port }}"
+          - "{{ service_port }}:80"
         volumes:
-          - /cache/plz:/data
+          - /cache/controller:/data
           - /home/ubuntu/.ssh/plz.privkey:/root/.ssh/id_rsa:ro
           - /var/run/docker.sock:/var/run/docker.sock
         restart_policy: unless-stopped

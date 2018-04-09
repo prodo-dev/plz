@@ -6,8 +6,6 @@ import time
 from contextlib import closing
 from typing import Dict, Iterator, Optional
 
-import boto3
-
 from plz.controller.containers import Containers
 from plz.controller.images import Images
 from plz.controller.instances.instance_base import Instance, InstanceProvider
@@ -24,18 +22,6 @@ class EC2InstanceGroup(InstanceProvider):
 
     _name_to_group = {}
     _name_to_group_lock = threading.RLock()
-
-    @staticmethod
-    def from_config(config):
-        images = Images.from_config(config)
-        return EC2InstanceGroup(
-            name=config.environment_name,
-            client=boto3.client('ec2'),
-            aws_worker_ami=config.aws_worker_ami,
-            aws_key_name=config.aws_key_name,
-            images=images,
-            acquisition_delay_in_seconds=10,
-            max_acquisition_tries=5)
 
     def __new__(cls,
                 name: str,

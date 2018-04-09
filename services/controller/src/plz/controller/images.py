@@ -4,7 +4,6 @@ import json
 import time
 from typing import BinaryIO, Iterator
 
-import boto3
 import docker
 from requests.exceptions import ConnectionError
 
@@ -15,23 +14,13 @@ class Images:
     DOCKER_REPOSITORY = \
         '024444204267.dkr.ecr.eu-west-1.amazonaws.com/plz/builds'
 
-    @staticmethod
-    def from_config(config):
-        ecr_client = boto3.client('ecr')
-        docker_api_client = docker.APIClient(base_url=config.docker_host)
-        return Images(docker_api_client, ecr_client, config.aws_project)
-
-    def __init__(self,
-                 docker_api_client: docker.APIClient,
-                 ecr_client,
-                 aws_project: str):
+    def __init__(self, docker_api_client: docker.APIClient, ecr_client):
         self.docker_api_client = docker_api_client
         self.ecr_client = ecr_client
-        self.aws_project = aws_project
 
     def for_host(self, docker_url: str) -> 'Images':
         new_docker_api_client = docker.APIClient(base_url=docker_url)
-        return Images(new_docker_api_client, self.ecr_client, self.aws_project)
+        return Images(new_docker_api_client, self.ecr_client)
 
     def build(self, fileobj: BinaryIO, tag: str) -> Iterator[str]:
         return self.docker_api_client.build(

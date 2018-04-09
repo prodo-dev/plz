@@ -80,16 +80,15 @@ function start_controller {
 
   info "Starting the controller..."
   docker container run \
-    --name=$CONTROLLER_CONTAINER \
+    --name="$CONTROLLER_CONTAINER" \
     --detach \
-    --network=$NETWORK \
-    --env=PORT=$CONTROLLER_PORT \
-    --env=AWS_DEFAULT_REGION=eu-west-1 \
+    --network="$NETWORK" \
+    --env=PORT="$CONTROLLER_PORT" \
+    --env=CONFIG="$(cat services/controller/config/localhost.conf)" \
+    --env=AWS_DEFAULT_REGION="$AWS_DEFAULT_REGION" \
     --volume="${PWD}/cache/controller:/cache/controller" \
-    --volume=/var/run/docker.sock:/var/run/docker.sock \
-    $CONTROLLER_IMAGE \
-    --run-executions-locally \
-    --environment-name=ignore --data-dir=/cache/controller --aws-project=ignore --aws-worker-ami=ignore --aws-key-name=ignore
+    --volume='/var/run/docker.sock:/var/run/docker.sock' \
+    $CONTROLLER_IMAGE
   sleep 5
   info "Controller started."
 }
