@@ -6,7 +6,7 @@
     - name: Copy the SSH private key
       copy:
         src: "{{ ssh_private_key_file }}"
-        dest: /home/ubuntu/.ssh/plz.privkey
+        dest: /home/ubuntu/.ssh/plz
         owner: ubuntu
         group: ubuntu
         mode: 0600
@@ -43,7 +43,7 @@
           - "{{ service_port }}:80"
         volumes:
           - /cache/controller:/data
-          - /home/ubuntu/.ssh/plz.privkey:/root/.ssh/id_rsa:ro
+          - /home/ubuntu/.ssh/plz:/root/.ssh/id_rsa:ro
           - /var/run/docker.sock:/var/run/docker.sock
         restart_policy: unless-stopped
     - name: Set cron job for tidying

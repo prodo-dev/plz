@@ -6,8 +6,8 @@ IMAGE_GROUPS = controller worker
 
 AWS_REGION = $(shell jq -r '.aws_region' $(CONFIG_FILE))
 AMI_TAG = $(shell jq -r '.ami_tag' $(CONFIG_FILE))
-SSH_PRIVATE_KEY_FILE = $(SECRETS_DIR)/keys/plz
-SSH_PUBLIC_KEY_FILE = $(SECRETS_DIR)/keys/plz.pub
+SSH_PRIVATE_KEY_FILE = $(SECRETS_DIR)/keys/id_rsa
+SSH_PUBLIC_KEY_FILE = $(SECRETS_DIR)/keys/id_rsa.pub
 
 .PHONY: amis
 amis:

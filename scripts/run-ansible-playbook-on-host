@@ -23,7 +23,7 @@ if [[ -z $HOST_IP ]]; then
   exit 1
 fi
 
-SSH_PRIVATE_KEY_FILE="${SECRETS_DIR}/keys/plz"
+SSH_PRIVATE_KEY_FILE="${SECRETS_DIR}/keys/id_rsa"
 
 ANSIBLE_INVENTORY=$(mktemp "${TMPDIR:-/tmp/}inventory-XXXXX")
 cat > $ANSIBLE_INVENTORY <<EOF
