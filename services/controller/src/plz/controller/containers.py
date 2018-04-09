@@ -6,6 +6,7 @@ from typing import Dict, Iterator, List, Optional
 import dateutil.parser
 import docker
 import docker.errors
+from docker.models.containers import Container
 from docker.types import Mount
 
 ContainerState = collections.namedtuple(
@@ -43,20 +44,25 @@ class Containers:
         self.log.info(f'Started container: {container.id}')
 
     def rm(self, name: str):
-        try:
-            container = self._get_container(name)
-            container.stop()
-            container.remove()
-        except docker.errors.NotFound:
-            pass
+        container = self._get_container(name)
+        if not container:
+            return
+        container.stop()
+        container.remove()
 
     def logs(self, name: str, stdout: bool = True, stderr: bool = True) \
             -> Iterator[str]:
-        return self._get_container(name).logs(
+        container = self._get_container(name)
+        if not container:
+            return iter([])
+        return container.logs(
             stdout=stdout, stderr=stderr, stream=True, follow=True)
 
     def get_state(self, name) -> Optional[ContainerState]:
-        container_state = self._get_container(name).attrs['State']
+        container = self._get_container(name)
+        if not container:
+            return None
+        container_state = container.attrs['State']
         success = container_state['ExitCode'] == 0
         finished_at = _docker_date_to_timestamp(container_state['FinishedAt'])
         return ContainerState(
@@ -67,10 +73,16 @@ class Containers:
             finished_at=finished_at)
 
     def stop(self, name):
-        self._get_container(name).stop()
+        container = self._get_container(name)
+        if not container:
+            return
+        container.stop()
 
-    def _get_container(self, name: str):
-        return self.docker_client.containers.get(name)
+    def _get_container(self, name: str) -> Optional[Container]:
+        try:
+            return self.docker_client.containers.get(name)
+        except docker.errors.NotFound:
+            return None
 
     @staticmethod
     def _is_container_id(container_id: str):

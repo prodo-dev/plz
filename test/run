@@ -6,6 +6,8 @@ set -o pipefail
 
 autoload -U colors && colors
 
+cd ${0:a:h:h}
+
 NETWORK=plz-test
 VOLUME=plz-data
 VOLUME_CONTAINER=plz-data
@@ -16,8 +18,6 @@ CONTROLLER_CONTAINER=plz-controller-test
 CONTROLLER_PORT=8080
 TEST_DIRECTORY=${0:a:h}
 DATA_DIRECTORY="${PWD}/cache/test"
-
-cd ${0:a:h:h}
 
 mkdir -p $DATA_DIRECTORY
 
@@ -67,9 +67,6 @@ else
 fi
 
 function start_controller {
-  docker network inspect $NETWORK >& /dev/null \
-    || docker network create $NETWORK
-
   info "Building the controller..."
   docker image build --quiet --tag=$CONTROLLER_IMAGE services/controller
 
@@ -129,11 +126,13 @@ function run_cli {
 
   # Add the app directory to a Docker volume.
   docker volume create $VOLUME > /dev/null
-  docker create \
+  docker run \
     --name=$VOLUME_CONTAINER \
+    --detach \
+    --interactive \
     --volume=$VOLUME:/data \
     docker:stable-git \
-    /bin/true \
+    /bin/cat \
     > /dev/null
   docker container cp $app_directory $VOLUME_CONTAINER:/data/app
 
@@ -149,8 +148,8 @@ function run_cli {
     --name=$CLI_CONTAINER \
     --detach \
     --network=$NETWORK \
-    --env=PLZ_HOST=$CONTROLLER_CONTAINER \
-    --env=PLZ_PORT=$CONTROLLER_PORT \
+    --env=PLZ_HOST=$PLZ_HOST \
+    --env=PLZ_PORT=$PLZ_PORT \
     --env=PLZ_QUIET_BUILD=true \
     --workdir=/data/app \
     --volume="${VOLUME}:/data" \
@@ -164,7 +163,8 @@ function run_cli {
   docker container rm $CLI_CONTAINER > /dev/null
 
   # Extract the output.
-  docker container cp $VOLUME_CONTAINER:/data/output $output_directory
+  docker container exec $VOLUME_CONTAINER sh -c '[ ! -d /data/output ]' \
+    || docker container cp $VOLUME_CONTAINER:/data/output $output_directory
   remove_volume
 
   return $exit_status
@@ -193,25 +193,42 @@ function cleanup {
 }
 
 function remove_volume {
-  if ! volume_exists; then
-    return
+  if volume_container_exists; then
+    docker container kill $VOLUME_CONTAINER > /dev/null
+    docker container rm $VOLUME_CONTAINER > /dev/null
+   fi
+  if volume_exists; then
+    docker volume rm $VOLUME > /dev/null
   fi
-  docker container rm $VOLUME_CONTAINER > /dev/null || :
-  docker volume rm $VOLUME > /dev/null || :
+}
+
+function volume_container_exists {
+  docker container inspect $VOLUME_CONTAINER >& /dev/null
 }
 
 function volume_exists {
-  docker container inspect $VOLUME_CONTAINER >& /dev/null \
-    || docker volume inspect $VOLUME >& /dev/null
+  docker volume inspect $VOLUME >& /dev/null
 }
 
 function redact_uuids {
-  sed 's/[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}/<UUID>/'
+  # The "$| = 1" bit disables buffering so we get output as we need it.
+  perl -pe '$| = 1; s/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/<UUID>/g'
 }
 
-build_cli
-start_controller
 trap cleanup EXIT INT TERM
+
+build_cli
+
+docker network inspect $NETWORK >& /dev/null \
+  || docker network create $NETWORK
+
+if (( ! ${+PLZ_HOST} )) && (( ! ${+PLZ_PORT} )); then
+  start_controller
+  PLZ_HOST=$CONTROLLER_CONTAINER
+  PLZ_PORT=$CONTROLLER_PORT
+fi
+export PLZ_HOST
+export PLZ_PORT
 
 success=true
 for test in $tests; do

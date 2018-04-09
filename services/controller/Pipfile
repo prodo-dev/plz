@@ -10,6 +10,7 @@ python_version = "3.6"
 boto3 = "*"
 docker = "*"
 flask = "*"
+gunicorn = "*"
 pyhocon = "*"
 requests = "*"
 
