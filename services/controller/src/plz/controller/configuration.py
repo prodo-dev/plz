@@ -15,8 +15,8 @@ from plz.controller.volumes import Volumes
 
 
 def load() -> pyhocon.ConfigTree:
-    if os.environ.get('CONFIG'):
-        return load_from_string(os.environ['CONFIG'])
+    if os.environ.get('CONFIGURATION'):
+        return load_from_string(os.environ['CONFIGURATION'])
     if len(sys.argv) != 1:
         return load_from_file(sys.argv[1])
     else:

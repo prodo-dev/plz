@@ -84,7 +84,7 @@ function start_controller {
     --detach \
     --network="$NETWORK" \
     --env=PORT="$CONTROLLER_PORT" \
-    --env=CONFIG="$(cat services/controller/config/localhost.conf)" \
+    --env=CONFIGURATION="$(cat services/controller/config/localhost.conf)" \
     --volume="${PWD}/cache/controller:/cache/controller" \
     --volume='/var/run/docker.sock:/var/run/docker.sock' \
     $CONTROLLER_IMAGE

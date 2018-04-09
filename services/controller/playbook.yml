@@ -23,7 +23,7 @@
         image: "{{ image }}"
         pull: yes
         env:
-          CONFIG: |
+          CONFIGURATION: |
             port = 80
             data_dir = "/data"
             instances = {
