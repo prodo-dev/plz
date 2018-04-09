@@ -24,8 +24,10 @@ READ_BUFFER_SIZE = 16384
 
 T = TypeVar('T')
 
-input_dir = os.path.join(config.data_dir, 'input')
-temp_data_dir = os.environ.get('TEMP_DATA_DIR', f'{config.data_dir}/tmp')
+input_dir = os.environ.get('INPUT_DIR',
+                           os.path.join(config.data_dir, 'input'))
+temp_data_dir = os.environ.get('TEMP_DATA_DIR',
+                               os.path.join(config.data_dir, 'tmp'))
 
 log = logging.getLogger('controller')
 ecr_client = boto3.client('ecr')
