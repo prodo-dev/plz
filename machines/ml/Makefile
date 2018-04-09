@@ -7,7 +7,7 @@ IMAGE_GROUPS = controller worker
 .PHONY: amis
 amis:
 	$(eval SOURCE_AMI = $(shell \
-		aws --region=$(AWS_REGION) \
+		aws --region=$(AWS_DEFAULT_REGION) \
 			ec2 describe-images \
 			--owner=099720109477 \
 			--filters='Name=name, Values=ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-*' \
@@ -19,7 +19,7 @@ amis:
 		export AWS_SHARED_CREDENTIALS_FILE=../credentials/root.awscreds; \
 		export AWS_PROFILE=; \
 		packer build \
-			-var aws-region=$(AWS_REGION) \
+			-var aws-region=$(AWS_DEFAULT_REGION) \
 			-var source-ami=$(SOURCE_AMI) \
 			-var group=$(GROUP) \
 			-var ami-tag=$(AMI_TAG) \
