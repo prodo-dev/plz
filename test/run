@@ -67,6 +67,7 @@ else
 fi
 
 function start_controller {
+  set -e
   info "Building the controller..."
   docker image build --quiet --tag=$CONTROLLER_IMAGE services/controller
 
@@ -90,6 +91,7 @@ function start_controller {
 }
 
 function stop_controller {
+  set -e
   if ! controller_running; then
     return
   fi
@@ -105,11 +107,13 @@ function controller_running {
 }
 
 function build_cli {
+  set -e
   info "Building the CLI..."
   docker image build --quiet --tag=$CLI_IMAGE cli
 }
 
 function run_cli {
+  set -e
   if cli_running; then
     warning "CLI container already exists. Stopping..."
     stop_cli
@@ -171,6 +175,7 @@ function run_cli {
 }
 
 function stop_cli {
+  set -e
   if ! cli_running; then
     return
   fi
@@ -185,16 +190,18 @@ function cli_running {
 
 function cleanup {
   exit_status=$?
+  set +e
   stop_controller
   stop_cli
   remove_volume
-  docker network rm $NETWORK > /dev/null || :
+  docker network rm $NETWORK >& /dev/null || :
   return $exit_status
 }
 
 function remove_volume {
+  set -e
   if volume_container_exists; then
-    docker container kill $VOLUME_CONTAINER > /dev/null
+    docker container kill $VOLUME_CONTAINER >& /dev/null || :
     docker container rm $VOLUME_CONTAINER > /dev/null
    fi
   if volume_exists; then
@@ -247,10 +254,13 @@ for test in $tests; do
   actual_output_directory=$(mktemp "${DATA_DIRECTORY}/plz-test-output.XXXXX")
   rm $actual_output_directory # It's been created as a file.
 
-  set +e
-  run_cli $test $actual_logs $actual_output_directory
-  actual_exit_status=$?
-  set -e
+  start=$(date +%s)
+  run_cli $test $actual_logs $actual_output_directory \
+    && actual_exit_status=$? \
+    || actual_exit_status=$?
+  end=$(date +%s)
+
+  info "Time taken: $((end - start))s."
 
   if $bless; then
     if [[ $actual_exit_status -eq $expected_exit_status ]]; then

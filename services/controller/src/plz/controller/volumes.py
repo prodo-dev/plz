@@ -94,7 +94,7 @@ class Volumes:
             for volume_object in objects:
                 volume_object.put_in(container, root)
         finally:
-            container.stop()
+            container.kill()
         return volume
 
     def get_files(self, volume_name: str, path: str) -> Iterator[bytes]:
