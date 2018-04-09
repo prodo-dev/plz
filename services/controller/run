@@ -5,10 +5,5 @@ set -u
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-mkdir -p ../../cache/controller
-DATA_DIR="${DATA_DIR:-$(cd ../../cache/controller && pwd)}"
-export DATA_DIR
-
 export PYTHONPATH=./src
-
 exec python ./src/plz/controller/main.py "$@"

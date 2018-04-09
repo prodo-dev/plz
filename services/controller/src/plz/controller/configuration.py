@@ -33,7 +33,7 @@ def load_from_file(path) -> pyhocon.ConfigTree:
 
 
 def instance_provider_from_config(config) -> InstanceProvider:
-    provider = config['instances.provider']
+    provider = config.get('instances.provider', 'localhost')
     docker_host = config.get('images.docker_host', None)
     images = images_from_config(config)
     if provider == 'localhost':
@@ -56,7 +56,7 @@ def instance_provider_from_config(config) -> InstanceProvider:
 
 
 def images_from_config(config):
-    provider = config['images.provider']
+    provider = config.get('images.provider', 'local')
     docker_api_client = docker.APIClient(
         base_url=config.get('images.docker_host', None))
     if provider == 'local':
