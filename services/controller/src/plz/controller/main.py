@@ -187,31 +187,14 @@ def stop_execution_entrypoint(execution_id: str):
 
 @app.route('/snapshots', methods=['POST'])
 def create_snapshot():
-    # Test with
-    # { echo '{"user": "bruce", "project": "mobile"}'; cat some_file.tar.bz2; }
-    #     | http localhost:5000/snapshots
-
-    # Read a string with a json object until a newline is found.
-    # Using the utf-8 decoder from the codecs module fails as it's decoding
-    # beyond the new line (even using readline(). Probably it does a read()
-    # and decodes everything it gets, as it's not possible to push back to
-    # the request stream). We don't use readline on a BufferedReader as the
-    # the request.stream is a LimitedStream that doesn't support it.
-    b = None
-    json_bytes = []
-    while b != b'\n':
-        b = request.stream.read(1)
-        if len(b) == 0:
-            raise ValueError('Expected json at the beginning of request')
-        json_bytes.append(b)
-    metadata_str = str(b''.join(json_bytes), 'utf-8')
+    metadata_str = request.input_stream.readline().decode('utf-8')
     tag = Images.construct_tag(metadata_str)
 
     @stream_with_context
     @_handle_lazy_exceptions(formatter=_format_error)
     def act() -> Iterator[Union[bytes, str]]:
         # Pass the rest of the stream to `docker build`
-        yield from images.build(request.stream, tag)
+        yield from images.build(request.input_stream, tag)
         instance_provider.push(tag)
         yield json.dumps({'id': tag})
 
