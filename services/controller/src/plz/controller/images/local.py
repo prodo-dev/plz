@@ -6,9 +6,7 @@ from plz.controller.images.images_base import Images
 
 
 class LocalImages(Images):
-    def __init__(self,
-                 docker_api_client: docker.APIClient,
-                 repository: str = 'plz'):
+    def __init__(self, docker_api_client: docker.APIClient, repository: str):
         self.docker_api_client = docker_api_client
         self.repository = repository
 

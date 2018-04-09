@@ -62,7 +62,8 @@ def images_from_config(config):
     docker_api_client = docker.APIClient(
         base_url=config.get('images.docker_host', None))
     if provider == 'local':
-        return LocalImages(docker_api_client)
+        repository = config.get('images.repository', 'plz/builds')
+        return LocalImages(docker_api_client, repository)
     elif provider == 'aws-ecr':
         ecr_client = boto3.client(
             service_name='ecr',
