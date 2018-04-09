@@ -6,7 +6,7 @@ import docker
 import pyhocon
 
 from plz.controller.containers import Containers
-from plz.controller.images import ECRImages
+from plz.controller.images import ECRImages, Images
 from plz.controller.images.local import LocalImages
 from plz.controller.instances.aws import EC2InstanceGroup
 from plz.controller.instances.instance_base import InstanceProvider
@@ -57,7 +57,7 @@ def instance_provider_from_config(config) -> InstanceProvider:
         raise ValueError('Invalid instance provider.')
 
 
-def images_from_config(config):
+def images_from_config(config) -> Images:
     provider = config.get('images.provider', 'local')
     docker_api_client = docker.APIClient(
         base_url=config.get('images.docker_host', None))
