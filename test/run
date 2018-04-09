@@ -216,7 +216,8 @@ function volume_exists {
 }
 
 function redact_uuids {
-  sed 's/[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}/<UUID>/'
+  # The "$| = 1" bit disables buffering so we get output as we need it.
+  perl -pe '$| = 1; s/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/<UUID>/g'
 }
 
 build_cli

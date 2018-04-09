@@ -14,4 +14,5 @@ FROM python:3.6
 COPY --from=0 /src/dist/plz_cli-0.1.0-py3-none-any.whl /tmp/
 RUN pip install /tmp/plz_cli-0.1.0-py3-none-any.whl
 
+ENV PYTHONUNBUFFERED 1
 ENTRYPOINT ["plz"]
