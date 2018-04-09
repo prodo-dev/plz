@@ -249,10 +249,14 @@ for test in $tests; do
   actual_output_directory=$(mktemp "${DATA_DIRECTORY}/plz-test-output.XXXXX")
   rm $actual_output_directory # It's been created as a file.
 
+  start=$(date +%s)
   set +e
   run_cli $test $actual_logs $actual_output_directory
   actual_exit_status=$?
   set -e
+  end=$(date +%s)
+
+  info "Time taken: $((end - start))s."
 
   if $bless; then
     if [[ $actual_exit_status -eq $expected_exit_status ]]; then
