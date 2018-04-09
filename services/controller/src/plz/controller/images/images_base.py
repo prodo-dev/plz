@@ -1,7 +1,6 @@
+import collections
 import json
 import time
-
-import collections
 from abc import ABC, abstractmethod
 from typing import BinaryIO, Iterator
 
