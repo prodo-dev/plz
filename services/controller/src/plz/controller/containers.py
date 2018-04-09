@@ -8,8 +8,6 @@ import docker
 import docker.errors
 from docker.types import Mount
 
-from plz.controller.images import Images
-
 ContainerState = collections.namedtuple(
     'ContainerState',
     ['running', 'status', 'success', 'exit_code', 'finished_at'])
@@ -28,11 +26,12 @@ class Containers:
 
     def run(self,
             name: str,
+            repository: str,
             tag: str,
             command: List[str],
             environment: Dict[str, str],
             mounts: List[Mount]):
-        image = f'{Images.DOCKER_REPOSITORY}:{tag}'
+        image = f'{repository}:{tag}'
         container = self.docker_client.containers.run(
             image=image,
             command=command,

@@ -86,6 +86,7 @@ function start_controller {
     --env=PORT="$CONTROLLER_PORT" \
     --env=CONFIG="$(cat services/controller/config/localhost.conf)" \
     --env=AWS_DEFAULT_REGION="$AWS_DEFAULT_REGION" \
+    --env=AWS_PROJECT="$AWS_PROJECT" \
     --volume="${PWD}/cache/controller:/cache/controller" \
     --volume='/var/run/docker.sock:/var/run/docker.sock' \
     $CONTROLLER_IMAGE

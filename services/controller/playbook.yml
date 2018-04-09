@@ -27,7 +27,7 @@
             port = 80
             data_dir = "/data"
             instances = {
-              provider = "aws-ec2"
+              provider = aws-ec2
               region = "{{ aws_region }}"
               project = "{{ aws_project }}"
               worker_ami = "{{ aws_worker_ami }}"
@@ -35,8 +35,9 @@
               group_name = "{{ environment_name }}"
             }
             images = {
-              provider = "aws-ecr"
+              provider = aws-ecr
               region = "{{ aws_region }}"
+              repository = "{{ aws_project }}/plz/builds"
             }
         published_ports:
           - "{{ service_port }}:80"

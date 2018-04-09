@@ -11,16 +11,17 @@ Metadata = collections.namedtuple('Metadata', ['user', 'project', 'timestamp'])
 
 
 class Images:
-    DOCKER_REPOSITORY = \
-        '024444204267.dkr.ecr.eu-west-1.amazonaws.com/plz/builds'
-
-    def __init__(self, docker_api_client: docker.APIClient, ecr_client):
+    def __init__(self,
+                 docker_api_client: docker.APIClient,
+                 ecr_client,
+                 repository: str):
         self.docker_api_client = docker_api_client
         self.ecr_client = ecr_client
+        self.repository = repository
 
     def for_host(self, docker_url: str) -> 'Images':
         new_docker_api_client = docker.APIClient(base_url=docker_url)
-        return Images(new_docker_api_client, self.ecr_client)
+        return Images(new_docker_api_client, self.ecr_client, self.repository)
 
     def build(self, fileobj: BinaryIO, tag: str) -> Iterator[str]:
         return self.docker_api_client.build(
@@ -28,16 +29,16 @@ class Images:
             custom_context=True,
             encoding='bz2',
             rm=True,
-            tag=f'{self.DOCKER_REPOSITORY}:{tag}')
+            tag=f'{self.repository}:{tag}')
 
     def push(self, tag: str):
         self.docker_api_client.push(
-            self.DOCKER_REPOSITORY, tag,
+            self.repository, tag,
             auth_config=self._aws_ecr_credentials())
 
     def pull(self, tag: str):
         self.docker_api_client.pull(
-            self.DOCKER_REPOSITORY, tag,
+            self.repository, tag,
             auth_config=self._aws_ecr_credentials())
 
     def can_pull(self):
