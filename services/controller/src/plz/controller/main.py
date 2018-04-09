@@ -44,6 +44,18 @@ _user_last_execution_id = dict()
 app = Flask(__name__)
 
 
+@app.before_request
+def handle_chunked_input():
+    """
+    Sets the "wsgi.input_terminated" environment flag to tell Werkzeug to pass
+    chunked requests as streams.
+    The Gunicorn server should set the flag, but doesn't.
+    """
+    transfer_encoding = request.headers.get('Transfer-Encoding', None)
+    if transfer_encoding == 'chunked':
+        request.environ['wsgi.input_terminated'] = True
+
+
 @app.route(f'/executions', methods=['POST'])
 def run_execution_entrypoint():
     # Test with:
@@ -187,24 +199,7 @@ def stop_execution_entrypoint(execution_id: str):
 
 @app.route('/snapshots', methods=['POST'])
 def create_snapshot():
-    # Test with
-    # { echo '{"user": "bruce", "project": "mobile"}'; cat some_file.tar.bz2; }
-    #     | http localhost:5000/snapshots
-
-    # Read a string with a json object until a newline is found.
-    # Using the utf-8 decoder from the codecs module fails as it's decoding
-    # beyond the new line (even using readline(). Probably it does a read()
-    # and decodes everything it gets, as it's not possible to push back to
-    # the request stream). We don't use readline on a BufferedReader as the
-    # the request.stream is a LimitedStream that doesn't support it.
-    b = None
-    json_bytes = []
-    while b != b'\n':
-        b = request.stream.read(1)
-        if len(b) == 0:
-            raise ValueError('Expected json at the beginning of request')
-        json_bytes.append(b)
-    metadata_str = str(b''.join(json_bytes), 'utf-8')
+    metadata_str = request.stream.readline().decode('utf-8')
     tag = Images.construct_tag(metadata_str)
 
     @stream_with_context

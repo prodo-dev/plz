@@ -101,7 +101,12 @@ def _name_to_env_variable(name: str):
 def _create_config():
     cfg = {}
     arg_parser = _create_arg_parser()
-    args = arg_parser.parse_args(sys.argv[1:])
+    if '--' in sys.argv:
+        arg_start = sys.argv.index('--') + 1
+        raw_args = sys.argv[arg_start:]
+    else:
+        raw_args = sys.argv[1:]
+    args = arg_parser.parse_args(raw_args)
     for spec in _ARGUMENTS_SPEC:
         val = getattr(args, spec['name'], None)
         if val is None:

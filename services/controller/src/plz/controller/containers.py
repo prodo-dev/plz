@@ -1,11 +1,12 @@
 import calendar
 import collections
 import logging
-from typing import Dict, Iterator, List, Optional
+from typing import Dict, Iterable, Iterator, List, Optional
 
 import dateutil.parser
 import docker
 import docker.errors
+from docker.models.containers import Container
 from docker.types import Mount
 
 from plz.controller.images import Images
@@ -42,6 +43,16 @@ class Containers:
             detach=True,
         )
         self.log.info(f'Started container: {container.id}')
+
+    def exists(self, name: str) -> bool:
+        try:
+            self.docker_client.containers.get(name)
+            return True
+        except docker.errors.NotFound:
+            return False
+
+    def list(self) -> Iterable[Container]:
+        return self.docker_client.containers.list()
 
     def rm(self, name: str):
         try:

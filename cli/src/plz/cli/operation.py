@@ -46,8 +46,10 @@ class RequestException(Exception):
         except ValueError:
             body = response.text
         super().__init__(
-            f'Request failed with status code {response.status_code}.\n' +
-            f'Response:\n{body}'
+            f'Request failed.'
+            f'Status Code: {response.status_code}\n'
+            f'Headers:\n{response.headers}\n'
+            f'Body:\n{body}\n'
         )
 
 

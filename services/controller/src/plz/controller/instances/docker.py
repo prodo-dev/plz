@@ -8,6 +8,7 @@ from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
 from plz.controller.instances.instance_base import \
     ExecutionInfo, Instance, Parameters
+from plz.controller.instances.instance_cache import InstanceCache
 from plz.controller.volumes import \
     VolumeDirectory, VolumeEmptyDirectory, VolumeFile, Volumes
 
@@ -51,6 +52,9 @@ class DockerInstance(Instance):
                             mounts=[Mount(source=volume.name,
                                           target=Volumes.VOLUME_MOUNT)])
 
+    def stop_command(self):
+        self.containers.stop(self.execution_id)
+
     def logs(self, stdout: bool = True, stderr: bool = True):
         return self.containers.logs(self.execution_id,
                                     stdout=stdout,
@@ -59,6 +63,9 @@ class DockerInstance(Instance):
     def output_files_tarball(self):
         return self.volumes.get_files(self.volume_name,
                                       Volumes.OUTPUT_DIRECTORY)
+
+    def stop_execution(self):
+        self.containers.stop(self.execution_id)
 
     def cleanup(self):
         self.containers.rm(self.execution_id)
@@ -96,5 +103,25 @@ class DockerInstance(Instance):
         # It's never time for a local instance
         pass
 
-    def stop_execution(self):
-        self.containers.stop(self.execution_id)
+
+class DockerInstanceCache(InstanceCache):
+    def __init__(self,
+                 images: Images,
+                 containers: Containers,
+                 volumes: Volumes):
+        super().__init__()
+        self.images = images
+        self.containers = containers
+        self.volumes = volumes
+
+    def find_instance(self, execution_id: str) -> Optional[Instance]:
+        return DockerInstance(
+            self.images, self.containers, self.volumes, execution_id)
+
+    def instance_exists(self, execution_id: str) -> bool:
+        return self.containers.exists(execution_id)
+
+    def list_instances(self) -> List[Instance]:
+        return [self.find_instance(container.id)
+                for container
+                in self.containers.list()]

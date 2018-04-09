@@ -151,10 +151,13 @@ class RunExecutionOperation(Operation):
         }
         metadata_bytes = json.dumps(metadata).encode('utf-8')
         request_data = itertools.chain(
-            [metadata_bytes, b'\n'],
+            io.BytesIO(metadata_bytes),
+            io.BytesIO(b'\n'),
             build_context)
         response = requests.post(
-            self.url('snapshots'), request_data, stream=True)
+            self.url('snapshots'),
+            data=request_data,
+            stream=True)
         check_status(response, requests.codes.ok)
         error = False
         snapshot_id: str = None
