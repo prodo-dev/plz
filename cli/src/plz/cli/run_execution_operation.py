@@ -146,7 +146,6 @@ class RunExecutionOperation(Operation):
             'project': self.configuration.project,
         }
         metadata_bytes = json.dumps(metadata).encode('utf-8')
-        io.BytesIO(metadata_bytes),
         request_data = itertools.chain(
             io.BytesIO(metadata_bytes),
             io.BytesIO(b'\n'),
