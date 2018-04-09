@@ -5,13 +5,20 @@ set -u
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-export PYTHONPATH=./src
+if [[ -z "${CONFIGURATION:-}" ]]; then
+  CONFIGURATION="$(cat "$1")"
+fi
+CONFIGURATION="$(echo "$CONFIGURATION" | pyhocon --format=json)"
+PORT="${PORT:-$(echo "$CONFIGURATION" | jq -r '.port')}"
+PORT="${PORT:-8080}"
+
+export PYTHONPATH='./src'
 
 exec gunicorn \
-  --bind="0.0.0.0:${PORT:-8080}" \
+  --bind="0.0.0.0:${PORT}" \
   --preload \
   --workers=1 \
   --timeout=120 \
-  --pythonpath=${PYTHONPATH} \
+  --pythonpath="${PYTHONPATH}" \
   plz.controller.main:app \
   -- $@
