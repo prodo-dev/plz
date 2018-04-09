@@ -49,8 +49,10 @@ def instance_provider_from_config(config) -> InstanceProvider:
             aws_worker_ami=config['instances.worker_ami'],
             aws_key_name=config['instances.key_name'],
             images=images,
-            acquisition_delay_in_seconds=10,
-            max_acquisition_tries=5)
+            acquisition_delay_in_seconds=config.get_int(
+                'instances.acquistion_delay', 10),
+            max_acquisition_tries=config.get_int(
+                'instances.max_acquisition_tries', 5))
     else:
         raise ValueError('Invalid instance provider.')
 
