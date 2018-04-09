@@ -11,6 +11,7 @@ from typing import Any, Callable, Iterator, TypeVar, Union
 
 import requests
 from flask import Flask, Response, abort, jsonify, request, stream_with_context
+from redis import StrictRedis
 
 from plz.controller import configuration
 from plz.controller.images import Images
@@ -32,7 +33,8 @@ os.makedirs(temp_data_dir, exist_ok=True)
 
 log = logging.getLogger('controller')
 
-_user_last_execution_id_lock = threading.RLock()
+_redis = StrictRedis()
+_user_last_execution_id_lock = _redis.lock('lock:main:_user_last_execution_id')
 _user_last_execution_id = dict()
 
 app = Flask(__name__)

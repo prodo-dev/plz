@@ -6,6 +6,8 @@ import time
 from contextlib import closing
 from typing import Dict, Iterator, Optional
 
+from redis import StrictRedis
+
 from plz.controller.containers import Containers
 from plz.controller.images import Images
 from plz.controller.instances.instance_base import Instance, InstanceProvider
@@ -20,8 +22,10 @@ class EC2InstanceGroup(InstanceProvider):
         os.path.dirname(__file__), '..', '..', 'startup', 'startup.yml'))
     _CACHE_DEVICE = '/dev/xvdx'
 
+    _redis: StrictRedis = StrictRedis()
     _name_to_group = {}
-    _name_to_group_lock = threading.RLock()
+    _name_to_group_lock = _redis.lock(
+        f'lock:EC2InstanceGroup#_name_to_group_lock')
 
     def __new__(cls,
                 name: str,
@@ -56,7 +60,7 @@ class EC2InstanceGroup(InstanceProvider):
         self.acquisition_delay_in_seconds = acquisition_delay_in_seconds
         self.max_acquisition_tries = max_acquisition_tries
         self.instances: Dict[str, EC2Instance] = {}
-        self.lock = threading.RLock()
+        self.lock = self._redis.lock(f'lock:EC2InstanceGroup#lock:{name}')
         self.filters = [{'Name': f'tag:{EC2Instance.GROUP_NAME_TAG}',
                          'Values': [self.name]}]
         # Lazily initialized by ami_id
