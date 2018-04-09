@@ -4,6 +4,7 @@ from collections import namedtuple
 from typing import Any, Dict, Iterator, List, Optional
 
 from plz.controller.containers import ContainerState
+from plz.controller.results.results_base import ResultsStorage
 
 Parameters = Dict[str, Any]
 ExecutionInfo = namedtuple(
@@ -30,12 +31,13 @@ class Instance(ABC):
         pass
 
     @abstractmethod
-    def cleanup(self):
-        pass
-
-    @abstractmethod
     def get_container_state(self) -> Optional[ContainerState]:
         pass
+
+    def publish_results(self, results_storage: ResultsStorage):
+        results_storage.publish_output(
+            self.get_execution_id(),
+            self.output_files_tarball())
 
     @abstractmethod
     def stop_execution(self):
@@ -43,6 +45,10 @@ class Instance(ABC):
 
     @abstractmethod
     def dispose(self) -> str:
+        pass
+
+    @abstractmethod
+    def cleanup(self):
         pass
 
     @abstractmethod
@@ -122,7 +128,7 @@ class InstanceProvider(ABC):
     def instance_iterator(self) -> Iterator[Instance]:
         pass
 
-    def tidy_up(self):
+    def harvest(self):
         for instance in self.instance_iterator():
             info = instance.get_execution_info()
             if info.status == 'exited':

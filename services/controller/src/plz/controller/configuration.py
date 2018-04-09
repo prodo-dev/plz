@@ -7,11 +7,11 @@ import pyhocon
 from redis import StrictRedis
 
 from plz.controller.containers import Containers
-from plz.controller.images import ECRImages, Images
-from plz.controller.images.local import LocalImages
+from plz.controller.images import ECRImages, Images, LocalImages
 from plz.controller.instances.aws import EC2InstanceGroups
 from plz.controller.instances.instance_base import InstanceProvider
 from plz.controller.instances.localhost import Localhost
+from plz.controller.results import LocalResultsStorage, ResultsStorage
 from plz.controller.volumes import Volumes
 
 AMI_TAG = '2018-04-11'
@@ -46,10 +46,11 @@ def instance_provider_from_config(config) -> InstanceProvider:
     provider = config.get('instances.provider', 'localhost')
     docker_host = config.get('images.docker_host', None)
     images = images_from_config(config)
+    results_storage = results_storage_from_config(config)
     if provider == 'localhost':
         containers = Containers.for_host(docker_host)
         volumes = Volumes.for_host(docker_host)
-        return Localhost(images, containers, volumes)
+        return Localhost(images, containers, volumes, results_storage)
     elif provider == 'aws-ec2':
         groups = EC2InstanceGroups(
             redis=redis_from_config(config),
@@ -59,6 +60,7 @@ def instance_provider_from_config(config) -> InstanceProvider:
             aws_worker_ami=WORKER_AMI,
             aws_key_name=config['instances.key_name'],
             images=images,
+            results_storage=results_storage,
             acquisition_delay_in_seconds=config.get_int(
                 'instances.acquisition_delay', 10),
             max_acquisition_tries=config.get_int(
@@ -83,6 +85,17 @@ def images_from_config(config) -> Images:
         return ECRImages(docker_api_client, ecr_client, repository)
     else:
         raise ValueError('Invalid image provider.')
+
+
+def results_storage_from_config(config) -> ResultsStorage:
+    provider = config.get('results.provider', 'local')
+    if provider == 'local':
+        directory = config.get('results.directory')
+        return LocalResultsStorage(directory)
+    elif provider == 'aws-s3':  # TODO: Implement this
+        raise NotImplementedError('The AWS S3 provider is not implemented.')
+    else:
+        raise ValueError('Invalid results storage provider.')
 
 
 def redis_from_config(config) -> StrictRedis:

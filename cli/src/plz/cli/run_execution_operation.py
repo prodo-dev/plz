@@ -3,13 +3,12 @@ import io
 import itertools
 import json
 import os
-import os.path
 import shutil
 import subprocess
 import tarfile
 import tempfile
 from glob import iglob
-from typing import Optional, Tuple
+from typing import Iterator, Optional, Tuple
 
 import docker.utils.build
 import requests
@@ -22,7 +21,6 @@ from plz.cli.log import log_error, log_info
 from plz.cli.logs_operation import LogsOperation
 from plz.cli.operation import Operation, check_status, on_exception_reraise
 from plz.cli.parameters import Parameters
-
 
 ExecutionStatus = collections.namedtuple(
     'ExecutionStatus',
@@ -226,32 +224,8 @@ class RunExecutionOperation(Operation):
         except FileExistsError:
             raise CLIException(
                 f'The output directory "{self.output_dir}" already exists.')
-        # The response is a tarball we need to extract into `self.output_dir`.
-        with tempfile.TemporaryFile() as tarball:
-            # `tarfile.open` needs to read from a real file, so we copy to one.
-            shutil.copyfileobj(response.raw, tarball)
-            # And rewind to the start.
-            tarball.seek(0)
-            tar = tarfile.open(fileobj=tarball)
-            for tarinfo in tar.getmembers():
-                # Drop the first segment, because it's just the name of the
-                # directory that was tarred up, and we don't care.
-                path_segments = tarinfo.name.split(os.sep)[1:]
-                if path_segments:
-                    # Unfortunately we can't just pass `*path_segments`
-                    # because `os.path.join` explicitly expects an argument
-                    # for the first parameter.
-                    path = os.path.join(path_segments[0], *path_segments[1:])
-                    # Just because it's nice, print the file to be extracted.
-                    print(path)
-                    source: io.BufferedReader = tar.extractfile(tarinfo.name)
-                    if source:
-                        # Finally, write the file.
-                        absolute_path = os.path.join(self.output_dir, path)
-                        os.makedirs(os.path.dirname(absolute_path),
-                                    exist_ok=True)
-                        with open(absolute_path, 'wb') as dest:
-                            shutil.copyfileobj(source, dest)
+        for path in untar(response.raw, self.output_dir):
+            print(path)
 
     def cleanup(self, execution_id: str):
         log_info('Cleaning up all detritus...')
@@ -316,3 +290,33 @@ def _get_ignored_git_files() -> [str]:
                           f'Return code is: {result.returncode}\n'
                           f'Stderr: [{result.stderr}]')
     return [os.path.abspath(p) for p in result.stdout.splitlines()]
+
+
+# This is duplicated in the controller. We need a place for common code.
+def untar(stream: io.RawIOBase, output_dir: str) -> Iterator[str]:
+    # The response is a tarball we need to extract into `output_dir`.
+    with tempfile.TemporaryFile() as tarball:
+        # `tarfile.open` needs to read from a real file, so we copy to one.
+        shutil.copyfileobj(stream, tarball)
+        # And rewind to the start.
+        tarball.seek(0)
+        tar = tarfile.open(fileobj=tarball)
+        for tarinfo in tar.getmembers():
+            # Drop the first segment, because it's just the name of the
+            # directory that was tarred up, and we don't care.
+            path_segments = tarinfo.name.split(os.sep)[1:]
+            if path_segments:
+                # Unfortunately we can't just pass `*path_segments`
+                # because `os.path.join` explicitly expects an argument
+                # for the first parameter.
+                path = os.path.join(path_segments[0], *path_segments[1:])
+                # Just because it's nice, yield the file to be extracted.
+                yield path
+                source: io.BufferedReader = tar.extractfile(tarinfo.name)
+                if source:
+                    # Finally, write the file.
+                    absolute_path = os.path.join(output_dir, path)
+                    os.makedirs(os.path.dirname(absolute_path),
+                                exist_ok=True)
+                    with open(absolute_path, 'wb') as dest:
+                        shutil.copyfileobj(source, dest)

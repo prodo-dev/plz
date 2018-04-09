@@ -133,9 +133,9 @@ def list_executions_entrypoint():
     return response
 
 
-@app.route('/executions/tidy', methods=['POST'])
-def tidy_entry_point():
-    instance_provider.tidy_up()
+@app.route('/executions/harvest', methods=['POST'])
+def harvest_entry_point():
+    instance_provider.harvest()
     response = jsonify({})
     response.status_code = requests.codes.no_content
     return response

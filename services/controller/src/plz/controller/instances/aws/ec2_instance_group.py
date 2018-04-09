@@ -10,6 +10,7 @@ from redis import StrictRedis
 from plz.controller.containers import Containers
 from plz.controller.images import Images
 from plz.controller.instances.instance_base import Instance, InstanceProvider
+from plz.controller.results.results_base import ResultsStorage
 from plz.controller.volumes import Volumes
 from .ec2_instance import EC2Instance, get_tag
 
@@ -21,6 +22,7 @@ class EC2InstanceGroups:
                  aws_worker_ami: str,
                  aws_key_name: str,
                  images: Images,
+                 results_storage: ResultsStorage,
                  acquisition_delay_in_seconds: int,
                  max_acquisition_tries: int):
         self._construction_args = {
@@ -29,6 +31,7 @@ class EC2InstanceGroups:
             'aws_worker_ami': aws_worker_ami,
             'aws_key_name': aws_key_name,
             'images': images,
+            'results_storage': results_storage,
             'acquisition_delay_in_seconds': acquisition_delay_in_seconds,
             'max_acquisition_tries': max_acquisition_tries,
         }
@@ -60,6 +63,7 @@ class EC2InstanceGroup(InstanceProvider):
                  aws_worker_ami: str,
                  aws_key_name: Optional[str],
                  images: Images,
+                 results_storage: ResultsStorage,
                  acquisition_delay_in_seconds: int,
                  max_acquisition_tries: int):
         self.name = name
@@ -68,6 +72,7 @@ class EC2InstanceGroup(InstanceProvider):
         self.aws_worker_ami = aws_worker_ami
         self.aws_key_name = aws_key_name
         self.images = images
+        self.results_storage = results_storage
         self.acquisition_delay_in_seconds = acquisition_delay_in_seconds
         self.max_acquisition_tries = max_acquisition_tries
         self.instances: Dict[str, EC2Instance] = {}
@@ -195,6 +200,7 @@ class EC2InstanceGroup(InstanceProvider):
             idle_since_timestamp = int(time.time())
         with self.lock:
             instance = self.instance_for(execution_id)
+            instance.publish_results(self.results_storage)
             instance.cleanup()
             instance.set_tags([
                 {'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,

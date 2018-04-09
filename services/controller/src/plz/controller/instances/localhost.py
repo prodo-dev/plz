@@ -6,6 +6,7 @@ from plz.controller.images import Images
 from plz.controller.instances.docker import DockerInstance
 from plz.controller.instances.instance_base \
     import Instance, InstanceProvider
+from plz.controller.results.results_base import ResultsStorage
 from plz.controller.volumes import Volumes
 
 log = logging.getLogger(__name__)
@@ -15,10 +16,12 @@ class Localhost(InstanceProvider):
     def __init__(self,
                  images: Images,
                  containers: Containers,
-                 volumes: Volumes):
+                 volumes: Volumes,
+                 results_storage: ResultsStorage):
         self.images = images
         self.containers = containers
         self.volumes = volumes
+        self.results_storage = results_storage
 
     def acquire_instance(
             self, execution_id: str, execution_spec: dict) -> Iterator[Dict]:
@@ -52,7 +55,9 @@ class Localhost(InstanceProvider):
 
         As we're dealing with `localhost` here, this doesn't do much.
         """
-        self.instance_for(execution_id).cleanup()
+        instance = self.instance_for(execution_id)
+        instance.publish_results(self.results_storage)
+        instance.cleanup()
 
     def push(self, image_tag: str):
         pass

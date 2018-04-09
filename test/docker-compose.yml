@@ -17,8 +17,13 @@ services:
         port = 80
         data_dir = /data
         redis_host = redis
+        results = {
+          provider = local
+          directory = /data/results
+        }
     volumes:
       - ../cache/controller:/data
+      - ../cache/results:/data/results
       - ${SECRETS_DIR}/keys/id_rsa:/root/.ssh/id_rsa:ro
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
