@@ -2,7 +2,7 @@ import io
 import logging
 import os.path
 import time
-from typing import List, Optional
+from typing import Iterator, List, Optional
 
 from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
@@ -55,7 +55,7 @@ class EC2Instance(Instance):
         return self.images.can_pull(
             5 if is_instance_newly_created else 1)
 
-    def output_files_tarball(self):
+    def output_files_tarball(self) -> Iterator[bytes]:
         return self.delegate.output_files_tarball()
 
     def cleanup(self):

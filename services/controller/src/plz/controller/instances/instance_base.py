@@ -26,7 +26,7 @@ class Instance(ABC):
         pass
 
     @abstractmethod
-    def output_files_tarball(self):
+    def output_files_tarball(self) -> Iterator[bytes]:
         pass
 
     @abstractmethod

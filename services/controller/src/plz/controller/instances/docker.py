@@ -1,6 +1,6 @@
 import io
 import json
-from typing import List, Optional
+from typing import Iterator, List, Optional
 
 from docker.types import Mount
 
@@ -57,7 +57,7 @@ class DockerInstance(Instance):
                                     stdout=stdout,
                                     stderr=stderr)
 
-    def output_files_tarball(self):
+    def output_files_tarball(self) -> Iterator[bytes]:
         return self.volumes.get_files(self.volume_name,
                                       Volumes.OUTPUT_DIRECTORY)
 
