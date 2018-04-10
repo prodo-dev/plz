@@ -32,7 +32,7 @@ os.makedirs(input_dir, exist_ok=True)
 os.makedirs(temp_data_dir, exist_ok=True)
 
 
-def setup_logging():
+def _setup_logging():
     root_logger = logging.getLogger('.'.join(__name__.split('.')[:-1]))
     root_logger_handler = logging.StreamHandler(stream=sys.stderr)
     root_logger_handler.setFormatter(logging.Formatter(
@@ -45,7 +45,7 @@ def setup_logging():
         root_logger.setLevel(log_level)
 
 
-setup_logging()
+_setup_logging()
 log = logging.getLogger(__name__)
 
 _user_last_execution_id_lock = threading.RLock()
