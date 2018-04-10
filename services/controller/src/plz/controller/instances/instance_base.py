@@ -23,7 +23,8 @@ class Instance(ABC):
         pass
 
     @abstractmethod
-    def logs(self, stdout: bool = True, stderr: bool = True):
+    def logs(self, stdout: bool = True, stderr: bool = True) \
+            -> Iterator[bytes]:
         pass
 
     @abstractmethod

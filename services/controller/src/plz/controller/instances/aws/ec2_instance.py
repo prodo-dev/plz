@@ -48,7 +48,8 @@ class EC2Instance(Instance):
         self.images.pull(snapshot_id)
         self.delegate.run(command, snapshot_id, parameters, input_stream)
 
-    def logs(self, stdout: bool = True, stderr: bool = True):
+    def logs(self, stdout: bool = True, stderr: bool = True) \
+            -> Iterator[bytes]:
         return self.delegate.logs(stdout, stderr)
 
     def is_up(self, is_instance_newly_created: bool):

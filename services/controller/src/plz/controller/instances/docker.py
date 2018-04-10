@@ -52,7 +52,8 @@ class DockerInstance(Instance):
                             mounts=[Mount(source=volume.name,
                                           target=Volumes.VOLUME_MOUNT)])
 
-    def logs(self, stdout: bool = True, stderr: bool = True):
+    def logs(self, stdout: bool = True, stderr: bool = True) \
+            -> Iterator[bytes]:
         return self.containers.logs(self.execution_id,
                                     stdout=stdout,
                                     stderr=stderr)
