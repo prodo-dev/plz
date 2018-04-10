@@ -355,4 +355,4 @@ def _get_user_last_execution_id(user: str):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port)
