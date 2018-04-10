@@ -38,6 +38,7 @@ class Instance(ABC):
     def publish_results(self, results_storage: ResultsStorage):
         results_storage.publish_output(
             self.get_execution_id(),
+            self.logs(),
             self.output_files_tarball())
 
     @abstractmethod

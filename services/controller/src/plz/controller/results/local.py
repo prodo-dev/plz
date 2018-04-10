@@ -10,8 +10,17 @@ class LocalResultsStorage(ResultsStorage):
 
     def publish_output(self,
                        execution_id: str,
+                       logs: Iterator[bytes],
                        output_tarball: Iterator[bytes]):
-        output_directory = os.path.join(self.directory, execution_id, 'output')
+        directory = os.path.join(self.directory, execution_id)
+        os.makedirs(directory, exist_ok=True)
+
+        logs_path = os.path.join(directory, 'logs')
+        with open(logs_path, 'wb') as f:
+            for line in logs:
+                f.write(line)
+
+        output_directory = os.path.join(directory, 'output')
         consume(untar(output_tarball, output_directory))
 
 

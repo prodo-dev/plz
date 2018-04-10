@@ -11,6 +11,7 @@ class ResultsStorage(ABC):
     @abstractmethod
     def publish_output(self,
                        execution_id: str,
+                       logs: Iterator[bytes],
                        output_tarball: Iterator[bytes]):
         pass
 
