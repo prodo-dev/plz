@@ -13,11 +13,9 @@ shift
 
 PLAYBOOK_ARGS=()
 while [[ $# -gt 0 ]]; do
-  PLAYBOOK_ARGS+=(--extra-vars "@${1}")
+  PLAYBOOK_ARGS+=(--extra-vars="@${1}")
   shift
 done
-
-eval $(make --no-print-directory --file="${ROOT}/vars.mk" bash)
 
 HOST_IP=$(dig +short $HOSTNAME)
 if [[ -z $HOST_IP ]]; then
@@ -25,7 +23,7 @@ if [[ -z $HOST_IP ]]; then
   exit 1
 fi
 
-SSH_PRIVATE_KEY_FILE="${ROOT}/machines/keys/plz.privkey"
+SSH_PRIVATE_KEY_FILE="${SECRETS_DIR}/keys/id_rsa"
 
 ANSIBLE_INVENTORY=$(mktemp "${TMPDIR:-/tmp/}inventory-XXXXX")
 cat > $ANSIBLE_INVENTORY <<EOF
@@ -37,12 +35,13 @@ all:
       ansible_ssh_private_key_file: "${SSH_PRIVATE_KEY_FILE}"
       ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
   vars:
-    aws_region: "${AWS_DEFAULT_REGION}"
-    aws_project: "${AWS_PROJECT}"
-    environment_name: "${ENVIRONMENT_NAME}"
     ssh_private_key_file: "${SSH_PRIVATE_KEY_FILE}"
 EOF
 
-ansible-playbook --inventory=$ANSIBLE_INVENTORY $PLAYBOOK_ARGS $PLAYBOOK
+ansible-playbook \
+  --inventory=$ANSIBLE_INVENTORY \
+  --extra-vars="@${SECRETS_DIR}/config.json" \
+  $PLAYBOOK_ARGS \
+  $PLAYBOOK
 
 rm -f $ANSIBLE_INVENTORY
