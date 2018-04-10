@@ -31,19 +31,28 @@ instance_provider = configuration.instance_provider_from_config(config)
 os.makedirs(input_dir, exist_ok=True)
 os.makedirs(temp_data_dir, exist_ok=True)
 
-root_logger = logging.getLogger(__name__.split('.')[:-1])
-root_logger.addHandler(logging.StreamHandler(stream=sys.stderr))
-if 'log_level' in config:
-    log_level = config['log_level']
-    print(f'Setting log level to: {log_level}', file=sys.stderr, flush=True)
-    root_logger.setLevel(log_level)
 
+def setup_logging():
+    root_logger = logging.getLogger('.'.join(__name__.split('.')[:-1]))
+    root_logger_handler = logging.StreamHandler(stream=sys.stderr)
+    root_logger_handler.setFormatter(logging.Formatter(
+        '%(asctime)s ' + logging.BASIC_FORMAT))
+    root_logger.addHandler(root_logger_handler)
+    if 'log_level' in config:
+        log_level = config['log_level']
+        print(f'Setting log level to: {log_level}',
+              file=sys.stderr, flush=True)
+        root_logger.setLevel(log_level)
+
+
+setup_logging()
 log = logging.getLogger(__name__)
 
 _user_last_execution_id_lock = threading.RLock()
 _user_last_execution_id = dict()
 
 app = Flask(__name__)
+
 
 @app.before_request
 def handle_chunked_input():

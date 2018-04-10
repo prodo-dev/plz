@@ -3,11 +3,11 @@ import logging
 from typing import BinaryIO, Iterator
 
 import docker
-from requests.exceptions import ConnectionError, ChunkedEncodingError
+from requests.exceptions import ConnectionError
 
 from plz.controller.images.images_base import Images
 
-log = logging.getLogger('controller')
+log = logging.getLogger(__name__)
 
 
 class ECRImages(Images):

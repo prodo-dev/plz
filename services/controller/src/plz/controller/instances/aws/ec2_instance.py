@@ -11,7 +11,7 @@ from plz.controller.instances.instance_base \
     import ExecutionInfo, Instance, Parameters
 from plz.controller.volumes import Volumes
 
-log = logging.getLogger('controller')
+log = logging.getLogger(__name__)
 
 
 class EC2Instance(Instance):
