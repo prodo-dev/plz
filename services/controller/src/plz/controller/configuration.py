@@ -13,6 +13,9 @@ from plz.controller.instances.instance_base import InstanceProvider
 from plz.controller.instances.localhost import Localhost
 from plz.controller.volumes import Volumes
 
+AMI_TAG = '2018-03-27'
+WORKER_AMI = f'plz-worker-{AMI_TAG}'
+
 
 def load() -> pyhocon.ConfigTree:
     if os.environ.get('CONFIGURATION'):
@@ -52,7 +55,7 @@ def instance_provider_from_config(config) -> InstanceProvider:
             client=boto3.client(
                 service_name='ec2',
                 region_name=config['instances.region']),
-            aws_worker_ami=config['instances.worker_ami'],
+            aws_worker_ami=WORKER_AMI,
             aws_key_name=config['instances.key_name'],
             images=images,
             acquisition_delay_in_seconds=config.get_int(

@@ -5,7 +5,6 @@ include ../../vars.mk
 IMAGE_GROUPS = controller worker
 
 AWS_REGION = $(shell jq -r '.aws_region' $(CONFIG_FILE))
-AMI_TAG = $(shell jq -r '.ami_tag' $(CONFIG_FILE))
 SSH_PRIVATE_KEY_FILE = $(SECRETS_DIR)/keys/id_rsa
 SSH_PUBLIC_KEY_FILE = $(SECRETS_DIR)/keys/id_rsa.pub
 
@@ -38,6 +37,7 @@ deploy: $(SSH_PRIVATE_KEY_FILE)
 	terraform apply \
 		-state=$(SECRETS_DIR)/terraform.tfstate \
 		-var-file=$(CONFIG_FILE) \
+		-var=ami_tag=$(AMI_TAG) \
 		-var=ssh_public_key_file=$(SSH_PUBLIC_KEY_FILE)
 
 
