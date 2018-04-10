@@ -1,10 +1,13 @@
 import base64
+import logging
 from typing import BinaryIO, Iterator
 
 import docker
-from requests.exceptions import ConnectionError
+from requests.exceptions import ConnectionError, ChunkedEncodingError
 
 from plz.controller.images.images_base import Images
+
+log = logging.getLogger('controller')
 
 
 class ECRImages(Images):
@@ -42,6 +45,7 @@ class ECRImages(Images):
     def can_pull(self) -> bool:
         try:
             self.docker_api_client.pull('hello-world')
+            log.debug('Could pull image')
             return True
         except ConnectionError:
             return False

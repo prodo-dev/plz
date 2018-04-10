@@ -20,5 +20,9 @@ exec gunicorn \
   --workers=1 \
   --timeout=120 \
   --pythonpath="${PYTHONPATH}" \
+  --capture-output \
+  --log-level=DEBUG \
+  --access-logfile=- \
+  --error-logfile=- \
   plz.controller.main:app \
   -- $@

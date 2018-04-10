@@ -52,7 +52,12 @@ class EC2Instance(Instance):
         return self.delegate.logs(stdout, stderr)
 
     def is_up(self):
-        return self.images.can_pull()
+        # TODO(sergio): change to return self.images.can_pull()
+        # after we stop seeing the Docker exception
+        is_up = self.images.can_pull()
+        log.debug(
+            f'Instance for {self.delegate.execution_id} can pull: {is_up}')
+        return is_up
 
     def output_files_tarball(self):
         return self.delegate.output_files_tarball()
