@@ -8,7 +8,7 @@ from plz.controller.instances.instance_base \
     import Instance, InstanceProvider
 from plz.controller.volumes import Volumes
 
-log = logging.getLogger('localhost')
+log = logging.getLogger(__name__)
 
 
 class Localhost(InstanceProvider):
