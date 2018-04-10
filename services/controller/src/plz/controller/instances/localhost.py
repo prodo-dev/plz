@@ -27,10 +27,8 @@ class Localhost(InstanceProvider):
         """
         "Acquires" an instance.
 
-        As we're dealing with `localhost` here, it's always the same instance.
+        As we're dealing with `localhost` here, there's nothing to do.
         """
-        self.instances[execution_id] = DockerInstance(
-            self.images, self.containers, self.volumes, execution_id)
         return iter([])
 
     def release_instance(self, execution_id: str,
@@ -41,7 +39,6 @@ class Localhost(InstanceProvider):
         As we're dealing with `localhost` here, this doesn't do much.
         """
         self.instance_for(execution_id).cleanup()
-        del self.instances[execution_id]
 
     def instance_for(self, execution_id: str) -> Optional[Instance]:
         """
@@ -49,14 +46,16 @@ class Localhost(InstanceProvider):
 
         As we're dealing with `localhost` here, it's always the same instance.
         """
-        return self.instances.get(execution_id)
+        return DockerInstance(
+                self.images, self.containers, self.volumes, execution_id)
 
     def push(self, image_tag: str):
         pass
 
     def instance_iterator(self) \
             -> Iterator[Instance]:
-        return iter(self.instances.values())
+        return iter(self.instance_for(execution_id)
+                    for execution_id in self.containers.names())
 
     def stop_execution(self, execution_id):
         self.containers.stop(execution_id)
