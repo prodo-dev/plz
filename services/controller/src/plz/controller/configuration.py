@@ -45,12 +45,12 @@ def load_from_file(path) -> pyhocon.ConfigTree:
 def instance_provider_from_config(config) -> InstanceProvider:
     provider = config.get('instances.provider', 'localhost')
     docker_host = config.get('images.docker_host', None)
-    images = images_from_config(config)
     results_storage = results_storage_from_config(config)
+    images = images_from_config(config)
     if provider == 'localhost':
         containers = Containers.for_host(docker_host)
         volumes = Volumes.for_host(docker_host)
-        return Localhost(images, containers, volumes, results_storage)
+        return Localhost(results_storage, images, containers, volumes)
     elif provider == 'aws-ec2':
         groups = EC2InstanceGroups(
             redis=redis_from_config(config),
@@ -59,8 +59,8 @@ def instance_provider_from_config(config) -> InstanceProvider:
                 region_name=config['instances.region']),
             aws_worker_ami=WORKER_AMI,
             aws_key_name=config['instances.key_name'],
-            images=images,
             results_storage=results_storage,
+            images=images,
             acquisition_delay_in_seconds=config.get_int(
                 'instances.acquisition_delay', 10),
             max_acquisition_tries=config.get_int(

@@ -14,10 +14,10 @@ log = logging.getLogger(__name__)
 
 class Localhost(InstanceProvider):
     def __init__(self,
+                 results_storage: ResultsStorage,
                  images: Images,
                  containers: Containers,
-                 volumes: Volumes,
-                 results_storage: ResultsStorage):
+                 volumes: Volumes):
         self.images = images
         self.containers = containers
         self.volumes = volumes
