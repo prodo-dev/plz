@@ -243,7 +243,6 @@ class EC2InstanceGroup(InstanceProvider):
         volumes = Volumes.for_host(docker_url)
         return EC2Instance(
             self.client,
-            self.results_storage,
             images,
             containers,
             volumes,

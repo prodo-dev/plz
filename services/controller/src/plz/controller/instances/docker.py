@@ -16,12 +16,10 @@ from plz.controller.volumes import \
 
 class DockerInstance(Instance):
     def __init__(self,
-                 results_storage: ResultsStorage,
                  images: Images,
                  containers: Containers,
                  volumes: Volumes,
                  execution_id: str):
-        self.results_storage = results_storage
         self.images = images
         self.containers = containers
         self.volumes = volumes
@@ -56,34 +54,15 @@ class DockerInstance(Instance):
                             mounts=[Mount(source=volume.name,
                                           target=Volumes.VOLUME_MOUNT)])
 
-    def status(self) -> InstanceStatus:
-        with self.results_storage.get(self.execution_id) as results:
-            if results:
-                status = results.status()
-                if status == 0:
-                    return InstanceStatusSuccess()
-                else:
-                    return InstanceStatusFailure(status)
-            else:
-                return super().status()
-
     def logs(self, stdout: bool = True, stderr: bool = True) \
             -> Iterator[bytes]:
-        with self.results_storage.get(self.execution_id) as results:
-            if results:
-                return results.logs()
-            else:
-                return self.containers.logs(self.execution_id,
-                                            stdout=stdout,
-                                            stderr=stderr)
+        return self.containers.logs(self.execution_id,
+                                    stdout=stdout,
+                                    stderr=stderr)
 
     def output_files_tarball(self) -> Iterator[bytes]:
-        with self.results_storage.get(self.execution_id) as results:
-            if results:
-                return results.output_tarball()
-            else:
-                return self.volumes.get_files(self.volume_name,
-                                              Volumes.OUTPUT_DIRECTORY)
+        return self.volumes.get_files(self.volume_name,
+                                      Volumes.OUTPUT_DIRECTORY)
 
     def stop_execution(self):
         self.containers.stop(self.execution_id)

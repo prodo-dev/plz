@@ -93,19 +93,6 @@ class RunExecutionOperation(Operation):
                 raise CLIException('The command failed.')
             logs = LogsOperation(self.configuration, execution_id)
             logs.display_logs(execution_id)
-            status = self.get_status(execution_id)
-            if status.running:
-                raise CLIException(
-                    'Execution has not finished. This should not happen.'
-                    ' Please report it.')
-            elif status.success:
-                log_info('Execution succeeded.')
-                self.retrieve_output_files(execution_id)
-                return status.code
-            else:
-                raise CLIException(
-                    f'Execution failed with an exit status of {status.code}.',
-                    exit_code=status.code)
         except CLIException as e:
             e.print(self.configuration)
             raise ExitWithStatusCodeException(e.exit_code)
@@ -113,8 +100,22 @@ class RunExecutionOperation(Operation):
             skip_cleanup = True
         finally:
             if not skip_cleanup:
-                self.cleanup(execution_id)
-                log_info('Done and dusted.')
+                self.harvest(execution_id)
+
+        status = self.get_status(execution_id)
+        if status.running:
+            raise CLIException(
+                'Execution has not finished. This should not happen.'
+                ' Please report it.')
+        elif status.success:
+            log_info('Execution succeeded.')
+            self.retrieve_output_files(execution_id)
+            log_info('Done and dusted.')
+            return status.code
+        else:
+            raise CLIException(
+                f'Execution failed with an exit status of {status.code}.',
+                exit_code=status.code)
 
     def capture_build_context(self):
         context_dir = os.getcwd()
@@ -227,8 +228,8 @@ class RunExecutionOperation(Operation):
         for path in untar(response.raw, self.output_dir):
             print(path)
 
-    def cleanup(self, execution_id: str):
-        log_info('Cleaning up all detritus...')
+    def harvest(self, execution_id: str):
+        log_info('Harvesting the output...')
         response = requests.delete(self.url('executions', execution_id))
         check_status(response, requests.codes.no_content)
 

@@ -29,7 +29,6 @@ class Localhost(InstanceProvider):
         "Acquires" an instance.
         """
         instance = DockerInstance(
-            self.results_storage,
             self.images,
             self.containers,
             self.volumes,
@@ -47,7 +46,6 @@ class Localhost(InstanceProvider):
             log.error(f'Names are:{self.containers.execution_ids()}')
             return None
         return DockerInstance(
-            self.results_storage,
             self.images,
             self.containers,
             self.volumes,

@@ -15,6 +15,8 @@ from flask import Flask, Response, abort, jsonify, request, stream_with_context
 
 from plz.controller import configuration
 from plz.controller.images import Images
+from plz.controller.instances.instance_base import InstanceStatusSuccess, \
+    InstanceStatusFailure
 
 READ_BUFFER_SIZE = 16384
 
@@ -27,6 +29,7 @@ input_dir = os.path.join(data_dir, 'input')
 temp_data_dir = os.path.join(data_dir, 'tmp')
 images = configuration.images_from_config(config)
 instance_provider = configuration.instance_provider_from_config(config)
+results_storage = configuration.results_storage_from_config(config)
 redis = configuration.redis_from_config(config)
 
 os.makedirs(input_dir, exist_ok=True)
@@ -160,6 +163,14 @@ def harvest_entry_point():
 def get_status_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/executions/some-id/status
+    with results_storage.get(execution_id) as results:
+        if results:
+            status = results.status()
+            if status == 0:
+                return jsonify(InstanceStatusSuccess())
+            else:
+                return jsonify(InstanceStatusFailure(status))
+
     instance = instance_provider.instance_for(execution_id)
     return jsonify(instance.status())
 
@@ -169,31 +180,23 @@ def get_status_entrypoint(execution_id):
 def get_logs_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/executions/some-id/logs
+    with results_storage.get(execution_id) as results:
+        if results:
+            response = results.logs()
+            return Response(response, mimetype='application/octet-stream')
+
     instance = instance_provider.instance_for(execution_id)
     response = instance.logs()
     return Response(response, mimetype='application/octet-stream')
 
 
-@app.route(f'/executions/<execution_id>/logs/stdout')
-def get_logs_stdout_entrypoint(execution_id):
-    # Test with:
-    # curl localhost:5000/executions/some-id/logs/stdout
-    instance = instance_provider.instance_for(execution_id)
-    response = instance.logs(stdout=True, stderr=False)
-    return Response(response, mimetype='application/octet-stream')
-
-
-@app.route(f'/executions/<execution_id>/logs/stderr')
-def get_logs_stderr_entrypoint(execution_id):
-    # Test with:
-    # curl localhost:5000/executions/some-id/logs/stderr
-    instance = instance_provider.instance_for(execution_id)
-    response = instance.logs(stdout=False, stderr=True)
-    return Response(response, mimetype='application/octet-stream')
-
-
 @app.route(f'/executions/<execution_id>/output/files')
 def get_output_files_entrypoint(execution_id):
+    with results_storage.get(execution_id) as results:
+        if results:
+            response = results.output_tarball()
+            return Response(response, mimetype='application/octet-stream')
+
     # Test with:
     # curl localhost:5000/executions/some-id/output | tar x -C /tmp/plz-output
     instance = instance_provider.instance_for(execution_id)

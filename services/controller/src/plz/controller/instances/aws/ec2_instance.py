@@ -30,7 +30,6 @@ class EC2Instance(Instance):
 
     def __init__(self,
                  client,
-                 results_storage: ResultsStorage,
                  images: Images,
                  containers: Containers,
                  volumes: Volumes,
@@ -39,7 +38,7 @@ class EC2Instance(Instance):
         self.client = client
         self.images = images
         self.delegate = DockerInstance(
-            results_storage, images, containers, volumes, execution_id)
+            images, containers, volumes, execution_id)
         self.data = data
 
     def run(self,
