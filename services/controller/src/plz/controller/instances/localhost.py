@@ -29,7 +29,11 @@ class Localhost(InstanceProvider):
         "Acquires" an instance.
         """
         instance = DockerInstance(
-            self.images, self.containers, self.volumes, execution_id)
+            self.results_storage,
+            self.images,
+            self.containers,
+            self.volumes,
+            execution_id)
         return iter([{'instance': instance}])
 
     def instance_for(self, execution_id: str) -> Optional[Instance]:
@@ -43,7 +47,11 @@ class Localhost(InstanceProvider):
             log.error(f'Names are:{self.containers.execution_ids()}')
             return None
         return DockerInstance(
-            self.images, self.containers, self.volumes, execution_id)
+            self.results_storage,
+            self.images,
+            self.containers,
+            self.volumes,
+            execution_id)
 
     def stop_execution(self, execution_id):
         self.containers.stop(execution_id)

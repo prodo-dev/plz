@@ -292,7 +292,6 @@ def _get_ignored_git_files() -> [str]:
     return [os.path.abspath(p) for p in result.stdout.splitlines()]
 
 
-# This is duplicated in the controller. We need a place for common code.
 def untar(stream: io.RawIOBase, output_dir: str) -> Iterator[str]:
     # The response is a tarball we need to extract into `output_dir`.
     with tempfile.TemporaryFile() as tarball:

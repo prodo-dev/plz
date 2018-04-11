@@ -9,6 +9,7 @@ from plz.controller.images import Images
 from plz.controller.instances.docker import DockerInstance
 from plz.controller.instances.instance_base \
     import ExecutionInfo, Instance, Parameters
+from plz.controller.results import ResultsStorage
 from plz.controller.volumes import Volumes
 
 log = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ class EC2Instance(Instance):
 
     def __init__(self,
                  client,
+                 results_storage: ResultsStorage,
                  images: Images,
                  containers: Containers,
                  volumes: Volumes,
@@ -37,7 +39,7 @@ class EC2Instance(Instance):
         self.client = client
         self.images = images
         self.delegate = DockerInstance(
-            images, containers, volumes, execution_id)
+            results_storage, images, containers, volumes, execution_id)
         self.data = data
 
     def run(self,
