@@ -1,11 +1,15 @@
 import os
+import shutil
 from typing import Iterator
+
+from redis import StrictRedis
 
 from plz.controller.results.results_base import ResultsStorage, untar
 
 
 class LocalResultsStorage(ResultsStorage):
-    def __init__(self, directory):
+    def __init__(self, redis: StrictRedis, directory: str):
+        self.redis = redis
         self.directory = directory
 
     def publish_output(self,
@@ -13,20 +17,23 @@ class LocalResultsStorage(ResultsStorage):
                        exit_status: int,
                        logs: Iterator[bytes],
                        output_tarball: Iterator[bytes]):
-        directory = os.path.join(self.directory, execution_id)
-        os.makedirs(directory, exist_ok=True)
+        lock_name = f'lock:{__name__}.{self.__class__.__name__}:{execution_id}'
+        with self.redis.lock(lock_name):
+            directory = os.path.join(self.directory, execution_id)
+            exit_status_path = os.path.join(directory, 'status')
+            logs_path = os.path.join(directory, 'logs')
+            output_directory = os.path.join(directory, 'output')
 
-        exit_status_path = os.path.join(directory, 'status')
-        with open(exit_status_path, 'w') as f:
-            print(exit_status, file=f)
+            os.makedirs(directory, exist_ok=True)
 
-        logs_path = os.path.join(directory, 'logs')
-        with open(logs_path, 'wb') as f:
-            for line in logs:
-                f.write(line)
+            with open(exit_status_path, 'w') as f:
+                print(exit_status, file=f)
 
-        output_directory = os.path.join(directory, 'output')
-        consume(untar(output_tarball, output_directory))
+            with open(logs_path, 'wb') as f:
+                for line in logs:
+                    f.write(line)
+
+            consume(untar(output_tarball, output_directory))
 
 
 def consume(iterator):

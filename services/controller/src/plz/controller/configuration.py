@@ -90,8 +90,9 @@ def images_from_config(config) -> Images:
 def results_storage_from_config(config) -> ResultsStorage:
     provider = config.get('results.provider', 'local')
     if provider == 'local':
+        redis = redis_from_config(config)
         directory = config.get('results.directory')
-        return LocalResultsStorage(directory)
+        return LocalResultsStorage(redis, directory)
     elif provider == 'aws-s3':  # TODO: Implement this
         raise NotImplementedError('The AWS S3 provider is not implemented.')
     else:
