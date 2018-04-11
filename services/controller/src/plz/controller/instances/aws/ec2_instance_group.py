@@ -200,6 +200,7 @@ class EC2InstanceGroup(InstanceProvider):
             idle_since_timestamp = int(time.time())
         with self.lock:
             instance = self.instance_for(execution_id)
+            instance.stop_execution()
             instance.publish_results(self.results_storage)
             instance.cleanup()
             instance.set_tags([

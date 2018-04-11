@@ -56,6 +56,7 @@ class Localhost(InstanceProvider):
         As we're dealing with `localhost` here, this doesn't do much.
         """
         instance = self.instance_for(execution_id)
+        instance.stop_execution()
         instance.publish_results(self.results_storage)
         instance.cleanup()
 

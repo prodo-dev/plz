@@ -47,13 +47,6 @@ class Containers:
         )
         log.info(f'Started container: {container.id}')
 
-    def rm(self, execution_id: str):
-        container = self.from_execution_id(execution_id)
-        if not container:
-            return
-        container.stop()
-        container.remove()
-
     def logs(self,
              execution_id: str,
              stdout: bool = True,
@@ -64,6 +57,19 @@ class Containers:
             return iter([])
         return container.logs(
             stdout=stdout, stderr=stderr, stream=True, follow=True)
+
+    def stop(self, name: str):
+        container = self.from_execution_id(name)
+        if not container:
+            return
+        container.stop()
+
+    def rm(self, execution_id: str):
+        container = self.from_execution_id(execution_id)
+        if not container:
+            return
+        container.stop()
+        container.remove()
 
     def get_state(self, execution_id: str) -> Optional[ContainerState]:
         container = self.from_execution_id(execution_id)
@@ -78,12 +84,6 @@ class Containers:
             success=success,
             exit_code=container_state['ExitCode'],
             finished_at=finished_at)
-
-    def stop(self, execution_id: str):
-        container = self.from_execution_id(execution_id)
-        if not container:
-            return
-        container.stop()
 
     def execution_ids(self):
         return [container.name[len(self._CONTAINER_NAME_PREFIX):]
