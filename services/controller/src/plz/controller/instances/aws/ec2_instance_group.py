@@ -70,6 +70,8 @@ class EC2InstanceGroup(InstanceProvider):
         self.images = images
         self.acquisition_delay_in_seconds = acquisition_delay_in_seconds
         self.max_acquisition_tries = max_acquisition_tries
+        self.instances: Dict[str, EC2Instance] = {}
+        self.lock = self.redis.lock(f'lock:EC2InstanceGroup#lock:{name}')
         self.filters = [{'Name': f'tag:{EC2Instance.GROUP_NAME_TAG}',
                          'Values': [self.name]}]
         # Lazily initialized by ami_id
