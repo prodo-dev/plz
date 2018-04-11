@@ -4,7 +4,7 @@ import socket
 import threading
 import time
 from contextlib import closing
-from typing import Dict, Iterator, Optional
+from typing import Any, Dict, Iterator, Optional
 
 from plz.controller.containers import Containers
 from plz.controller.images import Images
@@ -55,7 +55,6 @@ class EC2InstanceGroup(InstanceProvider):
         self.images = images
         self.acquisition_delay_in_seconds = acquisition_delay_in_seconds
         self.max_acquisition_tries = max_acquisition_tries
-        self.instances: Dict[str, EC2Instance] = {}
         self.lock = threading.RLock()
         self.filters = [{'Name': f'tag:{EC2Instance.GROUP_NAME_TAG}',
                          'Values': [self.name]}]
@@ -117,28 +116,31 @@ class EC2InstanceGroup(InstanceProvider):
             execution_spec: dict,
             max_tries: int = 30,
             delay_in_seconds: int = 10) \
-            -> Iterator[str]:
+            -> Iterator[Dict[str, Any]]:
         """
         Gets an available instance for the execution with the given id.
 
         If there's at least one instance in the group that is idle, assign the
         execution ID to it and return it. Otherwise, start a new box.
         """
+        def msg(s) -> Dict:
+            return {'message:': s}
         tries_remaining = max_tries
-        yield 'querying availability'
+        yield msg('querying availability')
         instance_type = execution_spec.get('instance_type')
         instances_not_assigned = self._get_running_aws_instances([
             (f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
             ('instance-type', instance_type)])
         if len(instances_not_assigned) > 0:
-            yield 'reusing existing instance'
+            yield msg('reusing existing instance')
             instance_data = instances_not_assigned[0]
         else:
-            yield 'requesting new instance'
+            yield msg('requesting new instance')
             instance_data = self._ask_aws_for_new_instance(instance_type)
         instance = self._ec2_instance_from_instance_data(instance_data)
         dns_name = _get_dns_name(instance_data)
-        yield f'waiting for the instance to be ready. Dns name is: {dns_name}'
+        yield msg(
+            f'waiting for the instance to be ready. Dns name is: {dns_name}')
 
         while tries_remaining > 0:
             tries_remaining -= 1
@@ -154,13 +156,14 @@ class EC2InstanceGroup(InstanceProvider):
                             {'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
                              'Value': str(60 * 30)}
                         ])
-                        yield 'started'
+                        yield msg('started')
+                        yield {'instance': instance}
                         return
-                yield 'taken while waiting'
+                yield msg('taken while waiting')
                 instance_data = self._ask_aws_for_new_instance(instance_type)
                 instance = self._ec2_instance_from_instance_data(instance_data)
             else:
-                yield 'pending'
+                yield msg('pending')
                 time.sleep(delay_in_seconds)
 
     def _is_instance_free(self, instance_id):
@@ -169,10 +172,15 @@ class EC2InstanceGroup(InstanceProvider):
                      ('instance-id', instance_id)])
         return len(instances) > 0
 
-    def instance_for(self, execution_id: str) -> EC2Instance:
-        instance_data = self._get_running_aws_instances(
-            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', execution_id)])[0]
-        return self._ec2_instance_from_instance_data(instance_data)
+    def instance_for(self, execution_id: str) -> Optional[EC2Instance]:
+        instance_data_list = self._get_running_aws_instances(
+            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', execution_id)])
+        if len(instance_data_list) == 0:
+            return None
+        elif len(instance_data_list) > 1:
+            raise ValueError(
+                f'More than one instance for execution id {execution_id}')
+        return self._ec2_instance_from_instance_data(instance_data_list[0])
 
     def push(self, image_tag):
         self.images.push(image_tag)

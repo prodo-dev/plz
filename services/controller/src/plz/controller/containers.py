@@ -80,7 +80,7 @@ class Containers:
             return
         container.stop()
 
-    def names(self):
+    def execution_ids(self):
         return [container.name[len(self._CONTAINER_NAME_PREFIX):]
                 for container in self.docker_client.containers.list(all=True)
                 if container.name.startswith(self._CONTAINER_NAME_PREFIX)]

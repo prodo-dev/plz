@@ -83,11 +83,16 @@ def run_execution_entrypoint():
         yield {'id': execution_id}
 
         try:
-            messages = instance_provider.acquire_instance(
-                execution_id, execution_spec)
-            for message in messages:
-                yield {'status': message}
-            instance = instance_provider.instance_for(execution_id)
+            # Make type system happy by making this explicit, otherwise it's
+            # complaining about the `'message'` in `status['message']` (?)
+            acquisition_statuses = instance_provider.acquire_instance(
+                    execution_id, execution_spec)
+            instance = None
+            for status in acquisition_statuses:
+                if 'message' in status:
+                    yield {'status': status['message']}
+                if 'instance' in status:
+                    instance = status['instance']
             if instance is None:
                 yield {
                     'error': 'Couldn\'t get an instance.',
