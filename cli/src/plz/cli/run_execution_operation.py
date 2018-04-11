@@ -87,7 +87,7 @@ class RunExecutionOperation(Operation):
             raise CLIException('We did not receive an execution ID.')
         log_info(f'Execution ID is: {execution_id}')
 
-        skip_cleanup = False
+        cancelled = False
         try:
             if not ok:
                 raise CLIException('The command failed.')
@@ -97,10 +97,13 @@ class RunExecutionOperation(Operation):
             e.print(self.configuration)
             raise ExitWithStatusCodeException(e.exit_code)
         except KeyboardInterrupt:
-            skip_cleanup = True
+            cancelled = True
         finally:
-            if not skip_cleanup:
+            if not cancelled:
                 self.harvest(execution_id)
+
+        if cancelled:
+            return
 
         status = self.get_status(execution_id)
         if status.running:
