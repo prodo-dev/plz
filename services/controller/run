@@ -5,15 +5,21 @@ set -u
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-export PYTHONPATH=./src
+if [[ -z "${CONFIGURATION:-}" ]]; then
+  export CONFIGURATION="$(cat "$1")"
+fi
+PORT="${PORT:-$(python -c 'import os; import pyhocon; print(pyhocon.ConfigFactory.parse_string(os.environ.get("CONFIGURATION", "")).get("port", ""))')}"
+PORT="${PORT:-8080}"
+
+export PYTHONPATH='./src'
 
 redis-server &
 
 exec gunicorn \
-  --bind="0.0.0.0:${PORT:-8080}" \
+  --bind="0.0.0.0:${PORT}" \
   --preload \
   --workers=1 \
   --timeout=120 \
-  --pythonpath=${PYTHONPATH} \
+  --pythonpath="${PYTHONPATH}" \
   plz.controller.main:app \
   -- $@

@@ -1,7 +1,6 @@
 include ../../vars.mk
 
-SHELL := zsh
-
+AWS_PROJECT = $(shell jq -r '.aws_project' $(CONFIG_FILE))
 TAG = $(AWS_PROJECT)/ml-pytorch
 CACHE_DIR = ../../cache/base-images/ml-pytorch
 

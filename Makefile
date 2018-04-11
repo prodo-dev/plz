@@ -1,5 +1,7 @@
 SHELL := zsh -e -u
 
+include vars.mk
+
 .PHONY: check
 check:
 	$(MAKE) -C cli check
@@ -11,24 +13,13 @@ environment:
 	$(MAKE) -C cli environment
 	$(MAKE) -C services/controller environment
 
-.PHONY: ml-production
-ml-production:
-	$(MAKE) -C machines/ml deploy-production
+.PHONY: ml
+ml:
+	$(MAKE) -C machines/ml deploy
 
-.PHONY: ml-test
-ml-test:
-	$(MAKE) -C machines/ml deploy-test
+.PHONY: controller
+controller: ml
+	$(MAKE) -C services/controller deploy
 
-.PHONY: controller-production
-controller-production: ml-production
-	$(MAKE) -C services/controller deploy-production
-
-.PHONY: controller-test
-controller-test: ml-test
-	$(MAKE) -C services/controller deploy-test
-
-.PHONY: deploy-production
-deploy-production: ml-production controller-production
-
-.PHONY: deploy-test
-deploy-test: ml-test controller-test
+.PHONY: deploy
+deploy: ml controller

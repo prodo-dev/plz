@@ -19,23 +19,11 @@ See the CLI's *README.rst*.
 2. Install [direnv](https://direnv.net/).
 3. Create a *.envrc* file in the root of this repository:
    ```
-   export ENVIRONMENT_NAME='<YOUR NAME>'
+   export SERCRETS_DIR="${PWD}/secrets"
    ```
-4. Run `make deploy-test`.
+4. Create a configuration file named *secrets/config.json* based on *example.config.json*.
+5. Run `make deploy`.
 
-## Connecting to the VPN
+## Deploying a production environment
 
-1. Clone [*prodo-ai/inside*](https://github.com/prodo-ai/inside).
-2. `cd` to that directory.
-3. Create a file named *bucket* with the contents:
-   ```
-   inside.secrets.prodo.ai
-   ```
-4. Download the state by running `make retrieve`.
-5. Create yourself a key with:
-   ```
-   ./openvpn/new-client-key.sh NAME@prodo.ai OUTPUT-FILE.zip
-   ```
-6. Connect to the VPN by following the instructions in the *README*.
-
-One you're connected, you should be able to access everything inside the AWS VPC.
+Do just as above, but put your secrets directory somewhere else (for example, another repository, this one private).
