@@ -86,7 +86,7 @@ function start_controller {
   fi
 
   info "Starting the controller..."
-  docker_compose up --detach
+  docker_compose up --quiet-pull --detach
 }
 
 function stop_controller {

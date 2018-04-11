@@ -2,7 +2,7 @@ version: '2.3'
 
 services:
   all:
-    image: busybox
+    image: docker:stable-git
     command:
       - echo
       - 'Started.'
