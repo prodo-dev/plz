@@ -131,13 +131,15 @@ class EC2InstanceGroup(InstanceProvider):
             (f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
             ('instance-type', instance_type)])
         if len(instances_not_assigned) > 0:
+            yield 'reusing existing instance'
             instance_data = instances_not_assigned[0]
         else:
             yield 'requesting new instance'
             instance_data = self._ask_aws_for_new_instance(instance_type)
         instance = self._ec2_instance_from_instance_data(instance_data)
         dns_name = _get_dns_name(instance_data)
-        yield f'worker dns name is: {dns_name}'
+        yield f'waiting for the instance to be ready. Dns name is: {dns_name}'
+
         while tries_remaining > 0:
             tries_remaining -= 1
             if instance.is_up():
