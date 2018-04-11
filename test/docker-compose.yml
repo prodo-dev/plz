@@ -1,0 +1,22 @@
+version: '2.3'
+
+services:
+  all:
+    image: docker:stable-git
+    command:
+      - echo
+      - 'Started.'
+    depends_on:
+      controller:
+        condition: service_healthy
+
+  controller:
+    image: plztest/controller
+    environment:
+      CONFIGURATION: |
+        port = 80
+        data_dir = /data
+    volumes:
+      - ../cache/controller:/data
+      - ${SECRETS_DIR}/keys/id_rsa:/root/.ssh/id_rsa:ro
+      - /var/run/docker.sock:/var/run/docker.sock

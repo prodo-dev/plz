@@ -10,42 +10,53 @@
         owner: ubuntu
         group: ubuntu
         mode: 0600
+
     - name: Log in to AWS ECR
       shell: |
         eval "$(aws ecr get-login --no-include-email --region {{ aws_region }})"
-    - name: Stop the container
-      docker_container:
-        name: controller
-        state: absent
-    - name: Start the container
-      docker_container:
-        name: controller
-        image: "{{ image }}"
+
+    - name: Start the services
+      docker_service:
+        project_name: controller
         pull: yes
-        env:
-          CONFIGURATION: |
-            port = 80
-            data_dir = "/data"
-            instances = {
-              provider = aws-ec2
-              region = "{{ aws_region }}"
-              project = "{{ aws_project }}"
-              worker_ami = "{{ worker_ami }}"
-              key_name = "{{ key_name }}"
-              group_name = "{{ environment_name }}"
-            }
-            images = {
-              provider = aws-ecr
-              region = "{{ aws_region }}"
-              repository = "{{ aws_project }}/plz/builds"
-            }
-        published_ports:
-          - "{{ service_port }}:80"
-        volumes:
-          - /cache/controller:/data
-          - /home/ubuntu/.ssh/plz:/root/.ssh/id_rsa:ro
-          - /var/run/docker.sock:/var/run/docker.sock
-        restart_policy: unless-stopped
+        definition:
+          version: '2.3'
+
+          services:
+            all:
+              image: docker:stable-git
+              command:
+                - echo
+                - 'Started.'
+              depends_on:
+                controller:
+                  condition: service_healthy
+
+            controller:
+              image: '{{ image }}'
+              environment:
+                CONFIGURATION: |
+                  port = 80
+                  data_dir = "/data"
+                  instances = {
+                    provider = aws-ec2
+                    region = "{{ aws_region }}"
+                    project = "{{ aws_project }}"
+                    key_name = "{{ key_name }}"
+                    group_name = "{{ environment_name }}"
+                  }
+                  images = {
+                    provider = aws-ecr
+                    region = "{{ aws_region }}"
+                    repository = "{{ aws_project }}/plz/builds"
+                  }
+              ports:
+                - "{{ service_port }}:80"
+              volumes:
+                - /cache/controller:/data
+                - /home/ubuntu/.ssh/plz:/root/.ssh/id_rsa:ro
+                - /var/run/docker.sock:/var/run/docker.sock
+
     - name: Set cron job for tidying
       cron:
         name: "Tidying each minute"

@@ -94,9 +94,12 @@
     - name: Install Docker
       apt:
         name: docker-ce
-    - name: Install docker-py
+    - name: Install docker for Python
       pip:
-        name: docker-py
+        name: docker
+    - name: Install docker-compose for Python
+      pip:
+        name: docker-compose
     - name: Add the user to the docker group
       user:
         name: ubuntu
