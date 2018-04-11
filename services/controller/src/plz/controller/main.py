@@ -50,6 +50,11 @@ def handle_chunked_input():
         request.environ['wsgi.input_terminated'] = True
 
 
+@app.route('/', methods=['GET'])
+def root():
+    return jsonify({})
+
+
 @app.route(f'/executions', methods=['POST'])
 def run_execution_entrypoint():
     # Test with:
