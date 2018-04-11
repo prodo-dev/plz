@@ -1,0 +1,16 @@
+version: '2'
+
+services:
+  controller:
+    extends:
+      file: ../services/controller/docker-compose.base.yml
+      service: controller
+    image: plztest/controller
+    environment:
+      CONFIGURATION: |
+        port = 80
+        data_dir = /data
+    volumes:
+      - ../cache/controller:/data
+      - ${SECRETS_DIR}/keys/id_rsa:/root/.ssh/id_rsa:ro
+      - /var/run/docker.sock:/var/run/docker.sock
