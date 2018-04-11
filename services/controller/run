@@ -13,8 +13,6 @@ PORT="${PORT:-8080}"
 
 export PYTHONPATH='./src'
 
-redis-server &
-
 exec gunicorn \
   --bind="0.0.0.0:${PORT}" \
   --preload \

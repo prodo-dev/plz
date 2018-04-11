@@ -52,7 +52,7 @@ def instance_provider_from_config(config) -> InstanceProvider:
         return Localhost(images, containers, volumes)
     elif provider == 'aws-ec2':
         groups = EC2InstanceGroups(
-            redis=StrictRedis(),
+            redis=redis_from_config(config),
             client=boto3.client(
                 service_name='ec2',
                 region_name=config['instances.region']),
@@ -83,3 +83,8 @@ def images_from_config(config) -> Images:
         return ECRImages(docker_api_client, ecr_client, repository)
     else:
         raise ValueError('Invalid image provider.')
+
+
+def redis_from_config(config) -> StrictRedis:
+    return StrictRedis(
+        host=config.get('redis_host', 'localhost'))

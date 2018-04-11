@@ -4,7 +4,7 @@ RUN set -ex; \
     apt-get update -qq; \
     apt-get upgrade -qqy
 
-RUN apt-get install -qqy curl openssh-client redis-server
+RUN apt-get install -qqy curl openssh-client
 
 RUN pip install pipenv
 

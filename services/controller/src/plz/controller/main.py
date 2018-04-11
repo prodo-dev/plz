@@ -11,7 +11,6 @@ from typing import Any, Callable, Iterator, TypeVar, Union
 
 import requests
 from flask import Flask, Response, abort, jsonify, request, stream_with_context
-from redis import StrictRedis
 
 from plz.controller import configuration
 from plz.controller.images import Images
@@ -27,6 +26,7 @@ input_dir = os.path.join(data_dir, 'input')
 temp_data_dir = os.path.join(data_dir, 'tmp')
 images = configuration.images_from_config(config)
 instance_provider = configuration.instance_provider_from_config(config)
+redis = configuration.redis_from_config(config)
 
 os.makedirs(input_dir, exist_ok=True)
 os.makedirs(temp_data_dir, exist_ok=True)
@@ -48,8 +48,7 @@ def _setup_logging():
 _setup_logging()
 log = logging.getLogger(__name__)
 
-_redis = StrictRedis()
-_user_last_execution_id_lock = _redis.lock(
+_user_last_execution_id_lock = redis.lock(
     f'lock:{__name__}:_user_last_execution_id')
 _user_last_execution_id = dict()
 
