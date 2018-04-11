@@ -34,7 +34,7 @@ class EC2InstanceGroups:
         }
         self._groups = {}
         self._group_lock = redis.lock(
-            f'lock:EC2InstanceGroup#_name_to_group_lock')
+            f'lock:{__name__}.{self.__class__.__name__}#_groups')
 
     def get(self, name: str) -> 'EC2InstanceGroup':
         with self._group_lock:

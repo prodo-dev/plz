@@ -49,7 +49,8 @@ _setup_logging()
 log = logging.getLogger(__name__)
 
 _redis = StrictRedis()
-_user_last_execution_id_lock = _redis.lock('lock:main:_user_last_execution_id')
+_user_last_execution_id_lock = _redis.lock(
+    f'lock:{__name__}:_user_last_execution_id')
 _user_last_execution_id = dict()
 
 app = Flask(__name__)
