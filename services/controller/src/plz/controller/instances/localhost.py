@@ -39,7 +39,8 @@ class Localhost(InstanceProvider):
         """
         "Gets" the instance assigned to the execution ID.
 
-        As we're dealing with `localhost` here, it's always the same instance.
+        As we're dealing with `localhost` here, it's always the same instance,
+        but the return value knows about the container under the hood.
         """
         if execution_id not in self.containers.execution_ids():
             log.error(f'Looking for:{execution_id}')
@@ -57,9 +58,9 @@ class Localhost(InstanceProvider):
     def release_instance(self, execution_id: str,
                          idle_since_timestamp: Optional[int] = None):
         """
-        "Releases" an instance.
-
-        As we're dealing with `localhost` here, this doesn't do much.
+        "Releases" an instance. It doesn't actually destroy the instance
+        (because there's only one), but it does delete the Docker container
+        after publishing the results.
         """
         instance = self.instance_for(execution_id)
         instance.stop_execution()
