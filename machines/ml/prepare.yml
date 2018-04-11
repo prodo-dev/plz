@@ -93,10 +93,11 @@
         update_cache: yes
     - name: Install Docker
       apt:
-        name: docker-ce
-    - name: Install docker-py
-      pip:
-        name: docker-py
+        name: '{{ item }}'
+      with_items:
+        - docker-ce
+        - python-docker
+        - docker-compose
     - name: Add the user to the docker group
       user:
         name: ubuntu
