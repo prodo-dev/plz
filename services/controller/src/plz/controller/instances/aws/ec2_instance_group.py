@@ -14,6 +14,38 @@ from plz.controller.volumes import Volumes
 from .ec2_instance import EC2Instance, get_tag
 
 
+class EC2InstanceGroups:
+    def __init__(self,
+                 redis: StrictRedis,
+                 client,
+                 aws_worker_ami: str,
+                 aws_key_name: str,
+                 images: Images,
+                 acquisition_delay_in_seconds: int,
+                 max_acquisition_tries: int):
+        self._construction_args = {
+            'redis': redis,
+            'client': client,
+            'aws_worker_ami': aws_worker_ami,
+            'aws_key_name': aws_key_name,
+            'images': images,
+            'acquisition_delay_in_seconds': acquisition_delay_in_seconds,
+            'max_acquisition_tries': max_acquisition_tries,
+        }
+        self._groups = {}
+        self._group_lock = redis.lock(
+            f'lock:EC2InstanceGroup#_name_to_group_lock')
+
+    def get(self, name: str) -> 'EC2InstanceGroup':
+        with self._group_lock:
+            try:
+                return self._groups[name]
+            except KeyError:
+                group = EC2InstanceGroup(name, **self._construction_args)
+                self._groups[name] = group
+                return group
+
+
 class EC2InstanceGroup(InstanceProvider):
     DOCKER_PORT = 2375
 
@@ -21,30 +53,9 @@ class EC2InstanceGroup(InstanceProvider):
         os.path.dirname(__file__), '..', '..', 'startup', 'startup.yml'))
     _CACHE_DEVICE = '/dev/xvdx'
 
-    _redis: StrictRedis = StrictRedis()
-    _name_to_group = {}
-    _name_to_group_lock = _redis.lock(
-        f'lock:EC2InstanceGroup#_name_to_group_lock')
-
-    def __new__(cls,
-                name: str,
-                client,
-                aws_worker_ami: str,
-                aws_key_name: str,
-                images: Images,
-                acquisition_delay_in_seconds: int,
-                max_acquisition_tries: int):
-        with EC2InstanceGroup._name_to_group_lock:
-            try:
-                return EC2InstanceGroup._name_to_group[name]
-            except KeyError:
-                pass
-            group = super().__new__(cls)
-            EC2InstanceGroup._name_to_group[name] = group
-            return group
-
     def __init__(self,
                  name,
+                 redis: StrictRedis,
                  client,
                  aws_worker_ami: str,
                  aws_key_name: Optional[str],
@@ -52,6 +63,7 @@ class EC2InstanceGroup(InstanceProvider):
                  acquisition_delay_in_seconds: int,
                  max_acquisition_tries: int):
         self.name = name
+        self.redis = redis
         self.client = client
         self.aws_worker_ami = aws_worker_ami
         self.aws_key_name = aws_key_name
@@ -59,7 +71,7 @@ class EC2InstanceGroup(InstanceProvider):
         self.acquisition_delay_in_seconds = acquisition_delay_in_seconds
         self.max_acquisition_tries = max_acquisition_tries
         self.instances: Dict[str, EC2Instance] = {}
-        self.lock = self._redis.lock(f'lock:EC2InstanceGroup#lock:{name}')
+        self.lock = self.redis.lock(f'lock:EC2InstanceGroup#lock:{name}')
         self.filters = [{'Name': f'tag:{EC2Instance.GROUP_NAME_TAG}',
                          'Values': [self.name]}]
         # Lazily initialized by ami_id

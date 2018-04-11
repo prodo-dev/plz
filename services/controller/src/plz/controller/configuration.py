@@ -4,11 +4,12 @@ import sys
 import boto3
 import docker
 import pyhocon
+from redis import StrictRedis
 
 from plz.controller.containers import Containers
 from plz.controller.images import ECRImages, Images
 from plz.controller.images.local import LocalImages
-from plz.controller.instances.aws import EC2InstanceGroup
+from plz.controller.instances.aws import EC2InstanceGroups
 from plz.controller.instances.instance_base import InstanceProvider
 from plz.controller.instances.localhost import Localhost
 from plz.controller.volumes import Volumes
@@ -50,8 +51,8 @@ def instance_provider_from_config(config) -> InstanceProvider:
         volumes = Volumes.for_host(docker_host)
         return Localhost(images, containers, volumes)
     elif provider == 'aws-ec2':
-        return EC2InstanceGroup(
-            name=config['instances.group_name'],
+        groups = EC2InstanceGroups(
+            redis=StrictRedis(),
             client=boto3.client(
                 service_name='ec2',
                 region_name=config['instances.region']),
@@ -62,6 +63,7 @@ def instance_provider_from_config(config) -> InstanceProvider:
                 'instances.acquisition_delay', 10),
             max_acquisition_tries=config.get_int(
                 'instances.max_acquisition_tries', 5))
+        return groups.get(config['instances.group_name'])
     else:
         raise ValueError('Invalid instance provider.')
 
