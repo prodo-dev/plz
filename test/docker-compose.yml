@@ -1,10 +1,7 @@
-version: '2'
+version: '2.3'
 
 services:
   controller:
-    extends:
-      file: ../services/controller/docker-compose.base.yml
-      service: controller
     image: plztest/controller
     environment:
       CONFIGURATION: |

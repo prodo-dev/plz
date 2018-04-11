@@ -15,11 +15,6 @@
       shell: |
         eval "$(aws ecr get-login --no-include-email --region {{ aws_region }})"
 
-    - name: Copy the Docker Compose base file
-      copy:
-        src: ./docker-compose.base.yml
-        dest: /tmp/docker-compose.base.yml
-
     - name: Start the services
       docker_service:
         project_name: controller
@@ -29,9 +24,6 @@
 
           services:
             controller:
-              extends:
-                file: /tmp/docker-compose.base.yml
-                service: controller
               image: '{{ image }}'
               environment:
                 CONFIGURATION: |
@@ -54,6 +46,7 @@
               volumes:
                 - /cache/controller:/data
                 - /home/ubuntu/.ssh/plz:/root/.ssh/id_rsa:ro
+                - /var/run/docker.sock:/var/run/docker.sock
 
     - name: Set cron job for tidying
       cron:
