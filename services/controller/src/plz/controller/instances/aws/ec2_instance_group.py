@@ -151,7 +151,7 @@ class EC2InstanceGroup(InstanceProvider):
             instance_data = instances_not_assigned[0]
         else:
             yield _msg('requesting new instance')
-            is_instance_newly_created = False
+            is_instance_newly_created = True
             instance_data = self._ask_aws_for_new_instance(instance_type)
         instance = self._ec2_instance_from_instance_data(instance_data)
         dns_name = _get_dns_name(instance_data)
