@@ -19,7 +19,7 @@ WORKER_AMI = f'plz-worker-{AMI_TAG}'
 
 Dependencies = collections.namedtuple(
     'Dependencies',
-    ['redis', 'instance_provider', 'images', 'instance_type'])
+    ['redis', 'instance_provider', 'images', 'results_storage'])
 
 
 def load() -> pyhocon.ConfigTree:
