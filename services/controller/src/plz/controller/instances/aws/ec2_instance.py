@@ -1,9 +1,8 @@
 import io
 import logging
 import os.path
-from typing import Iterator, List, Optional
-
 import time
+from typing import Iterator, List, Optional
 
 from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
