@@ -139,26 +139,24 @@ class EC2InstanceGroup(InstanceProvider):
         If there's at least one instance in the group that is idle, assign the
         execution ID to it and return it. Otherwise, start a new box.
         """
-        def msg(s) -> Dict:
-            return {'message': s}
         tries_remaining = max_tries
-        yield msg('querying availability')
+        yield _msg('querying availability')
         instance_type = execution_spec.get('instance_type')
         instances_not_assigned = self._get_running_aws_instances([
             (f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
             ('instance-type', instance_type)])
         if len(instances_not_assigned) > 0:
-            yield msg('reusing existing instance')
+            yield _msg('reusing existing instance')
             is_instance_newly_created = False
             instance_data = instances_not_assigned[0]
         else:
-            yield msg('requesting new instance')
+            yield _msg('requesting new instance')
             is_instance_newly_created = False
             instance_data = self._ask_aws_for_new_instance(instance_type)
         instance = self._ec2_instance_from_instance_data(instance_data)
         dns_name = _get_dns_name(instance_data)
-        yield msg(
-            f'waiting for the instance to be ready. Dns name is: {dns_name}')
+        yield _msg(
+            f'waiting for the instance to be ready. DNS name is: {dns_name}')
 
         while tries_remaining > 0:
             tries_remaining -= 1
@@ -166,18 +164,18 @@ class EC2InstanceGroup(InstanceProvider):
                 with self.lock:
                     # Checking if it's still free
                     if self._is_instance_free(instance_data['InstanceId']):
-                        # TODO(sergio): max_idle_seconds hardcoded to 30
-                        # minutes now, should be coming in the request
-                        instance.set_execution_id(
-                                execution_id, max_idle_seconds=60 * 30)
-                        yield msg('started')
+                        instance.set_execution_id(execution_id)
+                        # TODO(sergio): hardcoded to 30 minutes now, should be
+                        # coming in the request
+                        instance.set_max_idle_seconds(60 * 30)
+                        yield _msg('started')
                         yield {'instance': instance}
                         return
-                yield msg('taken while waiting')
+                yield _msg('taken while waiting')
                 instance_data = self._ask_aws_for_new_instance(instance_type)
                 instance = self._ec2_instance_from_instance_data(instance_data)
             else:
-                yield msg('pending')
+                yield _msg('pending')
                 time.sleep(delay_in_seconds)
 
     def _is_instance_free(self, instance_id):
@@ -291,6 +289,9 @@ def _is_socket_open(host: str, port: int) -> bool:
 def _get_dns_name(instance_data: dict) -> str:
     return instance_data['PrivateDnsName']
 
+
+def _msg(s) -> Dict:
+        return {'message': s}
 
 _BASE_INSTANCE_SPEC = {
     # TODO(sergio): set subnet id

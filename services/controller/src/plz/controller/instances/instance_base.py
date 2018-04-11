@@ -71,7 +71,7 @@ class Instance(ABC):
         pass
 
     @abstractmethod
-    def set_execution_id(self, execution_id: str, max_idle_seconds: int):
+    def set_execution_id(self, execution_id: str):
         pass
 
     def get_execution_info(self) -> ExecutionInfo:

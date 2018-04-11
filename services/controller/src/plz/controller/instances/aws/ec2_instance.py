@@ -52,7 +52,7 @@ class EC2Instance(Instance):
         return self.delegate.logs(stdout, stderr)
 
     def is_up(self, is_instance_newly_created: bool):
-        return self.images.can_pull_many_times(
+        return self.images.can_pull(
             5 if is_instance_newly_created else 1)
 
     def output_files_tarball(self):
@@ -65,11 +65,15 @@ class EC2Instance(Instance):
     def dispose(self):
         self.client.terminate_instances(InstanceIds=[self.data['InstanceId']])
 
-    def set_execution_id(self, execution_id: str, max_idle_seconds: int):
+    def set_execution_id(self, execution_id: str):
         self.delegate.set_execution_id(execution_id, max_idle_seconds)
         self.set_tags([
             {'Key': EC2Instance.EXECUTION_ID_TAG,
-             'Value': execution_id},
+             'Value': execution_id}
+        ])
+
+    def set_max_idle_seconds(self, max_idle_seconds: int):
+        self.set_tags([
             {'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
              'Value': str(max_idle_seconds)}
         ])

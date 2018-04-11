@@ -27,7 +27,7 @@ class Localhost(InstanceProvider):
         """
         instance = DockerInstance(
             self.images, self.containers, self.volumes, execution_id)
-        return [{'instance': instance}]
+        return iter([{'instance': instance}])
 
     def release_instance(self, execution_id: str,
                          idle_since_timestamp: Optional[int] = None):

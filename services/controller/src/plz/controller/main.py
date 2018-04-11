@@ -89,8 +89,6 @@ def run_execution_entrypoint():
         yield {'id': execution_id}
 
         try:
-            # Make type system happy by making this explicit, otherwise it's
-            # complaining about the `'message'` in `status['message']` (?)
             acquisition_statuses = instance_provider.acquire_instance(
                     execution_id, execution_spec)
             instance = None
