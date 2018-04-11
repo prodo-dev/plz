@@ -20,11 +20,19 @@ class LocalResultsStorage(ResultsStorage):
         lock_name = f'lock:{__name__}.{self.__class__.__name__}:{execution_id}'
         with self.redis.lock(lock_name):
             directory = os.path.join(self.directory, execution_id)
+            finished_file = os.path.join(directory, '.finished')
             exit_status_path = os.path.join(directory, 'status')
             logs_path = os.path.join(directory, 'logs')
             output_directory = os.path.join(directory, 'output')
 
-            os.makedirs(directory, exist_ok=True)
+            if os.path.exists(finished_file):
+                return
+
+            try:
+                os.makedirs(directory)
+            except OSError:
+                shutil.rmtree(directory)
+                os.makedirs(directory)
 
             with open(exit_status_path, 'w') as f:
                 print(exit_status, file=f)
@@ -34,6 +42,9 @@ class LocalResultsStorage(ResultsStorage):
                     f.write(line)
 
             consume(untar(output_tarball, output_directory))
+
+            with open(finished_file, 'w') as _:
+                pass
 
 
 def consume(iterator):
