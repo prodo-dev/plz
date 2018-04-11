@@ -4,14 +4,18 @@ import sys
 import boto3
 import docker
 import pyhocon
+from redis import StrictRedis
 
 from plz.controller.containers import Containers
 from plz.controller.images import ECRImages, Images
 from plz.controller.images.local import LocalImages
-from plz.controller.instances.aws import EC2InstanceGroup
+from plz.controller.instances.aws import EC2InstanceGroups
 from plz.controller.instances.instance_base import InstanceProvider
 from plz.controller.instances.localhost import Localhost
 from plz.controller.volumes import Volumes
+
+AMI_TAG = '2018-04-11'
+WORKER_AMI = f'plz-worker-{AMI_TAG}'
 
 
 def load() -> pyhocon.ConfigTree:
@@ -47,18 +51,19 @@ def instance_provider_from_config(config) -> InstanceProvider:
         volumes = Volumes.for_host(docker_host)
         return Localhost(images, containers, volumes)
     elif provider == 'aws-ec2':
-        return EC2InstanceGroup(
-            name=config['instances.group_name'],
+        groups = EC2InstanceGroups(
+            redis=redis_from_config(config),
             client=boto3.client(
                 service_name='ec2',
                 region_name=config['instances.region']),
-            aws_worker_ami=config['instances.worker_ami'],
+            aws_worker_ami=WORKER_AMI,
             aws_key_name=config['instances.key_name'],
             images=images,
             acquisition_delay_in_seconds=config.get_int(
                 'instances.acquisition_delay', 10),
             max_acquisition_tries=config.get_int(
                 'instances.max_acquisition_tries', 5))
+        return groups.get(config['instances.group_name'])
     else:
         raise ValueError('Invalid instance provider.')
 
@@ -78,3 +83,8 @@ def images_from_config(config) -> Images:
         return ECRImages(docker_api_client, ecr_client, repository)
     else:
         raise ValueError('Invalid image provider.')
+
+
+def redis_from_config(config) -> StrictRedis:
+    return StrictRedis(
+        host=config.get('redis_host', 'localhost'))

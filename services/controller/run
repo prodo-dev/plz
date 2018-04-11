@@ -6,10 +6,9 @@ set -u
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
 if [[ -z "${CONFIGURATION:-}" ]]; then
-  CONFIGURATION="$(cat "$1")"
+  export CONFIGURATION="$(cat "$1")"
 fi
-CONFIGURATION="$(echo "$CONFIGURATION" | pyhocon --format=json)"
-PORT="${PORT:-$(echo "$CONFIGURATION" | jq -r '.port')}"
+PORT="${PORT:-$(python -c 'import os; import pyhocon; print(pyhocon.ConfigFactory.parse_string(os.environ.get("CONFIGURATION", "")).get("port", ""))')}"
 PORT="${PORT:-8080}"
 
 export PYTHONPATH='./src'
