@@ -165,8 +165,6 @@ class EC2InstanceGroup(InstanceProvider):
                     # Checking if it's still free
                     if self._is_instance_free(instance_data['InstanceId']):
                         instance.set_execution_id(execution_id)
-                        # TODO(sergio): hardcoded to 30 minutes now, should be
-                        # coming in the request
                         instance.set_max_idle_seconds(60 * 30)
                         yield _msg('started')
                         yield {'instance': instance}
@@ -264,8 +262,6 @@ class EC2InstanceGroup(InstanceProvider):
                     'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
                     # Give it 5 minutes as to be claimed before being
                     # terminated by staying idle for too long
-                    # TODO(sergio): this is gonna go when we change code as
-                    # to start with a non-empty execution id
                     'Value': '300'
                 },
                 {
@@ -295,8 +291,6 @@ def _msg(s) -> Dict:
 
 
 _BASE_INSTANCE_SPEC = {
-    # TODO(sergio): set subnet id
-
     'InstanceType': 't2.micro',
     'InstanceMarketOptions': {
         'MarketType': 'spot',
