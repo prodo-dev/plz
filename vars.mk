@@ -5,3 +5,6 @@ $(error 'You must set the `SECRETS_DIR` environment variable.\nYou can use `dire
 endif
 
 CONFIG_FILE = $(SECRETS_DIR)/config.json
+
+AMI_TAG = 2018-04-11
+WORKER_AMI = plz-worker-$(AMI_TAG)

@@ -13,9 +13,10 @@ ContainerState = collections.namedtuple(
     'ContainerState',
     ['running', 'status', 'success', 'exit_code', 'finished_at'])
 
+log = logging.getLogger(__name__)
+
 
 class Containers:
-    log = logging.getLogger('containers')
 
     @staticmethod
     def for_host(docker_url):
@@ -41,7 +42,7 @@ class Containers:
             mounts=mounts,
             detach=True,
         )
-        self.log.info(f'Started container: {container.id}')
+        log.info(f'Started container: {container.id}')
 
     def rm(self, name: str):
         container = self._get_container(name)

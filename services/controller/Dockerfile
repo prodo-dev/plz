@@ -22,4 +22,6 @@ RUN pipenv install --system --deploy
 COPY run ./
 COPY src ./src/
 
+HEALTHCHECK CMD curl -f http://localhost/
+
 ENTRYPOINT ["/tini", "--", "./run"]
