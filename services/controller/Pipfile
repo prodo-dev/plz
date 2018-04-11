@@ -12,6 +12,7 @@ docker = "*"
 flask = "*"
 gunicorn = "*"
 pyhocon = "*"
+redis = "*"
 requests = "*"
 
 [dev-packages]

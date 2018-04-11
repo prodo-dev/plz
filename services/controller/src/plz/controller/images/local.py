@@ -7,8 +7,8 @@ from plz.controller.images.images_base import Images
 
 class LocalImages(Images):
     def __init__(self, docker_api_client: docker.APIClient, repository: str):
+        super().__init__(repository)
         self.docker_api_client = docker_api_client
-        self.repository = repository
 
     def build(self, fileobj: BinaryIO, tag: str) -> Iterator[str]:
         return self.docker_api_client.build(

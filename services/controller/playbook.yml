@@ -38,6 +38,7 @@
                 CONFIGURATION: |
                   port = 80
                   data_dir = "/data"
+                  redis_host = redis
                   instances = {
                     provider = aws-ec2
                     region = "{{ aws_region }}"
@@ -56,6 +57,18 @@
                 - /cache/controller:/data
                 - /home/ubuntu/.ssh/plz:/root/.ssh/id_rsa:ro
                 - /var/run/docker.sock:/var/run/docker.sock
+              depends_on:
+                redis:
+                  condition: service_started
+
+            redis:
+              image: redis:4
+              entrypoint: redis-server
+              volumes:
+                - redis_data:/data
+
+          volumes:
+            redis_data: {}
 
     - name: Set cron job for tidying
       cron:

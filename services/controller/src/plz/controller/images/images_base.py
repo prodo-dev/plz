@@ -9,6 +9,9 @@ Metadata = collections.namedtuple('Metadata', ['user', 'project', 'timestamp'])
 
 
 class Images(ABC):
+    def __init__(self, repository):
+        self.repository = repository
+
     @staticmethod
     def construct_tag(metadata_string: str) -> str:
         metadata = Images.parse_metadata(metadata_string)

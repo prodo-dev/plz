@@ -15,9 +15,9 @@ class ECRImages(Images):
                  docker_api_client: docker.APIClient,
                  ecr_client,
                  repository: str):
+        super().__init__(repository)
         self.docker_api_client = docker_api_client
         self.ecr_client = ecr_client
-        self.repository = repository
 
     def for_host(self, docker_url: str) -> 'ECRImages':
         new_docker_api_client = docker.APIClient(base_url=docker_url)

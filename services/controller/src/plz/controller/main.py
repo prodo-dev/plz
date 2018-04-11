@@ -6,7 +6,6 @@ import random
 import re
 import sys
 import tempfile
-import threading
 import uuid
 from typing import Any, Callable, Iterator, TypeVar, Union
 
@@ -27,6 +26,7 @@ input_dir = os.path.join(data_dir, 'input')
 temp_data_dir = os.path.join(data_dir, 'tmp')
 images = configuration.images_from_config(config)
 instance_provider = configuration.instance_provider_from_config(config)
+redis = configuration.redis_from_config(config)
 
 os.makedirs(input_dir, exist_ok=True)
 os.makedirs(temp_data_dir, exist_ok=True)
@@ -48,7 +48,8 @@ def _setup_logging():
 _setup_logging()
 log = logging.getLogger(__name__)
 
-_user_last_execution_id_lock = threading.RLock()
+_user_last_execution_id_lock = redis.lock(
+    f'lock:{__name__}:_user_last_execution_id')
 _user_last_execution_id = dict()
 
 app = Flask(__name__)
@@ -345,17 +346,15 @@ def _format_error(message: str) -> bytes:
 
 
 def _set_user_last_execution_id(user: str, execution_id: str):
-    _user_last_execution_id_lock.acquire()
-    _user_last_execution_id[user] = execution_id
-    _user_last_execution_id_lock.release()
+    with _user_last_execution_id_lock:
+        _user_last_execution_id[user] = execution_id
 
 
 def _get_user_last_execution_id(user: str):
     last_execution_id = None
-    _user_last_execution_id_lock.acquire()
-    if user in _user_last_execution_id:
-        last_execution_id = _user_last_execution_id[user]
-    _user_last_execution_id_lock.release()
+    with _user_last_execution_id_lock:
+        if user in _user_last_execution_id:
+            last_execution_id = _user_last_execution_id[user]
     return last_execution_id
 
 
