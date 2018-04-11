@@ -20,9 +20,18 @@
         project_name: controller
         pull: yes
         definition:
-          version: '2'
+          version: '2.3'
 
           services:
+            all:
+              image: docker:stable-git
+              command:
+                - echo
+                - 'Started.'
+              depends_on:
+                controller:
+                  condition: service_healthy
+
             controller:
               image: '{{ image }}'
               environment:

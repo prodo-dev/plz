@@ -20,9 +20,3 @@ services:
       - ../cache/controller:/data
       - ${SECRETS_DIR}/keys/id_rsa:/root/.ssh/id_rsa:ro
       - /var/run/docker.sock:/var/run/docker.sock
-    healthcheck:
-      test:
-        - "CMD"
-        - "curl"
-        - "-f"
-        - "http://localhost/"
