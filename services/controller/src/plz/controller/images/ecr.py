@@ -42,13 +42,14 @@ class ECRImages(Images):
             self.repository, tag,
             auth_config=self._aws_ecr_credentials())
 
-    def can_pull(self) -> bool:
+    def can_pull_many_times(self, times: int) -> bool:
         try:
-            for _ in range(3):
+            for _ in range(times):
                 self.docker_api_client.pull('hello-world')
                 log.debug('Could pull image')
             return True
         except (ChunkedEncodingError, ConnectionError):
+            log.debug('Couldn\'t pull image')
             return False
 
     def _aws_ecr_credentials(self) -> dict:

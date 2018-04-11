@@ -35,6 +35,8 @@ class Containers:
             environment: Dict[str, str],
             mounts: List[Mount]):
         image = f'{repository}:{tag}'
+        if execution_id == '':
+            raise ValueError('Empty execution id!')
         container = self.docker_client.containers.run(
             image=image,
             command=command,

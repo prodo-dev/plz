@@ -115,7 +115,7 @@ class EC2InstanceGroup(InstanceProvider):
             execution_id: str,
             execution_spec: dict,
             max_tries: int = 30,
-            delay_in_seconds: int = 10) \
+            delay_in_seconds: int = 5) \
             -> Iterator[Dict[str, Any]]:
         """
         Gets an available instance for the execution with the given id.
@@ -124,7 +124,7 @@ class EC2InstanceGroup(InstanceProvider):
         execution ID to it and return it. Otherwise, start a new box.
         """
         def msg(s) -> Dict:
-            return {'message:': s}
+            return {'message': s}
         tries_remaining = max_tries
         yield msg('querying availability')
         instance_type = execution_spec.get('instance_type')
@@ -133,9 +133,11 @@ class EC2InstanceGroup(InstanceProvider):
             ('instance-type', instance_type)])
         if len(instances_not_assigned) > 0:
             yield msg('reusing existing instance')
+            is_instance_newly_created = False
             instance_data = instances_not_assigned[0]
         else:
             yield msg('requesting new instance')
+            is_instance_newly_created = False
             instance_data = self._ask_aws_for_new_instance(instance_type)
         instance = self._ec2_instance_from_instance_data(instance_data)
         dns_name = _get_dns_name(instance_data)
@@ -144,18 +146,14 @@ class EC2InstanceGroup(InstanceProvider):
 
         while tries_remaining > 0:
             tries_remaining -= 1
-            if instance.is_up():
+            if instance.is_up(is_instance_newly_created):
                 with self.lock:
                     # Checking if it's still free
                     if self._is_instance_free(instance_data['InstanceId']):
-                        instance.set_tags([
-                            {'Key': EC2Instance.EXECUTION_ID_TAG,
-                             'Value': execution_id},
-                            # TODO(sergio): hardcoded to 30 minutes now,
-                            # should be coming in the request
-                            {'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
-                             'Value': str(60 * 30)}
-                        ])
+                        # TODO(sergio): max_idle_seconds hardcoded to 30
+                        # minutes now, should be coming in the request
+                        instance.set_execution_id(
+                                execution_id, max_idle_seconds=60 * 30)
                         yield msg('started')
                         yield {'instance': instance}
                         return
@@ -193,8 +191,6 @@ class EC2InstanceGroup(InstanceProvider):
             instance = self.instance_for(execution_id)
             instance.cleanup()
             instance.set_tags([
-                {'Key': EC2Instance.EXECUTION_ID_TAG,
-                 'Value': ''},
                 {'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
                  'Value': str(idle_since_timestamp)}
             ])
@@ -252,9 +248,11 @@ class EC2InstanceGroup(InstanceProvider):
                 },
                 {
                     'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
-                    # Give it one minute as to be claimed before being
+                    # Give it 5 minutes as to be claimed before being
                     # terminated by staying idle for too long
-                    'Value': '60'
+                    # TODO(sergio): this is gonna go when we change code as
+                    # to start with a non-empty execution id
+                    'Value': '300'
                 },
                 {
                     'Key': 'Name',

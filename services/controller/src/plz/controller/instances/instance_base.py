@@ -70,6 +70,10 @@ class Instance(ABC):
         # workers), so we allow to pass the info as parameter
         pass
 
+    @abstractmethod
+    def set_execution_id(self, execution_id: str, max_idle_seconds: int):
+        pass
+
     def get_execution_info(self) -> ExecutionInfo:
         container_state = self.get_container_state()
         if container_state is None:

@@ -62,6 +62,7 @@ class DockerInstance(Instance):
                                       Volumes.OUTPUT_DIRECTORY)
 
     def cleanup(self):
+        self.execution_id = ''
         self.containers.rm(self.execution_id)
         self.volumes.remove(self.volume_name)
 
@@ -99,3 +100,6 @@ class DockerInstance(Instance):
 
     def stop_execution(self):
         self.containers.stop(self.execution_id)
+
+    def set_execution_id(self, execution_id: str, max_idle_seconds: int):
+        self.execution_id = execution_id
