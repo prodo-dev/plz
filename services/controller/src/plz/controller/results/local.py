@@ -10,10 +10,15 @@ class LocalResultsStorage(ResultsStorage):
 
     def publish_output(self,
                        execution_id: str,
+                       exit_status: int,
                        logs: Iterator[bytes],
                        output_tarball: Iterator[bytes]):
         directory = os.path.join(self.directory, execution_id)
         os.makedirs(directory, exist_ok=True)
+
+        exit_status_path = os.path.join(directory, 'status')
+        with open(exit_status_path, 'w') as f:
+            print(exit_status, file=f)
 
         logs_path = os.path.join(directory, 'logs')
         with open(logs_path, 'wb') as f:

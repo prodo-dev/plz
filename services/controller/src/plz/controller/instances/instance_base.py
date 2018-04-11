@@ -38,8 +38,18 @@ class Instance(ABC):
     def publish_results(self, results_storage: ResultsStorage):
         results_storage.publish_output(
             self.get_execution_id(),
-            self.logs(),
-            self.output_files_tarball())
+            exit_status=self.exit_status(),
+            logs=self.logs(),
+            output_tarball=self.output_files_tarball())
+
+    def exit_status(self) -> int:
+        container_state = self.get_container_state()
+        if container_state is None:
+            raise InstanceNotRunningException(self.get_execution_id())
+        exit_status = container_state.exit_code
+        if exit_status is None:
+            raise InstanceStillRunningException(self.get_execution_id())
+        return exit_status
 
     @abstractmethod
     def stop_execution(self):
@@ -142,3 +152,11 @@ class InstanceProvider(ABC):
         return [
             instance.get_execution_info()
             for instance in self.instance_iterator()]
+
+
+class InstanceNotRunningException(Exception):
+    pass
+
+
+class InstanceStillRunningException(Exception):
+    pass
