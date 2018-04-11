@@ -191,7 +191,7 @@ class EC2InstanceGroup(InstanceProvider):
             return None
         elif len(instance_data_list) > 1:
             raise ValueError(
-                f'More than one instance for execution id {execution_id}')
+                f'More than one instance for execution ID {execution_id}')
         return self._ec2_instance_from_instance_data(instance_data_list[0])
 
     def push(self, image_tag):
