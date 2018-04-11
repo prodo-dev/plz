@@ -27,10 +27,11 @@ port = config.get_int('port', 8080)
 data_dir = config['data_dir']
 input_dir = os.path.join(data_dir, 'input')
 temp_data_dir = os.path.join(data_dir, 'tmp')
-images = configuration.images_from_config(config)
-instance_provider = configuration.instance_provider_from_config(config)
-results_storage = configuration.results_storage_from_config(config)
-redis = configuration.redis_from_config(config)
+dependencies = configuration.dependencies_from_config(config)
+images = dependencies.images
+instance_provider = dependencies.instance_provider
+results_storage = dependencies.results_storage
+redis = dependencies.redis
 
 os.makedirs(input_dir, exist_ok=True)
 os.makedirs(temp_data_dir, exist_ok=True)
