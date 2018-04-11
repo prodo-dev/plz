@@ -13,7 +13,7 @@ from plz.controller.instances.instance_base import InstanceProvider
 from plz.controller.instances.localhost import Localhost
 from plz.controller.volumes import Volumes
 
-AMI_TAG = '2018-04-10'
+AMI_TAG = '2018-04-11'
 WORKER_AMI = f'plz-worker-{AMI_TAG}'
 
 

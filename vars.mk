@@ -6,5 +6,5 @@ endif
 
 CONFIG_FILE = $(SECRETS_DIR)/config.json
 
-AMI_TAG = 2018-04-10
+AMI_TAG = 2018-04-11
 WORKER_AMI = plz-worker-$(AMI_TAG)
