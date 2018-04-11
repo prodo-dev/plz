@@ -62,15 +62,13 @@ class DockerInstance(Instance):
         return self.volumes.get_files(self.volume_name,
                                       Volumes.OUTPUT_DIRECTORY)
 
+    def stop_execution(self):
+        self.containers.stop(self.execution_id)
+
     def cleanup(self):
         self.execution_id = ''
         self.containers.rm(self.execution_id)
         self.volumes.remove(self.volume_name)
-
-    def get_container_state(self) -> Optional[dict]:
-        if self.execution_id == '':
-            return None
-        return self.containers.get_state(self.execution_id)
 
     def dispose(self):
         raise RuntimeError('Cannot dispose of a docker instance')
@@ -99,8 +97,10 @@ class DockerInstance(Instance):
         # It's never time for a local instance
         pass
 
-    def stop_execution(self):
-        self.containers.stop(self.execution_id)
-
     def set_execution_id(self, execution_id: str):
         self.execution_id = execution_id
+
+    def container_state(self) -> Optional[dict]:
+        if self.execution_id == '':
+            return None
+        return self.containers.get_state(self.execution_id)

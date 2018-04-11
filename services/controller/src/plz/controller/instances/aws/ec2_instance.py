@@ -107,9 +107,6 @@ class EC2Instance(Instance):
     def get_instance_type(self):
         return self.data['InstanceType']
 
-    def get_container_state(self) -> Optional[dict]:
-        return self.delegate.get_container_state()
-
     def dispose_if_its_time(
             self, execution_info: Optional[ExecutionInfo] = None):
         if execution_info is not None:
@@ -130,6 +127,9 @@ class EC2Instance(Instance):
 
     def stop_execution(self):
         return self.delegate.stop_execution()
+
+    def container_state(self) -> Optional[dict]:
+        return self.delegate.container_state()
 
 
 def get_tag(instance_data, tag, default=None) -> Optional[str]:

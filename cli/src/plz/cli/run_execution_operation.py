@@ -210,7 +210,7 @@ class RunExecutionOperation(Operation):
         return ExecutionStatus(
             running=body['running'],
             success=body['success'],
-            code=body['code'])
+            code=body['exit_status'])
 
     @on_exception_reraise('Retrieving the output failed.')
     def retrieve_output_files(self, execution_id: str):

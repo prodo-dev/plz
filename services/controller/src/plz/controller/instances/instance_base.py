@@ -22,6 +22,17 @@ class Instance(ABC):
             input_stream: Optional[io.BytesIO]):
         pass
 
+    def status(self) -> 'InstanceStatus':
+        state = self.container_state()
+        if not state:
+            raise InstanceMissingStateException()
+        if state.running:
+            return InstanceStatusRunning()
+        elif state.exit_code == 0:
+            return InstanceStatusSuccess()
+        else:
+            return InstanceStatusFailure(state.exit_code)
+
     @abstractmethod
     def logs(self, stdout: bool = True, stderr: bool = True) \
             -> Iterator[bytes]:
@@ -29,10 +40,6 @@ class Instance(ABC):
 
     @abstractmethod
     def output_files_tarball(self) -> Iterator[bytes]:
-        pass
-
-    @abstractmethod
-    def get_container_state(self) -> Optional[ContainerState]:
         pass
 
     def publish_results(self, results_storage: ResultsStorage):
@@ -43,13 +50,10 @@ class Instance(ABC):
             output_tarball=self.output_files_tarball())
 
     def exit_status(self) -> int:
-        container_state = self.get_container_state()
-        if container_state is None:
-            raise InstanceNotRunningException(self.get_execution_id())
-        exit_status = container_state.exit_code
-        if exit_status is None:
+        status = self.status()
+        if status.exit_status is None:
             raise InstanceStillRunningException(self.get_execution_id())
-        return exit_status
+        return status.exit_status
 
     @abstractmethod
     def stop_execution(self):
@@ -93,7 +97,7 @@ class Instance(ABC):
         pass
 
     def get_execution_info(self) -> ExecutionInfo:
-        container_state = self.get_container_state()
+        container_state = self.container_state()
         if container_state is None:
             running = False
             status = 'idle'
@@ -110,6 +114,10 @@ class Instance(ABC):
             status=status,
             idle_since_timestamp=idle_since_timestamp,
             max_idle_seconds=self.get_max_idle_seconds())
+
+    @abstractmethod
+    def container_state(self) -> Optional[ContainerState]:
+        pass
 
 
 class InstanceProvider(ABC):
@@ -154,9 +162,47 @@ class InstanceProvider(ABC):
             for instance in self.instance_iterator()]
 
 
+class InstanceStatus(ABC):
+    def __init__(self,
+                 running: bool,
+                 success: Optional[bool],
+                 exit_status: Optional[int]):
+        self.running = running
+        self.success = success
+        self.exit_status = exit_status
+
+
+class InstanceStatusRunning(InstanceStatus):
+    def __init__(self):
+        super().__init__(
+            running=True,
+            success=None,
+            exit_status=None)
+
+
+class InstanceStatusSuccess(InstanceStatus):
+    def __init__(self):
+        super().__init__(
+            running=False,
+            success=True,
+            exit_status=0)
+
+
+class InstanceStatusFailure(InstanceStatus):
+    def __init__(self, exit_status: int):
+        super().__init__(
+            running=False,
+            success=False,
+            exit_status=exit_status)
+
+
 class InstanceNotRunningException(Exception):
     pass
 
 
 class InstanceStillRunningException(Exception):
+    pass
+
+
+class InstanceMissingStateException(Exception):
     pass

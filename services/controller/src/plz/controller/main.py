@@ -9,6 +9,7 @@ import tempfile
 import uuid
 from typing import Any, Callable, Iterator, TypeVar, Union
 
+import flask
 import requests
 from flask import Flask, Response, abort, jsonify, request, stream_with_context
 
@@ -32,6 +33,18 @@ os.makedirs(input_dir, exist_ok=True)
 os.makedirs(temp_data_dir, exist_ok=True)
 
 
+class ArbitraryObjectJSONEncoder(flask.json.JSONEncoder):
+    """
+    This encoder tries very hard to encode any kind of object. It uses the
+     object's ``__dict__`` property if the object itself is not encodable.
+    """
+    def default(self, o):
+        try:
+            return super().default(o)
+        except TypeError:
+            return o.__dict__
+
+
 def _setup_logging():
     root_logger = logging.getLogger('.'.join(__name__.split('.')[:-1]))
     root_logger_handler = logging.StreamHandler(stream=sys.stderr)
@@ -53,6 +66,7 @@ _user_last_execution_id_lock = redis.lock(
 _user_last_execution_id = dict()
 
 app = Flask(__name__)
+app.json_encoder = ArbitraryObjectJSONEncoder
 
 
 @app.before_request
@@ -147,19 +161,7 @@ def get_status_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/executions/some-id/status
     instance = instance_provider.instance_for(execution_id)
-    state = instance.get_container_state()
-    if not state:
-        abort(requests.codes.not_found)
-    if state.running:
-        return jsonify({
-            'running': True,
-        })
-    else:
-        return jsonify({
-            'running': False,
-            'success': state.success,
-            'code': state.exit_code,
-        })
+    return jsonify(instance.status())
 
 
 @app.route(f'/executions/<execution_id>/logs',
