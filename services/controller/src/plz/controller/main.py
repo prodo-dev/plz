@@ -346,17 +346,15 @@ def _format_error(message: str) -> bytes:
 
 
 def _set_user_last_execution_id(user: str, execution_id: str):
-    _user_last_execution_id_lock.acquire()
-    _user_last_execution_id[user] = execution_id
-    _user_last_execution_id_lock.release()
+    with _user_last_execution_id_lock:
+        _user_last_execution_id[user] = execution_id
 
 
 def _get_user_last_execution_id(user: str):
     last_execution_id = None
-    _user_last_execution_id_lock.acquire()
-    if user in _user_last_execution_id:
-        last_execution_id = _user_last_execution_id[user]
-    _user_last_execution_id_lock.release()
+    with _user_last_execution_id_lock:
+        if user in _user_last_execution_id:
+            last_execution_id = _user_last_execution_id[user]
     return last_execution_id
 
 
