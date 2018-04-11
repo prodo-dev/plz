@@ -36,7 +36,7 @@ class Instance(ABC):
         pass
 
     def publish_results(self, results_storage: ResultsStorage):
-        results_storage.publish_output(
+        results_storage.publish(
             self.get_execution_id(),
             exit_status=self.exit_status(),
             logs=self.logs(),

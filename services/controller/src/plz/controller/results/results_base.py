@@ -9,11 +9,11 @@ from typing import Iterator
 
 class ResultsStorage(ABC):
     @abstractmethod
-    def publish_output(self,
-                       execution_id: str,
-                       exit_status: int,
-                       logs: Iterator[bytes],
-                       output_tarball: Iterator[bytes]):
+    def publish(self,
+                execution_id: str,
+                exit_status: int,
+                logs: Iterator[bytes],
+                output_tarball: Iterator[bytes]):
         pass
 
 

@@ -12,11 +12,11 @@ class LocalResultsStorage(ResultsStorage):
         self.redis = redis
         self.directory = directory
 
-    def publish_output(self,
-                       execution_id: str,
-                       exit_status: int,
-                       logs: Iterator[bytes],
-                       output_tarball: Iterator[bytes]):
+    def publish(self,
+                execution_id: str,
+                exit_status: int,
+                logs: Iterator[bytes],
+                output_tarball: Iterator[bytes]):
         lock_name = f'lock:{__name__}.{self.__class__.__name__}:{execution_id}'
         with self.redis.lock(lock_name):
             directory = os.path.join(self.directory, execution_id)
