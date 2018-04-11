@@ -66,7 +66,7 @@ class EC2Instance(Instance):
         self.client.terminate_instances(InstanceIds=[self.data['InstanceId']])
 
     def set_execution_id(self, execution_id: str):
-        self.delegate.set_execution_id(execution_id, max_idle_seconds)
+        self.delegate.set_execution_id(execution_id)
         self.set_tags([
             {'Key': EC2Instance.EXECUTION_ID_TAG,
              'Value': execution_id}

@@ -293,6 +293,7 @@ def _get_dns_name(instance_data: dict) -> str:
 def _msg(s) -> Dict:
         return {'message': s}
 
+
 _BASE_INSTANCE_SPEC = {
     # TODO(sergio): set subnet id
 
