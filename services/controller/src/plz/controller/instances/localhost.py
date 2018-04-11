@@ -1,5 +1,5 @@
 import logging
-from typing import Iterator, Optional
+from typing import Dict, Iterator, Optional
 
 from plz.controller.containers import Containers
 from plz.controller.images import Images
@@ -19,19 +19,15 @@ class Localhost(InstanceProvider):
         self.images = images
         self.containers = containers
         self.volumes = volumes
-        self.instances = {}
 
     def acquire_instance(
-            self, execution_id: str, execution_spec: dict) \
-            -> Iterator[str]:
+            self, execution_id: str, execution_spec: dict) -> Iterator[Dict]:
         """
         "Acquires" an instance.
-
-        As we're dealing with `localhost` here, it's always the same instance.
         """
-        self.instances[execution_id] = DockerInstance(
+        instance = DockerInstance(
             self.images, self.containers, self.volumes, execution_id)
-        return iter([])
+        return iter([{'instance': instance}])
 
     def release_instance(self, execution_id: str,
                          idle_since_timestamp: Optional[int] = None):
@@ -41,7 +37,6 @@ class Localhost(InstanceProvider):
         As we're dealing with `localhost` here, this doesn't do much.
         """
         self.instance_for(execution_id).cleanup()
-        del self.instances[execution_id]
 
     def instance_for(self, execution_id: str) -> Optional[Instance]:
         """
@@ -49,14 +44,20 @@ class Localhost(InstanceProvider):
 
         As we're dealing with `localhost` here, it's always the same instance.
         """
-        return self.instances.get(execution_id)
+        if execution_id not in self.containers.execution_ids():
+            log.error(f'Looking for:{execution_id}')
+            log.error(f'Names are:{self.containers.execution_ids()}')
+            return None
+        return DockerInstance(
+                self.images, self.containers, self.volumes, execution_id)
 
     def push(self, image_tag: str):
         pass
 
     def instance_iterator(self) \
             -> Iterator[Instance]:
-        return iter(self.instances.values())
+        return iter(self.instance_for(execution_id)
+                    for execution_id in self.containers.execution_ids())
 
     def stop_execution(self, execution_id):
         self.containers.stop(execution_id)

@@ -17,6 +17,7 @@ log = logging.getLogger(__name__)
 
 
 class Containers:
+    _CONTAINER_NAME_PREFIX = 'plz-execution-id.'
 
     @staticmethod
     def for_host(docker_url):
@@ -27,40 +28,42 @@ class Containers:
         self.docker_client = docker_client
 
     def run(self,
-            name: str,
+            execution_id: str,
             repository: str,
             tag: str,
             command: List[str],
             environment: Dict[str, str],
             mounts: List[Mount]):
         image = f'{repository}:{tag}'
+        if execution_id == '':
+            raise ValueError('Empty execution id!')
         container = self.docker_client.containers.run(
             image=image,
             command=command,
-            name=name,
+            name=self._CONTAINER_NAME_PREFIX + execution_id,
             environment=environment,
             mounts=mounts,
             detach=True,
         )
         log.info(f'Started container: {container.id}')
 
-    def rm(self, name: str):
-        container = self._get_container(name)
+    def rm(self, execution_id: str):
+        container = self.from_execution_id(execution_id)
         if not container:
             return
         container.stop()
         container.remove()
 
-    def logs(self, name: str, stdout: bool = True, stderr: bool = True) \
-            -> Iterator[str]:
-        container = self._get_container(name)
+    def logs(self, execution_id: str, stdout: bool = True,
+             stderr: bool = True) -> Iterator[str]:
+        container = self.from_execution_id(execution_id)
         if not container:
             return iter([])
         return container.logs(
             stdout=stdout, stderr=stderr, stream=True, follow=True)
 
-    def get_state(self, name) -> Optional[ContainerState]:
-        container = self._get_container(name)
+    def get_state(self, execution_id) -> Optional[ContainerState]:
+        container = self.from_execution_id(execution_id)
         if not container:
             return None
         container_state = container.attrs['State']
@@ -74,14 +77,20 @@ class Containers:
             finished_at=finished_at)
 
     def stop(self, name):
-        container = self._get_container(name)
+        container = self.from_execution_id(name)
         if not container:
             return
         container.stop()
 
-    def _get_container(self, name: str) -> Optional[Container]:
+    def execution_ids(self):
+        return [container.name[len(self._CONTAINER_NAME_PREFIX):]
+                for container in self.docker_client.containers.list(all=True)
+                if container.name.startswith(self._CONTAINER_NAME_PREFIX)]
+
+    def from_execution_id(self, execution_id: str) -> Optional[Container]:
         try:
-            return self.docker_client.containers.get(name)
+            return self.docker_client.containers.get(
+                self._CONTAINER_NAME_PREFIX + execution_id)
         except docker.errors.NotFound:
             return None
 

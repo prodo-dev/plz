@@ -70,6 +70,10 @@ class Instance(ABC):
         # workers), so we allow to pass the info as parameter
         pass
 
+    @abstractmethod
+    def set_execution_id(self, execution_id: str):
+        pass
+
     def get_execution_info(self) -> ExecutionInfo:
         container_state = self.get_container_state()
         if container_state is None:
@@ -93,7 +97,7 @@ class Instance(ABC):
 class InstanceProvider(ABC):
     @abstractmethod
     def acquire_instance(
-            self, execution_id: str, execution_spec: dict) -> Iterator[str]:
+            self, execution_id: str, execution_spec: dict) -> Iterator[Dict]:
         pass
 
     @abstractmethod

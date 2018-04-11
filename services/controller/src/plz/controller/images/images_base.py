@@ -40,5 +40,5 @@ class Images(ABC):
         pass
 
     @abstractmethod
-    def can_pull(self) -> bool:
+    def can_pull(self, times: int) -> bool:
         pass

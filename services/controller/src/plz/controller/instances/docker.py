@@ -44,7 +44,7 @@ class DockerInstance(Instance):
             VolumeFile(Volumes.CONFIGURATION_FILE,
                        contents=json.dumps(configuration, indent=2)),
         ])
-        self.containers.run(name=self.execution_id,
+        self.containers.run(execution_id=self.execution_id,
                             repository=self.images.repository,
                             tag=snapshot_id,
                             command=command,
@@ -62,6 +62,7 @@ class DockerInstance(Instance):
                                       Volumes.OUTPUT_DIRECTORY)
 
     def cleanup(self):
+        self.execution_id = ''
         self.containers.rm(self.execution_id)
         self.volumes.remove(self.volume_name)
 
@@ -99,3 +100,6 @@ class DockerInstance(Instance):
 
     def stop_execution(self):
         self.containers.stop(self.execution_id)
+
+    def set_execution_id(self, execution_id: str):
+        self.execution_id = execution_id

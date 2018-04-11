@@ -28,5 +28,5 @@ class LocalImages(Images):
     def pull(self, tag: str):
         pass
 
-    def can_pull(self) -> bool:
+    def can_pull(self, _) -> bool:
         return True

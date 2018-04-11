@@ -51,22 +51,32 @@ class EC2Instance(Instance):
     def logs(self, stdout: bool = True, stderr: bool = True):
         return self.delegate.logs(stdout, stderr)
 
-    def is_up(self):
-        # TODO(sergio): change to return self.images.can_pull()
-        # after we stop seeing the Docker exception
-        is_up = self.images.can_pull()
-        log.debug(
-            f'Instance for {self.delegate.execution_id} can pull: {is_up}')
-        return is_up
+    def is_up(self, is_instance_newly_created: bool):
+        return self.images.can_pull(
+            5 if is_instance_newly_created else 1)
 
     def output_files_tarball(self):
         return self.delegate.output_files_tarball()
 
     def cleanup(self):
+        self.set_tags([{'Key': EC2Instance.EXECUTION_ID_TAG, 'Value': ''}])
         return self.delegate.cleanup()
 
     def dispose(self):
         self.client.terminate_instances(InstanceIds=[self.data['InstanceId']])
+
+    def set_execution_id(self, execution_id: str):
+        self.delegate.set_execution_id(execution_id)
+        self.set_tags([
+            {'Key': EC2Instance.EXECUTION_ID_TAG,
+             'Value': execution_id}
+        ])
+
+    def set_max_idle_seconds(self, max_idle_seconds: int):
+        self.set_tags([
+            {'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
+             'Value': str(max_idle_seconds)}
+        ])
 
     def set_tags(self, tags):
         instance_id = self.data['InstanceId']
