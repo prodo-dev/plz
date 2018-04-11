@@ -87,8 +87,6 @@ function start_controller {
 
   info "Starting the controller..."
   docker_compose up --detach
-  sleep 5
-  info "Controller started."
 }
 
 function stop_controller {
