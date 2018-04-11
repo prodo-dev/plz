@@ -7,9 +7,7 @@ from docker.types import Mount
 from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
 from plz.controller.instances.instance_base import \
-    ExecutionInfo, Instance, \
-    InstanceStatus, InstanceStatusFailure, InstanceStatusSuccess, Parameters
-from plz.controller.results import ResultsStorage
+    ExecutionInfo, Instance, Parameters
 from plz.controller.volumes import \
     VolumeDirectory, VolumeEmptyDirectory, VolumeFile, Volumes
 

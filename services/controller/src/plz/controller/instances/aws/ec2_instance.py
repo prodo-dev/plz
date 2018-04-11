@@ -1,15 +1,15 @@
 import io
 import logging
 import os.path
-import time
 from typing import Iterator, List, Optional
+
+import time
 
 from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
 from plz.controller.instances.docker import DockerInstance
 from plz.controller.instances.instance_base \
     import ExecutionInfo, Instance, Parameters
-from plz.controller.results import ResultsStorage
 from plz.controller.volumes import Volumes
 
 log = logging.getLogger(__name__)

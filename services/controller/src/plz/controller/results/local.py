@@ -39,7 +39,7 @@ class LocalResultsStorage(ResultsStorage):
             write_bytes(paths.logs, logs)
             write_bytes(paths.output, output_tarball)
 
-            with open(paths.finished_file, 'w') as _:
+            with open(paths.finished_file, 'w') as _:  # noqa: F841 (unused)
                 pass
 
     def get(self, execution_id: str) -> ContextManager[Optional[Results]]:
