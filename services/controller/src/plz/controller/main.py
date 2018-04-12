@@ -9,11 +9,14 @@ import tempfile
 import uuid
 from typing import Any, Callable, Iterator, TypeVar, Union
 
+import flask
 import requests
 from flask import Flask, Response, abort, jsonify, request, stream_with_context
 
 from plz.controller import configuration
 from plz.controller.images import Images
+from plz.controller.instances.instance_base import InstanceStatusSuccess, \
+    InstanceStatusFailure
 
 READ_BUFFER_SIZE = 16384
 
@@ -24,12 +27,26 @@ port = config.get_int('port', 8080)
 data_dir = config['data_dir']
 input_dir = os.path.join(data_dir, 'input')
 temp_data_dir = os.path.join(data_dir, 'tmp')
-images = configuration.images_from_config(config)
-instance_provider = configuration.instance_provider_from_config(config)
-redis = configuration.redis_from_config(config)
+dependencies = configuration.dependencies_from_config(config)
+images = dependencies.images
+instance_provider = dependencies.instance_provider
+results_storage = dependencies.results_storage
+redis = dependencies.redis
 
 os.makedirs(input_dir, exist_ok=True)
 os.makedirs(temp_data_dir, exist_ok=True)
+
+
+class ArbitraryObjectJSONEncoder(flask.json.JSONEncoder):
+    """
+    This encoder tries very hard to encode any kind of object. It uses the
+     object's ``__dict__`` property if the object itself is not encodable.
+    """
+    def default(self, o):
+        try:
+            return super().default(o)
+        except TypeError:
+            return o.__dict__
 
 
 def _setup_logging():
@@ -53,6 +70,7 @@ _user_last_execution_id_lock = redis.lock(
 _user_last_execution_id = dict()
 
 app = Flask(__name__)
+app.json_encoder = ArbitraryObjectJSONEncoder
 
 
 @app.before_request
@@ -133,9 +151,9 @@ def list_executions_entrypoint():
     return response
 
 
-@app.route('/executions/tidy', methods=['POST'])
-def tidy_entry_point():
-    instance_provider.tidy_up()
+@app.route('/executions/harvest', methods=['POST'])
+def harvest_entry_point():
+    instance_provider.harvest()
     response = jsonify({})
     response.status_code = requests.codes.no_content
     return response
@@ -146,20 +164,16 @@ def tidy_entry_point():
 def get_status_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/executions/some-id/status
+    with results_storage.get(execution_id) as results:
+        if results:
+            status = results.status()
+            if status == 0:
+                return jsonify(InstanceStatusSuccess())
+            else:
+                return jsonify(InstanceStatusFailure(status))
+
     instance = instance_provider.instance_for(execution_id)
-    state = instance.get_container_state()
-    if not state:
-        abort(requests.codes.not_found)
-    if state.running:
-        return jsonify({
-            'running': True,
-        })
-    else:
-        return jsonify({
-            'running': False,
-            'success': state.success,
-            'code': state.exit_code,
-        })
+    return jsonify(instance.status())
 
 
 @app.route(f'/executions/<execution_id>/logs',
@@ -167,31 +181,23 @@ def get_status_entrypoint(execution_id):
 def get_logs_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/executions/some-id/logs
+    with results_storage.get(execution_id) as results:
+        if results:
+            response = results.logs()
+            return Response(response, mimetype='application/octet-stream')
+
     instance = instance_provider.instance_for(execution_id)
     response = instance.logs()
     return Response(response, mimetype='application/octet-stream')
 
 
-@app.route(f'/executions/<execution_id>/logs/stdout')
-def get_logs_stdout_entrypoint(execution_id):
-    # Test with:
-    # curl localhost:5000/executions/some-id/logs/stdout
-    instance = instance_provider.instance_for(execution_id)
-    response = instance.logs(stdout=True, stderr=False)
-    return Response(response, mimetype='application/octet-stream')
-
-
-@app.route(f'/executions/<execution_id>/logs/stderr')
-def get_logs_stderr_entrypoint(execution_id):
-    # Test with:
-    # curl localhost:5000/executions/some-id/logs/stderr
-    instance = instance_provider.instance_for(execution_id)
-    response = instance.logs(stdout=False, stderr=True)
-    return Response(response, mimetype='application/octet-stream')
-
-
 @app.route(f'/executions/<execution_id>/output/files')
 def get_output_files_entrypoint(execution_id):
+    with results_storage.get(execution_id) as results:
+        if results:
+            response = results.output_tarball()
+            return Response(response, mimetype='application/octet-stream')
+
     # Test with:
     # curl localhost:5000/executions/some-id/output | tar x -C /tmp/plz-output
     instance = instance_provider.instance_for(execution_id)

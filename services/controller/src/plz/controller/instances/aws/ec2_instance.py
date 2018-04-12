@@ -2,7 +2,7 @@ import io
 import logging
 import os.path
 import time
-from typing import List, Optional
+from typing import Iterator, List, Optional
 
 from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
@@ -48,14 +48,15 @@ class EC2Instance(Instance):
         self.images.pull(snapshot_id)
         self.delegate.run(command, snapshot_id, parameters, input_stream)
 
-    def logs(self, stdout: bool = True, stderr: bool = True):
+    def logs(self, stdout: bool = True, stderr: bool = True) \
+            -> Iterator[bytes]:
         return self.delegate.logs(stdout, stderr)
 
     def is_up(self, is_instance_newly_created: bool):
         return self.images.can_pull(
             5 if is_instance_newly_created else 1)
 
-    def output_files_tarball(self):
+    def output_files_tarball(self) -> Iterator[bytes]:
         return self.delegate.output_files_tarball()
 
     def cleanup(self):
@@ -106,9 +107,6 @@ class EC2Instance(Instance):
     def get_instance_type(self):
         return self.data['InstanceType']
 
-    def get_container_state(self) -> Optional[dict]:
-        return self.delegate.get_container_state()
-
     def dispose_if_its_time(
             self, execution_info: Optional[ExecutionInfo] = None):
         if execution_info is not None:
@@ -129,6 +127,9 @@ class EC2Instance(Instance):
 
     def stop_execution(self):
         return self.delegate.stop_execution()
+
+    def container_state(self) -> Optional[dict]:
+        return self.delegate.container_state()
 
 
 def get_tag(instance_data, tag, default=None) -> Optional[str]:

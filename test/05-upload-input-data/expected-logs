@@ -7,10 +7,10 @@
 file.txt
 directory/another-file.txt
 
+=> Harvesting the output...
 => Execution succeeded.
 => Retrieving the output...
 directory
 directory/another-file.txt
 file.txt
-=> Cleaning up all detritus...
 => Done and dusted.

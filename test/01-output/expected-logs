@@ -6,9 +6,9 @@
 foo = None
 bar = None
 
+=> Harvesting the output...
 => Execution succeeded.
 => Retrieving the output...
 foo
 foo/bar
-=> Cleaning up all detritus...
 => Done and dusted.

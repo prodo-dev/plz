@@ -51,6 +51,10 @@
                     region = "{{ aws_region }}"
                     repository = "{{ aws_project }}/plz/builds"
                   }
+                  results = {
+                    provider = aws-s3
+                    bucket = "{{ results_s3_bucket }}"
+                  }
               ports:
                 - "{{ service_port }}:80"
               volumes:
@@ -72,5 +76,5 @@
 
     - name: Set cron job for tidying
       cron:
-        name: "Tidying each minute"
-        job: "curl -X POST localhost:{{service_port}}/executions/tidy"
+        name: "Harvesting every minute"
+        job: "curl -X POST localhost:{{service_port}}/executions/harvest"
