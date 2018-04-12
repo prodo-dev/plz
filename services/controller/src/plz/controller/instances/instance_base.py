@@ -59,10 +59,6 @@ class Instance(ABC):
         pass
 
     @abstractmethod
-    def dispose(self) -> str:
-        pass
-
-    @abstractmethod
     def get_idle_since_timestamp(
             self, container_state: Optional[ContainerState] = None) -> int:
         pass
@@ -118,8 +114,18 @@ class Instance(ABC):
     @abstractmethod
     def release(self, results_storage: ResultsStorage,
                 idle_since_timestamp: int,
-                _lock_held: bool=True):
+                _lock_held: bool=False):
         pass
+
+    def harvest(self, results_storage: ResultsStorage):
+        with self._lock:
+            info = self.get_execution_info()
+            if info.status == 'exited':
+                self.release(
+                    results_storage,
+                    info.idle_since_timestamp,
+                    _lock_held=True)
+            self.dispose_if_its_time(info)
 
     @property
     @abstractmethod
@@ -136,6 +142,9 @@ class Instance(ABC):
 
 
 class InstanceProvider(ABC):
+    def __init__(self, results_storage: ResultsStorage):
+        self.results_storage = results_storage
+
     @abstractmethod
     def acquire_instance(
             self, execution_id: str, execution_spec: dict) -> Iterator[Dict]:
@@ -149,11 +158,18 @@ class InstanceProvider(ABC):
     def stop_execution(self, execution_id: str):
         pass
 
-    @abstractmethod
     def release_instance(
             self, execution_id: str,
-            idle_since_timestamp: Optional[int] = None):
-        pass
+            fail_if_not_found: bool=True,
+            idle_since_timestamp: Optional[int]=None):
+        instance = self.instance_for(execution_id)
+        if instance is None:
+            if fail_if_not_found:
+                raise ValueError(f'Instance for Execution ID {execution_id} ' +
+                                 'not found')
+            else:
+                return
+        instance.release(self.results_storage, idle_since_timestamp)
 
     @abstractmethod
     def push(self, image_tag: str):
@@ -165,11 +181,7 @@ class InstanceProvider(ABC):
 
     def harvest(self):
         for instance in self.instance_iterator():
-            info = instance.get_execution_info()
-            if info.status == 'exited':
-                self.release_instance(
-                    info.execution_id, info.idle_since_timestamp)
-            instance.dispose_if_its_time(info)
+            instance.harvest(self.results_storage)
 
     def get_executions(self) -> [ExecutionInfo]:
         return [

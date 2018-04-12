@@ -12,11 +12,14 @@ from typing import Any, Callable, Iterator, TypeVar, Union
 import flask
 import requests
 from flask import Flask, Response, abort, jsonify, request, stream_with_context
+from redis import StrictRedis
 
 from plz.controller import configuration
+from plz.controller.configuration import Dependencies
 from plz.controller.images import Images
 from plz.controller.instances.instance_base import InstanceStatusSuccess, \
-    InstanceStatusFailure
+    InstanceStatusFailure, InstanceProvider
+from plz.controller.results import ResultsStorage
 
 READ_BUFFER_SIZE = 16384
 
@@ -27,11 +30,11 @@ port = config.get_int('port', 8080)
 data_dir = config['data_dir']
 input_dir = os.path.join(data_dir, 'input')
 temp_data_dir = os.path.join(data_dir, 'tmp')
-dependencies = configuration.dependencies_from_config(config)
-images = dependencies.images
-instance_provider = dependencies.instance_provider
-results_storage = dependencies.results_storage
-redis = dependencies.redis
+dependencies: Dependencies = configuration.dependencies_from_config(config)
+images: Images = dependencies.images
+instance_provider: InstanceProvider = dependencies.instance_provider
+results_storage: ResultsStorage = dependencies.results_storage
+redis: StrictRedis = dependencies.redis
 
 os.makedirs(input_dir, exist_ok=True)
 os.makedirs(temp_data_dir, exist_ok=True)
@@ -210,7 +213,7 @@ def get_output_files_entrypoint(execution_id):
 def delete_process(execution_id):
     # Test with:
     # curl -XDELETE localhost:5000/executions/some-id
-    instance_provider.release_instance(execution_id)
+    instance_provider.release_instance(execution_id, fail_if_not_found=False)
     response = jsonify({})
     response.status_code = requests.codes.no_content
     return response

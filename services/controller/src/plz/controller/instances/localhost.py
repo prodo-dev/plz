@@ -21,6 +21,7 @@ class Localhost(InstanceProvider):
                  containers: Containers,
                  volumes: Volumes,
                  redis: StrictRedis):
+        super().__init__(results_storage)
         self.images = images
         self.containers = containers
         self.volumes = volumes
@@ -60,16 +61,6 @@ class Localhost(InstanceProvider):
 
     def stop_execution(self, execution_id):
         self.containers.stop(execution_id)
-
-    def release_instance(self, execution_id: str,
-                         idle_since_timestamp: Optional[int] = None):
-        """
-        "Releases" an instance. It doesn't actually destroy the instance
-        (because there's only one), but it does delete the Docker container
-        after publishing the results.
-        """
-        instance = self.instance_for(execution_id)
-        instance.release(self.results_storage, idle_since_timestamp)
 
     def push(self, image_tag: str):
         pass

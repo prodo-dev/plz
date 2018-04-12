@@ -46,7 +46,7 @@ def load_from_file(path) -> pyhocon.ConfigTree:
     return pyhocon.ConfigFactory.parse_file(path)
 
 
-def dependencies_from_config(config):
+def dependencies_from_config(config) -> Dependencies:
     docker_host = config.get('images.docker_host', None)
     redis = StrictRedis(host=config.get('redis_host', 'localhost'))
     images = _images_from(config, docker_host)

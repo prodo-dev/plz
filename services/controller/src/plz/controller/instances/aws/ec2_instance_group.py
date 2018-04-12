@@ -32,6 +32,7 @@ class EC2InstanceGroup(InstanceProvider):
                  images: Images,
                  acquisition_delay_in_seconds: int,
                  max_acquisition_tries: int):
+        super().__init__(results_storage)
         self.name = name
         self.redis = redis
         self.client = client
@@ -155,11 +156,13 @@ class EC2InstanceGroup(InstanceProvider):
         self.instance_for(execution_id).stop_execution()
 
     def release_instance(self, execution_id: str,
+                         fail_if_not_found: bool=True,
                          idle_since_timestamp: Optional[int] = None):
         if idle_since_timestamp is None:
             idle_since_timestamp = int(time.time())
-        instance = self.instance_for(execution_id)
-        instance.release(self.results_storage, idle_since_timestamp)
+        super().release_instance(execution_id,
+                                 fail_if_not_found,
+                                 idle_since_timestamp)
 
     def push(self, image_tag):
         self.images.push(image_tag)

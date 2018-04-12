@@ -64,7 +64,7 @@ class EC2Instance(Instance):
     def output_files_tarball(self) -> Iterator[bytes]:
         return self.delegate.output_files_tarball()
 
-    def dispose(self):
+    def _dispose(self):
         self.client.terminate_instances(InstanceIds=[self._instance_id])
 
     def set_execution_id(
@@ -127,7 +127,7 @@ class EC2Instance(Instance):
         if now - ei.idle_since_timestamp > ei.max_idle_seconds or \
                 ei.idle_since_timestamp > now or \
                 ei.max_idle_seconds < 0:
-            self.dispose()
+            self._dispose()
 
     def stop_execution(self):
         return self.delegate.stop_execution()
@@ -138,15 +138,21 @@ class EC2Instance(Instance):
     def release(self,
                 results_storage: ResultsStorage,
                 idle_since_timestamp: int,
-                _lock_held=True):
-        with self._lock:
-            self.delegate.release(
-                results_storage, idle_since_timestamp, _lock_held=True)
-            self._set_tags([
-                {'Key': EC2Instance.EXECUTION_ID_TAG,
-                 'Value': ''},
-                {'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
-                 'Value': str(idle_since_timestamp)}])
+                _lock_held: bool=False):
+        if _lock_held:
+            self._do_release(results_storage, idle_since_timestamp)
+        else:
+            with self._lock:
+                self._do_release(results_storage, idle_since_timestamp)
+
+    def _do_release(self, results_storage, idle_since_timestamp):
+        self.delegate.release(
+            results_storage, idle_since_timestamp, _lock_held=True)
+        self._set_tags([
+            {'Key': EC2Instance.EXECUTION_ID_TAG,
+             'Value': ''},
+            {'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
+             'Value': str(idle_since_timestamp)}])
 
     def _is_free(self):
         instances = get_running_aws_instances(

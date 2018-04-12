@@ -74,9 +74,6 @@ class DockerInstance(Instance):
         self.containers.rm(self.execution_id)
         self.volumes.remove(self.volume_name)
 
-    def dispose(self):
-        raise RuntimeError('Cannot dispose of a docker instance')
-
     @property
     def volume_name(self):
         return f'plz-{self.execution_id}'
