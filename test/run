@@ -156,7 +156,7 @@ function run_cli {
     > /dev/null
 
   # Capture the logs and exit status.
-  docker container logs --follow $CLI_CONTAINER |& redact_uuids | tee $logs_file
+  docker container logs --follow $CLI_CONTAINER |& redact_uuids |& redact_instance_status | tee $logs_file
   exit_status=$(docker wait $CLI_CONTAINER)
   docker container rm $CLI_CONTAINER > /dev/null
 
@@ -214,6 +214,10 @@ function volume_exists {
 function redact_uuids {
   # The "$| = 1" bit disables buffering so we get output as we need it.
   perl -pe '$| = 1; s/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/<UUID>/g'
+}
+
+function redact_instance_status {
+  grep -v '^Instance status: '
 }
 
 trap cleanup EXIT INT TERM

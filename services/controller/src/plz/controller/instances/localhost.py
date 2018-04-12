@@ -1,6 +1,8 @@
 import logging
 from typing import Dict, Iterator, Optional
 
+from redis import StrictRedis
+
 from plz.controller.containers import Containers
 from plz.controller.images import Images
 from plz.controller.instances.docker import DockerInstance
@@ -17,11 +19,13 @@ class Localhost(InstanceProvider):
                  results_storage: ResultsStorage,
                  images: Images,
                  containers: Containers,
-                 volumes: Volumes):
+                 volumes: Volumes,
+                 redis: StrictRedis):
         self.images = images
         self.containers = containers
         self.volumes = volumes
         self.results_storage = results_storage
+        self.redis = redis
 
     def acquire_instance(
             self, execution_id: str, execution_spec: dict) -> Iterator[Dict]:
@@ -32,7 +36,8 @@ class Localhost(InstanceProvider):
             self.images,
             self.containers,
             self.volumes,
-            execution_id)
+            execution_id,
+            self.redis)
         return iter([{'instance': instance}])
 
     def instance_for(self, execution_id: str) -> Optional[Instance]:
@@ -50,7 +55,8 @@ class Localhost(InstanceProvider):
             self.images,
             self.containers,
             self.volumes,
-            execution_id)
+            execution_id,
+            self.redis)
 
     def stop_execution(self, execution_id):
         self.containers.stop(execution_id)
@@ -63,9 +69,7 @@ class Localhost(InstanceProvider):
         after publishing the results.
         """
         instance = self.instance_for(execution_id)
-        instance.stop_execution()
-        instance.publish_results(self.results_storage)
-        instance.cleanup()
+        instance.release(self.results_storage, idle_since_timestamp)
 
     def push(self, image_tag: str):
         pass
