@@ -51,14 +51,15 @@
                     region = "{{ aws_region }}"
                     repository = "{{ aws_project }}/plz/builds"
                   }
-                  results = {
-                    provider = aws-s3
-                    bucket = "{{ results_s3_bucket }}"
+                  results {
+                    provider = local
+                    directory = "/data/results"
                   }
               ports:
                 - "{{ service_port }}:80"
               volumes:
                 - /cache/controller:/data
+                - /cache/results:/data/results
                 - /home/ubuntu/.ssh/plz:/root/.ssh/id_rsa:ro
                 - /var/run/docker.sock:/var/run/docker.sock
               depends_on:
