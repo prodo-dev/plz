@@ -211,6 +211,10 @@ class EC2InstanceGroup(InstanceProvider):
                     'Value': ''
                 },
                 {
+                    'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
+                    'Value': str(int(time.time()))
+                },
+                {
                     'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
                     # Give it 5 minutes as to be claimed before being
                     # terminated by staying idle for too long
