@@ -12,41 +12,7 @@ from plz.controller.images import Images
 from plz.controller.instances.instance_base import Instance, InstanceProvider
 from plz.controller.results.results_base import ResultsStorage
 from plz.controller.volumes import Volumes
-from .ec2_instance import EC2Instance, get_tag
-
-
-class EC2InstanceGroups:
-    def __init__(self,
-                 redis: StrictRedis,
-                 client,
-                 aws_worker_ami: str,
-                 aws_key_name: str,
-                 results_storage: ResultsStorage,
-                 images: Images,
-                 acquisition_delay_in_seconds: int,
-                 max_acquisition_tries: int):
-        self._construction_args = {
-            'redis': redis,
-            'client': client,
-            'aws_worker_ami': aws_worker_ami,
-            'aws_key_name': aws_key_name,
-            'results_storage': results_storage,
-            'images': images,
-            'acquisition_delay_in_seconds': acquisition_delay_in_seconds,
-            'max_acquisition_tries': max_acquisition_tries,
-        }
-        self._groups = {}
-        self._group_lock = redis.lock(
-            f'lock:{__name__}.{self.__class__.__name__}#_groups')
-
-    def get(self, name: str) -> 'EC2InstanceGroup':
-        with self._group_lock:
-            try:
-                return self._groups[name]
-            except KeyError:
-                group = EC2InstanceGroup(name, **self._construction_args)
-                self._groups[name] = group
-                return group
+from .ec2_instance import EC2Instance, get_tag, get_running_aws_instances
 
 
 class EC2InstanceGroup(InstanceProvider):
@@ -66,6 +32,7 @@ class EC2InstanceGroup(InstanceProvider):
                  images: Images,
                  acquisition_delay_in_seconds: int,
                  max_acquisition_tries: int):
+        super().__init__(results_storage)
         self.name = name
         self.redis = redis
         self.client = client
@@ -76,9 +43,6 @@ class EC2InstanceGroup(InstanceProvider):
         self.acquisition_delay_in_seconds = acquisition_delay_in_seconds
         self.max_acquisition_tries = max_acquisition_tries
         self.instances: Dict[str, EC2Instance] = {}
-        self.lock = self.redis.lock(f'lock:EC2InstanceGroup#lock:{name}')
-        self.filters = [{'Name': f'tag:{EC2Instance.GROUP_NAME_TAG}',
-                         'Values': [self.name]}]
         # Lazily initialized by ami_id
         self._ami_id = None
         # Lazily initialized by _instance_initialization_code
@@ -100,7 +64,7 @@ class EC2InstanceGroup(InstanceProvider):
         return self._ami_id
 
     def instance_iterator(self) -> Iterator[Instance]:
-        for instance_data in self._get_running_aws_instances([]):
+        for instance_data in self._get_group_running_aws_instances([]):
             yield self._ec2_instance_from_instance_data(instance_data)
 
     @property
@@ -147,7 +111,7 @@ class EC2InstanceGroup(InstanceProvider):
         tries_remaining = max_tries
         yield _msg('querying availability')
         instance_type = execution_spec.get('instance_type')
-        instances_not_assigned = self._get_running_aws_instances([
+        instances_not_assigned = self._get_group_running_aws_instances([
             (f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
             ('instance-type', instance_type)])
         if len(instances_not_assigned) > 0:
@@ -166,14 +130,11 @@ class EC2InstanceGroup(InstanceProvider):
         while tries_remaining > 0:
             tries_remaining -= 1
             if instance.is_up(is_instance_newly_created):
-                with self.lock:
-                    # Checking if it's still free
-                    if self._is_instance_free(instance_data['InstanceId']):
-                        instance.set_execution_id(execution_id)
-                        instance.set_max_idle_seconds(60 * 30)
-                        yield _msg('started')
-                        yield {'instance': instance}
-                        return
+                if instance.set_execution_id(
+                        execution_id, max_idle_seconds=60 * 30):
+                    yield _msg('started')
+                    yield {'instance': instance}
+                    return
                 yield _msg('taken while waiting')
                 instance_data = self._ask_aws_for_new_instance(instance_type)
                 instance = self._ec2_instance_from_instance_data(instance_data)
@@ -182,7 +143,7 @@ class EC2InstanceGroup(InstanceProvider):
                 time.sleep(delay_in_seconds)
 
     def instance_for(self, execution_id: str) -> Optional[EC2Instance]:
-        instance_data_list = self._get_running_aws_instances(
+        instance_data_list = self._get_group_running_aws_instances(
             filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', execution_id)])
         if len(instance_data_list) == 0:
             return None
@@ -195,37 +156,20 @@ class EC2InstanceGroup(InstanceProvider):
         self.instance_for(execution_id).stop_execution()
 
     def release_instance(self, execution_id: str,
+                         fail_if_not_found: bool=True,
                          idle_since_timestamp: Optional[int] = None):
         if idle_since_timestamp is None:
             idle_since_timestamp = int(time.time())
-        with self.lock:
-            instance = self.instance_for(execution_id)
-            instance.stop_execution()
-            instance.publish_results(self.results_storage)
-            instance.cleanup()
-            instance.set_tags([
-                {'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
-                 'Value': str(idle_since_timestamp)}
-            ])
+        super().release_instance(execution_id,
+                                 fail_if_not_found,
+                                 idle_since_timestamp)
 
     def push(self, image_tag):
         self.images.push(image_tag)
 
-    def _is_instance_free(self, instance_id):
-        instances = self._get_running_aws_instances(
-            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
-                     ('instance-id', instance_id)])
-        return len(instances) > 0
-
-    def _get_running_aws_instances(self, filters: [(str, str)]):
-        new_filters = [{'Name': n, 'Values': [v]} for (n, v) in filters]
-        instance_state_filter = [{'Name': 'instance-state-name',
-                                  'Values': ['running']}]
-        response = self.client.describe_instances(
-            Filters=self.filters + new_filters + instance_state_filter)
-        return [instance
-                for reservation in response['Reservations']
-                for instance in reservation['Instances']]
+    def _get_group_running_aws_instances(self, filters):
+        filters += [(f'tag:{EC2Instance.GROUP_NAME_TAG}', self.name)]
+        return get_running_aws_instances(self.client, filters)
 
     def _ask_aws_for_new_instance(self, instance_type: str) -> dict:
         response = self.client.run_instances(
@@ -247,7 +191,8 @@ class EC2InstanceGroup(InstanceProvider):
             containers,
             volumes,
             execution_id,
-            instance_data)
+            instance_data,
+            self.redis)
 
     def _get_instance_spec(self, instance_type) -> dict:
         spec = _BASE_INSTANCE_SPEC.copy()
@@ -264,6 +209,10 @@ class EC2InstanceGroup(InstanceProvider):
                 {
                     'Key': EC2Instance.EXECUTION_ID_TAG,
                     'Value': ''
+                },
+                {
+                    'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
+                    'Value': str(int(time.time()))
                 },
                 {
                     'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,

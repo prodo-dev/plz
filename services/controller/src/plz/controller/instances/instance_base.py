@@ -3,6 +3,8 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 from typing import Any, Dict, Iterator, List, Optional
 
+from redis import StrictRedis
+
 from plz.controller.containers import ContainerState
 from plz.controller.results.results_base import ResultsStorage
 
@@ -14,6 +16,10 @@ ExecutionInfo = namedtuple(
 
 
 class Instance(ABC):
+    def __init__(self, redis: StrictRedis):
+        self.redis = redis
+        self._redis_lock = None
+
     @abstractmethod
     def run(self,
             command: List[str],
@@ -42,13 +48,6 @@ class Instance(ABC):
     def output_files_tarball(self) -> Iterator[bytes]:
         pass
 
-    def publish_results(self, results_storage: ResultsStorage):
-        results_storage.publish(
-            self.get_execution_id(),
-            exit_status=self.exit_status(),
-            logs=self.logs(),
-            output_tarball=self.output_files_tarball())
-
     def exit_status(self) -> int:
         status = self.status()
         if status.exit_status is None:
@@ -57,14 +56,6 @@ class Instance(ABC):
 
     @abstractmethod
     def stop_execution(self):
-        pass
-
-    @abstractmethod
-    def dispose(self) -> str:
-        pass
-
-    @abstractmethod
-    def cleanup(self):
         pass
 
     @abstractmethod
@@ -93,7 +84,8 @@ class Instance(ABC):
         pass
 
     @abstractmethod
-    def set_execution_id(self, execution_id: str):
+    def set_execution_id(self, execution_id: str, max_idle_seconds: int) \
+            -> bool:
         pass
 
     def get_execution_info(self) -> ExecutionInfo:
@@ -119,8 +111,40 @@ class Instance(ABC):
     def container_state(self) -> Optional[ContainerState]:
         pass
 
+    @abstractmethod
+    def release(self, results_storage: ResultsStorage,
+                idle_since_timestamp: int,
+                _lock_held: bool=False):
+        pass
+
+    def harvest(self, results_storage: ResultsStorage):
+        with self._lock:
+            info = self.get_execution_info()
+            if info.status == 'exited':
+                self.release(
+                    results_storage,
+                    info.idle_since_timestamp,
+                    _lock_held=True)
+            self.dispose_if_its_time(info)
+
+    @property
+    @abstractmethod
+    def _instance_id(self):
+        pass
+
+    @property
+    def _lock(self):
+        if self._redis_lock is None:
+            name = f'lock:{__name__}.{self.__class__.__name__}' + \
+                   f'#_lock:{self._instance_id}'
+            self._redis_lock = self.redis.lock(name)
+        return self._redis_lock
+
 
 class InstanceProvider(ABC):
+    def __init__(self, results_storage: ResultsStorage):
+        self.results_storage = results_storage
+
     @abstractmethod
     def acquire_instance(
             self, execution_id: str, execution_spec: dict) -> Iterator[Dict]:
@@ -134,11 +158,18 @@ class InstanceProvider(ABC):
     def stop_execution(self, execution_id: str):
         pass
 
-    @abstractmethod
     def release_instance(
             self, execution_id: str,
-            idle_since_timestamp: Optional[int] = None):
-        pass
+            fail_if_not_found: bool=True,
+            idle_since_timestamp: Optional[int]=None):
+        instance = self.instance_for(execution_id)
+        if instance is None:
+            if fail_if_not_found:
+                raise ValueError(f'Instance for Execution ID {execution_id} ' +
+                                 'not found')
+            else:
+                return
+        instance.release(self.results_storage, idle_since_timestamp)
 
     @abstractmethod
     def push(self, image_tag: str):
@@ -150,11 +181,7 @@ class InstanceProvider(ABC):
 
     def harvest(self):
         for instance in self.instance_iterator():
-            info = instance.get_execution_info()
-            if info.status == 'exited':
-                self.release_instance(
-                    info.execution_id, info.idle_since_timestamp)
-            instance.dispose_if_its_time(info)
+            instance.harvest(self.results_storage)
 
     def get_executions(self) -> [ExecutionInfo]:
         return [

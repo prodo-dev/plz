@@ -4,11 +4,14 @@ import os.path
 import time
 from typing import Iterator, List, Optional
 
+from redis import StrictRedis
+
 from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
 from plz.controller.instances.docker import DockerInstance
 from plz.controller.instances.instance_base \
     import ExecutionInfo, Instance, Parameters
+from plz.controller.results import ResultsStorage
 from plz.controller.volumes import Volumes
 
 log = logging.getLogger(__name__)
@@ -33,11 +36,13 @@ class EC2Instance(Instance):
                  containers: Containers,
                  volumes: Volumes,
                  execution_id: str,
-                 data: dict):
+                 data: dict,
+                 redis: StrictRedis):
+        super().__init__(redis)
         self.client = client
         self.images = images
         self.delegate = DockerInstance(
-            images, containers, volumes, execution_id)
+            images, containers, volumes, execution_id, redis)
         self.data = data
 
     def run(self,
@@ -59,28 +64,27 @@ class EC2Instance(Instance):
     def output_files_tarball(self) -> Iterator[bytes]:
         return self.delegate.output_files_tarball()
 
-    def cleanup(self):
-        self.set_tags([{'Key': EC2Instance.EXECUTION_ID_TAG, 'Value': ''}])
-        return self.delegate.cleanup()
+    def _dispose(self):
+        self.client.terminate_instances(InstanceIds=[self._instance_id])
 
-    def dispose(self):
-        self.client.terminate_instances(InstanceIds=[self.data['InstanceId']])
+    def set_execution_id(
+            self, execution_id: str, max_idle_seconds: int) -> bool:
+        with self._lock:
+            if not self._is_free():
+                return False
+            if not self.delegate.set_execution_id(
+                    execution_id, max_idle_seconds, _lock_held=True):
+                return False
+            self._set_tags([
+                {'Key': EC2Instance.EXECUTION_ID_TAG,
+                 'Value': execution_id},
+                {'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
+                 'Value': str(max_idle_seconds)}
+            ])
+            return True
 
-    def set_execution_id(self, execution_id: str):
-        self.delegate.set_execution_id(execution_id)
-        self.set_tags([
-            {'Key': EC2Instance.EXECUTION_ID_TAG,
-             'Value': execution_id}
-        ])
-
-    def set_max_idle_seconds(self, max_idle_seconds: int):
-        self.set_tags([
-            {'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
-             'Value': str(max_idle_seconds)}
-        ])
-
-    def set_tags(self, tags):
-        instance_id = self.data['InstanceId']
+    def _set_tags(self, tags):
+        instance_id = self._instance_id
         self.client.create_tags(Resources=[instance_id], Tags=tags)
         response = self.client.describe_instances(
             Filters=[{'Name': 'instance-id',
@@ -123,7 +127,7 @@ class EC2Instance(Instance):
         if now - ei.idle_since_timestamp > ei.max_idle_seconds or \
                 ei.idle_since_timestamp > now or \
                 ei.max_idle_seconds < 0:
-            self.dispose()
+            self._dispose()
 
     def stop_execution(self):
         return self.delegate.stop_execution()
@@ -131,9 +135,50 @@ class EC2Instance(Instance):
     def container_state(self) -> Optional[dict]:
         return self.delegate.container_state()
 
+    def release(self,
+                results_storage: ResultsStorage,
+                idle_since_timestamp: int,
+                _lock_held: bool=False):
+        if _lock_held:
+            self._do_release(results_storage, idle_since_timestamp)
+        else:
+            with self._lock:
+                self._do_release(results_storage, idle_since_timestamp)
+
+    def _do_release(self, results_storage, idle_since_timestamp):
+        self.delegate.release(
+            results_storage, idle_since_timestamp, _lock_held=True)
+        self._set_tags([
+            {'Key': EC2Instance.EXECUTION_ID_TAG,
+             'Value': ''},
+            {'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
+             'Value': str(idle_since_timestamp)}])
+
+    def _is_free(self):
+        instances = get_running_aws_instances(
+            self.client,
+            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
+                     ('instance-id', self._instance_id)])
+        return len(instances) > 0
+
+    @property
+    def _instance_id(self):
+        return self.data['InstanceId']
+
 
 def get_tag(instance_data, tag, default=None) -> Optional[str]:
     for t in instance_data['Tags']:
         if t['Key'] == tag:
             return t['Value']
     return default
+
+
+def get_running_aws_instances(client, filters: [(str, str)]):
+    new_filters = [{'Name': n, 'Values': [v]} for (n, v) in filters]
+    instance_state_filter = [{'Name': 'instance-state-name',
+                              'Values': ['running']}]
+    response = client.describe_instances(
+        Filters=new_filters + instance_state_filter)
+    return [instance
+            for reservation in response['Reservations']
+            for instance in reservation['Instances']]

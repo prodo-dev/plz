@@ -3,11 +3,13 @@ import json
 from typing import Iterator, List, Optional
 
 from docker.types import Mount
+from redis import StrictRedis
 
 from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
 from plz.controller.instances.instance_base import \
     ExecutionInfo, Instance, Parameters
+from plz.controller.results import ResultsStorage
 from plz.controller.volumes import \
     VolumeDirectory, VolumeEmptyDirectory, VolumeFile, Volumes
 
@@ -17,7 +19,9 @@ class DockerInstance(Instance):
                  images: Images,
                  containers: Containers,
                  volumes: Volumes,
-                 execution_id: str):
+                 execution_id: str,
+                 redis: StrictRedis):
+        super().__init__(redis)
         self.images = images
         self.containers = containers
         self.volumes = volumes
@@ -65,13 +69,10 @@ class DockerInstance(Instance):
     def stop_execution(self):
         self.containers.stop(self.execution_id)
 
-    def cleanup(self):
+    def _cleanup(self):
         self.execution_id = ''
         self.containers.rm(self.execution_id)
         self.volumes.remove(self.volume_name)
-
-    def dispose(self):
-        raise RuntimeError('Cannot dispose of a docker instance')
 
     @property
     def volume_name(self):
@@ -97,10 +98,45 @@ class DockerInstance(Instance):
         # It's never time for a local instance
         pass
 
-    def set_execution_id(self, execution_id: str):
-        self.execution_id = execution_id
+    def set_execution_id(self, execution_id: str, _: int, _lock_held=False):
+        if _lock_held:
+            self.execution_id = execution_id
+        else:
+            with self._lock:
+                self.execution_id = execution_id
+        return True
 
     def container_state(self) -> Optional[dict]:
         if self.execution_id == '':
             return None
         return self.containers.get_state(self.execution_id)
+
+    def release(self,
+                results_storage: ResultsStorage,
+                _: int,
+                _lock_held: bool = False):
+        # Passing a boolean is not the most elegant way to do it, but it's
+        # easy to see that it works (regardless of whether there are several
+        # instance objects with the same instance id, etc.). When it's about
+        # concurrency, that's enough for me
+        if _lock_held:
+            self._do_release(results_storage)
+        else:
+            with self._lock:
+                self._do_release(results_storage)
+
+    def _do_release(self, results_storage: ResultsStorage):
+        self.stop_execution()
+        self._publish_results(results_storage)
+        self._cleanup()
+
+    def _publish_results(self, results_storage: ResultsStorage):
+        results_storage.publish(
+            self.get_execution_id(),
+            exit_status=self.exit_status(),
+            logs=self.logs(),
+            output_tarball=self.output_files_tarball())
+
+    @property
+    def _instance_id(self):
+        return self.execution_id

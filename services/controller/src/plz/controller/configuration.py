@@ -9,7 +9,7 @@ from redis import StrictRedis
 
 from plz.controller.containers import Containers
 from plz.controller.images import ECRImages, LocalImages
-from plz.controller.instances.aws import EC2InstanceGroups
+from plz.controller.instances.aws.ec2_instance_group import EC2InstanceGroup
 from plz.controller.instances.localhost import Localhost
 from plz.controller.results import LocalResultsStorage
 from plz.controller.volumes import Volumes
@@ -46,7 +46,7 @@ def load_from_file(path) -> pyhocon.ConfigTree:
     return pyhocon.ConfigFactory.parse_file(path)
 
 
-def dependencies_from_config(config):
+def dependencies_from_config(config) -> Dependencies:
     docker_host = config.get('images.docker_host', None)
     redis = StrictRedis(host=config.get('redis_host', 'localhost'))
     images = _images_from(config, docker_host)
@@ -63,9 +63,9 @@ def _instance_provider_from(
         containers = Containers.for_host(docker_host)
         volumes = Volumes.for_host(docker_host)
         instance_provider = Localhost(
-            results_storage, images, containers, volumes)
+            results_storage, images, containers, volumes, redis)
     elif instance_provider_type == 'aws-ec2':
-        groups = EC2InstanceGroups(
+        instance_provider = EC2InstanceGroup(
             redis=redis,
             client=boto3.client(
                 service_name='ec2',
@@ -77,8 +77,8 @@ def _instance_provider_from(
             acquisition_delay_in_seconds=config.get_int(
                 'instances.acquisition_delay', 10),
             max_acquisition_tries=config.get_int(
-                'instances.max_acquisition_tries', 5))
-        instance_provider = groups.get(config['instances.group_name'])
+                'instances.max_acquisition_tries', 5),
+            name=config['instances.group_name'])
     else:
         raise ValueError('Invalid instance provider.')
     return instance_provider
