@@ -131,8 +131,8 @@ resource "aws_volume_attachment" "controller-cache-attachment" {
   skip_destroy = true
 
   provisioner "local-exec" {
-      interpreter = ["/bin/bash", "-c"]
-      command = "../../scripts/run-ansible-playbook-on-host ../../services/controller/src/plz/controller/startup/startup.yml ${aws_instance.controller.public_ip} /dev/stdin <<< 'device: /dev/xvdx'"
+    interpreter = ["/bin/bash", "-c"]
+    command = "../../scripts/run-ansible-playbook-on-host ../../services/controller/src/plz/controller/startup/startup.yml ${aws_instance.controller.private_ip} /dev/stdin <<< 'device: /dev/xvdx'"
   }
 }
 
@@ -145,7 +145,7 @@ resource "aws_route53_record" "controller" {
 }
 
 output "controller-host" {
-  value = "${aws_instance.controller.public_ip}"
+  value = "${aws_instance.controller.private_dns}"
 }
 
 ///
