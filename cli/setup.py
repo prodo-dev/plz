@@ -34,7 +34,7 @@ setup(
     packages=['plz.cli'],
     python_requires='>= 3.6',
     install_requires=[
-        'docker >= 3.1.1',
+        'docker >= 3.2.1',
         'prettytable >= 0.7.2',
         'requests >= 2.18.4',
     ],
