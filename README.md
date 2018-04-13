@@ -3,7 +3,7 @@
 *Say the magic word.*
 
 `plz` is a job runner targetted at training machine learning models as cheaply as possible.
-It is, however, fairly general, so can be used for practically anything that requires running a job.
+It is, however, fairly general, so can be used for practically anything that requires running a job in a repeatable fashion on a dedicated cloud VM.
 
 `plz run` performs a number of operations:
 
@@ -22,7 +22,7 @@ In the future, `plz` is intended to:
 * gather and plot metrics over multiple runs, to understand how training is progressing,
 * search over hyperparameters in parallel to optimise models,
 * manage epochs to capture intermediate metrics and results, and terminate runs early,
-* and whatever else is requested of us!
+* and whatever else sounds like fun. ([Please, tell us!](https://github.com/prodo-ai/plz/issues))
 
 ## Installing dependencies
 
