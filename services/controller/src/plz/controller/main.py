@@ -359,8 +359,12 @@ def _set_user_last_execution_id(user: str, execution_id: str) -> None:
 
 
 def _get_user_last_execution_id(user: str) -> Optional[str]:
-    return str(redis.get(f'key:{__name__}#user_last_execution_id:{user}'),
-               encoding='utf-8')
+    execution_id_bytes = redis.get(
+        f'key:{__name__}#user_last_execution_id:{user}')
+    if execution_id_bytes:
+        return str(execution_id_bytes, encoding='utf-8')
+    else:
+        return None
 
 
 if __name__ == '__main__':
