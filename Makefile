@@ -23,3 +23,11 @@ controller: ml
 
 .PHONY: deploy
 deploy: ml controller
+
+.PHONY: destroy
+destroy: ml-destroy
+
+
+.PHONY: ml-destroy
+ml-destroy:
+	$(MAKE) -C machines/ml destroy

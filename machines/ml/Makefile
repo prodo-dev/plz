@@ -40,6 +40,13 @@ deploy: $(SSH_PRIVATE_KEY_FILE)
 		-var=ami_tag=$(AMI_TAG) \
 		-var=ssh_public_key_file=$(SSH_PUBLIC_KEY_FILE)
 
+.PHONY: destroy
+destroy: $(SSH_PRIVATE_KEY_FILE)
+	terraform destroy \
+		-state=$(SECRETS_DIR)/terraform.tfstate \
+		-var-file=$(CONFIG_FILE) \
+		-var=ami_tag=$(AMI_TAG) \
+		-var=ssh_public_key_file=$(SSH_PUBLIC_KEY_FILE)
 
 # Necessary to make each `foreach` line a new instruction.
 define \n
