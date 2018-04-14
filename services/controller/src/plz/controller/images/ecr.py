@@ -33,14 +33,20 @@ class ECRImages(Images):
             tag=f'{self.repository}:{tag}')
 
     def push(self, tag: str):
-        self.docker_api_client.push(
-            self.repository, tag,
-            auth_config=self._aws_ecr_credentials())
+        return _call_maybe_streaming(
+            'push',
+            self.docker_api_client.push,
+            {'repository': self.repository,
+             'tag': tag,
+             'auth_config': self._aws_ecr_credentials()})
 
     def pull(self, tag: str):
-        self.docker_api_client.pull(
-            self.repository, tag,
-            auth_config=self._aws_ecr_credentials())
+        return _call_maybe_streaming(
+            'pull',
+            self.docker_api_client.pull,
+            {'repository': self.repository,
+             'tag': tag,
+             'auth_config': self._aws_ecr_credentials()})
 
     def can_pull(self, times: int) -> bool:
         try:
@@ -62,3 +68,14 @@ class ECRImages(Images):
             'username': username,
             'password': password,
         }
+
+
+def _call_maybe_streaming(func_name, func, args):
+    level = log.getEffectiveLevel()
+    stream = 0 < level <= logging.DEBUG
+    ret = func(**args, stream=stream, decode=stream)
+    log.debug(f'Starting {func_name}')
+    if stream:
+        for message in ret:
+            log.debug(f'{func_name}: {message}')
+    log.debug(f'Starting {func_name}')
