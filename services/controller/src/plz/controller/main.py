@@ -53,16 +53,22 @@ class ArbitraryObjectJSONEncoder(flask.json.JSONEncoder):
 
 
 def _setup_logging():
-    root_logger = logging.getLogger('.'.join(__name__.split('.')[:-1]))
+    # Setup handler for the root logger (there's no default one in our context,
+    # probably because of gunicorn) so that we can turn on loggers for other
+    # modules, like docker
+    root_logger = logging.getLogger()
     root_logger_handler = logging.StreamHandler(stream=sys.stderr)
     root_logger_handler.setFormatter(logging.Formatter(
         '%(asctime)s ' + logging.BASIC_FORMAT))
     root_logger.addHandler(root_logger_handler)
+    # Set logger level for the controller
     if 'log_level' in config:
         log_level = config['log_level']
         print(f'Setting log level to: {log_level}',
               file=sys.stderr, flush=True)
-        root_logger.setLevel(log_level)
+        controller_logger = logging.getLogger(
+            '.'.join(__name__.split('.')[:-1]))
+        controller_logger.setLevel(log_level)
 
 
 _setup_logging()
