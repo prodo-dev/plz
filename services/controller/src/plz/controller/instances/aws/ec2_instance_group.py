@@ -216,9 +216,9 @@ class EC2InstanceGroup(InstanceProvider):
                 },
                 {
                     'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
-                    # Give it 5 minutes as to be claimed before being
+                    # Give it 10 minutes as to be claimed before being
                     # terminated by staying idle for too long
-                    'Value': '300'
+                    'Value': str(10 * 60)
                 },
                 {
                     'Key': 'Name',
