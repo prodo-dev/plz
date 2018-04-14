@@ -7,7 +7,7 @@ import re
 import sys
 import tempfile
 import uuid
-from typing import Any, Callable, Iterator, TypeVar, Union
+from typing import Any, Callable, Iterator, Optional, TypeVar, Union
 
 import flask
 import requests
@@ -17,8 +17,8 @@ from redis import StrictRedis
 from plz.controller import configuration
 from plz.controller.configuration import Dependencies
 from plz.controller.images import Images
-from plz.controller.instances.instance_base import InstanceStatusSuccess, \
-    InstanceStatusFailure, InstanceProvider
+from plz.controller.instances.instance_base import InstanceProvider, \
+    InstanceStatusFailure, InstanceStatusSuccess
 from plz.controller.results import ResultsStorage
 
 READ_BUFFER_SIZE = 16384
@@ -67,10 +67,6 @@ def _setup_logging():
 
 _setup_logging()
 log = logging.getLogger(__name__)
-
-_user_last_execution_id_lock = redis.lock(
-    f'lock:{__name__}:_user_last_execution_id')
-_user_last_execution_id = dict()
 
 app = Flask(__name__)
 app.json_encoder = ArbitraryObjectJSONEncoder
@@ -357,17 +353,18 @@ def _format_error(message: str) -> bytes:
     return json.dumps({'error': message}).encode('utf-8')
 
 
-def _set_user_last_execution_id(user: str, execution_id: str):
-    with _user_last_execution_id_lock:
-        _user_last_execution_id[user] = execution_id
+def _set_user_last_execution_id(user: str, execution_id: str) -> None:
+    redis.set(f'key:{__name__}#user_last_execution_id:{user}',
+              execution_id)
 
 
-def _get_user_last_execution_id(user: str):
-    last_execution_id = None
-    with _user_last_execution_id_lock:
-        if user in _user_last_execution_id:
-            last_execution_id = _user_last_execution_id[user]
-    return last_execution_id
+def _get_user_last_execution_id(user: str) -> Optional[str]:
+    execution_id_bytes = redis.get(
+        f'key:{__name__}#user_last_execution_id:{user}')
+    if execution_id_bytes:
+        return str(execution_id_bytes, encoding='utf-8')
+    else:
+        return None
 
 
 if __name__ == '__main__':
