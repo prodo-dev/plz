@@ -70,9 +70,9 @@ class DockerInstance(Instance):
         self.containers.stop(self.execution_id)
 
     def _cleanup(self):
-        self.execution_id = ''
         self.containers.rm(self.execution_id)
         self.volumes.remove(self.volume_name)
+        self.execution_id = ''
 
     @property
     def volume_name(self):
