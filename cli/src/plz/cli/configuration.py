@@ -74,12 +74,12 @@ class Configuration:
             # (save for when they are included explicitly).
             # Value of None means "use git if available"
             Property('exclude_gitignored_files',
-                     type=Optional[bool], default=None),
+                     type=bool, default=None),
             # Paths to include, as to override exclusion (must be paths under
             # the current work directory)
             Property('included_paths', type=list, default=[]),
             Property('debug', type=bool, default=False),
-            Property('docker_runtime', type=Optional[str], default=None),
+            Property('docker_runtime', type=str, default=None),
         ]
     }
 
