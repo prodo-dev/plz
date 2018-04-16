@@ -108,14 +108,16 @@ class RunExecutionOperation(Operation):
 
         show_status_operation = ShowStatusOperation(
             self.configuration, execution_id=execution_id)
-        status = show_status_operation.run()
+        retrieve_output_operation = RetrieveOutputOperation(
+            self.configuration, self.output_dir, self.execution_id)
+        status = show_status_operation.get_status()
         if status.running:
             raise CLIException(
                 'Execution has not finished. This should not happen.'
                 ' Please report it.')
         elif status.success:
             log_info('Execution succeeded.')
-            retrieve_output_operation.retrieve_output_files(execution_id)
+            retrieve_output_operation.retrieve_output()
             log_info('Done and dusted.')
             return status.code
         else:
