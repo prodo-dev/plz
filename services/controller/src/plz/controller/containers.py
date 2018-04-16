@@ -33,7 +33,8 @@ class Containers:
             tag: str,
             command: List[str],
             environment: Dict[str, str],
-            mounts: List[Mount]):
+            mounts: List[Mount],
+            docker_runtime: Optional[str]):
         image = f'{repository}:{tag}'
         if execution_id == '':
             raise ValueError('Empty execution id!')
@@ -44,6 +45,7 @@ class Containers:
             environment=environment,
             mounts=mounts,
             detach=True,
+            runtime=docker_runtime or ''
         )
         log.info(f'Started container: {container.id}')
 

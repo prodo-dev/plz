@@ -31,7 +31,8 @@ class DockerInstance(Instance):
             command: List[str],
             snapshot_id: str,
             parameters: Parameters,
-            input_stream: Optional[io.RawIOBase]):
+            input_stream: Optional[io.RawIOBase],
+            docker_runtime: Optional[str]):
         configuration = {
             'input_directory': Volumes.INPUT_DIRECTORY_PATH,
             'output_directory': Volumes.OUTPUT_DIRECTORY_PATH,
@@ -54,7 +55,8 @@ class DockerInstance(Instance):
                             command=command,
                             environment=environment,
                             mounts=[Mount(source=volume.name,
-                                          target=Volumes.VOLUME_MOUNT)])
+                                          target=Volumes.VOLUME_MOUNT)],
+                            docker_runtime=docker_runtime)
 
     def logs(self, stdout: bool = True, stderr: bool = True) \
             -> Iterator[bytes]:

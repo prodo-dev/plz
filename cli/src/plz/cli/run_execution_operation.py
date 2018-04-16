@@ -74,12 +74,16 @@ class RunExecutionOperation(Operation):
         if self.configuration.input:
             log_info('Capturing the input')
         with InputData.from_configuration(self.configuration) as input_data:
+            configuration = self.configuration
             input_id = input_data.publish()
             execution_spec = {
-                'instance_type': self.configuration.instance_type,
-                'user': self.configuration.user,
+                'instance_type': configuration.instance_type,
+                'user': configuration.user,
                 'input_id': input_id,
             }
+            if configuration.docker_runtime:
+                execution_spec['docker_runtime'] = configuration.docker_runtime
+
             execution_id, ok = self.post_execution_request(
                 snapshot_id, params, execution_spec)
 
