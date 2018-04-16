@@ -1,4 +1,3 @@
-import collections
 import io
 import itertools
 import json
@@ -21,10 +20,7 @@ from plz.cli.log import log_error, log_info
 from plz.cli.logs_operation import LogsOperation
 from plz.cli.operation import Operation, check_status, on_exception_reraise
 from plz.cli.parameters import Parameters
-
-ExecutionStatus = collections.namedtuple(
-    'ExecutionStatus',
-    ['running', 'success', 'code'])
+from plz.cli.show_status_operation import ExecutionStatus, ShowStatusOperation
 
 
 class RunExecutionOperation(Operation):
@@ -109,7 +105,9 @@ class RunExecutionOperation(Operation):
         if cancelled:
             return
 
-        status = self.get_status(execution_id)
+        show_status_operation = ShowStatusOperation(
+            self.configuration, execution_id=execution_id)
+        status = show_status_operation.run()
         if status.running:
             raise CLIException(
                 'Execution has not finished. This should not happen.'
