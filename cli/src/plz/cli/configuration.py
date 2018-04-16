@@ -66,6 +66,7 @@ class Configuration:
             Property('instance_type', default='t2.micro'),
             Property('project', required=True),
             Property('image', type=str, required=True),
+            Property('image_extensions', type=list, default=[]),
             Property('command', type=list),
             Property('input', type=str),
             # Paths to exclude when creating a snapshot. List of python globs

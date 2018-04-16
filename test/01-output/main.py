@@ -5,7 +5,7 @@ import os.path
 
 with open(os.environ['CONFIGURATION_FILE']) as c:
     config = json.load(c)
-parameters = config["parameters"]
+parameters = config['parameters']
 
 output_file = f'{config["output_directory"]}/foo/bar'
 os.makedirs(os.path.dirname(output_file))
