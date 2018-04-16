@@ -33,14 +33,20 @@ class ECRImages(Images):
             tag=f'{self.repository}:{tag}')
 
     def push(self, tag: str):
-        self.docker_api_client.push(
-            self.repository, tag,
-            auth_config=self._aws_ecr_credentials())
+        for m in self.docker_api_client.push(
+                repository=self.repository,
+                tag=tag,
+                auth_config=self._aws_ecr_credentials(),
+                stream=True):
+            log.debug(m)
 
     def pull(self, tag: str):
-        self.docker_api_client.pull(
-            self.repository, tag,
-            auth_config=self._aws_ecr_credentials())
+        for m in self.docker_api_client.pull(
+                repository=self.repository,
+                tag=tag,
+                auth_config=self._aws_ecr_credentials(),
+                stream=True):
+            log.debug(m)
 
     def can_pull(self, times: int) -> bool:
         try:
