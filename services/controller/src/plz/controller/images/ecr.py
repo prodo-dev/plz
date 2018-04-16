@@ -68,14 +68,3 @@ class ECRImages(Images):
             'username': username,
             'password': password,
         }
-
-
-def _call_maybe_streaming(func_name, func, args):
-    level = log.getEffectiveLevel()
-    stream = 0 < level <= logging.DEBUG
-    ret = func(**args, stream=stream, decode=stream)
-    log.debug(f'Starting {func_name}')
-    if stream:
-        for message in ret:
-            log.debug(f'{func_name}: {message}')
-    log.debug(f'Starting {func_name}')
