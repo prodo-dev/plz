@@ -64,31 +64,11 @@ class RunExecutionOperation(Operation):
 
         params = parameters.parse_file(self.parameters_file)
 
-        log_info('Capturing the context')
         build_context = self.capture_build_context()
-        log_info('Building the program snapshot')
         snapshot_id = self.submit_context_for_building(build_context)
-        if not snapshot_id:
-            raise CLIException('We did not receive a snapshot ID.')
-
-        if self.configuration.input:
-            log_info('Capturing the input')
-        with InputData.from_configuration(self.configuration) as input_data:
-            configuration = self.configuration
-            input_id = input_data.publish()
-            execution_spec = {
-                'instance_type': configuration.instance_type,
-                'user': configuration.user,
-                'input_id': input_id,
-            }
-            if configuration.docker_runtime:
-                execution_spec['docker_runtime'] = configuration.docker_runtime
-
-            execution_id, ok = self.post_execution_request(
-                snapshot_id, params, execution_spec)
-
-        if not execution_id:
-            raise CLIException('We did not receive an execution ID.')
+        input_id = self.capture_input()
+        execution_id, ok = self.start_execution(
+            snapshot_id, params, input_id)
         log_info(f'Execution ID is: {execution_id}')
 
         cancelled = False
@@ -125,6 +105,7 @@ class RunExecutionOperation(Operation):
                 exit_code=status.code)
 
     def capture_build_context(self):
+        log_info('Capturing the context')
         context_dir = os.getcwd()
         dockerfile_path = os.path.join(context_dir, 'Dockerfile')
         dockerfile_created = False
@@ -153,7 +134,8 @@ class RunExecutionOperation(Operation):
                 os.remove(dockerfile_path)
         return build_context
 
-    def submit_context_for_building(self, build_context):
+    def submit_context_for_building(self, build_context) -> str:
+        log_info('Building the program snapshot')
         metadata = {
             'user': self.configuration.user,
             'project': self.configuration.project,
@@ -181,18 +163,32 @@ class RunExecutionOperation(Operation):
                 print(data['error'].rstrip())
             if 'id' in data:
                 snapshot_id = data['id']
-        if error:
-            return None
+        if error or not snapshot_id:
+            raise CLIException('We did not receive a snapshot ID.')
         return snapshot_id
 
-    def post_execution_request(
+    def capture_input(self) -> Optional[str]:
+        if self.configuration.input:
+            log_info('Capturing the input')
+        with InputData.from_configuration(self.configuration) as input_data:
+            return input_data.publish()
+
+    def start_execution(
             self,
             snapshot_id: str,
             params: Parameters,
-            execution_spec: dict) \
+            input_id: Optional[str]) \
             -> Tuple[Optional[str], bool]:
-        log_info('Sending request to start execution')
+        configuration = self.configuration
+        execution_spec = {
+            'instance_type': configuration.instance_type,
+            'user': configuration.user,
+            'input_id': input_id,
+        }
+        if configuration.docker_runtime:
+            execution_spec['docker_runtime'] = configuration.docker_runtime
 
+        log_info('Sending request to start execution')
         response = requests.post(self.url('executions'), json={
             'command': self.command,
             'snapshot_id': snapshot_id,
@@ -211,6 +207,8 @@ class RunExecutionOperation(Operation):
             elif 'error' in data:
                 ok = False
                 log_error(data['error'].rstrip())
+        if not execution_id:
+            raise CLIException('We did not receive an execution ID.')
         return execution_id, ok
 
     @on_exception_reraise('Retrieving the status failed.')
