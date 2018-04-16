@@ -1,6 +1,10 @@
 import sys
 
 
+def log_debug(message):
+    print('::', message)
+
+
 def log_info(message):
     if sys.stdout.isatty():
         print('\x1b[33m', end='')

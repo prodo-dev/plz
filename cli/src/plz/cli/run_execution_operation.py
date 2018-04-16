@@ -7,8 +7,9 @@ import shutil
 import subprocess
 import tarfile
 import tempfile
+import time
 from glob import iglob
-from typing import Iterator, Optional, Tuple
+from typing import Any, Callable, Iterator, Optional, Tuple
 
 import docker.utils.build
 import requests
@@ -17,7 +18,7 @@ from plz.cli import parameters
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
 from plz.cli.input_data import InputData
-from plz.cli.log import log_error, log_info
+from plz.cli.log import log_debug, log_error, log_info
 from plz.cli.logs_operation import LogsOperation
 from plz.cli.operation import Operation, check_status, on_exception_reraise
 from plz.cli.parameters import Parameters
@@ -64,11 +65,12 @@ class RunExecutionOperation(Operation):
 
         params = parameters.parse_file(self.parameters_file)
 
-        build_context = self.capture_build_context()
-        snapshot_id = self.submit_context_for_building(build_context)
-        input_id = self.capture_input()
-        execution_id, ok = self.start_execution(
-            snapshot_id, params, input_id)
+        build_context = self.timed(self.capture_build_context)
+        snapshot_id = self.timed(
+            lambda: self.submit_context_for_building(build_context))
+        input_id = self.timed(self.capture_input)
+        execution_id, ok = self.timed(
+            lambda: self.start_execution(snapshot_id, params, input_id))
         log_info(f'Execution ID is: {execution_id}')
 
         cancelled = False
@@ -84,7 +86,7 @@ class RunExecutionOperation(Operation):
             cancelled = True
         finally:
             if not cancelled:
-                self.harvest(execution_id)
+                self.timed(lambda: self.harvest(execution_id))
 
         if cancelled:
             return
@@ -96,7 +98,7 @@ class RunExecutionOperation(Operation):
                 ' Please report it.')
         elif status.success:
             log_info('Execution succeeded.')
-            self.retrieve_output_files(execution_id)
+            self.timed(lambda: self.retrieve_output_files(execution_id))
             log_info('Done and dusted.')
             return status.code
         else:
@@ -240,6 +242,15 @@ class RunExecutionOperation(Operation):
         log_info('Harvesting the output...')
         response = requests.delete(self.url('executions', execution_id))
         check_status(response, requests.codes.no_content)
+
+    def timed(self, f: Callable[..., Any]):
+        start_time = time.time()
+        result = f()
+        end_time = time.time()
+        time_taken = end_time - start_time
+        if self.configuration.debug:
+            log_debug('Time taken: %.2fs' % time_taken)
+        return result
 
 
 def _is_git_present() -> bool:
