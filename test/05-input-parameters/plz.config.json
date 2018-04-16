@@ -1,9 +1,8 @@
 {
   "user": "plz-test",
-  "project": "04-download-input",
+  "project": "05-input-parameters",
   "image": "python:3-slim",
   "command": [
     "./main.py"
-  ],
-  "input": "file://./provided-input"
+  ]
 }

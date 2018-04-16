@@ -121,6 +121,12 @@ function run_cli {
   app_directory=${1:a}
   logs_file=${2:a}
   output_directory=${3:a}
+  test_config_file="${app_directory}/test.config.json"
+
+  args=()
+  if [[ -f $test_config_file ]]; then
+    IFS=$'\n' args=($(jq -r '(.args // []) | .[]' < $test_config_file))
+  fi
 
   # Add the app directory to a Docker volume.
   docker volume create $VOLUME > /dev/null
@@ -152,7 +158,7 @@ function run_cli {
     --workdir=/data/app \
     --volume="${VOLUME}:/data" \
     $CLI_IMAGE \
-    run --output="/data/output" \
+    run --output="/data/output" $args \
     > /dev/null
 
   # Capture the logs and exit status.
