@@ -6,7 +6,7 @@ import requests
 
 from plz.cli.configuration import Configuration
 from plz.cli.log import log_info
-from plz.cli.operation import Operation, check_status
+from plz.cli.operation import Operation, check_status, on_exception_reraise
 
 ExecutionStatus = collections.namedtuple(
     'ExecutionStatus',
@@ -25,6 +25,7 @@ class ShowStatusOperation(Operation):
         super().__init__(configuration)
         self.execution_id = execution_id
 
+    @on_exception_reraise('Retrieving the status failed.')
     def get_status(self):
         response = requests.get(
             self.url('executions', self.get_execution_id(), 'status'))

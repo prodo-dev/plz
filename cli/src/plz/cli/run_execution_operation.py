@@ -209,16 +209,6 @@ class RunExecutionOperation(Operation):
                 log_error(data['error'].rstrip())
         return execution_id, ok
 
-    @on_exception_reraise('Retrieving the status failed.')
-    def get_status(self, execution_id):
-        response = requests.get(self.url('executions', execution_id, 'status'))
-        check_status(response, requests.codes.ok)
-        body = response.json()
-        return ExecutionStatus(
-            running=body['running'],
-            success=body['success'],
-            code=body['exit_status'])
-
 
 def _is_git_present() -> bool:
     # noinspection PyBroadException
