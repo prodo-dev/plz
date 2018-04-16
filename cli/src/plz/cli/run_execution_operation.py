@@ -127,8 +127,11 @@ class RunExecutionOperation(Operation):
         try:
             with open(dockerfile_path, mode='x') as dockerfile:
                 dockerfile_created = True
+                dockerfile.write(f'FROM {self.configuration.image}\n')
+                for step in self.configuration.image_extensions:
+                    dockerfile.write(step)
+                    dockerfile.write('\n')
                 dockerfile.write(
-                    f'FROM {self.configuration.image}\n'
                     f'WORKDIR /app\n'
                     f'COPY . ./\n'
                     f'CMD {self.configuration.command}\n'
