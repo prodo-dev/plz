@@ -19,9 +19,9 @@ WORKDIR /src
 COPY Pipfile Pipfile.lock ./
 RUN pipenv install --system --deploy
 
-COPY run ./
 COPY src ./src/
+COPY run ./
 
-HEALTHCHECK CMD curl -f http://localhost/
+HEALTHCHECK --interval=5s CMD curl -f http://localhost/
 
 ENTRYPOINT ["/tini", "--", "./run"]
