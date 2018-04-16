@@ -3,7 +3,8 @@
 => Sending request to start execution
 => Execution ID is: <UUID>
 => Streaming logs...
-baz
+foo = 99
+bar = luftballon
 
 => Harvesting the output...
 => Execution succeeded.
