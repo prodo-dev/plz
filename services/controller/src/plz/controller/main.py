@@ -132,7 +132,7 @@ def run_execution_entrypoint():
                 snapshot_id=snapshot_id,
                 parameters=parameters,
                 input_stream=input_stream,
-                runtime=execution_spec.get('runtime', None))
+                docker_runtime=execution_spec.get('docker_runtime', None))
         except Exception as e:
             log.exception('Exception running command.')
             yield {'error': str(e)}
