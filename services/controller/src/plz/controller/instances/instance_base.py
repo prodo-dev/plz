@@ -25,7 +25,8 @@ class Instance(ABC):
             command: List[str],
             snapshot_id: str,
             parameters: Parameters,
-            input_stream: Optional[io.BytesIO]):
+            input_stream: Optional[io.BytesIO],
+            runtime: Optional[str]):
         pass
 
     def status(self) -> 'InstanceStatus':

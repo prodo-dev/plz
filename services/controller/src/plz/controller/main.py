@@ -18,7 +18,7 @@ from plz.controller import configuration
 from plz.controller.configuration import Dependencies
 from plz.controller.images import Images
 from plz.controller.instances.instance_base import InstanceProvider, \
-    InstanceStatusFailure, InstanceStatusSuccess
+    InstanceStatusFailure, InstanceStatusSuccess, Instance
 from plz.controller.results import ResultsStorage
 
 READ_BUFFER_SIZE = 16384
@@ -114,7 +114,7 @@ def run_execution_entrypoint():
         try:
             acquisition_statuses = instance_provider.acquire_instance(
                     execution_id, execution_spec)
-            instance = None
+            instance: Optional[Instance] = None
             for status in acquisition_statuses:
                 if 'message' in status:
                     yield {'status': status['message']}
@@ -131,7 +131,8 @@ def run_execution_entrypoint():
                 command=command,
                 snapshot_id=snapshot_id,
                 parameters=parameters,
-                input_stream=input_stream)
+                input_stream=input_stream,
+                runtime=execution_spec.get('runtime', None)
         except Exception as e:
             log.exception('Exception running command.')
             yield {'error': str(e)}

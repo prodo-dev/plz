@@ -49,9 +49,11 @@ class EC2Instance(Instance):
             command: List[str],
             snapshot_id: str,
             parameters: Parameters,
-            input_stream: Optional[io.BytesIO]):
+            input_stream: Optional[io.BytesIO],
+            docker_runtime: Optional[str]):
         self.images.pull(snapshot_id)
-        self.delegate.run(command, snapshot_id, parameters, input_stream)
+        self.delegate.run(command, snapshot_id, parameters, input_stream,
+                          docker_runtime)
 
     def logs(self, stdout: bool = True, stderr: bool = True) \
             -> Iterator[bytes]:
