@@ -9,7 +9,7 @@ import requests
 
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
-from plz.cli.log import log_info, log_error
+from plz.cli.log import log_info
 from plz.cli.operation import Operation, check_status, on_exception_reraise
 from plz.cli.show_status_operation import ShowStatusOperation
 
