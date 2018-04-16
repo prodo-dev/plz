@@ -1,12 +1,12 @@
+import collections
+import os
 from typing import Optional
 
-import collections
 import requests
 
 from plz.cli.configuration import Configuration
 from plz.cli.log import log_info
-from plz.cli.operation import check_status, Operation
-
+from plz.cli.operation import Operation, check_status
 
 ExecutionStatus = collections.namedtuple(
     'ExecutionStatus',
