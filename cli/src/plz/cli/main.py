@@ -7,13 +7,17 @@ from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
 from plz.cli.list_executions_operation import ListExecutionsOperation
 from plz.cli.logs_operation import LogsOperation
 from plz.cli.operation import Operation
+from plz.cli.retrieve_output_operation import RetrieveOutputOperation
 from plz.cli.run_execution_operation import RunExecutionOperation
+from plz.cli.show_status_operation import ShowStatusOperation
 from plz.cli.stop_execution_operation import StopExecutionOperation
 
 OPERATIONS: Dict[str, Type[Operation]] = {
     'run': RunExecutionOperation,
     'logs': LogsOperation,
     'list': ListExecutionsOperation,
+    'output': RetrieveOutputOperation,
+    'status': ShowStatusOperation,
     'stop': StopExecutionOperation,
 }
 
