@@ -65,12 +65,12 @@ class RunExecutionOperation(Operation):
 
         params = parameters.parse_file(self.parameters_file)
 
-        build_context = self.suboperation(
+        with self.suboperation(
                 'Capturing the context',
-                self.capture_build_context)
-        snapshot_id = self.suboperation(
-                'Building the program snapshot',
-                lambda: self.submit_context_for_building(build_context))
+                self.capture_build_context) as build_context:
+            snapshot_id = self.suboperation(
+                    'Building the program snapshot',
+                    lambda: self.submit_context_for_building(build_context))
         input_id = self.suboperation(
                 'Capturing the input',
                 self.capture_input,
@@ -117,7 +117,7 @@ class RunExecutionOperation(Operation):
                 f'Execution failed with an exit status of {status.code}.',
                 exit_code=status.code)
 
-    def capture_build_context(self):
+    def capture_build_context(self) -> io.FileIO:
         context_dir = os.getcwd()
         dockerfile_path = os.path.join(context_dir, 'Dockerfile')
         dockerfile_created = False
@@ -146,7 +146,7 @@ class RunExecutionOperation(Operation):
                 os.remove(dockerfile_path)
         return build_context
 
-    def submit_context_for_building(self, build_context) -> str:
+    def submit_context_for_building(self, build_context: io.FileIO) -> str:
         metadata = {
             'user': self.configuration.user,
             'project': self.configuration.project,
