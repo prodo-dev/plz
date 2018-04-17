@@ -65,12 +65,19 @@ class RunExecutionOperation(Operation):
 
         params = parameters.parse_file(self.parameters_file)
 
-        build_context = self.timed(self.capture_build_context)
-        snapshot_id = self.timed(
-            lambda: self.submit_context_for_building(build_context))
-        input_id = self.timed(self.capture_input)
-        execution_id, ok = self.timed(
-            lambda: self.start_execution(snapshot_id, params, input_id))
+        build_context = self.suboperation(
+                'Capturing the context',
+                self.capture_build_context)
+        snapshot_id = self.suboperation(
+                'Building the program snapshot',
+                lambda: self.submit_context_for_building(build_context))
+        input_id = self.suboperation(
+                'Capturing the input',
+                self.capture_input,
+                if_set=self.configuration.input)
+        execution_id, ok = self.suboperation(
+                'Sending request to start execution',
+                lambda: self.start_execution(snapshot_id, params, input_id))
         log_info(f'Execution ID is: {execution_id}')
 
         cancelled = False
@@ -86,7 +93,9 @@ class RunExecutionOperation(Operation):
             cancelled = True
         finally:
             if not cancelled:
-                self.timed(lambda: self.harvest(execution_id))
+                self.suboperation(
+                        'Harvesting the output...',
+                        lambda: self.harvest(execution_id))
 
         if cancelled:
             return
@@ -98,7 +107,9 @@ class RunExecutionOperation(Operation):
                 ' Please report it.')
         elif status.success:
             log_info('Execution succeeded.')
-            self.timed(lambda: self.retrieve_output_files(execution_id))
+            self.suboperation(
+                    'Retrieving the output...',
+                    lambda: self.retrieve_output_files(execution_id))
             log_info('Done and dusted.')
             return status.code
         else:
@@ -107,7 +118,6 @@ class RunExecutionOperation(Operation):
                 exit_code=status.code)
 
     def capture_build_context(self):
-        log_info('Capturing the context')
         context_dir = os.getcwd()
         dockerfile_path = os.path.join(context_dir, 'Dockerfile')
         dockerfile_created = False
@@ -137,7 +147,6 @@ class RunExecutionOperation(Operation):
         return build_context
 
     def submit_context_for_building(self, build_context) -> str:
-        log_info('Building the program snapshot')
         metadata = {
             'user': self.configuration.user,
             'project': self.configuration.project,
@@ -170,8 +179,6 @@ class RunExecutionOperation(Operation):
         return snapshot_id
 
     def capture_input(self) -> Optional[str]:
-        if self.configuration.input:
-            log_info('Capturing the input')
         with InputData.from_configuration(self.configuration) as input_data:
             return input_data.publish()
 
@@ -189,8 +196,6 @@ class RunExecutionOperation(Operation):
         }
         if configuration.docker_runtime:
             execution_spec['docker_runtime'] = configuration.docker_runtime
-
-        log_info('Sending request to start execution')
         response = requests.post(self.url('executions'), json={
             'command': self.command,
             'snapshot_id': snapshot_id,
@@ -225,7 +230,6 @@ class RunExecutionOperation(Operation):
 
     @on_exception_reraise('Retrieving the output failed.')
     def retrieve_output_files(self, execution_id: str):
-        log_info('Retrieving the output...')
         response = requests.get(
             self.url('executions', execution_id, 'output', 'files'),
             stream=True)
@@ -239,11 +243,16 @@ class RunExecutionOperation(Operation):
             print(path)
 
     def harvest(self, execution_id: str):
-        log_info('Harvesting the output...')
         response = requests.delete(self.url('executions', execution_id))
         check_status(response, requests.codes.no_content)
 
-    def timed(self, f: Callable[..., Any]):
+    def suboperation(self,
+                     name: str,
+                     f: Callable[..., Any],
+                     if_set: bool = True):
+        if not if_set:
+            return
+        log_info(name)
         start_time = time.time()
         result = f()
         end_time = time.time()
