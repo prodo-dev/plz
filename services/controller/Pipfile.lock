@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "e83d03d695261be60cc621727e2e60ea845b7b8fabab3d1bf76e28e664c12011"
+            "sha256": "5be5e0fad65cdc2faef107820b5dfd3fc4f9b2b66d95f7dd35f6755a9e1ab006"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -165,13 +165,6 @@
             ],
             "index": "pypi",
             "version": "==2.18.4"
-        },
-        "requests-unixsocket": {
-            "hashes": [
-                "sha256:a91bc0138f61fb3396de6358fa81e2cd069a150ade5111f869df01d8bc9d294c"
-            ],
-            "index": "pypi",
-            "version": "==0.1.5"
         },
         "s3transfer": {
             "hashes": [
