@@ -4,6 +4,7 @@ import os
 import tarfile
 import tempfile
 from abc import abstractmethod
+from typing import Optional
 
 import requests
 
@@ -31,7 +32,7 @@ class InputData(contextlib.AbstractContextManager):
         return self.prefix + '/' + '/'.join(path_segments)
 
     @abstractmethod
-    def publish(self) -> str:
+    def publish(self) -> Optional[str]:
         pass
 
 
@@ -42,8 +43,8 @@ class NoInputData(InputData):
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
-    def publish(self):
-        pass
+    def publish(self) -> Optional[str]:
+        return None
 
 
 class LocalInputData(InputData):
@@ -70,13 +71,13 @@ class LocalInputData(InputData):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.tarball.close()
 
-    def publish(self):
+    def publish(self) -> Optional[str]:
         input_id = self._compute_input_id()
         if not self._has_input(input_id):
             self._put_tarball(input_id)
         return input_id
 
-    def _compute_input_id(self):
+    def _compute_input_id(self) -> str:
         file_hash = hashlib.sha256()
         self.tarball.seek(0)
         while True:
@@ -86,11 +87,11 @@ class LocalInputData(InputData):
             file_hash.update(data)
         return file_hash.hexdigest()
 
-    def _has_input(self, input_id: str):
+    def _has_input(self, input_id: str) -> bool:
         response = requests.head(self.url('data', 'input', input_id))
         return response.status_code == requests.codes.ok
 
-    def _put_tarball(self, input_id: str):
+    def _put_tarball(self, input_id: str) -> str:
         self.tarball.seek(0)
         response = requests.put(self.url('data', 'input', input_id),
                                 data=self.tarball,
