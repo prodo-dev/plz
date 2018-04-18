@@ -2,6 +2,7 @@
 
 set -e
 set -u
+set -o err_return
 set -o pipefail
 
 autoload -U colors && colors
@@ -76,7 +77,6 @@ else
 fi
 
 function start_controller {
-  set -e
   info "Building the controller..."
   docker image build --quiet --tag=$CONTROLLER_IMAGE services/controller
 
@@ -90,21 +90,18 @@ function start_controller {
 }
 
 function stop_controller {
-  set -e
   docker_compose stop
   docker_compose logs
   docker_compose down --volumes
 }
 
 function build_cli {
-  set -e
   info "Building the CLI..."
   docker image build --quiet --target=builder --tag=$CLI_BUILDER_IMAGE cli
   docker image build --quiet --tag=$CLI_IMAGE cli
 }
 
 function run_test {
-  set -e
   test=${test:a}
   echo
   info "Running ${test:t}..."
@@ -114,6 +111,7 @@ function run_test {
   else
     expected_exit_status=0
   fi
+  actual_exit_status_file=$(mktemp "${DATA_DIRECTORY}/plz-test-status.XXXXX")
   expected_logs="${test}/expected-logs"
   actual_logs=$(mktemp "${DATA_DIRECTORY}/plz-test-logs.XXXXX")
   expected_output_directory="${test}/expected-output"
@@ -121,14 +119,13 @@ function run_test {
   rm $actual_output_directory # It's been created as a file.
 
   start=$(date +%s)
-  run_cli $test $actual_logs $actual_output_directory \
-    && actual_exit_status=$? \
-    || actual_exit_status=$?
+  run_cli $test $actual_exit_status_file $actual_logs $actual_output_directory
   end=$(date +%s)
 
   info "Time taken: $((end - start))s."
 
   success=true
+  actual_exit_status=$(cat $actual_exit_status_file)
   if $bless; then
     if [[ $actual_exit_status -eq $expected_exit_status ]]; then
       info 'Blessing output...'
@@ -165,10 +162,10 @@ function run_test {
 }
 
 function run_cli {
-  set -e
   app_directory=${1:a}
-  logs_file=${2:a}
-  output_directory=${3:a}
+  exit_status_file=${2:a}
+  logs_file=${3:a}
+  output_directory=${4:a}
   test_config_file="${app_directory}/test.config.json"
   suffix=$RANDOM
   cli_container="${CLI_CONTAINER_PREFIX}_${suffix}"
@@ -217,36 +214,30 @@ function run_cli {
     |& redact_uuids \
     |& redact_instance_status \
     | tee $logs_file
-  exit_status=$(docker wait $cli_container)
+  docker wait $cli_container > $exit_status_file
   docker container rm $cli_container > /dev/null
 
   # Extract the output.
   docker container exec $volume sh -c '[ ! -d /data/output ]' \
     || docker container cp $volume:/data/output $output_directory
   remove_volume $volume
-
-  return $exit_status
 }
 
 function cleanup {
   exit_status=$?
-  set +e
   stop_all_clis
   stop_controller
   remove_all_volumes
-  set -e
   return $exit_status
 }
 
 function stop_all_clis {
-  set -e
   for container in $(docker container ls --quiet | grep "^${CLI_CONTAINER_PREFIX}"); do
     stop_cli $container
   done
 }
 
 function stop_cli {
-  set -e
   if ! container_running $1; then
     return
   fi
@@ -256,14 +247,12 @@ function stop_cli {
 }
 
 function remove_all_volumes {
-  set -e
   for volume in $(docker volume ls --quiet | grep "^${VOLUME_PREFIX}"); do
     remove_volume $volume
   done
 }
 
 function remove_volume {
-  set -e
   if container_running $1; then
     docker container kill $1 >& /dev/null || :
     docker container rm $1 > /dev/null
@@ -290,7 +279,7 @@ function redact_instance_status {
   grep -v '^Instance status: '
 }
 
-trap cleanup EXIT INT TERM
+trap 'exit_early=true; cleanup' EXIT INT TERM
 
 build_cli
 
@@ -305,8 +294,13 @@ export PLZ_HOST
 export PLZ_PORT
 
 success=true
+exit_early=false
 for test in $tests; do
   run_test $test || success=false
+  if $exit_early; then
+    success=false
+    break
+  fi
 done
 
 echo
