@@ -37,19 +37,20 @@ class LogsOperation(Operation):
         # backend uses whatever timestamp we pass.
         if self.since is None:
             # Default: show since the current time
-            args = {'since': str(int(time.time()))}
+            params = {'since': str(int(time.time()))}
         elif self.since == 'start':
             # Log from the beginning, that's the default for the backend
-            args = {}
+            params = {}
         else:
             try:
                 since_timestamp = str(int(self.since))
             except ValueError:
                 since_timestamp = str(int(time.mktime(
                     dateutil.parser.parse(self.since).timetuple())))
-            args = {'since': since_timestamp}
+            params = {'since': since_timestamp}
         response = requests.get(
-            self.url('executions', execution_id, 'logs', args=args),
+            self.url('executions', execution_id, 'logs'),
+            params=params,
             stream=True)
         check_status(response, requests.codes.ok)
         try:
