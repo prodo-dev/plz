@@ -10,11 +10,10 @@ cd ${0:a:h:h}
 
 PROJECT_NAME=plztest
 NETWORK="${PROJECT_NAME}_default"
-VOLUME="${PROJECT_NAME}_data"
-VOLUME_CONTAINER="${PROJECT_NAME}_data"
+VOLUME_PREFIX="${PROJECT_NAME}_data_"
 CLI_BUILDER_IMAGE="${PROJECT_NAME}/cli-builder"
 CLI_IMAGE="${PROJECT_NAME}/cli"
-CLI_CONTAINER="${PROJECT_NAME}_cli"
+CLI_CONTAINER_PREFIX="${PROJECT_NAME}_cli_"
 CONTROLLER_IMAGE="${PROJECT_NAME}/controller"
 CONTROLLER_CONTAINER="${PROJECT_NAME}_controller_1"
 CONTROLLER_PORT=80
@@ -81,7 +80,7 @@ function start_controller {
   info "Building the controller..."
   docker image build --quiet --tag=$CONTROLLER_IMAGE services/controller
 
-  if controller_running; then
+  if container_running $CONTROLLER_CONTAINER; then
     warning "Controller already exists. Stopping..."
     stop_controller
   fi
@@ -97,10 +96,6 @@ function stop_controller {
   docker_compose down --volumes
 }
 
-function controller_running {
-  docker container inspect $CONTROLLER_CONTAINER >& /dev/null
-}
-
 function build_cli {
   set -e
   info "Building the CLI..."
@@ -110,20 +105,13 @@ function build_cli {
 
 function run_cli {
   set -e
-  if cli_running; then
-    warning "CLI container already exists. Stopping..."
-    stop_cli
-  fi
-
-  if volume_exists; then
-    warning "Volume already exists. Stopping..."
-    remove_volume
-  fi
-
   app_directory=${1:a}
   logs_file=${2:a}
   output_directory=${3:a}
   test_config_file="${app_directory}/test.config.json"
+  suffix=$RANDOM
+  cli_container="${CLI_CONTAINER_PREFIX}_${suffix}"
+  volume="${VOLUME_PREFIX}_${suffix}"
 
   args=()
   if [[ -f $test_config_file ]]; then
@@ -131,92 +119,102 @@ function run_cli {
   fi
 
   # Add the app directory to a Docker volume.
-  docker volume create $VOLUME > /dev/null
+  docker volume create $volume > /dev/null
   docker run \
-    --name=$VOLUME_CONTAINER \
+    --name=$volume \
     --detach \
     --interactive \
-    --volume=$VOLUME:/data \
+    --volume=$volume:/data \
     docker:stable-git \
     /bin/cat \
     > /dev/null
-  docker container cp $app_directory $VOLUME_CONTAINER:/data/app
+  docker container cp $app_directory $volume:/data/app
 
   # Initialize a Git repository to make excludes work.
   docker container run \
     --rm \
-    --volume=$VOLUME:/data \
+    --volume=$volume:/data \
     docker:stable-git \
     git init --quiet /data/app
 
   # Start the CLI process.
   docker container run \
-    --name=$CLI_CONTAINER \
+    --name=$cli_container \
     --detach \
     --network=$NETWORK \
     --env=PLZ_HOST=$PLZ_HOST \
     --env=PLZ_PORT=$PLZ_PORT \
     --env=PLZ_QUIET_BUILD=true \
     --workdir=/data/app \
-    --volume="${VOLUME}:/data" \
+    --volume="${volume}:/data" \
     $CLI_IMAGE \
-    run --output="/data/output" $args \
+    run --output=/data/output $args \
     > /dev/null
 
   # Capture the logs and exit status.
-  docker container logs --follow $CLI_CONTAINER |& redact_uuids |& redact_instance_status | tee $logs_file
-  exit_status=$(docker wait $CLI_CONTAINER)
-  docker container rm $CLI_CONTAINER > /dev/null
+  docker container logs --follow $cli_container |& redact_uuids |& redact_instance_status | tee $logs_file
+  exit_status=$(docker wait $cli_container)
+  docker container rm $cli_container > /dev/null
 
   # Extract the output.
-  docker container exec $VOLUME_CONTAINER sh -c '[ ! -d /data/output ]' \
-    || docker container cp $VOLUME_CONTAINER:/data/output $output_directory
-  remove_volume
+  docker container exec $volume sh -c '[ ! -d /data/output ]' \
+    || docker container cp $volume:/data/output $output_directory
+  remove_volume $volume
 
   return $exit_status
-}
-
-function stop_cli {
-  set -e
-  if ! cli_running; then
-    return
-  fi
-  docker container stop $CLI_CONTAINER > /dev/null || :
-  docker container rm $CLI_CONTAINER > /dev/null || :
-  info "CLI stopped."
-}
-
-function cli_running {
-  docker container inspect $CLI_CONTAINER >& /dev/null
 }
 
 function cleanup {
   exit_status=$?
   set +e
+  stop_all_clis
   stop_controller
-  stop_cli
-  remove_volume
-  docker network rm $NETWORK >& /dev/null || :
+  remove_all_volumes
+  set -e
   return $exit_status
+}
+
+function stop_all_clis {
+  set -e
+  for container in $(docker container ls --quiet | grep "^${CLI_CONTAINER_PREFIX}"); do
+    stop_cli $container
+  done
+}
+
+function stop_cli {
+  set -e
+  if ! container_running $1; then
+    return
+  fi
+  docker container stop $1 > /dev/null || :
+  docker container rm $1 > /dev/null || :
+  info "CLI stopped."
+}
+
+function remove_all_volumes {
+  set -e
+  for volume in $(docker volume ls --quiet | grep "^${VOLUME_PREFIX}"); do
+    remove_volume $volume
+  done
 }
 
 function remove_volume {
   set -e
-  if volume_container_exists; then
-    docker container kill $VOLUME_CONTAINER >& /dev/null || :
-    docker container rm $VOLUME_CONTAINER > /dev/null
-   fi
-  if volume_exists; then
-    docker volume rm $VOLUME > /dev/null
+  if container_running $1; then
+    docker container kill $1 >& /dev/null || :
+    docker container rm $1 > /dev/null
+  fi
+  if volume_exists $1; then
+    docker volume rm $1 > /dev/null
   fi
 }
 
-function volume_container_exists {
-  docker container inspect $VOLUME_CONTAINER >& /dev/null
+function container_running {
+  docker container inspect $1 >& /dev/null
 }
 
 function volume_exists {
-  docker volume inspect $VOLUME >& /dev/null
+  docker volume inspect $1 >& /dev/null
 }
 
 function redact_uuids {
