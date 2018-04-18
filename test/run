@@ -103,6 +103,67 @@ function build_cli {
   docker image build --quiet --tag=$CLI_IMAGE cli
 }
 
+function run_test {
+  set -e
+  test=${test:a}
+  echo
+  info "Running ${test:t}..."
+
+  if [[ -f "${test}/expected-status" ]]; then
+    expected_exit_status=$(cat "${test}/expected-status")
+  else
+    expected_exit_status=0
+  fi
+  expected_logs="${test}/expected-logs"
+  actual_logs=$(mktemp "${DATA_DIRECTORY}/plz-test-logs.XXXXX")
+  expected_output_directory="${test}/expected-output"
+  actual_output_directory=$(mktemp "${DATA_DIRECTORY}/plz-test-output.XXXXX")
+  rm $actual_output_directory # It's been created as a file.
+
+  start=$(date +%s)
+  run_cli $test $actual_logs $actual_output_directory \
+    && actual_exit_status=$? \
+    || actual_exit_status=$?
+  end=$(date +%s)
+
+  info "Time taken: $((end - start))s."
+
+  success=true
+  if $bless; then
+    if [[ $actual_exit_status -eq $expected_exit_status ]]; then
+      info 'Blessing output...'
+      cp $actual_logs $expected_logs
+      rm -rf $expected_output_directory
+      if [[ -e $actual_output_directory ]]; then
+        cp -R $actual_output_directory $expected_output_directory
+      fi
+      info 'Test blessed.'
+    else
+      error "Exited with a status code of ${actual_exit_status}."
+      success=false
+    fi
+  else
+    if [[ $actual_exit_status -ne $expected_exit_status ]]; then
+      success=false
+      error "Exited with a status code of ${actual_exit_status}."
+      error "Expected a status code of ${expected_exit_status}."
+      error 'Test failed.'
+    else
+      info 'Comparing output...'
+      if git diff --no-index $expected_logs $actual_logs && \
+         ( ! [[ -e $expected_output_directory ]] || \
+           git diff --no-index $expected_output_directory $actual_output_directory ); then
+        info 'Test passed.'
+      else
+        success=false
+        error 'Test failed.'
+      fi
+    fi
+  fi
+
+  $success
+}
+
 function run_cli {
   set -e
   app_directory=${1:a}
@@ -152,7 +213,10 @@ function run_cli {
     > /dev/null
 
   # Capture the logs and exit status.
-  docker container logs --follow $cli_container |& redact_uuids |& redact_instance_status | tee $logs_file
+  docker container logs --follow $cli_container \
+    |& redact_uuids \
+    |& redact_instance_status \
+    | tee $logs_file
   exit_status=$(docker wait $cli_container)
   docker container rm $cli_container > /dev/null
 
@@ -242,60 +306,7 @@ export PLZ_PORT
 
 success=true
 for test in $tests; do
-  test=${test:a}
-  echo
-  info "Running ${test:t}..."
-
-  if [[ -f "${test}/expected-status" ]]; then
-    expected_exit_status=$(cat "${test}/expected-status")
-  else
-    expected_exit_status=0
-  fi
-  expected_logs="${test}/expected-logs"
-  actual_logs=$(mktemp "${DATA_DIRECTORY}/plz-test-logs.XXXXX")
-  expected_output_directory="${test}/expected-output"
-  actual_output_directory=$(mktemp "${DATA_DIRECTORY}/plz-test-output.XXXXX")
-  rm $actual_output_directory # It's been created as a file.
-
-  start=$(date +%s)
-  run_cli $test $actual_logs $actual_output_directory \
-    && actual_exit_status=$? \
-    || actual_exit_status=$?
-  end=$(date +%s)
-
-  info "Time taken: $((end - start))s."
-
-  if $bless; then
-    if [[ $actual_exit_status -eq $expected_exit_status ]]; then
-      info "Blessing output..."
-      cp $actual_logs $expected_logs
-      rm -rf $expected_output_directory
-      if [[ -e $actual_output_directory ]]; then
-        cp -R $actual_output_directory $expected_output_directory
-      fi
-      info 'Test blessed.'
-    else
-      error "Exited with a status code of ${actual_exit_status}."
-      success=false
-    fi
-  else
-    if [[ $actual_exit_status -ne $expected_exit_status ]]; then
-      success=false
-      error "Exited with a status code of ${actual_exit_status}."
-      error "Expected a status code of ${expected_exit_status}."
-      error 'Test failed.'
-    else
-      info "Comparing output..."
-      if git diff --no-index $expected_logs $actual_logs && \
-         ( ! [[ -e $expected_output_directory ]] || \
-           git diff --no-index $expected_output_directory $actual_output_directory ); then
-        info 'Test passed.'
-      else
-        success=false
-        error 'Test failed.'
-      fi
-    fi
-  fi
+  run_test $test || success=false
 done
 
 echo
