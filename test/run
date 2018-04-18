@@ -56,10 +56,20 @@ fi
 # In "bless mode", instead of comparing the actual output against expected
 # output, we save the output.
 bless=false
-if [[ $# -gt 0 && $1 == '--bless' ]]; then
-  bless=true
-  shift
-fi
+# In "parallel mode", tests run in parallel.
+parallel=false
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --bless)
+      bless=true
+      shift ;;
+    --parallel)
+      parallel=true
+      shift ;;
+    *)
+      break
+  esac
+done
 
 if [[ $# -eq 0 ]]; then
   # Run all tests.
@@ -167,7 +177,7 @@ function run_cli {
   logs_file=${3:a}
   output_directory=${4:a}
   test_config_file="${app_directory}/test.config.json"
-  suffix=$RANDOM
+  suffix=$(slug ${app_directory:t})
   cli_container="${CLI_CONTAINER_PREFIX}_${suffix}"
   volume="${VOLUME_PREFIX}_${suffix}"
 
@@ -275,6 +285,10 @@ function redact_uuids {
   perl -pe '$| = 1; s/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/<UUID>/g'
 }
 
+function slug {
+  tr -C '[A-Za-z0-9_\n]' '_' <<< $1
+}
+
 function redact_instance_status {
   grep -v '^Instance status: '
 }
@@ -293,15 +307,25 @@ fi
 export PLZ_HOST
 export PLZ_PORT
 
-success=true
 exit_early=false
+success_file=$(mktemp "${DATA_DIRECTORY}/plz-test-success.XXXXX")
+pids=()
 for test in $tests; do
-  run_test $test || success=false
-  if $exit_early; then
-    success=false
-    break
+  if $parallel; then
+    (
+      test_output=$(run_test $test 2>&1) || rm -f $success_file
+      echo $test_output
+    ) & pids+=($!)
+  else
+    run_test $test || rm -f $success_file
   fi
 done
 
+if $parallel; then
+  for pid in $pids; do
+    wait $pid
+  done
+fi
+
 echo
-$success
+[[ -e $success_file ]]
