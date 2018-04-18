@@ -14,9 +14,13 @@ class LocalImages(Images):
         """
         Builds an image from the tarball supplied as ``attr:fileobj``.
 
-        We used to use the Docker client to build the image, but for some
-        reason it's much slower, with a minimum of 5 seconds to build anything
-        under testing. Going direct seems to be much faster.
+        We used to use `docker_api_client.build` to build the image, but it's
+        much slower, with a minimum of 5 seconds to build anything under
+        testing. Turns out that it takes _ages_ to figure out authentication
+        for building/pulling, which sucks.
+
+        At some point, let's send them a patch upstream. Until then, sending a
+        request directly to Docker over HTTP works.
         """
         tag = f'{self.repository}:{tag}'
         return self.docker_api_client.post(
