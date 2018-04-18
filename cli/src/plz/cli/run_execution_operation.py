@@ -1,14 +1,10 @@
-import collections
 import io
 import itertools
 import json
 import os
-import shutil
 import subprocess
-import tarfile
-import tempfile
 from glob import iglob
-from typing import Iterator, Optional, Tuple
+from typing import Optional, Tuple
 
 import docker.utils.build
 import requests
@@ -19,12 +15,10 @@ from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
 from plz.cli.input_data import InputData
 from plz.cli.log import log_error, log_info
 from plz.cli.logs_operation import LogsOperation
-from plz.cli.operation import Operation, check_status, on_exception_reraise
+from plz.cli.operation import Operation, check_status
 from plz.cli.parameters import Parameters
-
-ExecutionStatus = collections.namedtuple(
-    'ExecutionStatus',
-    ['running', 'success', 'code'])
+from plz.cli.retrieve_output_operation import RetrieveOutputOperation
+from plz.cli.show_status_operation import ShowStatusOperation
 
 
 class RunExecutionOperation(Operation):
@@ -91,6 +85,9 @@ class RunExecutionOperation(Operation):
             raise CLIException('We did not receive an execution ID.')
         log_info(f'Execution ID is: {execution_id}')
 
+        retrieve_output_operation = RetrieveOutputOperation(
+            self.configuration, execution_id)
+
         cancelled = False
         try:
             if not ok:
@@ -104,19 +101,23 @@ class RunExecutionOperation(Operation):
             cancelled = True
         finally:
             if not cancelled:
-                self.harvest(execution_id)
+                retrieve_output_operation.harvest()
 
         if cancelled:
             return
 
-        status = self.get_status(execution_id)
+        show_status_operation = ShowStatusOperation(
+            self.configuration, execution_id=execution_id)
+        retrieve_output_operation = RetrieveOutputOperation(
+            self.configuration, self.output_dir, self.execution_id)
+        status = show_status_operation.get_status()
         if status.running:
             raise CLIException(
                 'Execution has not finished. This should not happen.'
                 ' Please report it.')
         elif status.success:
             log_info('Execution succeeded.')
-            self.retrieve_output_files(execution_id)
+            retrieve_output_operation.retrieve_output()
             log_info('Done and dusted.')
             return status.code
         else:
@@ -213,36 +214,6 @@ class RunExecutionOperation(Operation):
                 log_error(data['error'].rstrip())
         return execution_id, ok
 
-    @on_exception_reraise('Retrieving the status failed.')
-    def get_status(self, execution_id):
-        response = requests.get(self.url('executions', execution_id, 'status'))
-        check_status(response, requests.codes.ok)
-        body = response.json()
-        return ExecutionStatus(
-            running=body['running'],
-            success=body['success'],
-            code=body['exit_status'])
-
-    @on_exception_reraise('Retrieving the output failed.')
-    def retrieve_output_files(self, execution_id: str):
-        log_info('Retrieving the output...')
-        response = requests.get(
-            self.url('executions', execution_id, 'output', 'files'),
-            stream=True)
-        check_status(response, requests.codes.ok)
-        try:
-            os.makedirs(self.output_dir)
-        except FileExistsError:
-            raise CLIException(
-                f'The output directory "{self.output_dir}" already exists.')
-        for path in untar(response.raw, self.output_dir):
-            print(path)
-
-    def harvest(self, execution_id: str):
-        log_info('Harvesting the output...')
-        response = requests.delete(self.url('executions', execution_id))
-        check_status(response, requests.codes.no_content)
-
 
 def _is_git_present() -> bool:
     # noinspection PyBroadException
@@ -301,32 +272,3 @@ def _get_ignored_git_files() -> [str]:
                           f'Return code is: {result.returncode}\n'
                           f'Stderr: [{result.stderr}]')
     return [os.path.abspath(p) for p in result.stdout.splitlines()]
-
-
-def untar(stream: io.RawIOBase, output_dir: str) -> Iterator[str]:
-    # The response is a tarball we need to extract into `output_dir`.
-    with tempfile.TemporaryFile() as tarball:
-        # `tarfile.open` needs to read from a real file, so we copy to one.
-        shutil.copyfileobj(stream, tarball)
-        # And rewind to the start.
-        tarball.seek(0)
-        tar = tarfile.open(fileobj=tarball)
-        for tarinfo in tar.getmembers():
-            # Drop the first segment, because it's just the name of the
-            # directory that was tarred up, and we don't care.
-            path_segments = tarinfo.name.split(os.sep)[1:]
-            if path_segments:
-                # Unfortunately we can't just pass `*path_segments`
-                # because `os.path.join` explicitly expects an argument
-                # for the first parameter.
-                path = os.path.join(path_segments[0], *path_segments[1:])
-                # Just because it's nice, yield the file to be extracted.
-                yield path
-                source: io.BufferedReader = tar.extractfile(tarinfo.name)
-                if source:
-                    # Finally, write the file.
-                    absolute_path = os.path.join(output_dir, path)
-                    os.makedirs(os.path.dirname(absolute_path),
-                                exist_ok=True)
-                    with open(absolute_path, 'wb') as dest:
-                        shutil.copyfileobj(source, dest)
