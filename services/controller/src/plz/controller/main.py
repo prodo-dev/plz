@@ -17,8 +17,8 @@ from redis import StrictRedis
 from plz.controller import configuration
 from plz.controller.configuration import Dependencies
 from plz.controller.images import Images
-from plz.controller.instances.instance_base import Instance, InstanceProvider, \
-    InstanceStatusFailure, InstanceStatusSuccess
+from plz.controller.instances.instance_base import Instance, \
+    InstanceProvider, InstanceStatusFailure, InstanceStatusSuccess
 from plz.controller.results import ResultsStorage
 
 READ_BUFFER_SIZE = 16384
