@@ -12,6 +12,7 @@ PROJECT_NAME=plztest
 NETWORK="${PROJECT_NAME}_default"
 VOLUME="${PROJECT_NAME}_data"
 VOLUME_CONTAINER="${PROJECT_NAME}_data"
+CLI_BUILDER_IMAGE="${PROJECT_NAME}/cli-builder"
 CLI_IMAGE="${PROJECT_NAME}/cli"
 CLI_CONTAINER="${PROJECT_NAME}_cli"
 CONTROLLER_IMAGE="${PROJECT_NAME}/controller"
@@ -103,6 +104,7 @@ function controller_running {
 function build_cli {
   set -e
   info "Building the CLI..."
+  docker image build --quiet --target=builder --tag=$CLI_BUILDER_IMAGE cli
   docker image build --quiet --tag=$CLI_IMAGE cli
 }
 
