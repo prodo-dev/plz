@@ -58,9 +58,10 @@ class DockerInstance(Instance):
                                           target=Volumes.VOLUME_MOUNT)],
                             docker_runtime=docker_runtime)
 
-    def logs(self, stdout: bool = True, stderr: bool = True) \
-            -> Iterator[bytes]:
+    def logs(self, since: Optional[int], stdout: bool = True,
+             stderr: bool = True) -> Iterator[bytes]:
         return self.containers.logs(self.execution_id,
+                                    since,
                                     stdout=stdout,
                                     stderr=stderr)
 
@@ -136,7 +137,7 @@ class DockerInstance(Instance):
         results_storage.publish(
             self.get_execution_id(),
             exit_status=self.exit_status(),
-            logs=self.logs(),
+            logs=self.logs(since=None),
             output_tarball=self.output_files_tarball())
 
     @property

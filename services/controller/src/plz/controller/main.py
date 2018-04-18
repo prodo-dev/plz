@@ -17,8 +17,8 @@ from redis import StrictRedis
 from plz.controller import configuration
 from plz.controller.configuration import Dependencies
 from plz.controller.images import Images
-from plz.controller.instances.instance_base import InstanceProvider, \
-    InstanceStatusFailure, InstanceStatusSuccess, Instance
+from plz.controller.instances.instance_base import Instance, \
+    InstanceProvider, InstanceStatusFailure, InstanceStatusSuccess
 from plz.controller.results import ResultsStorage
 
 READ_BUFFER_SIZE = 16384
@@ -187,13 +187,16 @@ def get_status_entrypoint(execution_id):
 def get_logs_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/executions/some-id/logs
+    since: Optional[int] = request.args.get(
+        'since', default=None, type=int)
     with results_storage.get(execution_id) as results:
         if results:
+            # Use `since` parameter for logs of finished jobs
             response = results.logs()
             return Response(response, mimetype='application/octet-stream')
 
     instance = instance_provider.instance_for(execution_id)
-    response = instance.logs()
+    response = instance.logs(since=since)
     return Response(response, mimetype='application/octet-stream')
 
 

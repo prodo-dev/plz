@@ -12,7 +12,7 @@ from plz.controller.images import Images
 from plz.controller.instances.instance_base import Instance, InstanceProvider
 from plz.controller.results.results_base import ResultsStorage
 from plz.controller.volumes import Volumes
-from .ec2_instance import EC2Instance, get_tag, get_running_aws_instances
+from .ec2_instance import EC2Instance, get_running_aws_instances, get_tag
 
 
 class EC2InstanceGroup(InstanceProvider):
@@ -251,7 +251,7 @@ _BASE_INSTANCE_SPEC = {
     'InstanceMarketOptions': {
         'MarketType': 'spot',
         'SpotOptions': {
-            'MaxPrice': '1.0',
+            'MaxPrice': '3',
         }
     },
     'BlockDeviceMappings': [

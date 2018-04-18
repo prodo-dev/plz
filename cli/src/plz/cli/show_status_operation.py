@@ -1,12 +1,12 @@
 import collections
-import os
 from typing import Optional
 
 import requests
 
 from plz.cli.configuration import Configuration
 from plz.cli.log import log_info
-from plz.cli.operation import Operation, check_status, on_exception_reraise
+from plz.cli.operation import Operation, check_status, \
+    maybe_add_execution_id_arg, on_exception_reraise
 
 ExecutionStatus = collections.namedtuple(
     'ExecutionStatus',
@@ -16,9 +16,7 @@ ExecutionStatus = collections.namedtuple(
 class ShowStatusOperation(Operation):
     @staticmethod
     def prepare_argument_parser(parser, args):
-        if len(args) > 1:
-            # Execution ID was specified
-            parser.add_argument(dest='execution_id')
+        maybe_add_execution_id_arg(parser, args)
 
     def __init__(self, configuration: Configuration,
                  execution_id: Optional[str] = None):

@@ -51,6 +51,7 @@ class Containers:
 
     def logs(self,
              execution_id: str,
+             since: Optional[int],
              stdout: bool = True,
              stderr: bool = True) \
             -> Iterator[bytes]:
@@ -58,7 +59,8 @@ class Containers:
         if not container:
             return iter([])
         return container.logs(
-            stdout=stdout, stderr=stderr, stream=True, follow=True)
+            stdout=stdout, stderr=stderr, stream=True, follow=True,
+            since=since)
 
     def stop(self, name: str):
         container = self.from_execution_id(name)
