@@ -1,5 +1,7 @@
 import json
 from abc import ABC, abstractmethod
+from typing import Dict
+from urllib.parse import urlencode
 
 import requests
 
@@ -14,8 +16,9 @@ class Operation(ABC):
         self.user = configuration.user
         self.execution_id = None
 
-    def url(self, *path_segments: str):
-        return self.prefix + '/' + '/'.join(path_segments)
+    def url(self, *path_segments: str, args: Dict[str, str]=None):
+        args = args or {}
+        return f'{self.prefix}/{"/".join(path_segments)}?{urlencode(args)}'
 
     def get_execution_id(self):
         if self.execution_id is not None:
