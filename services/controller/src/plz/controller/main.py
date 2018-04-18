@@ -170,16 +170,29 @@ def harvest_entry_point():
 def get_status_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/executions/some-id/status
+    status = get_status(execution_id)
+    if status is None:
+        response = jsonify({})
+        response.status_code = requests.codes.not_found
+
+    else:
+        return jsonify(status)
+
+
+def get_status(execution_id):
     with results_storage.get(execution_id) as results:
         if results:
             status = results.status()
             if status == 0:
-                return jsonify(InstanceStatusSuccess())
+                return InstanceStatusSuccess()
             else:
-                return jsonify(InstanceStatusFailure(status))
+                return InstanceStatusFailure(status)
 
     instance = instance_provider.instance_for(execution_id)
-    return jsonify(instance.status())
+    if instance is None:
+        return None
+    else:
+        return instance.status()
 
 
 @app.route(f'/executions/<execution_id>/logs',
@@ -222,10 +235,13 @@ def delete_execution(execution_id):
     fail_if_running: bool = request.args.get(
         'fail_if_running', default=False, type=bool)
     response = jsonify({})
-    instance = instance_provider.instance_for(execution_id)
-    if fail_if_running and instance.get_execution_info().running:
-        response.status_code = requests.codes.conflict
-        return response
+
+    if fail_if_running:
+        status = get_status(execution_id)
+        if status is not None and status.running:
+            response.status.code = requests.codes.conflict
+            return response
+
     instance_provider.release_instance(execution_id, fail_if_not_found=False)
     response = jsonify({})
     response.status_code = requests.codes.no_content
