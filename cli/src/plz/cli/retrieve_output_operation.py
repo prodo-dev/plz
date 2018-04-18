@@ -10,16 +10,14 @@ import requests
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
 from plz.cli.log import log_info
-from plz.cli.operation import Operation, RequestException, check_status, \
-    on_exception_reraise
+from plz.cli.operation import Operation, check_status, \
+    maybe_add_execution_id_arg, on_exception_reraise, RequestException
 
 
 class RetrieveOutputOperation(Operation):
     @staticmethod
     def prepare_argument_parser(parser, args):
-        if len(args) > 1:
-            # Execution ID was specified
-            parser.add_argument(dest='execution_id')
+        maybe_add_execution_id_arg(parser, args)
         cwd = os.getcwd()
         parser.add_argument('-o', '--output-dir',
                             type=str,

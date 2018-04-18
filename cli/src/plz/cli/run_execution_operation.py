@@ -92,8 +92,10 @@ class RunExecutionOperation(Operation):
         try:
             if not ok:
                 raise CLIException('The command failed.')
-            logs = LogsOperation(self.configuration, execution_id)
-            logs.display_logs(execution_id)
+            logs = LogsOperation(self.configuration,
+                                 execution_id=execution_id,
+                                 since='start')
+            logs.display_logs(execution_id, print_interrupt_message=True)
         except CLIException as e:
             e.print(self.configuration)
             raise ExitWithStatusCodeException(e.exit_code)

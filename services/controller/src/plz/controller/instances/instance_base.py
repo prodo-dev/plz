@@ -41,8 +41,8 @@ class Instance(ABC):
             return InstanceStatusFailure(state.exit_code)
 
     @abstractmethod
-    def logs(self, stdout: bool = True, stderr: bool = True) \
-            -> Iterator[bytes]:
+    def logs(self, since: Optional[int],
+             stdout: bool = True, stderr: bool = True) -> Iterator[bytes]:
         pass
 
     @abstractmethod
