@@ -17,8 +17,8 @@ from redis import StrictRedis
 from plz.controller import configuration
 from plz.controller.configuration import Dependencies
 from plz.controller.images import Images
-from plz.controller.instances.instance_base import InstanceProvider, \
-    InstanceStatusFailure, InstanceStatusSuccess, Instance
+from plz.controller.instances.instance_base import Instance, \
+    InstanceProvider, InstanceStatusFailure, InstanceStatusSuccess
 from plz.controller.results import ResultsStorage
 
 READ_BUFFER_SIZE = 16384
@@ -170,16 +170,29 @@ def harvest_entry_point():
 def get_status_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/executions/some-id/status
+    status = get_status(execution_id)
+    if status is None:
+        response = jsonify({})
+        response.status_code = requests.codes.not_found
+
+    else:
+        return jsonify(status)
+
+
+def get_status(execution_id):
     with results_storage.get(execution_id) as results:
         if results:
             status = results.status()
             if status == 0:
-                return jsonify(InstanceStatusSuccess())
+                return InstanceStatusSuccess()
             else:
-                return jsonify(InstanceStatusFailure(status))
+                return InstanceStatusFailure(status)
 
     instance = instance_provider.instance_for(execution_id)
-    return jsonify(instance.status())
+    if instance is None:
+        return None
+    else:
+        return instance.status()
 
 
 @app.route(f'/executions/<execution_id>/logs',
@@ -187,13 +200,16 @@ def get_status_entrypoint(execution_id):
 def get_logs_entrypoint(execution_id):
     # Test with:
     # curl localhost:5000/executions/some-id/logs
+    since: Optional[int] = request.args.get(
+        'since', default=None, type=int)
     with results_storage.get(execution_id) as results:
         if results:
+            # Use `since` parameter for logs of finished jobs
             response = results.logs()
             return Response(response, mimetype='application/octet-stream')
 
     instance = instance_provider.instance_for(execution_id)
-    response = instance.logs()
+    response = instance.logs(since=since)
     return Response(response, mimetype='application/octet-stream')
 
 
@@ -213,9 +229,19 @@ def get_output_files_entrypoint(execution_id):
 
 @app.route(f'/executions/<execution_id>',
            methods=['DELETE'])
-def delete_process(execution_id):
+def delete_execution(execution_id):
     # Test with:
     # curl -XDELETE localhost:5000/executions/some-id
+    fail_if_running: bool = request.args.get(
+        'fail_if_running', default=False, type=bool)
+    response = jsonify({})
+
+    if fail_if_running:
+        status = get_status(execution_id)
+        if status is not None and status.running:
+            response.status.code = requests.codes.conflict
+            return response
+
     instance_provider.release_instance(execution_id, fail_if_not_found=False)
     response = jsonify({})
     response.status_code = requests.codes.no_content

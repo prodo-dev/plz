@@ -67,3 +67,11 @@ def on_exception_reraise(message: str):
         return wrapped
 
     return wrapper
+
+
+def maybe_add_execution_id_arg(parser, args):
+    # Positional arguments cannot be optional, so we check whether the
+    # execution ID was specified and specify the argument only in that
+    # case
+    if len(args) > 1 and args[1][0] != '-':
+        parser.add_argument('execution_id')

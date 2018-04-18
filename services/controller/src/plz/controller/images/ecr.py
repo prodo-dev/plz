@@ -3,7 +3,7 @@ import logging
 from typing import BinaryIO, Iterator
 
 import docker
-from requests.exceptions import ConnectionError, ChunkedEncodingError
+from requests.exceptions import ChunkedEncodingError, ConnectionError
 
 from plz.controller.images.images_base import Images
 
@@ -38,7 +38,7 @@ class ECRImages(Images):
                 tag=tag,
                 auth_config=self._aws_ecr_credentials(),
                 stream=True):
-            log.debug(m)
+            log.debug('Push: ' + str(m, 'utf-8'))
 
     def pull(self, tag: str):
         for m in self.docker_api_client.pull(
@@ -46,7 +46,7 @@ class ECRImages(Images):
                 tag=tag,
                 auth_config=self._aws_ecr_credentials(),
                 stream=True):
-            log.debug(m)
+            log.debug('Pull: ' + str(m, 'utf-8'))
 
     def can_pull(self, times: int) -> bool:
         try:
