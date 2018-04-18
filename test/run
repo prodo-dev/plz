@@ -80,7 +80,7 @@ function start_controller {
   info "Building the controller..."
   docker image build --quiet --tag=$CONTROLLER_IMAGE services/controller
 
-  if container_running $CONTROLLER_CONTAINER; then
+  if container_exists $CONTROLLER_CONTAINER; then
     warning "Controller already exists. Stopping..."
     stop_controller
   fi
@@ -232,13 +232,13 @@ function cleanup {
 }
 
 function stop_all_clis {
-  for container in $(docker container ls --quiet | grep "^${CLI_CONTAINER_PREFIX}"); do
+  for container in $(docker container ls --quiet --all --filter=name="${CLI_CONTAINER_PREFIX}"); do
     stop_cli $container
   done
 }
 
 function stop_cli {
-  if ! container_running $1; then
+  if ! container_exists $1; then
     return
   fi
   docker container stop $1 > /dev/null || :
@@ -247,13 +247,13 @@ function stop_cli {
 }
 
 function remove_all_volumes {
-  for volume in $(docker volume ls --quiet | grep "^${VOLUME_PREFIX}"); do
+  for volume in $(docker volume ls --quiet --filter=name="${VOLUME_PREFIX}"); do
     remove_volume $volume
   done
 }
 
 function remove_volume {
-  if container_running $1; then
+  if container_exists $1; then
     docker container kill $1 >& /dev/null || :
     docker container rm $1 > /dev/null
   fi
@@ -262,7 +262,7 @@ function remove_volume {
   fi
 }
 
-function container_running {
+function container_exists {
   docker container inspect $1 >& /dev/null
 }
 
