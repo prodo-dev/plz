@@ -11,8 +11,7 @@ from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
 from plz.cli.log import log_info
 from plz.cli.operation import Operation, check_status, \
-    maybe_add_execution_id_arg, on_exception_reraise
-from plz.cli.show_status_operation import ShowStatusOperation
+    maybe_add_execution_id_arg, on_exception_reraise, RequestException
 
 
 class RetrieveOutputOperation(Operation):
@@ -34,7 +33,18 @@ class RetrieveOutputOperation(Operation):
     def harvest(self):
         log_info('Harvesting the output...')
         response = requests.delete(
-            self.url('executions', self.get_execution_id()))
+            self.url('executions', self.get_execution_id()),
+            params={'fail_if_running': True})
+        try:
+            check_status(response, requests.codes.conflict)
+            # If the check passes, we've got a conflict response, which means
+            # the process is still running
+            raise CLIException(
+                'Process is still running, run `plz stop` if you want to '
+                'terminate it')
+        except RequestException:
+            pass
+
         check_status(response, requests.codes.no_content)
 
     @on_exception_reraise('Retrieving the output failed.')
@@ -54,12 +64,6 @@ class RetrieveOutputOperation(Operation):
             print(path)
 
     def run(self):
-        show_status_operation = ShowStatusOperation(
-            self.configuration, self.get_execution_id())
-        if show_status_operation.get_status().running:
-            raise CLIException(
-                'Process is still running. Use `plz stop` if '
-                'you want to terminate it')
         self.harvest()
         self.retrieve_output()
 

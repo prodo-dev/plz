@@ -35,4 +35,8 @@ class ShowStatusOperation(Operation):
             code=body['exit_status'])
 
     def run(self):
-        log_info(f'{self.get_status()}')
+        status = self.get_status()
+        log_info('Status:')
+        print('Running:', status.running)
+        print('Success:', status.success)
+        print('Exit Status:', status.code)

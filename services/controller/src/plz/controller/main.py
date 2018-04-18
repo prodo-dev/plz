@@ -216,9 +216,16 @@ def get_output_files_entrypoint(execution_id):
 
 @app.route(f'/executions/<execution_id>',
            methods=['DELETE'])
-def delete_process(execution_id):
+def delete_execution(execution_id):
     # Test with:
     # curl -XDELETE localhost:5000/executions/some-id
+    fail_if_running: bool = request.args.get(
+        'fail_if_running', default=False, type=bool)
+    response = jsonify({})
+    instance = instance_provider.instance_for(execution_id)
+    if fail_if_running and instance.get_execution_info().running:
+        response.status_code = requests.codes.conflict
+        return response
     instance_provider.release_instance(execution_id, fail_if_not_found=False)
     response = jsonify({})
     response.status_code = requests.codes.no_content
