@@ -35,9 +35,8 @@ class RetrieveOutputOperation(Operation):
     def harvest(self):
         log_info('Harvesting the output...')
         response = requests.delete(
-            self.url(
-                'executions', self.get_execution_id(),
-                args={'fail_if_running': 'True'}))
+            self.url('executions', self.get_execution_id()),
+            params={'fail_if_running': True})
         try:
             check_status(response, requests.codes.conflict)
             # If the check passes, we've got a conflict response, which means
