@@ -293,6 +293,7 @@ function redact_instance_status {
   grep -v '^Instance status: '
 }
 
+exit_early=false
 trap 'exit_early=true; cleanup' EXIT INT TERM
 
 build_cli
@@ -307,7 +308,6 @@ fi
 export PLZ_HOST
 export PLZ_PORT
 
-exit_early=false
 success_file=$(mktemp "${DATA_DIRECTORY}/plz-test-success.XXXXX")
 pids=()
 for test in $tests; do
@@ -315,15 +315,24 @@ for test in $tests; do
     (
       test_output=$(run_test $test 2>&1) || rm -f $success_file
       echo $test_output
-    ) & pids+=($!)
+    ) &
+    pids+=($!)
   else
     run_test $test || rm -f $success_file
+    if $exit_early; then
+      rm -f $success_file
+      break
+    fi
   fi
 done
 
 if $parallel; then
   for pid in $pids; do
     wait $pid
+    if $exit_early; then
+      rm -f $success_file
+      break
+    fi
   done
 fi
 
