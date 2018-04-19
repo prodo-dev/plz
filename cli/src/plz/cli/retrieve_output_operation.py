@@ -34,16 +34,10 @@ class RetrieveOutputOperation(Operation):
         response = requests.delete(
             self.url('executions', self.get_execution_id()),
             params={'fail_if_running': True})
-        try:
-            check_status(response, requests.codes.conflict)
-            # If the check passes, we've got a conflict response, which means
-            # the process is still running
+        if response.status_code == requests.codes.conflict:
             raise CLIException(
                 'Process is still running, run `plz stop` if you want to '
                 'terminate it')
-        except RequestException:
-            pass
-
         check_status(response, requests.codes.no_content)
 
     @on_exception_reraise('Retrieving the output failed.')
