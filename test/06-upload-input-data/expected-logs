@@ -1,6 +1,7 @@
 => Capturing the context
 => Building the program snapshot
 => Capturing the input
+=> 179 input bytes to upload
 => Sending request to start execution
 => Execution ID is: <UUID>
 => Streaming logs...
