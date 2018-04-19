@@ -10,8 +10,8 @@ import requests
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
 from plz.cli.log import log_info
-from plz.cli.operation import Operation, check_status, \
-    maybe_add_execution_id_arg, on_exception_reraise, RequestException
+from plz.cli.operation import Operation, RequestException, check_status, \
+    maybe_add_execution_id_arg, on_exception_reraise
 
 
 class RetrieveOutputOperation(Operation):
@@ -31,7 +31,6 @@ class RetrieveOutputOperation(Operation):
         self.execution_id = execution_id
 
     def harvest(self):
-        log_info('Harvesting the output...')
         response = requests.delete(
             self.url('executions', self.get_execution_id()),
             params={'fail_if_running': True})
@@ -50,7 +49,6 @@ class RetrieveOutputOperation(Operation):
     @on_exception_reraise('Retrieving the output failed.')
     def retrieve_output(self):
         execution_id = self.get_execution_id()
-        log_info('Retrieving the output...')
         response = requests.get(
             self.url('executions', execution_id, 'output', 'files'),
             stream=True)
@@ -64,7 +62,9 @@ class RetrieveOutputOperation(Operation):
             print(path)
 
     def run(self):
+        log_info('Harvesting the output...')
         self.harvest()
+        log_info('Retrieving the output...')
         self.retrieve_output()
 
 

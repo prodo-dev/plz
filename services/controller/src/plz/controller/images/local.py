@@ -11,12 +11,29 @@ class LocalImages(Images):
         self.docker_api_client = docker_api_client
 
     def build(self, fileobj: BinaryIO, tag: str) -> Iterator[str]:
-        return self.docker_api_client.build(
-            fileobj=fileobj,
-            custom_context=True,
-            encoding='bz2',
-            rm=True,
-            tag=f'{self.repository}:{tag}')
+        """
+        Builds an image from the tarball supplied as ``attr:fileobj``.
+
+        We used to use `docker_api_client.build` to build the image, but it's
+        much slower. This is because it captures all the authentication
+        information for building/pulling, which is useful but not necessary for
+        us right now.
+
+        At some point, let's send them a patch upstream. Until then, sending a
+        request directly to Docker over HTTP works.
+        """
+        tag = f'{self.repository}:{tag}'
+        return self.docker_api_client.post(
+            self.docker_api_client.base_url + '/build',
+            params={
+                't': tag,
+            },
+            headers={
+                'Content-Type': 'application/tar',
+                'Content-Encoding': 'bz2',
+            },
+            data=fileobj,
+        )
 
     def for_host(self, docker_url: str) -> 'LocalImages':
         new_docker_api_client = docker.APIClient(base_url=docker_url)

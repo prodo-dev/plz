@@ -3,11 +3,11 @@
 => Sending request to start execution
 => Execution ID is: <UUID>
 => Streaming logs...
-baz
+[[ 9 12 15]
+ [19 26 33]
+ [29 40 51]]
 
 => Harvesting the output...
 => Execution succeeded.
 => Retrieving the output...
-foo
-foo/bar
 => Done and dusted.

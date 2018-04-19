@@ -29,7 +29,7 @@ def load() -> pyhocon.ConfigTree:
     try:
         start = sys.argv.index('--') + 1
     except ValueError:
-        start = 0
+        start = 1
     args = sys.argv[start:]
     if len(args) == 1:
         return load_from_file(args[0])
