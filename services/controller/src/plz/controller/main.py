@@ -295,8 +295,11 @@ def publish_input_data(expected_input_id: str):
     fd, temp_file_path = tempfile.mkstemp(dir=temp_data_dir)
     try:
         with os.fdopen(fd, 'wb') as f:
+            bytes_read = 0
             while True:
                 data = request.stream.read(READ_BUFFER_SIZE)
+                bytes_read += len(data)
+                log.debug(f'{bytes_read} bytes of input read')
                 if not data:
                     break
                 f.write(data)
