@@ -1,6 +1,6 @@
 SHELL := zsh -e -u
 
-check: lint
+check: test lint
 
 include ../../vars.mk
 

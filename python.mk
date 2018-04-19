@@ -1,5 +1,9 @@
 SHELL := zsh -e -u
 
+.PHONY: test
+test: environment
+	pipenv run nosetests
+
 .PHONY: lint
 lint: environment
 	pipenv run flake8 src
