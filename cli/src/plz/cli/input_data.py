@@ -10,6 +10,7 @@ import requests
 
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
+from plz.cli.log import log_info
 from plz.cli.operation import check_status
 
 READ_BUFFER_SIZE = 16384
@@ -74,6 +75,8 @@ class LocalInputData(InputData):
     def publish(self) -> Optional[str]:
         input_id = self._compute_input_id()
         if not self._has_input(input_id):
+            log_info(f'{os.path.getsize(self.tarball.name)} input bytes to '
+                     'upload')
             self._put_tarball(input_id)
         return input_id
 
