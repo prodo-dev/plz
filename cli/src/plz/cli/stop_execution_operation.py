@@ -4,7 +4,7 @@ import requests
 
 from plz.cli.configuration import Configuration
 from plz.cli.log import log_info
-from plz.cli.operation import check_status, Operation, RequestException
+from plz.cli.operation import Operation
 
 
 class StopExecutionOperation(Operation):
