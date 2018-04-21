@@ -78,7 +78,7 @@ data "aws_ami" "controller-ami" {
 
 resource "aws_instance" "controller" {
   subnet_id                   = "${data.aws_subnet.main.id}"
-  instance_type               = "t2.small"
+  instance_type               = "m5.2xlarge"
   ami                         = "${data.aws_ami.controller-ami.id}"
   key_name                    = "${aws_key_pair.plz.key_name}"
   associate_public_ip_address = true
