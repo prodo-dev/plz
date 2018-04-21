@@ -223,6 +223,7 @@ function run_cli {
   docker container logs --follow $cli_container \
     |& redact_uuids \
     |& redact_instance_status \
+    |& redact_debug_messages \
     | tee $logs_file
   docker wait $cli_container > $exit_status_file
   docker container rm $cli_container > /dev/null
@@ -292,6 +293,11 @@ function slug {
 function redact_instance_status {
   grep -v '^Instance status: '
 }
+
+function redact_debug_messages {
+  grep -v '^:: '
+}
+
 
 trap 'exit_early=true; cleanup' EXIT INT TERM
 
