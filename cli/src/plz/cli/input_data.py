@@ -64,7 +64,7 @@ class LocalInputData(InputData):
         # time in the input, and if we have in input for the timestamp, use
         # that one
         input_id = self._get_input_from_controller_or_none().get('id', None)
-        log_debug(f'Input id from the controller: {input_id}')
+        log_debug(f'Input ID from the controller: {input_id}')
         if input_id:
             log_info('Input files not changed according to modification times')
             self.input_id = input_id
