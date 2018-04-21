@@ -36,6 +36,7 @@ class Property:
         list: 'a list',
     }
 
+    # noinspection PyShadowingBuiltins
     def __init__(self,
                  name: str,
                  type: Type[T] = str,
