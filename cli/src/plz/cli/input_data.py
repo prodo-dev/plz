@@ -1,5 +1,6 @@
 import contextlib
 import hashlib
+import json
 import os
 import tarfile
 import tempfile
@@ -10,7 +11,7 @@ import requests
 
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
-from plz.cli.log import log_info
+from plz.cli.log import log_debug, log_info
 from plz.cli.operation import check_status
 
 READ_BUFFER_SIZE = 16384
@@ -51,10 +52,24 @@ class NoInputData(InputData):
 class LocalInputData(InputData):
     def __init__(self, configuration: Configuration, path: str):
         super().__init__(configuration)
-        self.path = path
+        self.user = configuration.user
+        self.project = configuration.project
+        self.path = os.path.normpath(path)
         self.tarball = None
+        self.input_id = None
+        self._timestamp_millis = None
 
     def __enter__(self):
+        # Try to avoid building the tarball. Look at maximum modification
+        # time in the input, and if we have in input for the timestamp, use
+        # that one
+        input_id = self._get_input_from_controller_or_none().get('id', None)
+        log_debug(f'Input ID from the controller: {input_id}')
+        if input_id:
+            log_info('Input files not changed according to modification times')
+            self.input_id = input_id
+            return self
+
         files = (os.path.join(directory, file)
                  for directory, _, files in os.walk(self.path)
                  for file in files)
@@ -70,15 +85,31 @@ class LocalInputData(InputData):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.tarball.close()
+        if self.tarball:
+            self.tarball.close()
 
     def publish(self) -> Optional[str]:
+        # We asked the controller previously and found the data is there
+        # with this input ID
+        if self.input_id is not None:
+            return self.input_id
+
         input_id = self._compute_input_id()
         if not self._has_input(input_id):
             log_info(f'{os.path.getsize(self.tarball.name)} input bytes to '
                      'upload')
             self._put_tarball(input_id)
         return input_id
+
+    def _get_input_from_controller_or_none(self) -> Optional[dict]:
+        response = requests.get(
+            self.url('data', 'input', 'id'),
+            params={'user': self.user,
+                    'project': self.project,
+                    'path': self.path,
+                    'timestamp_millis': self.timestamp_millis})
+        check_status(response, requests.codes.ok)
+        return json.loads(response.content)
 
     def _compute_input_id(self) -> str:
         file_hash = hashlib.sha256()
@@ -96,8 +127,21 @@ class LocalInputData(InputData):
 
     def _put_tarball(self, input_id: str) -> str:
         self.tarball.seek(0)
-        response = requests.put(self.url('data', 'input', input_id),
-                                data=self.tarball,
-                                stream=True)
+        response = requests.put(
+            self.url('data', 'input', input_id),
+            data=self.tarball,
+            stream=True,
+            params={'user': self.user,
+                    'project': self.project,
+                    'path': self.path,
+                    'timestamp_millis': self.timestamp_millis})
         check_status(response, requests.codes.ok)
         return response.json()['id']
+
+    @property
+    def timestamp_millis(self) -> int:
+        if self._timestamp_millis is None:
+            seconds_timestamp = max(os.path.getmtime(path[0])
+                                    for path in os.walk(self.path))
+            self._timestamp_millis = int(seconds_timestamp * 1000)
+        return self._timestamp_millis

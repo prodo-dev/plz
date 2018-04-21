@@ -1,43 +1,41 @@
-import hashlib
 import json
 import logging
 import os
 import random
-import re
 import sys
-import tempfile
 import uuid
 from typing import Any, Callable, Iterator, Optional, TypeVar, Union
 
 import flask
 import requests
-from flask import Flask, Response, abort, jsonify, request, stream_with_context
+from flask import Flask, Response, jsonify, request, stream_with_context
 from redis import StrictRedis
 
 from plz.controller import configuration
 from plz.controller.configuration import Dependencies
 from plz.controller.images import Images
+from plz.controller.input_data import InputDataConfiguration
 from plz.controller.instances.instance_base import Instance, \
     InstanceProvider, InstanceStatusFailure, InstanceStatusSuccess
 from plz.controller.results import ResultsStorage
-
-READ_BUFFER_SIZE = 16384
 
 T = TypeVar('T')
 
 config = configuration.load()
 port = config.get_int('port', 8080)
 data_dir = config['data_dir']
-input_dir = os.path.join(data_dir, 'input')
-temp_data_dir = os.path.join(data_dir, 'tmp')
 dependencies: Dependencies = configuration.dependencies_from_config(config)
 images: Images = dependencies.images
 instance_provider: InstanceProvider = dependencies.instance_provider
 results_storage: ResultsStorage = dependencies.results_storage
 redis: StrictRedis = dependencies.redis
 
+input_dir = os.path.join(data_dir, 'input')
+temp_data_dir = os.path.join(data_dir, 'tmp')
 os.makedirs(input_dir, exist_ok=True)
 os.makedirs(temp_data_dir, exist_ok=True)
+input_data_configuration = InputDataConfiguration(
+    redis, input_dir=input_dir, temp_data_dir=temp_data_dir)
 
 
 class ArbitraryObjectJSONEncoder(flask.json.JSONEncoder):
@@ -126,7 +124,8 @@ def run_execution_entrypoint():
                 }
                 return
 
-            input_stream = prepare_input_stream(execution_spec)
+            input_stream = input_data_configuration.prepare_input_stream(
+                execution_spec)
             instance.run(
                 command=command,
                 snapshot_id=snapshot_id,
@@ -239,7 +238,7 @@ def delete_execution(execution_id):
     if fail_if_running:
         status = get_status(execution_id)
         if status is not None and status.running:
-            response.status.code = requests.codes.conflict
+            response.status_code = requests.codes.conflict
             return response
 
     instance_provider.release_instance(execution_id, fail_if_not_found=False)
@@ -272,56 +271,25 @@ def create_snapshot():
     return Response(act(), mimetype='text/plain')
 
 
-@app.route('/data/input/<input_id>', methods=['HEAD'])
-def check_input_data(input_id: str):
-    if os.path.exists(input_file(input_id)):
-        return jsonify({
-            'id': input_id,
-        })
-    else:
-        abort(404)
+@app.route('/data/input/<input_id>', methods=['PUT'])
+def put_input_entrypoint(input_id: str):
+    return input_data_configuration.publish_input_data(input_id)
 
 
-@app.route('/data/input/<expected_input_id>', methods=['PUT'])
-def publish_input_data(expected_input_id: str):
-    input_file_path = input_file(expected_input_id)
-    if os.path.exists(input_file_path):
-        request.stream.close()
-        return jsonify({
-            'id': expected_input_id,
-        })
+@app.route('/data/input/<expected_input_id>', methods=['HEAD'])
+def check_input_data_entrypoint(expected_input_id: str):
+    return input_data_configuration.check_input_data(expected_input_id)
 
-    file_hash = hashlib.sha256()
-    fd, temp_file_path = tempfile.mkstemp(dir=temp_data_dir)
-    try:
-        with os.fdopen(fd, 'wb') as f:
-            bytes_read = 0
-            while True:
-                data = request.stream.read(READ_BUFFER_SIZE)
-                bytes_read += len(data)
-                log.debug(f'{bytes_read} bytes of input read')
-                if not data:
-                    break
-                f.write(data)
-                file_hash.update(data)
 
-        input_id = file_hash.hexdigest()
-        if input_id != expected_input_id:
-            abort(requests.codes.bad_request, 'The input ID was incorrect.')
-
-        os.rename(temp_file_path, input_file_path)
-        return jsonify({
-            'id': input_id,
-        })
-    except Exception:
-        os.remove(temp_file_path)
-        raise
+@app.route('/data/input/id', methods=['GET'])
+def get_input_id_entrypoint():
+    return input_data_configuration.get_input_id_from_metadata_or_none()
 
 
 @app.route('/data/input/<input_id>', methods=['DELETE'])
 def delete_input_data(input_id: str):
     try:
-        os.remove(input_file(input_id))
+        os.remove(input_data_configuration.input_file(input_id))
     except FileNotFoundError:
         pass
 
@@ -335,24 +303,6 @@ def last_execution_id_entrypoint(user: str):
     response = jsonify(response_object)
     response.status_code = requests.codes.ok
     return response
-
-
-def input_file(input_id: str):
-    if not re.match(r'^\w{64}$', input_id):
-        abort(requests.codes.bad_request, 'Invalid input ID.')
-    input_file_path = os.path.join(input_dir, input_id)
-    return input_file_path
-
-
-def prepare_input_stream(execution_spec: dict):
-    input_id = execution_spec.get('input_id')
-    if not input_id:
-        return None
-    try:
-        input_file_path = input_file(input_id)
-        return open(input_file_path, 'rb')
-    except FileNotFoundError:
-        abort(requests.codes.bad_request, 'Invalid input ID.')
 
 
 def get_execution_uuid() -> str:

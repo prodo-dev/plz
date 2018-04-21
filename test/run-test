@@ -126,6 +126,7 @@ function run_cli {
   # Capture the logs and exit status.
   docker container logs --follow $cli_container \
     |& redact_uuids \
+    |& redact_debug_messages \
     |& redact_instance_status \
     | tee $logs_file
   docker wait $cli_container > $exit_status_file
@@ -144,6 +145,10 @@ function slug {
 function redact_uuids {
   # The "$| = 1" bit disables buffering so we get output as we need it.
   perl -pe '$| = 1; s/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/<UUID>/g'
+}
+
+function redact_debug_messages {
+  grep -v '^:: '
 }
 
 function redact_instance_status {
