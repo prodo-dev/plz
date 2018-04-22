@@ -22,11 +22,10 @@ class StopExecutionOperation(Operation):
     def run(self):
         response = requests.delete(
             self.url('executions', self.get_execution_id()),
-            args={'fail_if_deleted': True})
-        check_status(response, requests.codes.ok)
+            params={'fail_if_deleted': True})
         if response.status_code == requests.codes.expectation_failed:
             # Returned when already deleted
             log_info('Process already stopped')
-        else:
-            check_status(response, requests.codes.no_content)
-            log_info('Stopped')
+            return
+        check_status(response, requests.codes.no_content)
+        log_info('Stopped')
