@@ -16,8 +16,8 @@ from plz.controller.configuration import Dependencies
 from plz.controller.images import Images
 from plz.controller.input_data import InputDataConfiguration
 from plz.controller.instances.instance_base import Instance, \
-    InstanceProvider, InstanceStatusFailure, InstanceStatusSuccess, \
-    InstanceNotRunningException, InstanceStatus
+    InstanceProvider, InstanceStatus, InstanceStatusFailure, \
+    InstanceStatusSuccess
 from plz.controller.results import ResultsStorage
 
 T = TypeVar('T')
