@@ -16,7 +16,8 @@ from plz.controller.configuration import Dependencies
 from plz.controller.images import Images
 from plz.controller.input_data import InputDataConfiguration
 from plz.controller.instances.instance_base import Instance, \
-    InstanceProvider, InstanceStatusFailure, InstanceStatusSuccess
+    InstanceProvider, InstanceStatus, InstanceStatusFailure, \
+    InstanceStatusSuccess
 from plz.controller.results import ResultsStorage
 
 T = TypeVar('T')
@@ -178,7 +179,7 @@ def get_status_entrypoint(execution_id):
         return jsonify(status)
 
 
-def get_status(execution_id):
+def get_status(execution_id: str) -> Optional[InstanceStatus]:
     with results_storage.get(execution_id) as results:
         if results:
             status = results.status()
@@ -233,16 +234,21 @@ def delete_execution(execution_id):
     # curl -XDELETE localhost:5000/executions/some-id
     fail_if_running: bool = request.args.get(
         'fail_if_running', default=False, type=bool)
+    fail_if_deleted: bool = request.args.get(
+        'fail_if_deleted', default=False, type=bool)
     response = jsonify({})
-
-    if fail_if_running:
-        status = get_status(execution_id)
-        if status is not None and status.running:
-            response.status_code = requests.codes.conflict
-            return response
-
+    status = get_status(execution_id)
+    if status is None:
+        response.status_code = requests.codes.not_found
+        return response
+    if fail_if_running and status.running:
+        response.status_code = requests.codes.conflict
+        return response
+    instance = instance_provider.instance_for(execution_id)
+    if fail_if_deleted and instance is None:
+        response.status_code = requests.codes.expectation_failed
+        return response
     instance_provider.release_instance(execution_id, fail_if_not_found=False)
-    response = jsonify({})
     response.status_code = requests.codes.no_content
     return response
 

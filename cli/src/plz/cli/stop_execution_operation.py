@@ -4,7 +4,7 @@ import requests
 
 from plz.cli.configuration import Configuration
 from plz.cli.log import log_info
-from plz.cli.operation import Operation
+from plz.cli.operation import Operation, check_status
 
 
 class StopExecutionOperation(Operation):
@@ -22,8 +22,10 @@ class StopExecutionOperation(Operation):
     def run(self):
         response = requests.delete(
             self.url('executions', self.get_execution_id()),
-            params={'fail_if_running': True})
-        if response.status_code == requests.codes.conflict:
+            params={'fail_if_deleted': True})
+        if response.status_code == requests.codes.expectation_failed:
+            # Returned when already deleted
             log_info('Process already stopped')
-        else:
-            log_info('Stopped')
+            return
+        check_status(response, requests.codes.no_content)
+        log_info('Stopped')
