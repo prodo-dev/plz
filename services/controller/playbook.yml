@@ -55,6 +55,7 @@
                     provider = local
                     directory = "/data/results"
                   }
+                  log_level = "debug"
               ports:
                 - "{{ service_port }}:80"
               volumes:
