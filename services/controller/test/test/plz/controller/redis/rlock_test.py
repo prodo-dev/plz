@@ -1,8 +1,8 @@
 import random
+import time
 import unittest
 
 import redis
-import time
 
 from plz.controller.redis.rlock import RedisRLock
 
@@ -26,10 +26,10 @@ class RedisRLockTest(unittest.TestCase):
 
     def test_releasing_without_acquiring_fails(self):
         lock = RedisRLock(self.redis, self._random_lock_name())
-        with self.assertRaises(redis.exceptions.LockError) as cm:
+        with self.assertRaises(RuntimeError) as cm:
             lock.release()
         self.assertEqual(cm.exception.args,
-                         ('Cannot release an unlocked lock',))
+                         ('cannot release un-acquired lock',))
 
     def test_locks_can_time_out(self):
         lock = RedisRLock(self.redis, self._random_lock_name(), timeout=0.1)
@@ -42,9 +42,9 @@ class RedisRLockTest(unittest.TestCase):
     def test_cannot_acquire_two_locks_with_the_same_name(self):
         lock_name = self._random_lock_name()
         lock_1 = RedisRLock(self.redis, lock_name)
-        lock_2 = RedisRLock(self.redis, lock_name)
+        lock_2 = RedisRLock(self.redis, lock_name, blocking_timeout=0.1)
         with lock_1:
-            acquired = lock_2.acquire(blocking_timeout=0.1)
+            acquired = lock_2.acquire()
         self.assertFalse(acquired)
 
     def test_can_acquire_two_locks_with_different_names(self):
@@ -54,6 +54,13 @@ class RedisRLockTest(unittest.TestCase):
             with lock_2:
                 locked = True
         self.assertTrue(locked)
+
+    def test_can_enter_a_lock_multiple_times(self):
+        lock = RedisRLock(
+            self.redis, self._random_lock_name(), blocking_timeout=0.1)
+        with lock:
+            acquired = lock.acquire()
+        self.assertTrue(acquired)
 
     def _random_lock_name(self):
         lock_name = \
