@@ -81,7 +81,7 @@ class Configuration:
             # the current work directory)
             Property('included_paths', type=list, default=[]),
             Property('debug', type=bool, default=False),
-            Property('docker_runtime', type=str, default=None),
+            Property('docker_run_args', type=dict, default={}),
         ]
     }
 

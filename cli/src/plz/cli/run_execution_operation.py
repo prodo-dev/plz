@@ -196,9 +196,8 @@ class RunExecutionOperation(Operation):
             'instance_type': configuration.instance_type,
             'user': configuration.user,
             'input_id': input_id,
+            'docker_run_args': configuration.docker_run_args
         }
-        if configuration.docker_runtime:
-            execution_spec['docker_runtime'] = configuration.docker_runtime
         response = requests.post(self.url('executions'), json={
             'command': self.command,
             'snapshot_id': snapshot_id,

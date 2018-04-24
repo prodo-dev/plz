@@ -26,7 +26,7 @@ class Instance(ABC):
             snapshot_id: str,
             parameters: Parameters,
             input_stream: Optional[io.BytesIO],
-            docker_runtime: Optional[str]):
+            docker_run_args: Dict[str, str]):
         pass
 
     def status(self) -> 'InstanceStatus':
