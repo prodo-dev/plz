@@ -1,6 +1,6 @@
 import io
 import json
-from typing import Iterator, List, Optional
+from typing import Iterator, List, Optional, Dict
 
 from docker.types import Mount
 from redis import StrictRedis
@@ -32,7 +32,7 @@ class DockerInstance(Instance):
             snapshot_id: str,
             parameters: Parameters,
             input_stream: Optional[io.RawIOBase],
-            docker_runtime: Optional[str]):
+            docker_run_args: Dict[str, str]):
         configuration = {
             'input_directory': Volumes.INPUT_DIRECTORY_PATH,
             'output_directory': Volumes.OUTPUT_DIRECTORY_PATH,
@@ -56,7 +56,7 @@ class DockerInstance(Instance):
                             environment=environment,
                             mounts=[Mount(source=volume.name,
                                           target=Volumes.VOLUME_MOUNT)],
-                            docker_runtime=docker_runtime)
+                            docker_run_args=docker_run_args)
 
     def logs(self, since: Optional[int], stdout: bool = True,
              stderr: bool = True) -> Iterator[bytes]:

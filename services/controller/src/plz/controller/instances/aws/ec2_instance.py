@@ -2,7 +2,7 @@ import io
 import logging
 import os.path
 import time
-from typing import Iterator, List, Optional
+from typing import Iterator, List, Optional, Dict
 
 from redis import StrictRedis
 
@@ -50,10 +50,10 @@ class EC2Instance(Instance):
             snapshot_id: str,
             parameters: Parameters,
             input_stream: Optional[io.BytesIO],
-            docker_runtime: Optional[str]):
+            docker_run_args: Dict[str, str]):
         self.images.pull(snapshot_id)
         self.delegate.run(command, snapshot_id, parameters, input_stream,
-                          docker_runtime)
+                          docker_run_args)
 
     def logs(self, since: Optional[int],
              stdout: bool = True, stderr: bool = True) -> Iterator[bytes]:
