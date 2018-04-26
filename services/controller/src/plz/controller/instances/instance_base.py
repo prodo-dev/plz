@@ -6,6 +6,7 @@ from typing import Any, Dict, Iterator, List, Optional
 from redis import StrictRedis
 
 from plz.controller.containers import ContainerState
+from plz.controller.redis.rlock import RedisRLock
 from plz.controller.results.results_base import ResultsStorage
 
 Parameters = Dict[str, Any]
@@ -114,8 +115,7 @@ class Instance(ABC):
 
     @abstractmethod
     def release(self, results_storage: ResultsStorage,
-                idle_since_timestamp: int,
-                _lock_held: bool=False):
+                idle_since_timestamp: int):
         pass
 
     def harvest(self, results_storage: ResultsStorage):
@@ -124,8 +124,7 @@ class Instance(ABC):
             if info.status == 'exited':
                 self.release(
                     results_storage,
-                    info.idle_since_timestamp,
-                    _lock_held=True)
+                    info.idle_since_timestamp)
             self.dispose_if_its_time(info)
 
     @property
@@ -138,7 +137,7 @@ class Instance(ABC):
         if self._redis_lock is None:
             name = f'lock:{__name__}.{self.__class__.__name__}' + \
                    f'#_lock:{self._instance_id}'
-            self._redis_lock = self.redis.lock(name)
+            self._redis_lock = RedisRLock(self.redis, name)
         return self._redis_lock
 
 

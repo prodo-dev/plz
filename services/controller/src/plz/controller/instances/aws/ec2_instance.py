@@ -76,7 +76,7 @@ class EC2Instance(Instance):
             if not self._is_free():
                 return False
             if not self.delegate.set_execution_id(
-                    execution_id, max_idle_seconds, _lock_held=True):
+                    execution_id, max_idle_seconds):
                 return False
             self._set_tags([
                 {'Key': EC2Instance.EXECUTION_ID_TAG,
@@ -140,22 +140,15 @@ class EC2Instance(Instance):
 
     def release(self,
                 results_storage: ResultsStorage,
-                idle_since_timestamp: int,
-                _lock_held: bool=False):
-        if _lock_held:
-            self._do_release(results_storage, idle_since_timestamp)
-        else:
-            with self._lock:
-                self._do_release(results_storage, idle_since_timestamp)
-
-    def _do_release(self, results_storage, idle_since_timestamp):
-        self.delegate.release(
-            results_storage, idle_since_timestamp, _lock_held=True)
-        self._set_tags([
-            {'Key': EC2Instance.EXECUTION_ID_TAG,
-             'Value': ''},
-            {'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
-             'Value': str(idle_since_timestamp)}])
+                idle_since_timestamp: int):
+        with self._lock:
+            self.delegate.release(
+                results_storage, idle_since_timestamp)
+            self._set_tags([
+                {'Key': EC2Instance.EXECUTION_ID_TAG,
+                 'Value': ''},
+                {'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
+                 'Value': str(idle_since_timestamp)}])
 
     def _is_free(self):
         instances = get_running_aws_instances(

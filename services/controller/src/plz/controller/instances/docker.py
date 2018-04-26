@@ -101,12 +101,9 @@ class DockerInstance(Instance):
         # It's never time for a local instance
         pass
 
-    def set_execution_id(self, execution_id: str, _: int, _lock_held=False):
-        if _lock_held:
+    def set_execution_id(self, execution_id: str, _: int):
+        with self._lock:
             self.execution_id = execution_id
-        else:
-            with self._lock:
-                self.execution_id = execution_id
         return True
 
     def container_state(self) -> Optional[dict]:
@@ -114,24 +111,15 @@ class DockerInstance(Instance):
             return None
         return self.containers.get_state(self.execution_id)
 
-    def release(self,
-                results_storage: ResultsStorage,
-                _: int,
-                _lock_held: bool = False):
+    def release(self, results_storage: ResultsStorage, _: int):
         # Passing a boolean is not the most elegant way to do it, but it's
         # easy to see that it works (regardless of whether there are several
         # instance objects with the same instance id, etc.). When it's about
         # concurrency, that's enough for me
-        if _lock_held:
-            self._do_release(results_storage)
-        else:
-            with self._lock:
-                self._do_release(results_storage)
-
-    def _do_release(self, results_storage: ResultsStorage):
-        self.stop_execution()
-        self._publish_results(results_storage)
-        self._cleanup()
+        with self._lock:
+            self.stop_execution()
+            self._publish_results(results_storage)
+            self._cleanup()
 
     def _publish_results(self, results_storage: ResultsStorage):
         results_storage.publish(
