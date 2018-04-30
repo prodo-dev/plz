@@ -135,9 +135,7 @@ class DockerInstance(Instance):
             with self._lock:
                 self._do_release(results_storage)
 
-    def _do_release(self,
-                    results_storage: ResultsStorage):
-
+    def _do_release(self, results_storage: ResultsStorage):
         self.stop_execution()
         self._publish_results(results_storage)
         # Check that we could collect the logs before destroying the container
