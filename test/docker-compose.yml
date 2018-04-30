@@ -11,27 +11,17 @@ services:
         condition: service_healthy
 
   controller:
-    image: plztest/controller
-    environment:
-      CONFIGURATION: |
-        port = 80
-        data_dir = /data
-        redis_host = redis
-        results = {
-          provider = local
-          directory = /data/results
-        }
-    volumes:
-      - ${SECRETS_DIR}/keys/id_rsa:/root/.ssh/id_rsa:ro
-      - /var/run/docker.sock:/var/run/docker.sock
+    extends:
+      file: ../docker-compose.base.yml
+      service: controller
     depends_on:
       redis:
         condition: service_started
 
   redis:
-    image: redis:4
-    volumes:
-      - redis_data:/data
+    extends:
+      file: ../docker-compose.base.yml
+      service: redis
 
 volumes:
   redis_data: {}
