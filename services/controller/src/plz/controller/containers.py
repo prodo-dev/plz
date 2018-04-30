@@ -78,7 +78,7 @@ class Containers:
     def get_state(self, execution_id: str) -> Optional[ContainerState]:
         container = self.from_execution_id(execution_id)
         if not container:
-            return None
+            raise ContainerMissingException
         container_state = container.attrs['State']
         success = container_state['ExitCode'] == 0
         finished_at = _docker_date_to_timestamp(container_state['FinishedAt'])
@@ -115,3 +115,7 @@ class Containers:
 def _docker_date_to_timestamp(docker_date):
     return int(calendar.timegm(
         dateutil.parser.parse(docker_date).utctimetuple()))
+
+
+class ContainerMissingException(Exception):
+    pass

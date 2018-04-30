@@ -1,6 +1,7 @@
 import io
 import json
-from typing import Iterator, List, Optional, Dict
+import logging
+from typing import Dict, Iterator, List, Optional
 
 from docker.types import Mount
 from redis import StrictRedis
@@ -10,8 +11,11 @@ from plz.controller.images import Images
 from plz.controller.instances.instance_base import \
     ExecutionInfo, Instance, Parameters
 from plz.controller.results import ResultsStorage
+from plz.controller.results.results_base import CouldNotGetOutputException
 from plz.controller.volumes import \
     VolumeDirectory, VolumeEmptyDirectory, VolumeFile, Volumes
+
+log = logging.getLogger(__name__)
 
 
 class DockerInstance(Instance):
@@ -117,7 +121,11 @@ class DockerInstance(Instance):
     def release(self,
                 results_storage: ResultsStorage,
                 _: int,
+                release_container: bool = False,
                 _lock_held: bool = False):
+        if not release_container:
+            # Everything to release here is about the container
+            return
         # Passing a boolean is not the most elegant way to do it, but it's
         # easy to see that it works (regardless of whether there are several
         # instance objects with the same instance id, etc.). When it's about
@@ -128,9 +136,13 @@ class DockerInstance(Instance):
             with self._lock:
                 self._do_release(results_storage)
 
-    def _do_release(self, results_storage: ResultsStorage):
+    def _do_release(self,
+                    results_storage: ResultsStorage):
+
         self.stop_execution()
         self._publish_results(results_storage)
+        # Check that we could collect the logs before destroying the container
+        results_storage.check_logs_available(self.execution_id)
         self._cleanup()
 
     def _publish_results(self, results_storage: ResultsStorage):

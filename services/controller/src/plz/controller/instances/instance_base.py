@@ -1,12 +1,16 @@
 import io
+import logging
+import time
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from typing import Any, Dict, Iterator, List, Optional
 
 from redis import StrictRedis
 
-from plz.controller.containers import ContainerState
+from plz.controller.containers import ContainerMissingException, ContainerState
 from plz.controller.results.results_base import ResultsStorage
+
+log = logging.getLogger(__name__)
 
 Parameters = Dict[str, Any]
 ExecutionInfo = namedtuple(
@@ -115,18 +119,36 @@ class Instance(ABC):
     @abstractmethod
     def release(self, results_storage: ResultsStorage,
                 idle_since_timestamp: int,
-                _lock_held: bool=False):
+                release_container: bool = False,
+                _lock_held: bool = False) -> bool:
         pass
 
     def harvest(self, results_storage: ResultsStorage):
         with self._lock:
-            info = self.get_execution_info()
+            try:
+                info = self.get_execution_info()
+            except ContainerMissingException:
+                # The container for an execution can't be found although
+                # we have an instance for it. Release the instance without
+                # trying to access the container
+                log.exception(
+                    f'Instance {self._instance_id} for execution id: '
+                    f'{self.get_execution_id()} missing container')
+                self.release(
+                    results_storage,
+                    idle_since_timestamp=int(time.time()),
+                    # There's no container so don't try to release things
+                    # there
+                    release_container=False,
+                    _lock_held=True)
             if info.status == 'exited':
                 self.release(
                     results_storage,
                     info.idle_since_timestamp,
                     _lock_held=True)
-            self.dispose_if_its_time(info)
+
+            if info.status in {'exited', 'idle'}:
+                self.dispose_if_its_time(info)
 
     @property
     @abstractmethod
@@ -182,7 +204,13 @@ class InstanceProvider(ABC):
 
     def harvest(self):
         for instance in self.instance_iterator():
-            instance.harvest(self.results_storage)
+            # noinspection PyBroadException
+            try:
+                instance.harvest(self.results_storage)
+            except Exception:
+                # Make sure that an exception thrown while harvesting an
+                # instance doesn't stop the whole harvesting process
+                log.exception('Exception harvesting')
 
     def get_executions(self) -> [ExecutionInfo]:
         return [

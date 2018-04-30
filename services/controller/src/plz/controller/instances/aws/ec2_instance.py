@@ -121,15 +121,11 @@ class EC2Instance(Instance):
         else:
             ei = self.get_execution_info()
 
-        status = ei.status
-        if status != 'exited' and status != 'idle':
-            return
-
         now = int(time.time())
         # In weird cases just dispose as well
         if now - ei.idle_since_timestamp > ei.max_idle_seconds or \
                 ei.idle_since_timestamp > now or \
-                ei.max_idle_seconds < 0:
+                ei.max_idle_seconds <= 0:
             self._dispose()
 
     def stop_execution(self):
@@ -141,16 +137,23 @@ class EC2Instance(Instance):
     def release(self,
                 results_storage: ResultsStorage,
                 idle_since_timestamp: int,
-                _lock_held: bool=False):
+                release_container: bool = False,
+                _lock_held: bool = False):
         if _lock_held:
-            self._do_release(results_storage, idle_since_timestamp)
+            self._do_release(
+                results_storage, idle_since_timestamp, release_container)
         else:
             with self._lock:
-                self._do_release(results_storage, idle_since_timestamp)
+                self._do_release(
+                    results_storage, idle_since_timestamp, release_container)
 
-    def _do_release(self, results_storage, idle_since_timestamp):
+    def _do_release(
+            self, results_storage, idle_since_timestamp, release_container):
         self.delegate.release(
-            results_storage, idle_since_timestamp, _lock_held=True)
+            results_storage,
+            idle_since_timestamp,
+            release_container,
+            _lock_held=True)
         self._set_tags([
             {'Key': EC2Instance.EXECUTION_ID_TAG,
              'Value': ''},
