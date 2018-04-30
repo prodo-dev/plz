@@ -86,7 +86,7 @@ def _instance_provider_from(
 
 def _images_from(config, docker_host):
     images_type = config.get('images.provider', 'local')
-    docker_api_client = docker.APIClient(base_url=docker_host)
+    docker_api_client = docker.APIClient(base_url=docker_host, timeout=600)
     if images_type == 'local':
         repository = config.get('images.repository', 'plz/builds')
         images = LocalImages(docker_api_client, repository)
