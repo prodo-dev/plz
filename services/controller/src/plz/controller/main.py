@@ -2,9 +2,7 @@ import json
 import logging
 import os
 import random
-import socket
 import sys
-import time
 import uuid
 from typing import Any, Callable, Iterator, Optional, TypeVar, Union
 
@@ -12,7 +10,6 @@ import flask
 import requests
 from flask import Flask, Response, jsonify, request, stream_with_context
 from redis import StrictRedis
-from urllib3.exceptions import ReadTimeoutError
 
 from plz.controller import configuration
 from plz.controller.configuration import Dependencies
@@ -33,7 +30,6 @@ images: Images = dependencies.images
 instance_provider: InstanceProvider = dependencies.instance_provider
 results_storage: ResultsStorage = dependencies.results_storage
 redis: StrictRedis = dependencies.redis
-socket.setdefaulttimeout(600)
 
 input_dir = os.path.join(data_dir, 'input')
 temp_data_dir = os.path.join(data_dir, 'tmp')
@@ -274,18 +270,7 @@ def create_snapshot():
     @_handle_lazy_exceptions(formatter=_format_error)
     def act() -> Iterator[Union[bytes, str]]:
         # Pass the rest of the stream to `docker build`
-        finished = False
-        messages = images.build(request.stream, tag)
-        while not finished:
-            try:
-                for message in messages:
-                    yield message
-                    log.debug('Setting timeout!')
-                    time.sleep(0.1)
-                log.debug('Finished!!!!')
-                finished = True
-            except ReadTimeoutError:
-                log.exception('Exception creating snapshot')
+        yield from images.build(request.stream, tag)
         instance_provider.push(tag)
         yield json.dumps({'id': tag})
 
