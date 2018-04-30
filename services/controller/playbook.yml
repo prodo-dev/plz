@@ -50,6 +50,7 @@
                     provider = aws-ecr
                     region = "{{ aws_region }}"
                     repository = "{{ aws_project }}/plz/builds"
+                    docker_api_client_timeout = 600
                   }
                   results {
                     provider = local
