@@ -1,4 +1,6 @@
+import os
 import random
+import sys
 import threading
 import time
 import unittest
@@ -10,7 +12,8 @@ from plz.controller.redis.rlock import RedisRLock
 
 class RedisRLockTest(unittest.TestCase):
     def setUp(self):
-        self.redis = redis.StrictRedis()
+        host = os.environ.get('REDIS_HOST', 'localhost')
+        self.redis = redis.StrictRedis(host=host)
 
     def test_acquires_and_releases(self):
         lock = RedisRLock(self.redis, self._random_lock_name())
@@ -69,10 +72,16 @@ class RedisRLockTest(unittest.TestCase):
 
         def something_requiring_locking():
             lock = RedisRLock(self.redis, lock_name)
-            with lock:
+            locked = lock.acquire(timeout=2)
+            if not locked:
+                print('Failed to lock.', file=sys.stderr)
+                return
+            try:
                 counter = self.counter
                 time.sleep(random.randint(0, 10) / 100)  # between 0 and 0.1
                 self.counter = counter + 1
+            finally:
+                lock.release()
 
         threads = [threading.Thread(target=something_requiring_locking)
                    for _ in range(10)]
@@ -88,10 +97,16 @@ class RedisRLockTest(unittest.TestCase):
         self.counter = 0
 
         def something_requiring_locking():
-            with self.lock:
+            locked = self.lock.acquire(timeout=2)
+            if not locked:
+                print('Failed to lock.', file=sys.stderr)
+                return
+            try:
                 counter = self.counter
                 time.sleep(random.randint(0, 10) / 100)  # between 0 and 0.1
                 self.counter = counter + 1
+            finally:
+                self.lock.release()
 
         threads = [threading.Thread(target=something_requiring_locking)
                    for _ in range(10)]
