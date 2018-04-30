@@ -1,4 +1,5 @@
 import random
+import threading
 import time
 import unittest
 
@@ -61,6 +62,25 @@ class RedisRLockTest(unittest.TestCase):
         with lock:
             acquired = lock.acquire()
         self.assertTrue(acquired)
+
+    def test_multiple_threads_can_share_a_lock_without_sharing_objects(self):
+        lock_name = self._random_lock_name()
+        self.counter = 0
+
+        def something_requiring_locking():
+            lock = RedisRLock(self.redis, lock_name)
+            with lock:
+                time.sleep(random.randint(0, 10) / 100)  # between 0 and 0.1
+                self.counter += 1
+
+        threads = [threading.Thread(target=something_requiring_locking)
+                   for _ in range(10)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+        self.assertEqual(self.counter, 10)
 
     def _random_lock_name(self):
         lock_name = \
