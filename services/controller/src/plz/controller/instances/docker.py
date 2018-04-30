@@ -11,7 +11,6 @@ from plz.controller.images import Images
 from plz.controller.instances.instance_base import \
     ExecutionInfo, Instance, Parameters
 from plz.controller.results import ResultsStorage
-from plz.controller.results.results_base import CouldNotGetOutputException
 from plz.controller.volumes import \
     VolumeDirectory, VolumeEmptyDirectory, VolumeFile, Volumes
 
