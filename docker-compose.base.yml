@@ -1,0 +1,29 @@
+version: '2.3'
+
+services:
+  controller:
+    image: plztest/controller
+    environment:
+      CONFIGURATION: |
+        config = { include "/root/config.json" }
+        include "/root/server.conf"
+
+        port = 80
+        redis_host = redis
+        data_dir = /data
+        results = {
+          directory = /data/results
+        }
+    volumes:
+      - ./services/controller/config/localhost.conf:/root/server.conf:ro
+      - ${SECRETS_DIR}/config.json:/root/config.json:ro
+      - ${SECRETS_DIR}/keys/id_rsa:/root/.ssh/id_rsa:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  redis:
+    image: redis:4
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data: {}
