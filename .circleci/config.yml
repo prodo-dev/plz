@@ -3,6 +3,7 @@ jobs:
   build:
     docker:
       - image: circleci/python:3.6-stretch-browsers
+      - image: redis:4
     steps:
       - run:
           name: 'Install zsh'
