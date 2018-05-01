@@ -3,9 +3,10 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from collections import namedtuple
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, ContextManager, Dict, Iterator, List, Optional
 
 from redis import StrictRedis
+from redis.lock import Lock
 
 from plz.controller.containers import ContainerMissingException, ContainerState
 from plz.controller.results.results_base import ResultsStorage
@@ -21,8 +22,9 @@ ExecutionInfo = namedtuple(
 
 class Instance(ABC):
     def __init__(self, redis: StrictRedis):
-        self.redis = redis
-        self._redis_lock = None
+        lock_name = f'lock:{__name__}.{self.__class__.__name__}' + \
+                    f'#_lock:{self._instance_id}'
+        self._redis_lock = Lock(redis, lock_name)
 
     @abstractmethod
     def run(self,
@@ -158,11 +160,7 @@ class Instance(ABC):
 
     @property
     def _lock(self):
-        if self._redis_lock is None:
-            name = f'lock:{__name__}.{self.__class__.__name__}' + \
-                   f'#_lock:{self._instance_id}'
-            self._redis_lock = self.redis.lock(name)
-        return self._redis_lock
+        return _InstanceContextManager(self._redis_lock)
 
 
 class InstanceProvider(ABC):
@@ -263,3 +261,26 @@ class InstanceStillRunningException(Exception):
 
 class InstanceMissingStateException(Exception):
     pass
+
+
+class _InstanceContextManager(ContextManager):
+    """
+    Allow for the lock to be acquired in several stack frames of the same
+    thread
+    """
+    def __init__(self, lock: Lock):
+        self.lock = lock
+
+    def acquire(self):
+        if self.lock.local.token is None:
+            self.lock.acquire()
+        else:
+            self.lock = None
+
+    def release(self):
+        if self.lock:
+            self.lock.release()
+
+    __enter__ = acquire
+
+    __exit__ = release
