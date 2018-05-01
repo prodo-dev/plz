@@ -35,25 +35,33 @@ class EC2Instance(Instance):
                  images: Images,
                  containers: Containers,
                  volumes: Volumes,
-                 execution_id: str,
+                 container_execution_id: str,
                  data: dict,
                  redis: StrictRedis):
         super().__init__(redis)
         self.client = client
         self.images = images
         self.delegate = DockerInstance(
-            images, containers, volumes, execution_id, redis)
+            images, containers, volumes, container_execution_id, redis)
         self.data = data
 
-    def run(self,
-            command: List[str],
-            snapshot_id: str,
-            parameters: Parameters,
-            input_stream: Optional[io.BytesIO],
-            docker_run_args: Dict[str, str]):
-        self.images.pull(snapshot_id)
-        self.delegate.run(command, snapshot_id, parameters, input_stream,
-                          docker_run_args)
+    def run_if_free(self,
+                    command: List[str],
+                    snapshot_id: str,
+                    parameters: Parameters,
+                    input_stream: Optional[io.BytesIO],
+                    docker_run_args: Dict[str, str],
+                    max_idle_seconds: int = 0) -> bool:
+        with self._lock:
+            if not self._is_free():
+                return False
+            self.images.pull(snapshot_id)
+            self.delegate.run_if_free(
+                command, snapshot_id, parameters, input_stream,
+                docker_run_args)
+            self._set_execution_id(
+                self.delegate.execution_id, max_idle_seconds)
+            return True
 
     def logs(self, since: Optional[int],
              stdout: bool = True, stderr: bool = True) -> Iterator[bytes]:
@@ -70,21 +78,14 @@ class EC2Instance(Instance):
     def _dispose(self):
         self.client.terminate_instances(InstanceIds=[self._instance_id])
 
-    def set_execution_id(
-            self, execution_id: str, max_idle_seconds: int) -> bool:
-        with self._lock:
-            if not self._is_free():
-                return False
-            if not self.delegate.set_execution_id(
-                    execution_id, max_idle_seconds, _lock_held=True):
-                return False
-            self._set_tags([
-                {'Key': EC2Instance.EXECUTION_ID_TAG,
-                 'Value': execution_id},
-                {'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
-                 'Value': str(max_idle_seconds)}
-            ])
-            return True
+    def _set_execution_id(
+            self, execution_id: str, max_idle_seconds: int):
+        self._set_tags([
+            {'Key': EC2Instance.EXECUTION_ID_TAG,
+             'Value': execution_id},
+            {'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
+             'Value': str(max_idle_seconds)}
+        ])
 
     def _set_tags(self, tags):
         instance_id = self._instance_id

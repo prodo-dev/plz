@@ -18,19 +18,9 @@ class ResultsStorage(ABC):
     def get(self, execution_id: str) -> ContextManager[Optional['Results']]:
         pass
 
-    def check_logs_available(self, execution_id: str) -> None:
-        with self.get(execution_id) as results:
-            if not results:
-                raise CouldNotGetOutputException(
-                    f'Couldn\'t read the results for {execution_id}')
-            else:
-                # Make sure the logs are non-empty
-                try:
-                    next(results.logs())
-                except StopIteration:
-                    raise CouldNotGetOutputException(
-                        f'Suspicious empty logs for {execution_id}')
-        log.debug(f'Logs are available for {execution_id}')
+    @abstractmethod
+    def is_finished(self, execution_id: str):
+        pass
 
 
 class Results:

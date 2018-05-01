@@ -111,10 +111,13 @@ def run_execution_entrypoint():
         yield {'id': execution_id}
 
         try:
-            acquisition_statuses = instance_provider.acquire_instance(
-                    execution_id, execution_spec)
+            input_stream = input_data_configuration.prepare_input_stream(
+                execution_spec)
+            startup_statuses = instance_provider.run_in_instance(
+                execution_id, command, snapshot_id, parameters, input_stream,
+                execution_spec)
             instance: Optional[Instance] = None
-            for status in acquisition_statuses:
+            for status in startup_statuses:
                 if 'message' in status:
                     yield {'status': status['message']}
                 if 'instance' in status:
@@ -124,15 +127,6 @@ def run_execution_entrypoint():
                     'error': 'Couldn\'t get an instance.',
                 }
                 return
-
-            input_stream = input_data_configuration.prepare_input_stream(
-                execution_spec)
-            instance.run(
-                command=command,
-                snapshot_id=snapshot_id,
-                parameters=parameters,
-                input_stream=input_stream,
-                docker_run_args=execution_spec['docker_run_args'])
         except Exception as e:
             log.exception('Exception running command.')
             yield {'error': str(e)}
