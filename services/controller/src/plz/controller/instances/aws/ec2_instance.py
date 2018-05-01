@@ -2,7 +2,7 @@ import io
 import logging
 import os.path
 import time
-from typing import Iterator, List, Optional, Dict
+from typing import Dict, Iterator, List, Optional
 
 from redis import StrictRedis
 
@@ -137,7 +137,7 @@ class EC2Instance(Instance):
     def release(self,
                 results_storage: ResultsStorage,
                 idle_since_timestamp: int,
-                release_container: bool = False,
+                release_container: bool = True,
                 _lock_held: bool = False):
         if _lock_held:
             self._do_release(

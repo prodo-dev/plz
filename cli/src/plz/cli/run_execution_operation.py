@@ -75,7 +75,8 @@ class RunExecutionOperation(Operation):
         log_info(f'Execution ID is: {execution_id}')
 
         retrieve_output_operation = RetrieveOutputOperation(
-            self.configuration, execution_id)
+            self.configuration, output_dir=self.output_dir,
+            execution_id=execution_id)
 
         cancelled = False
         try:
@@ -112,7 +113,7 @@ class RunExecutionOperation(Operation):
             log_info('Execution succeeded.')
             self.suboperation(
                     'Retrieving the output...',
-                    retrieve_output_operation.retrieve_output)
+                    lambda: retrieve_output_operation.retrieve_output())
             log_info('Done and dusted.')
             return status.code
         else:

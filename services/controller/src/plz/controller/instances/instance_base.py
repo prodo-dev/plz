@@ -119,7 +119,7 @@ class Instance(ABC):
     @abstractmethod
     def release(self, results_storage: ResultsStorage,
                 idle_since_timestamp: int,
-                release_container: bool = False,
+                release_container: bool = True,
                 _lock_held: bool = False) -> bool:
         pass
 

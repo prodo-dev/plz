@@ -120,7 +120,7 @@ class DockerInstance(Instance):
     def release(self,
                 results_storage: ResultsStorage,
                 _: int,
-                release_container: bool = False,
+                release_container: bool = True,
                 _lock_held: bool = False):
         if not release_container:
             # Everything to release here is about the container
