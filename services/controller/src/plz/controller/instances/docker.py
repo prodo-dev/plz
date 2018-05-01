@@ -11,6 +11,7 @@ from plz.controller.images import Images
 from plz.controller.instances.instance_base import \
     ExecutionInfo, Instance, Parameters
 from plz.controller.results import ResultsStorage
+from plz.controller.results.results_base import CouldNotGetOutputException
 from plz.controller.volumes import \
     VolumeDirectory, VolumeEmptyDirectory, VolumeFile, Volumes
 
@@ -139,7 +140,9 @@ class DockerInstance(Instance):
         self.stop_execution()
         self._publish_results(results_storage)
         # Check that we could collect the logs before destroying the container
-        results_storage.check_logs_available(self.execution_id)
+        if not results_storage.is_finished(self.execution_id):
+            raise CouldNotGetOutputException(
+                f'Couldn\'t read the results for {self.execution_id}')
         self._cleanup()
 
     def _publish_results(self, results_storage: ResultsStorage):
