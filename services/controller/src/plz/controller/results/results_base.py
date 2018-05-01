@@ -18,6 +18,10 @@ class ResultsStorage(ABC):
     def get(self, execution_id: str) -> ContextManager[Optional['Results']]:
         pass
 
+    @abstractmethod
+    def is_finished(self, execution_id: str):
+        pass
+
     def check_logs_available(self, execution_id: str) -> None:
         with self.get(execution_id) as results:
             if not results:

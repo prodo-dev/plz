@@ -76,7 +76,8 @@ class RunExecutionOperation(Operation):
         log_info(f'Execution ID is: {execution_id}')
 
         retrieve_output_operation = RetrieveOutputOperation(
-            self.configuration, output_dir=self.output_dir,
+            self.configuration,
+            output_dir=self.output_dir,
             execution_id=execution_id)
 
         cancelled = False

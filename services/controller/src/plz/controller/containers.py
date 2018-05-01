@@ -75,7 +75,7 @@ class Containers:
         container.stop()
         container.remove()
 
-    def get_state(self, execution_id: str) -> Optional[ContainerState]:
+    def get_state(self, execution_id: str) -> ContainerState:
         container = self.from_execution_id(execution_id)
         if not container:
             raise ContainerMissingException
