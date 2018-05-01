@@ -141,6 +141,7 @@ class Instance(ABC):
                     # there
                     release_container=False,
                     _lock_held=True)
+                return
             if info.status == 'exited':
                 self.release(
                     results_storage,

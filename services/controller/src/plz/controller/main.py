@@ -174,7 +174,7 @@ def get_status_entrypoint(execution_id):
     if status is None:
         response = jsonify({})
         response.status_code = requests.codes.not_found
-
+        return response
     else:
         return jsonify(status)
 
