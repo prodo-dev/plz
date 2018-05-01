@@ -72,6 +72,7 @@ class RunExecutionOperation(Operation):
         execution_id, ok = self.suboperation(
                 'Sending request to start execution',
                 lambda: self.start_execution(snapshot_id, params, input_id))
+        self.execution_id = execution_id
         log_info(f'Execution ID is: {execution_id}')
 
         retrieve_output_operation = RetrieveOutputOperation(
