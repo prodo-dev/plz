@@ -25,12 +25,12 @@ class Instance(ABC):
         self._redis_lock = None
 
     @abstractmethod
-    def run(self,
-            command: List[str],
-            snapshot_id: str,
-            parameters: Parameters,
-            input_stream: Optional[io.BytesIO],
-            docker_run_args: Dict[str, str]):
+    def run_if_free(self,
+                    command: List[str],
+                    snapshot_id: str,
+                    parameters: Parameters,
+                    input_stream: Optional[io.BytesIO],
+                    docker_run_args: Dict[str, str]) -> bool:
         pass
 
     def status(self) -> 'InstanceStatus':
@@ -86,11 +86,6 @@ class Instance(ABC):
         # We happen to have the execution info at hand when calling it,
         # and getting the info is not free (queries to the docker server in the
         # workers), so we allow to pass the info as parameter
-        pass
-
-    @abstractmethod
-    def set_execution_id(self, execution_id: str, max_idle_seconds: int) \
-            -> bool:
         pass
 
     def get_execution_info(self) -> ExecutionInfo:
@@ -170,8 +165,13 @@ class InstanceProvider(ABC):
         self.results_storage = results_storage
 
     @abstractmethod
-    def acquire_instance(
-            self, execution_id: str, execution_spec: dict) -> Iterator[Dict]:
+    def run_in_instance(self,
+                        execution_id: str,
+                        command: List[str],
+                        snapshot_id: str,
+                        parameters: Parameters,
+                        input_stream: Optional[io.BytesIO],
+                        execution_spec: dict,) -> Iterator[Dict[str, Any]]:
         pass
 
     @abstractmethod
