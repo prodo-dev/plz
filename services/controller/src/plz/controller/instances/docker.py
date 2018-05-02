@@ -31,12 +31,12 @@ class DockerInstance(Instance):
         self.volumes = volumes
         self.execution_id = execution_id
 
-    def run_if_free(self,
-                    command: List[str],
-                    snapshot_id: str,
-                    parameters: Parameters,
-                    input_stream: Optional[io.RawIOBase],
-                    docker_run_args: Dict[str, str]):
+    def run(self,
+            command: List[str],
+            snapshot_id: str,
+            parameters: Parameters,
+            input_stream: Optional[io.RawIOBase],
+            docker_run_args: Dict[str, str]) -> None:
         configuration = {
             'input_directory': Volumes.INPUT_DIRECTORY_PATH,
             'output_directory': Volumes.OUTPUT_DIRECTORY_PATH,
@@ -61,7 +61,6 @@ class DockerInstance(Instance):
                             mounts=[Mount(source=volume.name,
                                           target=Volumes.VOLUME_MOUNT)],
                             docker_run_args=docker_run_args)
-        return True
 
     def logs(self, since: Optional[int], stdout: bool = True,
              stderr: bool = True) -> Iterator[bytes]:

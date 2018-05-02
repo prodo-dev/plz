@@ -27,12 +27,12 @@ class Instance(ABC):
         self._redis_lock = Lock(redis, lock_name)
 
     @abstractmethod
-    def run_if_free(self,
-                    command: List[str],
-                    snapshot_id: str,
-                    parameters: Parameters,
-                    input_stream: Optional[io.BytesIO],
-                    docker_run_args: Dict[str, str]) -> bool:
+    def run(self,
+            command: List[str],
+            snapshot_id: str,
+            parameters: Parameters,
+            input_stream: Optional[io.BytesIO],
+            docker_run_args: Dict[str, str]) -> None:
         pass
 
     def status(self) -> 'InstanceStatus':

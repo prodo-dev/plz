@@ -45,23 +45,24 @@ class EC2Instance(Instance):
             images, containers, volumes, container_execution_id, redis)
         self.data = data
 
-    def run_if_free(self,
-                    command: List[str],
-                    snapshot_id: str,
-                    parameters: Parameters,
-                    input_stream: Optional[io.BytesIO],
-                    docker_run_args: Dict[str, str],
-                    max_idle_seconds: int = 0) -> bool:
+    def run(self,
+            command: List[str],
+            snapshot_id: str,
+            parameters: Parameters,
+            input_stream: Optional[io.BytesIO],
+            docker_run_args: Dict[str, str],
+            max_idle_seconds: int = 0) -> None:
         with self._lock:
             if not self._is_free():
-                return False
+                raise InstanceAssignedException(
+                    f'Instance {self._instance_id} cannot execute '
+                    f'{self.delegate.execution_id} as it\'s not '
+                    f'free (executing [{self.get_execution_id()}])')
             self.images.pull(snapshot_id)
-            self.delegate.run_if_free(
-                command, snapshot_id, parameters, input_stream,
-                docker_run_args)
+            self.delegate.run(command, snapshot_id, parameters, input_stream,
+                              docker_run_args)
             self._set_execution_id(
                 self.delegate.execution_id, max_idle_seconds)
-            return True
 
     def logs(self, since: Optional[int],
              stdout: bool = True, stderr: bool = True) -> Iterator[bytes]:
@@ -189,3 +190,7 @@ def get_running_aws_instances(client, filters: [(str, str)]):
     return [instance
             for reservation in response['Reservations']
             for instance in reservation['Instances']]
+
+
+class InstanceAssignedException(Exception):
+    pass
