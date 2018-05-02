@@ -278,20 +278,23 @@ class _InstanceContextManager(ContextManager):
     Allow for the lock to be acquired in several stack frames of the same
     thread
     """
-    def __init__(self, lock: Lock):
-        self.lock = lock
+    def __init__(self, instance_lock: Lock):
+        self.instance_lock = instance_lock
+        self.lock = None
 
-    def acquire(self):
-        if self.lock.local.token is None:
-            self.lock.acquire(blocking=True)
+    def acquire(self, blocking=None):
+        if self.instance_lock.local.token is None:
+            self.instance_lock.acquire(blocking=blocking)
+            self.lock = self.instance_lock
         else:
             self.lock = None
 
     def release(self):
-        if self.lock:
+        if self.lock is not None:
             self.lock.release()
 
-    __enter__ = acquire
+    def __enter__(self):
+        self.acquire(blocking=True)
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.release()

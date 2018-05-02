@@ -51,7 +51,7 @@ class EC2Instance(Instance):
             parameters: Parameters,
             input_stream: Optional[io.BytesIO],
             docker_run_args: Dict[str, str],
-            max_idle_seconds: int = 0) -> None:
+            max_idle_seconds: int = 60 * 30) -> None:
         with self._lock:
             if not self._is_free():
                 raise InstanceAssignedException(
@@ -128,6 +128,7 @@ class EC2Instance(Instance):
         if now - ei.idle_since_timestamp > ei.max_idle_seconds or \
                 ei.idle_since_timestamp > now or \
                 ei.max_idle_seconds <= 0:
+            log.info(f'Disposing of instance {self._instance_id}')
             self._dispose()
 
     def stop_execution(self):
