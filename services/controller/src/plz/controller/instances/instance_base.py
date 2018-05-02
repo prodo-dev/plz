@@ -22,9 +22,11 @@ ExecutionInfo = namedtuple(
 
 class Instance(ABC):
     def __init__(self, redis: StrictRedis):
-        lock_name = f'lock:{__name__}.{self.__class__.__name__}' + \
-                    f'#_lock:{self._instance_id}'
-        self._redis_lock = Lock(redis, lock_name)
+        self.redis = redis
+        # Need to create and memoised the lock afterwards, as we need the
+        # AWS instance id and it's not available at this point. Use
+        # _redis_lock to access it
+        self._memoised_lock = None
 
     @abstractmethod
     def run(self,
@@ -154,6 +156,14 @@ class Instance(ABC):
         pass
 
     @property
+    def _redis_lock(self) -> Lock:
+        if self._memoised_lock is None:
+            lock_name = f'lock:{__name__}.{self.__class__.__name__}' + \
+                        f'#_lock:{self._instance_id}'
+            self._memoised_lock = Lock(self.redis, lock_name)
+        return self._memoised_lock
+
+    @property
     def _lock(self):
         return _InstanceContextManager(self._redis_lock)
 
@@ -273,7 +283,7 @@ class _InstanceContextManager(ContextManager):
 
     def acquire(self):
         if self.lock.local.token is None:
-            self.lock.acquire()
+            self.lock.acquire(blocking=True)
         else:
             self.lock = None
 
@@ -283,4 +293,5 @@ class _InstanceContextManager(ContextManager):
 
     __enter__ = acquire
 
-    __exit__ = release
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.release()
