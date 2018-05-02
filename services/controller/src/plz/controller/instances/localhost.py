@@ -45,12 +45,9 @@ class Localhost(InstanceProvider):
             self.volumes,
             execution_id,
             self.redis)
-        instance.run_if_free(
-            command=command,
-            snapshot_id=snapshot_id,
-            parameters=parameters,
-            input_stream=input_stream,
-            docker_run_args=execution_spec['docker_run_args'])
+        instance.run(command=command, snapshot_id=snapshot_id,
+                     parameters=parameters, input_stream=input_stream,
+                     docker_run_args=execution_spec['docker_run_args'])
         return iter([{'instance': instance}])
 
     def instance_for(self, execution_id: str) -> Optional[Instance]:

@@ -14,7 +14,8 @@ from plz.controller.instances.instance_base import Instance, \
     InstanceProvider, Parameters
 from plz.controller.results.results_base import ResultsStorage
 from plz.controller.volumes import Volumes
-from .ec2_instance import EC2Instance, get_running_aws_instances, get_tag
+from .ec2_instance import EC2Instance, get_running_aws_instances, get_tag, \
+    InstanceAssignedException
 
 
 class EC2InstanceGroup(InstanceProvider):
@@ -137,22 +138,23 @@ class EC2InstanceGroup(InstanceProvider):
             tries_remaining -= 1
             if instance.is_up(is_instance_newly_created):
                 yield _msg('starting container')
-                has_started = instance.run_if_free(
-                    command=command,
-                    snapshot_id=snapshot_id,
-                    parameters=parameters,
-                    input_stream=input_stream,
-                    docker_run_args=execution_spec['docker_run_args'],
-                    max_idle_seconds=60 * 30)
-                if has_started:
-                    yield _msg('running')
-                    yield {'instance': instance}
-                    return
-                else:
+                try:
+                    instance.run(
+                        command=command,
+                        snapshot_id=snapshot_id,
+                        parameters=parameters,
+                        input_stream=input_stream,
+                        docker_run_args=execution_spec['docker_run_args'])
+                except InstanceAssignedException:
                     yield _msg('taken while waiting')
-                instance_data = self._ask_aws_for_new_instance(instance_type)
-                instance = self._ec2_instance_from_instance_data(
-                    instance_data, container_execution_id=execution_id)
+                    instance_data = self._ask_aws_for_new_instance(
+                        instance_type)
+                    instance = self._ec2_instance_from_instance_data(
+                        instance_data, container_execution_id=execution_id)
+                    continue
+                yield _msg('running')
+                yield {'instance': instance}
+                return
             else:
                 yield _msg('pending')
                 time.sleep(delay_in_seconds)
