@@ -1,18 +1,21 @@
+import io
 import os
 import shlex
 import socket
 import time
 from contextlib import closing
-from typing import Any, Dict, Iterator, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 from redis import StrictRedis
 
 from plz.controller.containers import Containers
 from plz.controller.images import Images
-from plz.controller.instances.instance_base import Instance, InstanceProvider
+from plz.controller.instances.instance_base import Instance, \
+    InstanceProvider, Parameters
 from plz.controller.results.results_base import ResultsStorage
 from plz.controller.volumes import Volumes
-from .ec2_instance import EC2Instance, get_running_aws_instances, get_tag
+from .ec2_instance import EC2Instance, get_running_aws_instances, get_tag, \
+    InstanceAssignedException
 
 
 class EC2InstanceGroup(InstanceProvider):
@@ -95,13 +98,16 @@ class EC2InstanceGroup(InstanceProvider):
         ])
         return self._instance_initialization_code
 
-    def acquire_instance(
+    def run_in_instance(
             self,
             execution_id: str,
+            command: List[str],
+            snapshot_id: str,
+            parameters: Parameters,
+            input_stream: Optional[io.BytesIO],
             execution_spec: dict,
             max_tries: int = 30,
-            delay_in_seconds: int = 5) \
-            -> Iterator[Dict[str, Any]]:
+            delay_in_seconds: int = 5) -> Iterator[Dict[str, Any]]:
         """
         Gets an available instance for the execution with the given id.
 
@@ -122,7 +128,8 @@ class EC2InstanceGroup(InstanceProvider):
             yield _msg('requesting new instance')
             is_instance_newly_created = True
             instance_data = self._ask_aws_for_new_instance(instance_type)
-        instance = self._ec2_instance_from_instance_data(instance_data)
+        instance = self._ec2_instance_from_instance_data(
+            instance_data, container_execution_id=execution_id)
         dns_name = _get_dns_name(instance_data)
         yield _msg(
             f'waiting for the instance to be ready. DNS name is: {dns_name}')
@@ -130,14 +137,24 @@ class EC2InstanceGroup(InstanceProvider):
         while tries_remaining > 0:
             tries_remaining -= 1
             if instance.is_up(is_instance_newly_created):
-                if instance.set_execution_id(
-                        execution_id, max_idle_seconds=60 * 30):
-                    yield _msg('started')
-                    yield {'instance': instance}
-                    return
-                yield _msg('taken while waiting')
-                instance_data = self._ask_aws_for_new_instance(instance_type)
-                instance = self._ec2_instance_from_instance_data(instance_data)
+                yield _msg('starting container')
+                try:
+                    instance.run(
+                        command=command,
+                        snapshot_id=snapshot_id,
+                        parameters=parameters,
+                        input_stream=input_stream,
+                        docker_run_args=execution_spec['docker_run_args'])
+                except InstanceAssignedException:
+                    yield _msg('taken while waiting')
+                    instance_data = self._ask_aws_for_new_instance(
+                        instance_type)
+                    instance = self._ec2_instance_from_instance_data(
+                        instance_data, container_execution_id=execution_id)
+                    continue
+                yield _msg('running')
+                yield {'instance': instance}
+                return
             else:
                 yield _msg('pending')
                 time.sleep(delay_in_seconds)
@@ -177,9 +194,11 @@ class EC2InstanceGroup(InstanceProvider):
             MinCount=1, MaxCount=1)
         return response['Instances'][0]
 
-    def _ec2_instance_from_instance_data(self, instance_data) \
-            -> EC2Instance:
-        execution_id = get_tag(instance_data, EC2Instance.EXECUTION_ID_TAG)
+    def _ec2_instance_from_instance_data(
+            self, instance_data, container_execution_id=None) -> EC2Instance:
+        if container_execution_id is None:
+            container_execution_id = get_tag(
+                instance_data, EC2Instance.EXECUTION_ID_TAG)
         dns_name = _get_dns_name(instance_data)
         docker_url = f'tcp://{dns_name}:{self.DOCKER_PORT}'
         images = self.images.for_host(docker_url)
@@ -190,7 +209,7 @@ class EC2InstanceGroup(InstanceProvider):
             images,
             containers,
             volumes,
-            execution_id,
+            container_execution_id,
             instance_data,
             self.redis)
 

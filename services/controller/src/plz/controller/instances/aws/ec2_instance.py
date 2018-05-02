@@ -2,7 +2,7 @@ import io
 import logging
 import os.path
 import time
-from typing import Iterator, List, Optional, Dict
+from typing import Dict, Iterator, List, Optional
 
 from redis import StrictRedis
 
@@ -35,14 +35,14 @@ class EC2Instance(Instance):
                  images: Images,
                  containers: Containers,
                  volumes: Volumes,
-                 execution_id: str,
+                 container_execution_id: str,
                  data: dict,
                  redis: StrictRedis):
         super().__init__(redis)
         self.client = client
         self.images = images
         self.delegate = DockerInstance(
-            images, containers, volumes, execution_id, redis)
+            images, containers, volumes, container_execution_id, redis)
         self.data = data
 
     def run(self,
@@ -50,10 +50,19 @@ class EC2Instance(Instance):
             snapshot_id: str,
             parameters: Parameters,
             input_stream: Optional[io.BytesIO],
-            docker_run_args: Dict[str, str]):
-        self.images.pull(snapshot_id)
-        self.delegate.run(command, snapshot_id, parameters, input_stream,
-                          docker_run_args)
+            docker_run_args: Dict[str, str],
+            max_idle_seconds: int = 0) -> None:
+        with self._lock:
+            if not self._is_free():
+                raise InstanceAssignedException(
+                    f'Instance {self._instance_id} cannot execute '
+                    f'{self.delegate.execution_id} as it\'s not '
+                    f'free (executing [{self.get_execution_id()}])')
+            self.images.pull(snapshot_id)
+            self.delegate.run(command, snapshot_id, parameters, input_stream,
+                              docker_run_args)
+            self._set_execution_id(
+                self.delegate.execution_id, max_idle_seconds)
 
     def logs(self, since: Optional[int],
              stdout: bool = True, stderr: bool = True) -> Iterator[bytes]:
@@ -70,21 +79,14 @@ class EC2Instance(Instance):
     def _dispose(self):
         self.client.terminate_instances(InstanceIds=[self._instance_id])
 
-    def set_execution_id(
-            self, execution_id: str, max_idle_seconds: int) -> bool:
-        with self._lock:
-            if not self._is_free():
-                return False
-            if not self.delegate.set_execution_id(
-                    execution_id, max_idle_seconds, _lock_held=True):
-                return False
-            self._set_tags([
-                {'Key': EC2Instance.EXECUTION_ID_TAG,
-                 'Value': execution_id},
-                {'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
-                 'Value': str(max_idle_seconds)}
-            ])
-            return True
+    def _set_execution_id(
+            self, execution_id: str, max_idle_seconds: int):
+        self._set_tags([
+            {'Key': EC2Instance.EXECUTION_ID_TAG,
+             'Value': execution_id},
+            {'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
+             'Value': str(max_idle_seconds)}
+        ])
 
     def _set_tags(self, tags):
         instance_id = self._instance_id
@@ -121,15 +123,11 @@ class EC2Instance(Instance):
         else:
             ei = self.get_execution_info()
 
-        status = ei.status
-        if status != 'exited' and status != 'idle':
-            return
-
         now = int(time.time())
         # In weird cases just dispose as well
         if now - ei.idle_since_timestamp > ei.max_idle_seconds or \
                 ei.idle_since_timestamp > now or \
-                ei.max_idle_seconds < 0:
+                ei.max_idle_seconds <= 0:
             self._dispose()
 
     def stop_execution(self):
@@ -141,16 +139,23 @@ class EC2Instance(Instance):
     def release(self,
                 results_storage: ResultsStorage,
                 idle_since_timestamp: int,
-                _lock_held: bool=False):
+                release_container: bool = True,
+                _lock_held: bool = False):
         if _lock_held:
-            self._do_release(results_storage, idle_since_timestamp)
+            self._do_release(
+                results_storage, idle_since_timestamp, release_container)
         else:
             with self._lock:
-                self._do_release(results_storage, idle_since_timestamp)
+                self._do_release(
+                    results_storage, idle_since_timestamp, release_container)
 
-    def _do_release(self, results_storage, idle_since_timestamp):
+    def _do_release(
+            self, results_storage, idle_since_timestamp, release_container):
         self.delegate.release(
-            results_storage, idle_since_timestamp, _lock_held=True)
+            results_storage,
+            idle_since_timestamp,
+            release_container,
+            _lock_held=True)
         self._set_tags([
             {'Key': EC2Instance.EXECUTION_ID_TAG,
              'Value': ''},
@@ -185,3 +190,7 @@ def get_running_aws_instances(client, filters: [(str, str)]):
     return [instance
             for reservation in response['Reservations']
             for instance in reservation['Instances']]
+
+
+class InstanceAssignedException(Exception):
+    pass

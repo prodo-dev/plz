@@ -1,6 +1,7 @@
 import io
 import json
-from typing import Iterator, List, Optional, Dict
+import logging
+from typing import Dict, Iterator, List, Optional
 
 from docker.types import Mount
 from redis import StrictRedis
@@ -10,8 +11,11 @@ from plz.controller.images import Images
 from plz.controller.instances.instance_base import \
     ExecutionInfo, Instance, Parameters
 from plz.controller.results import ResultsStorage
+from plz.controller.results.results_base import CouldNotGetOutputException
 from plz.controller.volumes import \
     VolumeDirectory, VolumeEmptyDirectory, VolumeFile, Volumes
+
+log = logging.getLogger(__name__)
 
 
 class DockerInstance(Instance):
@@ -32,7 +36,7 @@ class DockerInstance(Instance):
             snapshot_id: str,
             parameters: Parameters,
             input_stream: Optional[io.RawIOBase],
-            docker_run_args: Dict[str, str]):
+            docker_run_args: Dict[str, str]) -> None:
         configuration = {
             'input_directory': Volumes.INPUT_DIRECTORY_PATH,
             'output_directory': Volumes.OUTPUT_DIRECTORY_PATH,
@@ -101,14 +105,6 @@ class DockerInstance(Instance):
         # It's never time for a local instance
         pass
 
-    def set_execution_id(self, execution_id: str, _: int, _lock_held=False):
-        if _lock_held:
-            self.execution_id = execution_id
-        else:
-            with self._lock:
-                self.execution_id = execution_id
-        return True
-
     def container_state(self) -> Optional[dict]:
         if self.execution_id == '':
             return None
@@ -117,7 +113,11 @@ class DockerInstance(Instance):
     def release(self,
                 results_storage: ResultsStorage,
                 _: int,
+                release_container: bool = True,
                 _lock_held: bool = False):
+        if not release_container:
+            # Everything to release here is about the container
+            return
         # Passing a boolean is not the most elegant way to do it, but it's
         # easy to see that it works (regardless of whether there are several
         # instance objects with the same instance id, etc.). When it's about
@@ -131,6 +131,10 @@ class DockerInstance(Instance):
     def _do_release(self, results_storage: ResultsStorage):
         self.stop_execution()
         self._publish_results(results_storage)
+        # Check that we could collect the logs before destroying the container
+        if not results_storage.is_finished(self.execution_id):
+            raise CouldNotGetOutputException(
+                f'Couldn\'t read the results for {self.execution_id}')
         self._cleanup()
 
     def _publish_results(self, results_storage: ResultsStorage):

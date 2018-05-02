@@ -1,5 +1,6 @@
+import io
 import logging
-from typing import Dict, Iterator, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 from redis import StrictRedis
 
@@ -7,7 +8,7 @@ from plz.controller.containers import Containers
 from plz.controller.images import Images
 from plz.controller.instances.docker import DockerInstance
 from plz.controller.instances.instance_base \
-    import Instance, InstanceProvider
+    import Instance, InstanceProvider, Parameters
 from plz.controller.results.results_base import ResultsStorage
 from plz.controller.volumes import Volumes
 
@@ -28,10 +29,15 @@ class Localhost(InstanceProvider):
         self.results_storage = results_storage
         self.redis = redis
 
-    def acquire_instance(
-            self, execution_id: str, execution_spec: dict) -> Iterator[Dict]:
+    def run_in_instance(self,
+                        execution_id: str,
+                        command: List[str],
+                        snapshot_id: str,
+                        parameters: Parameters,
+                        input_stream: Optional[io.BytesIO],
+                        execution_spec: dict) -> Iterator[Dict[str, Any]]:
         """
-        "Acquires" an instance.
+        Runs a job in an instance, that happens to be always the localhost
         """
         instance = DockerInstance(
             self.images,
@@ -39,6 +45,9 @@ class Localhost(InstanceProvider):
             self.volumes,
             execution_id,
             self.redis)
+        instance.run(command=command, snapshot_id=snapshot_id,
+                     parameters=parameters, input_stream=input_stream,
+                     docker_run_args=execution_spec['docker_run_args'])
         return iter([{'instance': instance}])
 
     def instance_for(self, execution_id: str) -> Optional[Instance]:

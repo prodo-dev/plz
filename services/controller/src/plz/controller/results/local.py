@@ -51,6 +51,10 @@ class LocalResultsStorage(ResultsStorage):
         lock = self.redis.lock(lock_name, timeout=LOCK_TIMEOUT)
         return lock
 
+    def is_finished(self, execution_id: str):
+        paths = Paths(self.directory, execution_id)
+        return os.path.exists(paths.finished_file)
+
 
 class LocalResultsContext(ResultsContext):
     def __init__(self, paths: 'Paths', lock: Lock):

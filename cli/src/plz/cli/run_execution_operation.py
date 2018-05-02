@@ -72,10 +72,13 @@ class RunExecutionOperation(Operation):
         execution_id, ok = self.suboperation(
                 'Sending request to start execution',
                 lambda: self.start_execution(snapshot_id, params, input_id))
+        self.execution_id = execution_id
         log_info(f'Execution ID is: {execution_id}')
 
         retrieve_output_operation = RetrieveOutputOperation(
-            self.configuration, execution_id)
+            self.configuration,
+            output_dir=self.output_dir,
+            execution_id=execution_id)
 
         cancelled = False
         try:
@@ -101,8 +104,6 @@ class RunExecutionOperation(Operation):
 
         show_status_operation = ShowStatusOperation(
             self.configuration, execution_id=execution_id)
-        retrieve_output_operation = RetrieveOutputOperation(
-            self.configuration, self.output_dir, self.execution_id)
         status = show_status_operation.get_status()
         if status.running:
             raise CLIException(
