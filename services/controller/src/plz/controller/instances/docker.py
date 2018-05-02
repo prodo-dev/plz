@@ -113,29 +113,19 @@ class DockerInstance(Instance):
     def release(self,
                 results_storage: ResultsStorage,
                 _: int,
-                release_container: bool = True,
-                _lock_held: bool = False):
+                release_container: bool = True):
         if not release_container:
             # Everything to release here is about the container
             return
-        # Passing a boolean is not the most elegant way to do it, but it's
-        # easy to see that it works (regardless of whether there are several
-        # instance objects with the same instance id, etc.). When it's about
-        # concurrency, that's enough for me
-        if _lock_held:
-            self._do_release(results_storage)
-        else:
-            with self._lock:
-                self._do_release(results_storage)
-
-    def _do_release(self, results_storage: ResultsStorage):
-        self.stop_execution()
-        self._publish_results(results_storage)
-        # Check that we could collect the logs before destroying the container
-        if not results_storage.is_finished(self.execution_id):
-            raise CouldNotGetOutputException(
-                f'Couldn\'t read the results for {self.execution_id}')
-        self._cleanup()
+        with self._lock:
+            self.stop_execution()
+            self._publish_results(results_storage)
+            # Check that we could collect the logs before destroying the
+            # container
+            if not results_storage.is_finished(self.execution_id):
+                raise CouldNotGetOutputException(
+                    f'Couldn\'t read the results for {self.execution_id}')
+            self._cleanup()
 
     def _publish_results(self, results_storage: ResultsStorage):
         results_storage.publish(

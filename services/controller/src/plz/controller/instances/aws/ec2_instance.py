@@ -51,7 +51,7 @@ class EC2Instance(Instance):
             parameters: Parameters,
             input_stream: Optional[io.BytesIO],
             docker_run_args: Dict[str, str],
-            max_idle_seconds: int = 0) -> None:
+            max_idle_seconds: int = 60 * 30) -> None:
         with self._lock:
             if not self._is_free():
                 raise InstanceAssignedException(
@@ -128,6 +128,7 @@ class EC2Instance(Instance):
         if now - ei.idle_since_timestamp > ei.max_idle_seconds or \
                 ei.idle_since_timestamp > now or \
                 ei.max_idle_seconds <= 0:
+            log.info(f'Disposing of instance {self._instance_id}')
             self._dispose()
 
     def stop_execution(self):
@@ -139,28 +140,15 @@ class EC2Instance(Instance):
     def release(self,
                 results_storage: ResultsStorage,
                 idle_since_timestamp: int,
-                release_container: bool = True,
-                _lock_held: bool = False):
-        if _lock_held:
-            self._do_release(
+                release_container: bool = True):
+        with self._lock:
+            self.delegate.release(
                 results_storage, idle_since_timestamp, release_container)
-        else:
-            with self._lock:
-                self._do_release(
-                    results_storage, idle_since_timestamp, release_container)
-
-    def _do_release(
-            self, results_storage, idle_since_timestamp, release_container):
-        self.delegate.release(
-            results_storage,
-            idle_since_timestamp,
-            release_container,
-            _lock_held=True)
-        self._set_tags([
-            {'Key': EC2Instance.EXECUTION_ID_TAG,
-             'Value': ''},
-            {'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
-             'Value': str(idle_since_timestamp)}])
+            self._set_tags([
+                {'Key': EC2Instance.EXECUTION_ID_TAG,
+                 'Value': ''},
+                {'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
+                 'Value': str(idle_since_timestamp)}])
 
     def _is_free(self):
         instances = get_running_aws_instances(

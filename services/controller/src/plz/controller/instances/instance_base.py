@@ -3,9 +3,10 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from collections import namedtuple
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, ContextManager, Dict, Iterator, List, Optional
 
 from redis import StrictRedis
+from redis.lock import Lock
 
 from plz.controller.containers import ContainerMissingException, ContainerState
 from plz.controller.results.results_base import ResultsStorage
@@ -22,7 +23,10 @@ ExecutionInfo = namedtuple(
 class Instance(ABC):
     def __init__(self, redis: StrictRedis):
         self.redis = redis
-        self._redis_lock = None
+        # Need to create and memoised the lock afterwards, as we need the
+        # AWS instance id and it's not available at this point. Use
+        # _redis_lock to access it
+        self._memoised_lock = None
 
     @abstractmethod
     def run(self,
@@ -114,8 +118,7 @@ class Instance(ABC):
     @abstractmethod
     def release(self, results_storage: ResultsStorage,
                 idle_since_timestamp: int,
-                release_container: bool = True,
-                _lock_held: bool = False) -> bool:
+                release_container: bool = True) -> bool:
         pass
 
     def harvest(self, results_storage: ResultsStorage):
@@ -134,14 +137,10 @@ class Instance(ABC):
                     idle_since_timestamp=int(time.time()),
                     # There's no container so don't try to release things
                     # there
-                    release_container=False,
-                    _lock_held=True)
+                    release_container=False)
                 return
             if info.status == 'exited':
-                self.release(
-                    results_storage,
-                    info.idle_since_timestamp,
-                    _lock_held=True)
+                self.release(results_storage, info.idle_since_timestamp)
 
             if info.status in {'exited', 'idle'}:
                 self.dispose_if_its_time(info)
@@ -152,12 +151,16 @@ class Instance(ABC):
         pass
 
     @property
+    def _redis_lock(self) -> Lock:
+        if self._memoised_lock is None:
+            lock_name = f'lock:{__name__}.{self.__class__.__name__}' + \
+                        f'#_lock:{self._instance_id}'
+            self._memoised_lock = Lock(self.redis, lock_name)
+        return self._memoised_lock
+
+    @property
     def _lock(self):
-        if self._redis_lock is None:
-            name = f'lock:{__name__}.{self.__class__.__name__}' + \
-                   f'#_lock:{self._instance_id}'
-            self._redis_lock = self.redis.lock(name)
-        return self._redis_lock
+        return _InstanceContextManager(self._redis_lock)
 
 
 class InstanceProvider(ABC):
@@ -263,3 +266,30 @@ class InstanceStillRunningException(Exception):
 
 class InstanceMissingStateException(Exception):
     pass
+
+
+class _InstanceContextManager(ContextManager):
+    """
+    Allow for the lock to be acquired in several stack frames of the same
+    thread
+    """
+    def __init__(self, instance_lock: Lock):
+        self.instance_lock = instance_lock
+        self.lock = None
+
+    def acquire(self, blocking=None):
+        if self.instance_lock.local.token is None:
+            self.instance_lock.acquire(blocking=blocking)
+            self.lock = self.instance_lock
+        else:
+            self.lock = None
+
+    def release(self):
+        if self.lock is not None:
+            self.lock.release()
+
+    def __enter__(self):
+        self.acquire(blocking=True)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.release()
