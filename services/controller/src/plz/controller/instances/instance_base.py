@@ -118,8 +118,7 @@ class Instance(ABC):
     @abstractmethod
     def release(self, results_storage: ResultsStorage,
                 idle_since_timestamp: int,
-                release_container: bool = True,
-                _lock_held: bool = False) -> bool:
+                release_container: bool = True) -> bool:
         pass
 
     def harvest(self, results_storage: ResultsStorage):
@@ -138,14 +137,10 @@ class Instance(ABC):
                     idle_since_timestamp=int(time.time()),
                     # There's no container so don't try to release things
                     # there
-                    release_container=False,
-                    _lock_held=True)
+                    release_container=False)
                 return
             if info.status == 'exited':
-                self.release(
-                    results_storage,
-                    info.idle_since_timestamp,
-                    _lock_held=True)
+                self.release(results_storage, info.idle_since_timestamp)
 
             if info.status in {'exited', 'idle'}:
                 self.dispose_if_its_time(info)
