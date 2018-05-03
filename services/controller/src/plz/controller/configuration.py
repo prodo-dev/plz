@@ -14,7 +14,7 @@ from plz.controller.instances.localhost import Localhost
 from plz.controller.results import LocalResultsStorage
 from plz.controller.volumes import Volumes
 
-AMI_TAG = '2018-04-11'
+AMI_TAG = '2018-05-03'
 WORKER_AMI = f'plz-worker-{AMI_TAG}'
 
 Dependencies = collections.namedtuple(

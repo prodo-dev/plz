@@ -4,8 +4,8 @@ AWS_PROJECT = $(shell jq -r '.aws_project' $(CONFIG_FILE))
 TAG = $(AWS_PROJECT)/ml-pytorch
 CACHE_DIR = ../../cache/base-images/ml-pytorch
 
-ANACONDA_VERSION = 5.0.1
-ANACONDA_INSTALLER_SHA256 = 55e4db1919f49c92d5abbf27a4be5986ae157f074bf9f8238963cd4582a4068a
+ANACONDA_VERSION = 5.1.0
+ANACONDA_INSTALLER_SHA256 = 7e6785caad25e33930bc03fac4994a434a21bc8401817b7efa28f53619fa9c29
 
 .PHONY: build
 build: cache

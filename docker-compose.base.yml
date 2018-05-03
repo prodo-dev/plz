@@ -22,6 +22,7 @@ services:
 
   redis:
     image: redis:4
+    entrypoint: redis-server
     volumes:
       - redis_data:/data
 

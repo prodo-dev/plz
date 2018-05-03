@@ -8,7 +8,7 @@
   "builders": [
     {
       "type": "docker",
-      "image": "nvidia/cuda:9.0-cudnn7-runtime-ubuntu16.04",
+      "image": "nvidia/cuda:9.1-cudnn7-devel-ubuntu16.04",
       "commit": true,
       "volumes": {
         "{{pwd}}": "/env",

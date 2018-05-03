@@ -1,4 +1,5 @@
 import io
+import logging
 import os
 import shlex
 import socket
@@ -16,6 +17,9 @@ from plz.controller.results.results_base import ResultsStorage
 from plz.controller.volumes import Volumes
 from .ec2_instance import EC2Instance, get_running_aws_instances, get_tag, \
     InstanceAssignedException
+
+
+log = logging.getLogger(__name__)
 
 
 class EC2InstanceGroup(InstanceProvider):
@@ -189,6 +193,7 @@ class EC2InstanceGroup(InstanceProvider):
         return get_running_aws_instances(self.client, filters)
 
     def _ask_aws_for_new_instance(self, instance_type: str) -> dict:
+        raise Exception
         response = self.client.run_instances(
             **self._get_instance_spec(instance_type),
             MinCount=1, MaxCount=1)
@@ -216,6 +221,8 @@ class EC2InstanceGroup(InstanceProvider):
     def _get_instance_spec(self, instance_type) -> dict:
         spec = _BASE_INSTANCE_SPEC.copy()
         spec['ImageId'] = self.ami_id
+        log.info(f'******Ami name: {self.aws_worker_ami}')
+        log.info(f'******Ami id: {self.ami_id}')
         if self.aws_key_name:
             spec['KeyName'] = self.aws_key_name
         spec['TagSpecifications'] = [{
