@@ -1,5 +1,4 @@
 import io
-import logging
 import os
 import shlex
 import socket
@@ -15,11 +14,8 @@ from plz.controller.instances.instance_base import Instance, \
     InstanceProvider, Parameters
 from plz.controller.results.results_base import ResultsStorage
 from plz.controller.volumes import Volumes
-from .ec2_instance import EC2Instance, get_running_aws_instances, get_tag, \
-    InstanceAssignedException
-
-
-log = logging.getLogger(__name__)
+from .ec2_instance import EC2Instance, InstanceAssignedException, \
+    get_running_aws_instances, get_tag
 
 
 class EC2InstanceGroup(InstanceProvider):
