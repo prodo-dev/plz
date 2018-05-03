@@ -141,7 +141,9 @@ class LocalInputData(InputData):
     @property
     def timestamp_millis(self) -> int:
         if self._timestamp_millis is None:
-            seconds_timestamp = max(os.path.getmtime(path[0])
-                                    for path in os.walk(self.path))
-            self._timestamp_millis = int(seconds_timestamp * 1000)
+            modified_timestamps_in_seconds = [
+                    os.path.getmtime(path[0]) for path in os.walk(self.path)]
+            max_timestamp_in_seconds = max(
+                    [0] + modified_timestamps_in_seconds)
+            self._timestamp_millis = int(max_timestamp_in_seconds * 1000)
         return self._timestamp_millis
