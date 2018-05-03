@@ -193,7 +193,6 @@ class EC2InstanceGroup(InstanceProvider):
         return get_running_aws_instances(self.client, filters)
 
     def _ask_aws_for_new_instance(self, instance_type: str) -> dict:
-        raise Exception
         response = self.client.run_instances(
             **self._get_instance_spec(instance_type),
             MinCount=1, MaxCount=1)
@@ -221,8 +220,6 @@ class EC2InstanceGroup(InstanceProvider):
     def _get_instance_spec(self, instance_type) -> dict:
         spec = _BASE_INSTANCE_SPEC.copy()
         spec['ImageId'] = self.ami_id
-        log.info(f'******Ami name: {self.aws_worker_ami}')
-        log.info(f'******Ami id: {self.ami_id}')
         if self.aws_key_name:
             spec['KeyName'] = self.aws_key_name
         spec['TagSpecifications'] = [{
