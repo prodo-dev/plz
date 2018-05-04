@@ -3,8 +3,6 @@ channels:
 - defaults
 - pytorch
 dependencies:
-- cuda90=1.0=h6433d27_0
-- pytorch=0.3.0=py36_cuda9.0.176_cudnn7.0.3hdc18817_4
 - pip:
   - mmh3==2.5.1
   - tensorboardx==1.0

@@ -3,6 +3,7 @@ version: '2.3'
 services:
   controller:
     image: plztest/controller
+    build: services/controller
     environment:
       CONFIGURATION: |
         config = { include "/root/config.json" }
@@ -22,6 +23,7 @@ services:
 
   redis:
     image: redis:4
+    entrypoint: redis-server
     volumes:
       - redis_data:/data
 

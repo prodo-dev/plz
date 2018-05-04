@@ -3,6 +3,7 @@ SHELL := zsh -e -u
 include ../../vars.mk
 
 IMAGE_GROUPS = controller worker
+INSTANCE_TYPES = t2.small p2.xlarge
 
 AWS_REGION = $(shell jq -r '.aws_region' $(CONFIG_FILE))
 SSH_PRIVATE_KEY_FILE = $(SECRETS_DIR)/keys/id_rsa
@@ -19,11 +20,13 @@ amis:
 	))
 	$(info SOURCE_AMI = $(SOURCE_AMI))
 	$(info AMI_TAG = $(AMI_TAG))
-	$(foreach GROUP, $(IMAGE_GROUPS), \
+	$(foreach GROUP_AND_INSTANCE_TYPE, \
+		$(join $(IMAGE_GROUPS), $(addprefix ^, $(INSTANCE_TYPES))), \
 		packer build \
 			-var aws-region=$(AWS_REGION) \
 			-var source-ami=$(SOURCE_AMI) \
-			-var group=$(GROUP) \
+			-var group=$(word 1, $(subst ^, , $(GROUP_AND_INSTANCE_TYPE))) \
+			-var instance-type=$(word 2, $(subst ^, , $(GROUP_AND_INSTANCE_TYPE))) \
 			-var ami-tag=$(AMI_TAG) \
 			ami.json ${\n})
 

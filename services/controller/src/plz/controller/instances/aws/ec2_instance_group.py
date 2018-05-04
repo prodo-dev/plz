@@ -14,8 +14,8 @@ from plz.controller.instances.instance_base import Instance, \
     InstanceProvider, Parameters
 from plz.controller.results.results_base import ResultsStorage
 from plz.controller.volumes import Volumes
-from .ec2_instance import EC2Instance, get_running_aws_instances, get_tag, \
-    InstanceAssignedException
+from .ec2_instance import EC2Instance, InstanceAssignedException, \
+    get_running_aws_instances, get_tag
 
 
 class EC2InstanceGroup(InstanceProvider):

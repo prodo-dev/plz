@@ -10,7 +10,7 @@
       "type": "amazon-ebs",
       "region": "{{user `aws-region`}}",
       "source_ami": "{{user `source-ami`}}",
-      "instance_type": "t2.micro",
+      "instance_type": "{{user `instance-type`}}",
       "ssh_username": "ubuntu",
       "ami_name": "plz-{{user `group`}}-{{user `ami-tag`}}",
       "tags": {

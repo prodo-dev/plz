@@ -84,7 +84,7 @@
       apt_repository:
         repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
 
-- hosts: controller
+- hosts: all
   remote_user: root
   become: yes
   tasks:
@@ -114,22 +114,27 @@
       shell: |
         curl -fsSL https://nvidia.github.io/nvidia-docker/gpgkey | apt-key add -
     - name: Add the NVIDIA-Docker APT repository
-      shell: curl -fsSL https://nvidia.github.io/nvidia-docker/ubuntu16.04/amd64/nvidia-docker.list > /etc/apt/sources.list.d/nvidia-docker.list
+      shell: curl -fsSL https://nvidia.github.io/nvidia-docker/ubuntu16.04/nvidia-docker.list > /etc/apt/sources.list.d/nvidia-docker.list
     - name: Update the APT repositories
       apt:
         update_cache: yes
-    - name: Install Docker 17.12.0 # nvidia-docker doesn't yet support 17.12.1
-      apt:
-        name: docker-ce=17.12.0~ce-0~ubuntu
-        force: yes
     - name: Install NVIDIA-Docker
       apt:
         name: nvidia-docker2
-    - name: Install libcuda
-      apt:
-        name: libcuda1-384
-    - name: Add the user to the docker group
-      user:
-        name: ubuntu
-        groups: docker
-        append: yes
+    - name: Download cuda driver
+      get_url:
+        url: http://us.download.nvidia.com/XFree86/Linux-x86_64/390.48/NVIDIA-Linux-x86_64-390.48.run
+        checksum: "sha256:2c01f57abd78e9c52d3e76e3cdf688835be54f419a1093bbaa7ab21f375d4399"
+        dest: /nvidia_driver.sh
+    - name: Set the nvidia driver to be executable
+      file:
+        path: /nvidia_driver.sh
+        owner: root
+        group: root
+        mode: 0700
+    - name: Install nvidia driver
+      shell: /nvidia_driver.sh -s
+    - name: Delete nvidia driver installer
+      file:
+        path: /nvidia_driver.sh
+        state: absent
