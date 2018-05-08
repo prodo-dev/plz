@@ -132,7 +132,7 @@ resource "aws_volume_attachment" "controller-cache-attachment" {
 
   provisioner "local-exec" {
     interpreter = ["/bin/bash", "-c"]
-    command = "../../scripts/run-ansible-playbook-on-host ../../services/controller/src/plz/controller/startup/startup.yml ${aws_instance.controller.private_ip} /dev/stdin <<< 'device: /dev/nvme1n1'"
+    command     = "../../scripts/run-ansible-playbook-on-host ../../services/controller/src/plz/controller/startup/startup.yml ${aws_instance.controller.private_ip} /dev/stdin <<< 'device: /dev/nvme1n1'"
   }
 }
 
