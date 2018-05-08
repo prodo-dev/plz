@@ -16,7 +16,7 @@ from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
 from plz.cli.input_data import InputData
 from plz.cli.log import log_debug, log_error, log_info
 from plz.cli.logs_operation import LogsOperation
-from plz.cli.operation import Operation, check_status, add_output_dir_arg
+from plz.cli.operation import Operation, add_output_dir_arg, check_status
 from plz.cli.parameters import Parameters
 from plz.cli.retrieve_output_operation import RetrieveOutputOperation
 from plz.cli.show_status_operation import ShowStatusOperation
