@@ -1,4 +1,5 @@
 import json
+import os
 from abc import ABC, abstractmethod
 
 import requests
@@ -72,6 +73,14 @@ def on_exception_reraise(message: str):
 def maybe_add_execution_id_arg(parser, args):
     # Positional arguments cannot be optional, so we check whether the
     # execution ID was specified and specify the argument only in that
-    # case
-    if len(args) > 1 and args[1][0] != '-':
+    # case. Also display it when the user asks for help.
+    if len(args) > 1 and (args[1][0] != '-' or args[1] in {'-h', '--help'}):
         parser.add_argument('execution_id')
+
+
+def add_output_dir_arg(parser):
+    parser.add_argument('-o', '--output-dir',
+                        type=str,
+                        default=os.path.join(os.getcwd(), 'output/%e'),
+                        help='Directory to store output. The string %e is '
+                             'replaced by the execution id')

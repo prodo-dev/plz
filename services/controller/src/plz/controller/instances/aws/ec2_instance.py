@@ -134,7 +134,7 @@ class EC2Instance(Instance):
     def stop_execution(self):
         return self.delegate.stop_execution()
 
-    def container_state(self) -> Optional[dict]:
+    def container_state(self) -> Optional[ContainerState]:
         return self.delegate.container_state()
 
     def release(self,

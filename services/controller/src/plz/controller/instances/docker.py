@@ -105,7 +105,7 @@ class DockerInstance(Instance):
         # It's never time for a local instance
         pass
 
-    def container_state(self) -> Optional[dict]:
+    def container_state(self) -> Optional[ContainerState]:
         if self.execution_id == '':
             return None
         return self.containers.get_state(self.execution_id)
