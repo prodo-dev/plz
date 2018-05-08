@@ -13,6 +13,10 @@ variable "ami_tag" {}
 variable "key_name" {}
 variable "ssh_public_key_file" {}
 
+variable "controller_instance_type" {
+  default = "m5.2xlarge"
+}
+
 variable "ec2_role" {
   default = <<EOF
 {
@@ -78,7 +82,7 @@ data "aws_ami" "controller-ami" {
 
 resource "aws_instance" "controller" {
   subnet_id                   = "${data.aws_subnet.main.id}"
-  instance_type               = "m5.2xlarge"
+  instance_type               = "${var.controller_instance_type}"
   ami                         = "${data.aws_ami.controller-ami.id}"
   key_name                    = "${aws_key_pair.plz.key_name}"
   associate_public_ip_address = true
