@@ -13,7 +13,7 @@ dist: environment
 environment: .environment
 
 .environment: Pipfile.lock
-	pipenv install --keep-outdated --dev
+	pipenv sync --dev
 	touch $@
 
 Pipfile.lock: Pipfile

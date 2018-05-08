@@ -1,16 +1,15 @@
-import io
 import os
 import shutil
 import tarfile
 import tempfile
-from typing import Iterator, Optional
+from typing import Iterator, Optional, IO
 
 import requests
 
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
 from plz.cli.log import log_info
-from plz.cli.operation import Operation, check_status, \
+from plz.cli.operation import Operation, add_output_dir_arg, check_status, \
     maybe_add_execution_id_arg, on_exception_reraise
 
 
@@ -18,10 +17,7 @@ class RetrieveOutputOperation(Operation):
     @staticmethod
     def prepare_argument_parser(parser, args):
         maybe_add_execution_id_arg(parser, args)
-        cwd = os.getcwd()
-        parser.add_argument('-o', '--output-dir',
-                            type=str,
-                            default=os.path.join(cwd, 'output'))
+        add_output_dir_arg(parser)
 
     def __init__(self, configuration: Configuration,
                  output_dir: str,
@@ -47,12 +43,14 @@ class RetrieveOutputOperation(Operation):
             self.url('executions', execution_id, 'output', 'files'),
             stream=True)
         check_status(response, requests.codes.ok)
+        formatted_output_dir = self.output_dir.replace('%e', execution_id)
         try:
-            os.makedirs(self.output_dir)
+            os.makedirs(formatted_output_dir)
         except FileExistsError:
             raise CLIException(
-                f'The output directory "{self.output_dir}" already exists.')
-        for path in untar(response.raw, self.output_dir):
+                f'The output directory "{formatted_output_dir}" '
+                'already exists.')
+        for path in untar(response.raw, formatted_output_dir):
             print(path)
 
     def run(self):
@@ -62,7 +60,7 @@ class RetrieveOutputOperation(Operation):
         self.retrieve_output()
 
 
-def untar(stream: io.RawIOBase, output_dir: str) -> Iterator[str]:
+def untar(stream: IO, formatted_output_dir: str) -> Iterator[str]:
     # The response is a tarball we need to extract into `output_dir`.
     with tempfile.TemporaryFile() as tarball:
         # `tarfile.open` needs to read from a real file, so we copy to one.
@@ -81,10 +79,10 @@ def untar(stream: io.RawIOBase, output_dir: str) -> Iterator[str]:
                 path = os.path.join(path_segments[0], *path_segments[1:])
                 # Just because it's nice, yield the file to be extracted.
                 yield path
-                source: io.BufferedReader = tar.extractfile(tarinfo.name)
+                source: IO = tar.extractfile(tarinfo.name)
                 if source:
                     # Finally, write the file.
-                    absolute_path = os.path.join(output_dir, path)
+                    absolute_path = os.path.join(formatted_output_dir, path)
                     os.makedirs(os.path.dirname(absolute_path),
                                 exist_ok=True)
                     with open(absolute_path, 'wb') as dest:
