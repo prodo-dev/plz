@@ -53,7 +53,7 @@ class EC2Instance(Instance):
             docker_run_args: Dict[str, str],
             max_idle_seconds: int = 60 * 30) -> None:
         with self._lock:
-            if not self._is_free():
+            if not self._is_running_and_free():
                 raise InstanceAssignedException(
                     f'Instance {self._instance_id} cannot execute '
                     f'{self.delegate.execution_id} as it\'s not '
@@ -70,6 +70,8 @@ class EC2Instance(Instance):
             since=since, stdout=stdout, stderr=stderr)
 
     def is_up(self, is_instance_newly_created: bool):
+        if not self._is_running():
+            return False
         return self.images.can_pull(
             5 if is_instance_newly_created else 1)
 
@@ -150,11 +152,19 @@ class EC2Instance(Instance):
                 {'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
                  'Value': str(idle_since_timestamp)}])
 
-    def _is_free(self):
+    def _is_running_and_free(self):
+        if not self._is_running():
+            return False
         instances = get_running_aws_instances(
             self.client,
             filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
                      ('instance-id', self._instance_id)])
+        return len(instances) > 0
+
+    def _is_running(self):
+        instances = get_running_aws_instances(
+            self.client,
+            filters=[('instance-id', self._instance_id)])
         return len(instances) > 0
 
     @property
