@@ -56,7 +56,8 @@ class Images(ABC):
             custom_context=True,
             encoding='bz2',
             rm=True,
-            tag=f'{self.repository}:{tag}')
+            tag=f'{self.repository}:{tag}',
+            pull=True)
         for message_bytes in builder:
             try:
                 message_str = message_bytes.decode('utf-8').strip()
