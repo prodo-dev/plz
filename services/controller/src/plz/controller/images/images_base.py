@@ -27,7 +27,7 @@ class Images(ABC):
         pass
 
     @abstractmethod
-    def build(self, fileobj: BinaryIO, tag: str) -> Iterator[str]:
+    def build(self, fileobj: BinaryIO, tag: str) -> Iterator[bytes]:
         pass
 
     @abstractmethod

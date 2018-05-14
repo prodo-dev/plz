@@ -24,7 +24,7 @@ class ECRImages(Images):
         return ECRImages(
             new_docker_api_client, self.ecr_client, self.repository)
 
-    def build(self, fileobj: BinaryIO, tag: str) -> Iterator[str]:
+    def build(self, fileobj: BinaryIO, tag: str) -> Iterator[bytes]:
         return self.docker_api_client.build(
             fileobj=fileobj,
             custom_context=True,
