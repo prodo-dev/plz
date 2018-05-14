@@ -22,7 +22,7 @@ push: build
 cache: $(CACHE_DIR)/install/anaconda.sh $(CACHE_DIR)/pkgs
 
 $(CACHE_DIR)/install/anaconda.sh: $(CACHE_DIR)/install
-	./download \
+	../scripts/download \
 		https://repo.continuum.io/archive/Anaconda3-$(ANACONDA_VERSION)-Linux-x86_64.sh \
 		$@ \
 		$(ANACONDA_INSTALLER_SHA256)
