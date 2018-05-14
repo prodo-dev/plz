@@ -14,31 +14,37 @@ class ECRImages(Images):
     def __init__(self,
                  docker_api_client: docker.APIClient,
                  ecr_client,
+                 registry: str,
                  repository: str):
         super().__init__(docker_api_client, repository)
+        self.registry = registry
         self.ecr_client = ecr_client
 
     def for_host(self, docker_url: str) -> 'ECRImages':
         new_docker_api_client = docker.APIClient(base_url=docker_url)
         return ECRImages(
-            new_docker_api_client, self.ecr_client, self.repository)
+            new_docker_api_client,
+            self.ecr_client,
+            self.registry,
+            self.repository)
 
     def build(self, fileobj: BinaryIO, tag: str) -> Iterator[bytes]:
+        self._login()
         return self._build(fileobj, tag)
 
     def push(self, tag: str):
+        self._login()
         for message in self.docker_api_client.push(
                 repository=self.repository,
                 tag=tag,
-                auth_config=self._aws_ecr_credentials(),
                 stream=True):
             log.debug('Push: ' + message.decode('utf-8').strip())
 
     def pull(self, tag: str):
+        self._login()
         for message in self.docker_api_client.pull(
                 repository=self.repository,
                 tag=tag,
-                auth_config=self._aws_ecr_credentials(),
                 stream=True):
             log.debug('Pull: ' + message.decode('utf-8').strip())
 
@@ -52,13 +58,13 @@ class ECRImages(Images):
             log.debug('Couldn\'t pull image')
             return False
 
-    def _aws_ecr_credentials(self) -> dict:
+    def _login(self) -> None:
         authorization_token = self.ecr_client.get_authorization_token()
         authorization_data = authorization_token['authorizationData']
         encoded_token = authorization_data[0]['authorizationToken']
         token = base64.b64decode(encoded_token).decode('utf-8')
         username, password = token.split(':')
-        return {
-            'username': username,
-            'password': password,
-        }
+        self.docker_api_client.login(
+            username=username,
+            password=password,
+            registry=self.registry)

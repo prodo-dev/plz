@@ -49,7 +49,8 @@
                   images = {
                     provider = aws-ecr
                     region = "{{ aws_region }}"
-                    repository = "{{ aws_project }}/plz/builds"
+                    registry = "{{ aws_project }}"
+                    repository = "plz/builds"
                     docker_api_client_timeout = 600
                   }
                   results {
