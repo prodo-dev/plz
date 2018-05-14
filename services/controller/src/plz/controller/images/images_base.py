@@ -7,6 +7,8 @@ from typing import BinaryIO, Iterator
 
 import docker
 
+from plz.controller.exceptions import JSONResponseException
+
 Metadata = collections.namedtuple('Metadata', ['user', 'project', 'timestamp'])
 
 log = logging.getLogger(__name__)
@@ -55,6 +57,21 @@ class Images(ABC):
             encoding='bz2',
             rm=True,
             tag=f'{self.repository}:{tag}')
-        for message in builder:
-            log.debug('Build: ' + message.decode('utf-8').strip())
-            yield message
+        for message_bytes in builder:
+            message_str = message_bytes.decode('utf-8').strip()
+            log.debug('Build: ' + message_str)
+            self._raise_on_error_in_json(message_str)
+            yield message_bytes
+
+    @staticmethod
+    def _raise_on_error_in_json(message_str: str):
+        try:
+            message_json = json.loads(message_str)
+            if 'error' in message_json:
+                raise ImageBuildError(message_str)
+        except json.JSONDecodeError:
+            pass
+
+
+class ImageBuildError(JSONResponseException):
+    pass
