@@ -107,8 +107,9 @@ def _images_from(config, docker_host):
         ecr_client = boto3.client(
             service_name='ecr',
             region_name=config['images.region'])
-        repository = config['images.repository']
-        images = ECRImages(docker_api_client, ecr_client, repository)
+        registry = config['images.registry']
+        repository = f'{registry}/{config["images.repository"]}'
+        images = ECRImages(docker_api_client, ecr_client, registry, repository)
     else:
         raise ValueError('Invalid image provider.')
     return images

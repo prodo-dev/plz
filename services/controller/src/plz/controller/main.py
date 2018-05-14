@@ -14,6 +14,7 @@ from redis import StrictRedis
 from plz.controller import configuration
 from plz.controller.configuration import Dependencies
 from plz.controller.db_storage import DBStorage
+from plz.controller.exceptions import JSONResponseException
 from plz.controller.images import Images
 from plz.controller.input_data import InputDataConfiguration
 from plz.controller.instances.instance_base import Instance, \
@@ -22,6 +23,8 @@ from plz.controller.instances.instance_base import Instance, \
 from plz.controller.results import ResultsStorage
 
 T = TypeVar('T')
+ResponseGenerator = Iterator[Union[bytes, str]]
+ResponseGeneratorFunction = Callable[[], ResponseGenerator]
 
 config = configuration.load()
 port = config.get_int('port', 8080)
@@ -300,7 +303,7 @@ def create_snapshot():
     tag = Images.construct_tag(metadata_str)
 
     @stream_with_context
-    @_handle_lazy_exceptions(formatter=_format_error)
+    @_handle_lazy_exceptions
     def act() -> Iterator[Union[bytes, str]]:
         # Pass the rest of the stream to `docker build`
         yield from images.build(request.stream, tag)
@@ -358,24 +361,22 @@ def _json_stream(f: Callable[[], Iterator[Any]]):
     return wrapped
 
 
-def _handle_lazy_exceptions(formatter: Callable[[str], T]):
-    def wrapper(f):
-        def wrapped():
-            # noinspection PyBroadException
-            try:
-                for value in f():
-                    yield value
-            except Exception as e:
-                yield formatter(str(e) + '\n')
-                log.exception('Exception in response generator')
+def _handle_lazy_exceptions(f: ResponseGeneratorFunction) \
+        -> ResponseGeneratorFunction:
+    def wrapped() -> ResponseGenerator:
+        # noinspection PyBroadException
+        try:
+            for value in f():
+                yield value
+        except JSONResponseException as e:
+            yield e.args[0]
+            log.exception('Exception in response generator')
+        except Exception as e:
+            message = str(e) + '\n'
+            yield json.dumps({'error': message})
+            log.exception('Exception in response generator')
 
-        return wrapped
-
-    return wrapper
-
-
-def _format_error(message: str) -> bytes:
-    return json.dumps({'error': message}).encode('utf-8')
+    return wrapped
 
 
 def _set_user_last_execution_id(user: str, execution_id: str) -> None:
