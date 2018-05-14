@@ -162,7 +162,7 @@ class RunExecutionOperation(Operation):
             data=request_data,
             stream=True)
         check_status(response, requests.codes.ok)
-        error = False
+        errors = []
         snapshot_id: str = None
         for json_bytes in response.raw:
             data = json.loads(json_bytes.decode('utf-8'))
@@ -170,12 +170,13 @@ class RunExecutionOperation(Operation):
                 if not self.configuration.quiet_build:
                     print(data['stream'].rstrip())
             if 'error' in data:
-                error = True
-                log_error('The snapshot was not successfully created.')
-                print(data['error'].rstrip())
+                errors.append(data['error'].rstrip())
             if 'id' in data:
                 snapshot_id = data['id']
-        if error or not snapshot_id:
+        if errors or not snapshot_id:
+            log_error('The snapshot was not successfully created.')
+            for error in errors:
+                print(error)
             raise CLIException('We did not receive a snapshot ID.')
         return snapshot_id
 

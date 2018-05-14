@@ -1,4 +1,5 @@
 import base64
+import json
 import logging
 from typing import BinaryIO, Iterator
 
@@ -14,39 +15,33 @@ class ECRImages(Images):
     def __init__(self,
                  docker_api_client: docker.APIClient,
                  ecr_client,
+                 registry: str,
                  repository: str):
-        super().__init__(repository)
-        self.docker_api_client = docker_api_client
+        super().__init__(docker_api_client, repository)
+        self.registry = registry
         self.ecr_client = ecr_client
 
     def for_host(self, docker_url: str) -> 'ECRImages':
         new_docker_api_client = docker.APIClient(base_url=docker_url)
         return ECRImages(
-            new_docker_api_client, self.ecr_client, self.repository)
+            new_docker_api_client,
+            self.ecr_client,
+            self.registry,
+            self.repository)
 
-    def build(self, fileobj: BinaryIO, tag: str) -> Iterator[str]:
-        return self.docker_api_client.build(
-            fileobj=fileobj,
-            custom_context=True,
-            encoding='bz2',
-            rm=True,
-            tag=f'{self.repository}:{tag}')
+    def build(self, fileobj: BinaryIO, tag: str) -> Iterator[bytes]:
+        self._login()
+        return self._build(fileobj, tag)
 
     def push(self, tag: str):
-        for m in self.docker_api_client.push(
-                repository=self.repository,
-                tag=tag,
-                auth_config=self._aws_ecr_credentials(),
-                stream=True):
-            log.debug('Push: ' + str(m, 'utf-8'))
+        self._login()
+        self._log_output('Push', self.docker_api_client.push(
+            repository=self.repository, tag=tag, stream=True))
 
     def pull(self, tag: str):
-        for m in self.docker_api_client.pull(
-                repository=self.repository,
-                tag=tag,
-                auth_config=self._aws_ecr_credentials(),
-                stream=True):
-            log.debug('Pull: ' + str(m, 'utf-8'))
+        self._login()
+        self._log_output('Push', self.docker_api_client.pull(
+            repository=self.repository, tag=tag, stream=True))
 
     def can_pull(self, times: int) -> bool:
         try:
@@ -58,13 +53,25 @@ class ECRImages(Images):
             log.debug('Couldn\'t pull image')
             return False
 
-    def _aws_ecr_credentials(self) -> dict:
+    def _login(self) -> None:
         authorization_token = self.ecr_client.get_authorization_token()
         authorization_data = authorization_token['authorizationData']
         encoded_token = authorization_data[0]['authorizationToken']
         token = base64.b64decode(encoded_token).decode('utf-8')
         username, password = token.split(':')
-        return {
-            'username': username,
-            'password': password,
-        }
+        self.docker_api_client.login(
+            username=username,
+            password=password,
+            registry=self.registry)
+
+    @staticmethod
+    def _log_output(label: str, stream: Iterator[bytes]):
+        for message_bytes in stream:
+            message_str = message_bytes.decode('utf-8').strip()
+            try:
+                message_json = json.loads(message_str)
+                # Ignore progress indicators because they're too noisy
+                if 'progress' not in message_json:
+                    log.debug(f'{label}: {message_str}')
+            except json.JSONDecodeError:
+                log.debug(f'{label}: {message_str}')
