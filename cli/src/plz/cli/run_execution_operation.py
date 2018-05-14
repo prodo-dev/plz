@@ -3,12 +3,12 @@ import itertools
 import json
 import os
 import subprocess
-import time
 from glob import iglob
 from typing import Any, Callable, Optional, Tuple
 
 import docker.utils.build
 import requests
+import time
 
 from plz.cli import parameters
 from plz.cli.configuration import Configuration
@@ -196,11 +196,14 @@ class RunExecutionOperation(Operation):
             'input_id': input_id,
             'docker_run_args': configuration.docker_run_args
         }
+        commit = _get_head_commit() if _is_git_present() else None
         response = requests.post(self.url('executions'), json={
             'command': self.command,
             'snapshot_id': snapshot_id,
             'parameters': params,
-            'execution_spec': execution_spec
+            'execution_spec': execution_spec,
+            'start_metadata': {'commit': commit,
+                               'configuration': configuration.as_dict()}
         }, stream=True)
         check_status(response, requests.codes.accepted)
         execution_id: Optional[str] = None
@@ -247,6 +250,20 @@ def _is_git_present() -> bool:
             len(result.stdout) > 0
     except Exception:
         return False
+
+
+def _get_head_commit() -> str:
+    # noinspection PyBroadException
+    result = subprocess.run(
+        ['git', 'rev-parse', 'HEAD'],
+        input=None,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        encoding='utf-8')
+    commit = result.stdout.strip()
+    if result.returncode != 0 or result.stderr != '' or len(commit) == 0:
+        raise CLIException('Couldn\'t get HEAD commit')
+    return commit
 
 
 def _get_excluded_paths(configuration: Configuration):

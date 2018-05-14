@@ -13,6 +13,7 @@ from redis import StrictRedis
 
 from plz.controller import configuration
 from plz.controller.configuration import Dependencies
+from plz.controller.db_storage import DBStorage
 from plz.controller.images import Images
 from plz.controller.input_data import InputDataConfiguration
 from plz.controller.instances.instance_base import Instance, \
@@ -29,6 +30,7 @@ dependencies: Dependencies = configuration.dependencies_from_config(config)
 images: Images = dependencies.images
 instance_provider: InstanceProvider = dependencies.instance_provider
 results_storage: ResultsStorage = dependencies.results_storage
+db_storage: DBStorage = dependencies.db_storage
 redis: StrictRedis = dependencies.redis
 
 input_dir = os.path.join(data_dir, 'input')
@@ -103,7 +105,10 @@ def run_execution_entrypoint():
     snapshot_id = request.json['snapshot_id']
     parameters = request.json['parameters']
     execution_spec = request.json['execution_spec']
+    start_metadata = request.json['start_metadata']
     execution_id = str(get_execution_uuid())
+
+    db_storage.store_start_metadata(execution_id, start_metadata)
 
     @_json_stream
     @stream_with_context
@@ -221,6 +226,14 @@ def get_output_files_entrypoint(execution_id):
     return Response(response, mimetype='application/octet-stream')
 
 
+def get_metadata(execution_id):
+    with results_storage.get(execution_id) as results:
+        if results is None:
+            raise ExecutionIdNotFound(
+                f'Metadata not found for execution id: {execution_id}')
+        return ''.join(str(r, 'utf-8') for r in results.metadata())
+
+
 @app.route(f'/executions/<execution_id>',
            methods=['DELETE'])
 def delete_execution(execution_id):
@@ -244,6 +257,32 @@ def delete_execution(execution_id):
         return response
     instance_provider.release_instance(execution_id, fail_if_not_found=False)
     response.status_code = requests.codes.no_content
+    return response
+
+
+@app.route(f'/executions/<user>/<project>/history', methods=['GET'])
+def history_entrypoint(user, project):
+    execution_ids = db_storage.retrieve_execution_ids_for_user_and_project(
+        user, project)
+
+    @stream_with_context
+    def act():
+        yield '{\n'
+        first = True
+        for execution_id in execution_ids:
+            try:
+                metadata = get_metadata(execution_id)
+            except ExecutionIdNotFound as e:
+                log.info(e)
+                continue
+            if not first:
+                yield ',\n'
+            first = False
+            yield f'"{execution_id}": {metadata}'
+        yield '\n}\n'
+
+    response = Response(act(), mimetype='text/plain')
+    response.status_code = requests.codes.ok
     return response
 
 
@@ -351,6 +390,10 @@ def _get_user_last_execution_id(user: str) -> Optional[str]:
         return str(execution_id_bytes, encoding='utf-8')
     else:
         return None
+
+
+class ExecutionIdNotFound(Exception):
+    pass
 
 
 if __name__ == '__main__':

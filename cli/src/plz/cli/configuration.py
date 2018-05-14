@@ -157,3 +157,6 @@ class Configuration:
             return self.data.get(name, self.properties[name].default)
         else:
             raise KeyError(name)
+
+    def as_dict(self):
+        return {name: self.__getattr__(name) for name in self.properties}
