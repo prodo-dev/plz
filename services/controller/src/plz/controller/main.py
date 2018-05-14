@@ -340,10 +340,6 @@ def _handle_lazy_exceptions(f: ResponseGeneratorFunction) \
     return wrapped
 
 
-def _format_error(message: str) -> bytes:
-    return json.dumps({'error': message}).encode('utf-8')
-
-
 def _set_user_last_execution_id(user: str, execution_id: str) -> None:
     redis.set(f'key:{__name__}#user_last_execution_id:{user}',
               execution_id)
