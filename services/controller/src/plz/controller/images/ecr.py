@@ -1,4 +1,5 @@
 import base64
+import json
 import logging
 from typing import BinaryIO, Iterator
 
@@ -34,19 +35,13 @@ class ECRImages(Images):
 
     def push(self, tag: str):
         self._login()
-        for message in self.docker_api_client.push(
-                repository=self.repository,
-                tag=tag,
-                stream=True):
-            log.debug('Push: ' + message.decode('utf-8').strip())
+        self._log_output('Push', self.docker_api_client.push(
+            repository=self.repository, tag=tag, stream=True))
 
     def pull(self, tag: str):
         self._login()
-        for message in self.docker_api_client.pull(
-                repository=self.repository,
-                tag=tag,
-                stream=True):
-            log.debug('Pull: ' + message.decode('utf-8').strip())
+        self._log_output('Push', self.docker_api_client.pull(
+            repository=self.repository, tag=tag, stream=True))
 
     def can_pull(self, times: int) -> bool:
         try:
@@ -68,3 +63,15 @@ class ECRImages(Images):
             username=username,
             password=password,
             registry=self.registry)
+
+    @staticmethod
+    def _log_output(label: str, stream: Iterator[bytes]):
+        for message_bytes in stream:
+            message_str = message_bytes.decode('utf-8').strip()
+            try:
+                message_json = json.loads(message_str)
+                # Ignore progress indicators because they're too noisy
+                if 'progress' not in message_json:
+                    log.debug(f'{label}: {message_str}')
+            except json.JSONDecodeError:
+                log.debug(f'{label}: {message_str}')

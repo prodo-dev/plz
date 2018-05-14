@@ -58,19 +58,23 @@ class Images(ABC):
             rm=True,
             tag=f'{self.repository}:{tag}')
         for message_bytes in builder:
-            message_str = message_bytes.decode('utf-8').strip()
-            log.debug('Build: ' + message_str)
-            self._raise_on_error_in_json(message_str)
+            try:
+                message_str = message_bytes.decode('utf-8').strip()
+                message_json = json.loads(message_str)
+                # Ignore progress indicators because they're too noisy
+                if 'progress' not in message_json:
+                    log.debug('Build: ' + message_str)
+                self._raise_on_error_in_json(message_str, message_json)
+            except UnicodeDecodeError:
+                pass
+            except json.JSONDecodeError:
+                pass
             yield message_bytes
 
     @staticmethod
-    def _raise_on_error_in_json(message_str: str):
-        try:
-            message_json = json.loads(message_str)
-            if 'error' in message_json:
-                raise ImageBuildError(message_str)
-        except json.JSONDecodeError:
-            pass
+    def _raise_on_error_in_json(message_str: str, message_json: dict):
+        if 'error' in message_json:
+            raise ImageBuildError(message_str)
 
 
 class ImageBuildError(JSONResponseException):
