@@ -253,16 +253,18 @@ def _is_git_present() -> bool:
 
 
 def _get_head_commit() -> str:
-    # noinspection PyBroadException
     result = subprocess.run(
-        ['git', 'rev-parse', 'HEAD'],
+        ['git', 'log', '-n', '1', '--format=\'%H\''],
         input=None,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         encoding='utf-8')
     commit = result.stdout.strip()
     if result.returncode != 0 or result.stderr != '' or len(commit) == 0:
-        raise CLIException('Couldn\'t get HEAD commit')
+        raise CLIException('Couldn\'t get HEAD commit. \n'
+                           f'Return code: {result.returncode}. \n'
+                           f'Stdout: {result.stdout}. \n'
+                           f'Stderr: [{result.stderr}]. \n')
     return commit
 
 
