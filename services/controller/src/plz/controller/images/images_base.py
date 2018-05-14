@@ -1,14 +1,20 @@
 import collections
 import json
+import logging
 import time
 from abc import ABC, abstractmethod
 from typing import BinaryIO, Iterator
 
+import docker
+
 Metadata = collections.namedtuple('Metadata', ['user', 'project', 'timestamp'])
+
+log = logging.getLogger(__name__)
 
 
 class Images(ABC):
-    def __init__(self, repository):
+    def __init__(self, docker_api_client: docker.APIClient, repository: str):
+        self.docker_api_client = docker_api_client
         self.repository = repository
 
     @staticmethod
@@ -41,3 +47,14 @@ class Images(ABC):
     @abstractmethod
     def can_pull(self, times: int) -> bool:
         pass
+
+    def _build(self, fileobj: BinaryIO, tag: str) -> Iterator[bytes]:
+        builder = self.docker_api_client.build(
+            fileobj=fileobj,
+            custom_context=True,
+            encoding='bz2',
+            rm=True,
+            tag=f'{self.repository}:{tag}')
+        for message in builder:
+            log.debug('Build: ' + message.decode('utf-8').strip())
+            yield message

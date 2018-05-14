@@ -15,8 +15,7 @@ class ECRImages(Images):
                  docker_api_client: docker.APIClient,
                  ecr_client,
                  repository: str):
-        super().__init__(repository)
-        self.docker_api_client = docker_api_client
+        super().__init__(docker_api_client, repository)
         self.ecr_client = ecr_client
 
     def for_host(self, docker_url: str) -> 'ECRImages':
@@ -25,12 +24,7 @@ class ECRImages(Images):
             new_docker_api_client, self.ecr_client, self.repository)
 
     def build(self, fileobj: BinaryIO, tag: str) -> Iterator[bytes]:
-        return self.docker_api_client.build(
-            fileobj=fileobj,
-            custom_context=True,
-            encoding='bz2',
-            rm=True,
-            tag=f'{self.repository}:{tag}')
+        return self._build(fileobj, tag)
 
     def push(self, tag: str):
         for message in self.docker_api_client.push(

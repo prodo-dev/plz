@@ -7,19 +7,10 @@ from plz.controller.images.images_base import Images
 
 class LocalImages(Images):
     def __init__(self, docker_api_client: docker.APIClient, repository: str):
-        super().__init__(repository)
-        self.docker_api_client = docker_api_client
+        super().__init__(docker_api_client, repository)
 
     def build(self, fileobj: BinaryIO, tag: str) -> Iterator[bytes]:
-        """
-        Builds an image from the tarball supplied as ``attr:fileobj``.
-        """
-        return self.docker_api_client.build(
-            fileobj=fileobj,
-            custom_context=True,
-            encoding='bz2',
-            rm=True,
-            tag=f'{self.repository}:{tag}')
+        return self._build(fileobj, tag)
 
     def for_host(self, docker_url: str) -> 'LocalImages':
         new_docker_api_client = docker.APIClient(base_url=docker_url)

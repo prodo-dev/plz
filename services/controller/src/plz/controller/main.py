@@ -264,9 +264,7 @@ def create_snapshot():
     @_handle_lazy_exceptions(formatter=_format_error)
     def act() -> Iterator[Union[bytes, str]]:
         # Pass the rest of the stream to `docker build`
-        for message in images.build(request.stream, tag):
-            log.debug('Build: ' + message.decode('utf-8').strip())
-            yield message
+        yield from images.build(request.stream, tag)
         instance_provider.push(tag)
         yield json.dumps({'id': tag})
 
