@@ -4,6 +4,7 @@ set -e
 set -u
 set -o err_return
 set -o pipefail
+setopt extended_glob
 
 cd ${0:a:h:h}
 
@@ -89,13 +90,15 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ $# -eq 0 ]]; then
-  # Run all tests.
-  tests=($(find $TEST_DIRECTORY -mindepth 1 -maxdepth 1 -type d -not -name '*.ignored' | sort))
+  # Run all tests, except in directories named "*.ignored".
+  tests=($((cd $TEST_DIRECTORY && echo */*/plz.config.json~*/*.ignored/*) \
+             | xargs -n1 dirname))
 else
   # Run selected tests.
   # But first, verify all arguments are actually test directories.
   for dir in $@; do
-    if [[ ${dir:a} != "${TEST_DIRECTORY}/${dir:t}" ]]; then
+    if [[ ! ( $dir =~ '^[A-Za-z0-9\-]+/[A-Za-z0-9\-]+$' ) \
+          || ! -f "${TEST_DIRECTORY}/${dir}/plz.config.json" ]]; then
       echo "\"${dir}\" is not a test directory."
       exit 2
     fi

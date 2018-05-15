@@ -1,6 +1,4 @@
 {
-  "user": "plz-test",
-  "project": "01-output",
   "image": "python:3-slim",
   "command": [
     "./main.py"
