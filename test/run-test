@@ -62,9 +62,9 @@ function run_test {
       return 1
     else
       info 'Comparing output...'
-      if git diff --no-index $expected_logs $actual_logs && \
+      if diff $expected_logs $actual_logs && \
          ( ! [[ -e $expected_output_directory ]] || \
-           git diff --no-index $expected_output_directory $actual_output_directory ); then
+           diff $expected_output_directory $actual_output_directory ); then
         info 'Test passed.'
       else
         error 'Test failed.'
@@ -141,6 +141,10 @@ function run_cli {
   docker container exec $volume sh -c '[ ! -d /data/output ]' \
     || docker container cp $volume:/data/output $output_directory
   remove_volume $volume
+}
+
+function diff {
+  git --no-pager diff --no-index $@
 }
 
 function slug {

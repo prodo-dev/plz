@@ -1,0 +1,32 @@
+=> Capturing the context
+=> Building the program snapshot
+=> Capturing the input
+=> Sending request to start execution
+=> Execution ID is: <UUID>
+=> Streaming logs...
+
+=> Harvesting the output...
+=> Retrieving summary of measures (if present)...
+=> Execution succeeded.
+=> Retrieving the output...
+eng-fra.txt
+names
+names/Arabic.txt
+names/Chinese.txt
+names/Czech.txt
+names/Dutch.txt
+names/English.txt
+names/French.txt
+names/German.txt
+names/Greek.txt
+names/Irish.txt
+names/Italian.txt
+names/Japanese.txt
+names/Korean.txt
+names/Polish.txt
+names/Portuguese.txt
+names/Russian.txt
+names/Scottish.txt
+names/Spanish.txt
+names/Vietnamese.txt
+=> Done and dusted.

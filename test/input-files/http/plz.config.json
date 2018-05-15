@@ -1,0 +1,10 @@
+{
+  "image": "python:3-slim",
+  "command": [
+    "./main.py"
+  ],
+  "input": "https://s3-eu-west-1.amazonaws.com/plz.prodo.ai/test/names.tar.bz2",
+  "excluded_paths": [
+    "expected-output/**"
+  ]
+}

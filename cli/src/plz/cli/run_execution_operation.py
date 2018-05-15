@@ -13,7 +13,7 @@ import time
 from plz.cli import parameters
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
-from plz.cli.input_data import InputData
+from plz.cli.input_data import InputData, InputInfo
 from plz.cli.log import log_debug, log_error, log_info
 from plz.cli.logs_operation import LogsOperation
 from plz.cli.operation import Operation, add_output_dir_arg, check_status
@@ -63,13 +63,13 @@ class RunExecutionOperation(Operation):
             snapshot_id = self.suboperation(
                     'Building the program snapshot',
                     lambda: self.submit_context_for_building(build_context))
-        input_id = self.suboperation(
+        input_info = self.suboperation(
                 'Capturing the input',
                 self.capture_input,
                 if_set=self.configuration.input)
         execution_id, ok = self.suboperation(
                 'Sending request to start execution',
-                lambda: self.start_execution(snapshot_id, params, input_id))
+                lambda: self.start_execution(snapshot_id, params, input_info))
         self.execution_id = execution_id
         log_info(f'Execution ID is: {execution_id}')
 
@@ -189,7 +189,7 @@ class RunExecutionOperation(Operation):
             raise CLIException('We did not receive a snapshot ID.')
         return snapshot_id
 
-    def capture_input(self) -> Optional[str]:
+    def capture_input(self) -> Optional[InputInfo]:
         with InputData.from_configuration(self.configuration) as input_data:
             return input_data.publish()
 
@@ -197,14 +197,14 @@ class RunExecutionOperation(Operation):
             self,
             snapshot_id: str,
             params: Parameters,
-            input_id: Optional[str]) \
+            input_info: Optional[InputInfo]) \
             -> Tuple[Optional[str], bool]:
         configuration = self.configuration
         execution_spec = {
             'instance_type': configuration.instance_type,
             'user': configuration.user,
-            'input_id': input_id,
-            'docker_run_args': configuration.docker_run_args
+            'input': input_info,
+            'docker_run_args': configuration.docker_run_args,
         }
         commit = _get_head_commit() if _is_git_present() else None
         response = requests.post(self.url('executions'), json={

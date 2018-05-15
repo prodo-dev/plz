@@ -5,7 +5,7 @@ import os
 import tarfile
 import tempfile
 from abc import abstractmethod
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import requests
 
@@ -17,14 +17,19 @@ from plz.cli.operation import check_status
 READ_BUFFER_SIZE = 16384
 
 
+InputInfo = Dict[str, Any]
+
+
 class InputData(contextlib.AbstractContextManager):
     @staticmethod
     def from_configuration(configuration: Configuration):
         if not configuration.input:
             return NoInputData(configuration)
         if configuration.input.startswith('file://'):
-            path = configuration.input[len('file://'):]
-            return LocalInputData(configuration, path)
+            return LocalInputData(configuration)
+        if configuration.input.startswith('http://') \
+                or configuration.input.startswith('https://'):
+            return HTTPInputData(configuration)
         raise CLIException('Could not parse the configured input.')
 
     def __init__(self, configuration: Configuration):
@@ -45,16 +50,16 @@ class NoInputData(InputData):
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
-    def publish(self) -> Optional[str]:
+    def publish(self) -> Optional[InputInfo]:
         return None
 
 
 class LocalInputData(InputData):
-    def __init__(self, configuration: Configuration, path: str):
+    def __init__(self, configuration: Configuration):
         super().__init__(configuration)
         self.user = configuration.user
         self.project = configuration.project
-        self.path = os.path.normpath(path)
+        self.path = os.path.normpath(configuration.input[len('file://'):])
         self.tarball = None
         self.input_id = None
         self._timestamp_millis = None
@@ -88,18 +93,24 @@ class LocalInputData(InputData):
         if self.tarball:
             self.tarball.close()
 
-    def publish(self) -> Optional[str]:
+    def publish(self) -> Optional[InputInfo]:
         # We asked the controller previously and found the data is there
         # with this input ID
         if self.input_id is not None:
-            return self.input_id
+            return {
+                'type': 'local',
+                'id': self.input_id,
+            }
 
         input_id = self._compute_input_id()
         if not self._has_input(input_id):
             log_info(f'{os.path.getsize(self.tarball.name)} input bytes to '
                      'upload')
             self._put_tarball(input_id)
-        return input_id
+        return {
+            'type': 'local',
+            'id': input_id,
+        }
 
     def _get_input_from_controller_or_none(self) -> Optional[dict]:
         response = requests.get(
@@ -147,3 +158,18 @@ class LocalInputData(InputData):
                     [0] + modified_timestamps_in_seconds)
             self._timestamp_millis = int(max_timestamp_in_seconds * 1000)
         return self._timestamp_millis
+
+
+class HTTPInputData(InputData):
+    def __init__(self, configuration: Configuration):
+        super().__init__(configuration)
+        self.url = configuration.input
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    def publish(self) -> Optional[InputInfo]:
+        return {
+            'type': 'http',
+            'url': self.url,
+        }

@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import tempfile
+import urllib.request
 from typing import Optional
 
 import requests
@@ -98,14 +99,26 @@ class InputDataConfiguration:
             abort(requests.codes.not_found)
 
     def prepare_input_stream(self, execution_spec: dict):
-        input_id: Optional[str] = execution_spec.get('input_id')
-        if not input_id:
+        input_info: Optional[dict] = execution_spec.get('input')
+        if not input_info:
             return None
-        try:
-            input_file_path = self.input_file(input_id)
-            return open(input_file_path, 'rb')
-        except FileNotFoundError:
-            abort(requests.codes.bad_request, 'Invalid input ID.')
+        input_type = input_info.get('type')
+        if not input_type:
+            abort(requests.codes.bad_request, 'Missing input type.')
+        if input_type == 'local':
+            input_id: Optional[str] = input_info.get('id')
+            if not input_id:
+                abort(requests.codes.bad_request, 'Missing input ID.')
+            try:
+                input_file_path = self.input_file(input_id)
+                return open(input_file_path, 'rb')
+            except FileNotFoundError:
+                abort(requests.codes.bad_request, 'Invalid input ID.')
+        if input_type == 'http':
+            url: Optional[str] = input_info.get('url')
+            if not url:
+                abort(requests.codes.bad_request, 'Missing URL.')
+            return urllib.request.urlopen(url)
 
     def input_file(self, input_id: str):
         if not re.match(r'^\w{64}$', input_id):
