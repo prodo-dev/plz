@@ -1,6 +1,4 @@
 {
-  "user": "plz-test",
-  "project": "04-context-files",
   "image": "python:3-slim",
   "command": [
     "./main.py"
