@@ -253,9 +253,11 @@ def _is_git_present() -> bool:
         return False
 
 
-def _get_head_commit() -> str:
+def _get_head_commit() -> Optional[str]:
+    if not _is_there_a_head_commit():
+        return None
     result = subprocess.run(
-        ['git', 'log', '-n', '1', '--format=\'%H\''],
+        ['git', 'rev-parse', 'HEAD'],
         input=None,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -267,6 +269,23 @@ def _get_head_commit() -> str:
                            f'Stdout: {result.stdout}. \n'
                            f'Stderr: [{result.stderr}]. \n')
     return commit
+
+
+def _is_there_a_head_commit() -> bool:
+    # We could be doing `git rev-list -n 1 --all`, and check that the output
+    # is non-empty, but Ubuntu ships with ridiculous versions of git
+    result = subprocess.run(
+        ['git', 'show-ref', '--head'],
+        input=None,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        encoding='utf-8')
+    if result.returncode not in {0, 1} or result.stderr != '':
+        raise CLIException('Error finding if there are commits. \n'
+                           f'Return code: {result.returncode}. \n'
+                           f'Stdout: {result.stdout}. \n'
+                           f'Stderr: [{result.stderr}]. \n')
+    return result.returncode == 0 and ' HEAD\n' in result.stdout
 
 
 def _get_excluded_paths(configuration: Configuration):
