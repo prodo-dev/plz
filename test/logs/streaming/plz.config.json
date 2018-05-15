@@ -1,6 +1,4 @@
 {
-  "user": "plz-test",
-  "project": "02-output",
   "port": 9000,
   "image": "python:3-slim",
   "instance_type": "t2.small",

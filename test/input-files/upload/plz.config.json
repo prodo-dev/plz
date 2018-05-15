@@ -1,8 +1,7 @@
 {
-  "user": "plz-test",
-  "project": "03-output",
   "image": "python:3-slim",
   "command": [
     "./main.py"
-  ]
+  ],
+  "input": "file://./provided-input"
 }
