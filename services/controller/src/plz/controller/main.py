@@ -232,8 +232,7 @@ def get_output_files_entrypoint(execution_id):
 def get_metadata(execution_id):
     with results_storage.get(execution_id) as results:
         if results is None:
-            raise ExecutionIdNotFound(
-                f'Metadata not found for execution id: {execution_id}')
+            raise ExecutionIDNotFound('No metadata found for {}', execution_id)
         return ''.join(str(r, 'utf-8') for r in results.metadata())
 
 
@@ -273,15 +272,10 @@ def history_entrypoint(user, project):
         yield '{\n'
         first = True
         for execution_id in execution_ids:
-            try:
-                metadata = get_metadata(execution_id)
-            except ExecutionIdNotFound as e:
-                log.info(e)
-                continue
             if not first:
                 yield ',\n'
             first = False
-            yield f'"{execution_id}": {metadata}'
+            yield f'"{execution_id}": {get_metadata(execution_id)}'
         yield '\n}\n'
 
     response = Response(act(), mimetype='text/plain')
@@ -393,8 +387,13 @@ def _get_user_last_execution_id(user: str) -> Optional[str]:
         return None
 
 
-class ExecutionIdNotFound(Exception):
-    pass
+class ExecutionIDNotFound(Exception):
+    def __init__(self, message: str, execution_id: str):
+        self.message = message
+        self.execution_id = execution_id
+
+    def __str__(self):
+        return self.message.format(self.execution_id)
 
 
 if __name__ == '__main__':

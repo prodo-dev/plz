@@ -8,10 +8,10 @@ import pyhocon
 from redis import StrictRedis
 
 from plz.controller.containers import Containers
-from plz.controller.db_storage import get_redis_db_storage
 from plz.controller.images import ECRImages, LocalImages
 from plz.controller.instances.aws.ec2_instance_group import EC2InstanceGroup
 from plz.controller.instances.localhost import Localhost
+from plz.controller.redis_db_storage import RedisDBStorage
 from plz.controller.results import LocalResultsStorage
 from plz.controller.volumes import Volumes
 
@@ -128,4 +128,4 @@ def _results_storage_from(config, redis, db_storage):
 
 
 def _db_storage_from(redis):
-    return get_redis_db_storage(redis)
+    return RedisDBStorage(redis)

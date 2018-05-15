@@ -159,4 +159,4 @@ class Configuration:
             raise KeyError(name)
 
     def as_dict(self):
-        return {name: self.__getattr__(name) for name in self.properties}
+        return {name: getattr(self, name) for name in self.properties}

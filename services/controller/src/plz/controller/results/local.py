@@ -8,14 +8,16 @@ from redis.lock import Lock
 
 from plz.controller.db_storage import DBStorage
 from plz.controller.results.results_base \
-    import Results, ResultsContext, ResultsStorage
+    import Results, ResultsContext, ResultsStorage, compile_metadata
 
 LOCK_TIMEOUT = 60  # 1 minute
 CHUNK_SIZE = 1024 * 1024  # 1 MB
 
 
 class LocalResultsStorage(ResultsStorage):
-    def __init__(self, redis: StrictRedis, db_storage: DBStorage,
+    def __init__(self,
+                 redis: StrictRedis,
+                 db_storage: DBStorage,
                  directory: str):
         super().__init__(db_storage)
         self.redis = redis
@@ -45,8 +47,9 @@ class LocalResultsStorage(ResultsStorage):
             write_bytes(paths.logs, logs)
             write_bytes(paths.output, output_tarball)
             with open(paths.metadata, 'w') as metadata_file:
-                metadata_file.write(json.dumps(
-                    self.compile_metadata(execution_id, finish_timestamp)))
+                json.dump(compile_metadata(
+                            self.db_storage, execution_id, finish_timestamp),
+                          metadata_file)
             with open(paths.finished_file, 'w') as _:  # noqa: F841 (unused)
                 pass
 

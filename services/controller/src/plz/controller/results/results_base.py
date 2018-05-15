@@ -28,10 +28,6 @@ class ResultsStorage(ABC):
     def is_finished(self, execution_id: str):
         pass
 
-    def compile_metadata(self, execution_id: str, finish_timestamp: int):
-        start_metadata = self.db_storage.retrieve_start_metadata(execution_id)
-        return {**start_metadata, 'finish_timestamp': finish_timestamp}
-
 
 class Results:
     @abstractmethod
@@ -52,6 +48,13 @@ class Results:
 
 
 ResultsContext = ContextManager[Optional[Results]]
+
+
+def compile_metadata(
+        db_storage: DBStorage, execution_id: str, finish_timestamp: int):
+    start_metadata = db_storage.retrieve_start_metadata(execution_id)
+    return {**start_metadata,
+            'finish_timestamp': finish_timestamp}
 
 
 class CouldNotGetOutputException(Exception):
