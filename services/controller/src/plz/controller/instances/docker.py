@@ -112,14 +112,15 @@ class DockerInstance(Instance):
 
     def release(self,
                 results_storage: ResultsStorage,
-                _: int,
+                idle_since_timestamp: int,
                 release_container: bool = True):
         if not release_container:
             # Everything to release here is about the container
             return
         with self._lock:
             self.stop_execution()
-            self._publish_results(results_storage)
+            self._publish_results(results_storage,
+                                  finish_timestamp=idle_since_timestamp)
             # Check that we could collect the logs before destroying the
             # container
             if not results_storage.is_finished(self.execution_id):
@@ -127,12 +128,14 @@ class DockerInstance(Instance):
                     f'Couldn\'t read the results for {self.execution_id}')
             self._cleanup()
 
-    def _publish_results(self, results_storage: ResultsStorage):
+    def _publish_results(self, results_storage: ResultsStorage,
+                         finish_timestamp: int):
         results_storage.publish(
             self.get_execution_id(),
             exit_status=self.exit_status(),
             logs=self.logs(since=None),
-            output_tarball=self.output_files_tarball())
+            output_tarball=self.output_files_tarball(),
+            finish_timestamp=finish_timestamp)
 
     @property
     def _instance_id(self):

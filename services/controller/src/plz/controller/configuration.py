@@ -11,6 +11,7 @@ from plz.controller.containers import Containers
 from plz.controller.images import ECRImages, LocalImages
 from plz.controller.instances.aws.ec2_instance_group import EC2InstanceGroup
 from plz.controller.instances.localhost import Localhost
+from plz.controller.redis_db_storage import RedisDBStorage
 from plz.controller.results import LocalResultsStorage
 from plz.controller.volumes import Volumes
 
@@ -19,7 +20,7 @@ WORKER_AMI = f'plz-worker-{AMI_TAG}'
 
 Dependencies = collections.namedtuple(
     'Dependencies',
-    ['redis', 'instance_provider', 'images', 'results_storage'])
+    ['redis', 'instance_provider', 'images', 'results_storage', 'db_storage'])
 
 
 def load() -> pyhocon.ConfigTree:
@@ -49,11 +50,16 @@ def load_from_file(path) -> pyhocon.ConfigTree:
 def dependencies_from_config(config) -> Dependencies:
     docker_host = config.get('images.docker_host', None)
     redis = StrictRedis(host=config.get('redis_host', 'localhost'))
+    # DB storage can only be redis for now, but in case we want to drop redis
+    # for something else, or allow other DBs to be specified in the info,
+    # the dependence on redis is nicely encapsulated here
+    db_storage = _db_storage_from(redis)
     images = _images_from(config, docker_host)
-    results_storage = _results_storage_from(config, redis)
+    results_storage = _results_storage_from(config, redis, db_storage)
     instance_provider = _instance_provider_from(
         config, docker_host, images, redis, results_storage)
-    return Dependencies(redis, instance_provider, images, results_storage)
+    return Dependencies(
+        redis, instance_provider, images, results_storage, db_storage)
 
 
 def _instance_provider_from(
@@ -109,13 +115,17 @@ def _images_from(config, docker_host):
     return images
 
 
-def _results_storage_from(config, redis):
+def _results_storage_from(config, redis, db_storage):
     results_storage_type = config.get('results.provider', 'local')
     if results_storage_type == 'local':
         directory = config.get('results.directory')
-        results_storage = LocalResultsStorage(redis, directory)
+        results_storage = LocalResultsStorage(redis, db_storage, directory)
     elif results_storage_type == 'aws-s3':  # TODO: Implement this
         raise NotImplementedError('The AWS S3 provider is not implemented.')
     else:
         raise ValueError('Invalid results storage provider.')
     return results_storage
+
+
+def _db_storage_from(redis):
+    return RedisDBStorage(redis)

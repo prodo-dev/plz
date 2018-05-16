@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 from typing import ContextManager, Iterator, Optional
@@ -5,23 +6,30 @@ from typing import ContextManager, Iterator, Optional
 from redis import StrictRedis
 from redis.lock import Lock
 
+from plz.controller.db_storage import DBStorage
 from plz.controller.results.results_base \
-    import Results, ResultsContext, ResultsStorage
+    import Results, ResultsContext, ResultsStorage, compile_metadata
 
 LOCK_TIMEOUT = 60  # 1 minute
 CHUNK_SIZE = 1024 * 1024  # 1 MB
 
 
 class LocalResultsStorage(ResultsStorage):
-    def __init__(self, redis: StrictRedis, directory: str):
+    def __init__(self,
+                 redis: StrictRedis,
+                 db_storage: DBStorage,
+                 directory: str):
+        super().__init__(db_storage)
         self.redis = redis
+        self.db_storage = db_storage
         self.directory = directory
 
     def publish(self,
                 execution_id: str,
                 exit_status: int,
                 logs: Iterator[bytes],
-                output_tarball: Iterator[bytes]):
+                output_tarball: Iterator[bytes],
+                finish_timestamp: int):
         paths = Paths(self.directory, execution_id)
         with self._lock(execution_id):
             if os.path.exists(paths.finished_file):
@@ -38,7 +46,10 @@ class LocalResultsStorage(ResultsStorage):
 
             write_bytes(paths.logs, logs)
             write_bytes(paths.output, output_tarball)
-
+            with open(paths.metadata, 'w') as metadata_file:
+                json.dump(compile_metadata(
+                            self.db_storage, execution_id, finish_timestamp),
+                          metadata_file)
             with open(paths.finished_file, 'w') as _:  # noqa: F841 (unused)
                 pass
 
@@ -86,6 +97,9 @@ class LocalResults(Results):
     def output_tarball(self) -> Iterator[bytes]:
         return read_bytes(self.paths.output)
 
+    def metadata(self) -> Iterator[bytes]:
+        return read_bytes(self.paths.metadata)
+
 
 class Paths:
     def __init__(self, *segments):
@@ -94,6 +108,7 @@ class Paths:
         self.exit_status = os.path.join(self.directory, 'status')
         self.logs = os.path.join(self.directory, 'logs')
         self.output = os.path.join(self.directory, 'output.tar')
+        self.metadata = os.path.join(self.directory, 'metadata.json')
 
 
 def read_bytes(path: str) -> Iterator[bytes]:
