@@ -8,6 +8,7 @@ import sys
 import tarfile
 import tempfile
 import uuid
+from distutils.util import strtobool
 from json import JSONDecodeError
 from typing import Any, Callable, IO, Iterator, Optional, Tuple, TypeVar, Union
 
@@ -244,12 +245,24 @@ def get_metadata(execution_id):
 
 @app.route(f'/executions/<execution_id>/measures', methods=['GET'])
 def get_measures(execution_id):
+    summary: Optional[bool] = request.args.get(
+        'summary', default=False, type=strtobool)
     with results_storage.get(execution_id) as results:
         if results is None:
             response = jsonify({})
             response.status_code = requests.codes.not_found
             return response
-        return jsonify(_convert_measures_to_dict(results.measures_tarball()))
+        dict_measures = _convert_measures_to_dict(results.measures_tarball())
+    # We return text that happens to be json, as we want the cli to show it
+    # indented properly and we don't want an additional conversion round
+    # json <-> str.
+    # In the future we can have another entrypoint or a parameter
+    # to return the json if we use it programmatically in the CLI.
+    if summary:
+        str_response = json.dumps(dict_measures.get('summary'), indent=2)
+    else:
+        str_response = json.dumps(dict_measures, indent=2)
+    return Response(str_response, mimetype='text/plain')
 
 
 @app.route(f'/executions/<execution_id>', methods=['DELETE'])
@@ -257,9 +270,9 @@ def delete_execution(execution_id):
     # Test with:
     # curl -XDELETE localhost:5000/executions/some-id
     fail_if_running: bool = request.args.get(
-        'fail_if_running', default=False, type=bool)
+        'fail_if_running', default=False, type=strtobool)
     fail_if_deleted: bool = request.args.get(
-        'fail_if_deleted', default=False, type=bool)
+        'fail_if_deleted', default=False, type=strtobool)
     response = jsonify({})
     status = get_status(execution_id)
     if status is None:

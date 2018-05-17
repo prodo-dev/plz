@@ -13,7 +13,7 @@ class RetrieveHistoryOperation(Operation):
     def __init__(self, configuration: Configuration):
         super().__init__(configuration)
 
-    @on_exception_reraise('Retrieving the output failed.')
+    @on_exception_reraise('Retrieving the history failed.')
     def retrieve_history(self):
         response = requests.get(
             self.url('executions', self.configuration.user,
