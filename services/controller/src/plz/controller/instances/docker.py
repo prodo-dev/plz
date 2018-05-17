@@ -1,6 +1,7 @@
 import io
 import json
 import logging
+import os
 from typing import Dict, Iterator, List, Optional
 
 from docker.types import Mount
@@ -40,6 +41,9 @@ class DockerInstance(Instance):
         configuration = {
             'input_directory': Volumes.INPUT_DIRECTORY_PATH,
             'output_directory': Volumes.OUTPUT_DIRECTORY_PATH,
+            'measures_directory': Volumes.MEASURES_DIRECTORY_PATH,
+            'summary_measures_file_name': os.path.join(
+                Volumes.MEASURES_DIRECTORY_PATH, 'summary'),
             'parameters': parameters
         }
         environment = {
@@ -50,6 +54,7 @@ class DockerInstance(Instance):
                 Volumes.INPUT_DIRECTORY,
                 contents_tarball=input_stream or io.BytesIO()),
             VolumeEmptyDirectory(Volumes.OUTPUT_DIRECTORY),
+            VolumeEmptyDirectory(Volumes.MEASURES_DIRECTORY),
             VolumeFile(Volumes.CONFIGURATION_FILE,
                        contents=json.dumps(configuration, indent=2)),
         ])
@@ -72,6 +77,10 @@ class DockerInstance(Instance):
     def output_files_tarball(self) -> Iterator[bytes]:
         return self.volumes.get_files(self.volume_name,
                                       Volumes.OUTPUT_DIRECTORY)
+
+    def measures_files_tarball(self) -> Iterator[bytes]:
+        return self.volumes.get_files(self.volume_name,
+                                      Volumes.MEASURES_DIRECTORY)
 
     def stop_execution(self):
         self.containers.stop(self.execution_id)
@@ -135,6 +144,7 @@ class DockerInstance(Instance):
             exit_status=self.exit_status(),
             logs=self.logs(since=None),
             output_tarball=self.output_files_tarball(),
+            measures_tarball=self.measures_files_tarball(),
             finish_timestamp=finish_timestamp)
 
     @property

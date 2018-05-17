@@ -71,6 +71,8 @@ class Volumes:
     INPUT_DIRECTORY_PATH = os.path.join(VOLUME_MOUNT, INPUT_DIRECTORY)
     OUTPUT_DIRECTORY = 'output'
     OUTPUT_DIRECTORY_PATH = os.path.join(VOLUME_MOUNT, OUTPUT_DIRECTORY)
+    MEASURES_DIRECTORY = 'measures'
+    MEASURES_DIRECTORY_PATH = os.path.join(VOLUME_MOUNT, MEASURES_DIRECTORY)
 
     @staticmethod
     def for_host(docker_url):
