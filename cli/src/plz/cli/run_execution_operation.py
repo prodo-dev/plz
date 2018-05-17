@@ -130,7 +130,7 @@ class RunExecutionOperation(Operation):
                     dockerfile.write(step)
                     dockerfile.write('\n')
                 dockerfile.write(
-                    f'WORKDIR /app\n'
+                    f'WORKDIR /src\n'
                     f'COPY . ./\n'
                     f'CMD {self.configuration.command}\n'
                 )
