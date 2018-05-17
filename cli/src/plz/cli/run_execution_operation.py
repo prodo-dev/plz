@@ -120,7 +120,7 @@ class RunExecutionOperation(Operation):
 
     def capture_build_context(self) -> io.FileIO:
         context_dir = os.getcwd()
-        dockerfile_path = os.path.join(context_dir, 'Dockerfile')
+        dockerfile_path = os.path.join(context_dir, 'plz.Dockerfile')
         dockerfile_created = False
         try:
             with open(dockerfile_path, mode='x') as dockerfile:
@@ -141,7 +141,8 @@ class RunExecutionOperation(Operation):
                 gzip=True,
             )
         except FileExistsError as e:
-            raise CLIException('The directory cannot have a Dockerfile.', e)
+            raise CLIException(
+                    'The directory cannot have a plz.Dockerfile.', e)
         finally:
             if dockerfile_created:
                 os.remove(dockerfile_path)

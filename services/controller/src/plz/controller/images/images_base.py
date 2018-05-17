@@ -55,6 +55,7 @@ class Images(ABC):
             fileobj=fileobj,
             custom_context=True,
             encoding='bz2',
+            dockerfile='plz.Dockerfile',
             rm=True,
             tag=f'{self.repository}:{tag}',
             pull=True)
