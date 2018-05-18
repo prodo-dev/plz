@@ -247,21 +247,25 @@ def get_metadata(execution_id):
 def get_measures(execution_id):
     summary: Optional[bool] = request.args.get(
         'summary', default=False, type=strtobool)
+    measures_tarball = None
     with results_storage.get(execution_id) as results:
-        if results is None:
-            response = jsonify({})
-            response.status_code = requests.codes.not_found
-            return response
-        dict_measures = _convert_measures_to_dict(results.measures_tarball())
+        if results is not None:
+            measures_tarball = results.measures_tarball()
+
+    if measures_tarball is None:
+        instance = instance_provider.instance_for(execution_id)
+        response = instance.output_files_tarball()
+    return Response(response, mimetype='application/octet-stream')
+    if summary:
+        dict_to_return = dict_measures.get('summary', {})
+    else:
+        dict_to_return = dict_measures
     # We return text that happens to be json, as we want the cli to show it
     # indented properly and we don't want an additional conversion round
     # json <-> str.
     # In the future we can have another entrypoint or a parameter
     # to return the json if we use it programmatically in the CLI.
-    if summary:
-        str_response = json.dumps(dict_measures.get('summary'), indent=2)
-    else:
-        str_response = json.dumps(dict_measures, indent=2)
+    str_response = json.dumps(dict_to_return, indent=2)
     return Response(str_response, mimetype='text/plain')
 
 
