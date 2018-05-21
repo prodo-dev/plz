@@ -247,6 +247,13 @@ def get_metadata(execution_id):
 def get_measures(execution_id):
     summary: Optional[bool] = request.args.get(
         'summary', default=False, type=strtobool)
+
+    status = get_status(execution_id)
+    if status.running:
+        response = jsonify({})
+        response.status_code = requests.codes.conflict
+        return response
+
     measures_tarball = None
     with results_storage.get(execution_id) as results:
         if results is not None:
@@ -254,19 +261,27 @@ def get_measures(execution_id):
 
     if measures_tarball is None:
         instance = instance_provider.instance_for(execution_id)
-        response = instance.output_files_tarball()
-    return Response(response, mimetype='application/octet-stream')
+        measures_tarball = instance.output_files_tarball()
+    measures_dict = _convert_measures_to_dict(measures_tarball)
     if summary:
-        dict_to_return = dict_measures.get('summary', {})
+        dict_to_return = measures_dict.get('summary', {})
     else:
-        dict_to_return = dict_measures
+        dict_to_return = measures_dict
+    if dict_to_return == {}:
+        return Response('', status=requests.codes.no_content,
+                        mimetype='text/plain')
     # We return text that happens to be json, as we want the cli to show it
     # indented properly and we don't want an additional conversion round
     # json <-> str.
     # In the future we can have another entrypoint or a parameter
     # to return the json if we use it programmatically in the CLI.
-    str_response = json.dumps(dict_to_return, indent=2)
-    return Response(str_response, mimetype='text/plain')
+    str_response = json.dumps(dict_to_return, indent=2) + '\n'
+
+    @stream_with_context
+    def act():
+        for l in str_response.splitlines(keepends=True):
+            yield l
+    return Response(act(), mimetype='text/plain')
 
 
 @app.route(f'/executions/<execution_id>', methods=['DELETE'])

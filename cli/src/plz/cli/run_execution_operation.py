@@ -18,6 +18,7 @@ from plz.cli.log import log_debug, log_error, log_info
 from plz.cli.logs_operation import LogsOperation
 from plz.cli.operation import Operation, add_output_dir_arg, check_status
 from plz.cli.parameters import Parameters
+from plz.cli.retrieve_measures_operation import RetrieveMeasuresOperation
 from plz.cli.retrieve_output_operation import RetrieveOutputOperation
 from plz.cli.show_status_operation import ShowStatusOperation
 
@@ -98,6 +99,13 @@ class RunExecutionOperation(Operation):
 
         if cancelled:
             return
+
+        retrieve_measures_operation = RetrieveMeasuresOperation(
+            self.configuration, execution_id=self.get_execution_id(),
+            summary=True)
+        self.suboperation(
+            'Retrieving summary of measures (if present)...',
+            retrieve_measures_operation.retrieve_measures)
 
         show_status_operation = ShowStatusOperation(
             self.configuration, execution_id=execution_id)

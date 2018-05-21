@@ -4,6 +4,7 @@ import requests
 
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
+from plz.cli.log import log_info
 from plz.cli.operation import Operation, check_status, \
     maybe_add_execution_id_arg, on_exception_reraise
 
@@ -25,13 +26,17 @@ class RetrieveMeasuresOperation(Operation):
     def retrieve_measures(self):
         response = requests.get(
             self.url('executions', self.get_execution_id(), 'measures'),
-            params={'summary': self.summary})
+            params={'summary': self.summary},
+            stream=True)
         if response.status_code == requests.codes.conflict:
             raise CLIException(
                 'Process is still running, run `plz stop` if you want to '
                 'terminate it')
+        elif response.status_code == requests.codes.no_content:
+            return
         check_status(response, requests.codes.ok)
-        print(str(response.content, 'utf-8'))
+        for line in response.raw:
+            print(line.decode('utf-8'), end='')
 
     def run(self):
         self.retrieve_measures()
