@@ -12,8 +12,5 @@ os.makedirs(os.path.dirname(output_file))
 with open(output_file, 'w') as f:
     f.write(f'foo = {parameters.get("foo")}\n'
             f'bar = {parameters.get("bar")}\n')
-
-
-summary_measures_file_name = config["summary_measures_file_name"]
-with open(summary_measures_file_name, 'w') as f:
-    json.dump({'loss': 0.42}, f)
+with open(output_file) as f:
+    print(f.read(), end='')
