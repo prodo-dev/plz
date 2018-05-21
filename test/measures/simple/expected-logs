@@ -1,0 +1,14 @@
+=> Capturing the context
+=> Building the program snapshot
+=> Sending request to start execution
+=> Execution ID is: <UUID>
+=> Streaming logs...
+
+=> Harvesting the output...
+=> Retrieving summary of measures (if present)...
+{
+  "loss": 0.42
+}
+=> Execution succeeded.
+=> Retrieving the output...
+=> Done and dusted.

@@ -1,0 +1,6 @@
+{
+  "image": "python:3-slim",
+  "command": [
+    "./main.py"
+  ]
+}
