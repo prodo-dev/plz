@@ -1,3 +1,4 @@
+import base64
 import io
 import json
 import logging
@@ -455,7 +456,9 @@ def _convert_measures_to_dict(measures_tarball: Iterator[bytes]) -> dict:
         if content_as_json is not None:
             measures_dict[path] = content_as_json
         else:
-            measures_dict[path] = {'raw': content}
+            measures_dict[path] = {
+                'base64_bytes': base64.encodebytes(content).decode('ascii')
+            }
     return measures_dict
 
 

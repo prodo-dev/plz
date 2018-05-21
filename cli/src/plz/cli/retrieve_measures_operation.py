@@ -4,7 +4,6 @@ import requests
 
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
-from plz.cli.log import log_info
 from plz.cli.operation import Operation, check_status, \
     maybe_add_execution_id_arg, on_exception_reraise
 
