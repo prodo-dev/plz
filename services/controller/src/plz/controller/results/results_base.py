@@ -17,6 +17,7 @@ class ResultsStorage(ABC):
                 exit_status: int,
                 logs: Iterator[bytes],
                 output_tarball: Iterator[bytes],
+                measures_tarball: Iterator[bytes],
                 finish_timestamp: int):
         pass
 
@@ -40,6 +41,10 @@ class Results:
 
     @abstractmethod
     def output_tarball(self) -> Iterator[bytes]:
+        pass
+
+    @abstractmethod
+    def measures_tarball(self) -> Iterator[bytes]:
         pass
 
     @abstractmethod

@@ -29,6 +29,7 @@ class LocalResultsStorage(ResultsStorage):
                 exit_status: int,
                 logs: Iterator[bytes],
                 output_tarball: Iterator[bytes],
+                measures_tarball: Iterator[bytes],
                 finish_timestamp: int):
         paths = Paths(self.directory, execution_id)
         with self._lock(execution_id):
@@ -46,6 +47,7 @@ class LocalResultsStorage(ResultsStorage):
 
             write_bytes(paths.logs, logs)
             write_bytes(paths.output, output_tarball)
+            write_bytes(paths.measures, measures_tarball)
             with open(paths.metadata, 'w') as metadata_file:
                 json.dump(compile_metadata(
                             self.db_storage, execution_id, finish_timestamp),
@@ -97,6 +99,9 @@ class LocalResults(Results):
     def output_tarball(self) -> Iterator[bytes]:
         return read_bytes(self.paths.output)
 
+    def measures_tarball(self) -> Iterator[bytes]:
+        return read_bytes(self.paths.measures)
+
     def metadata(self) -> Iterator[bytes]:
         return read_bytes(self.paths.metadata)
 
@@ -108,6 +113,7 @@ class Paths:
         self.exit_status = os.path.join(self.directory, 'status')
         self.logs = os.path.join(self.directory, 'logs')
         self.output = os.path.join(self.directory, 'output.tar')
+        self.measures = os.path.join(self.directory, 'measures.tar')
         self.metadata = os.path.join(self.directory, 'metadata.json')
 
 
