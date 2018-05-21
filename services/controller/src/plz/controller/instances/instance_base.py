@@ -57,6 +57,10 @@ class Instance(ABC):
     def output_files_tarball(self) -> Iterator[bytes]:
         pass
 
+    @abstractmethod
+    def measures(self) -> dict:
+        pass
+
     def exit_status(self) -> int:
         status = self.status()
         if status.exit_status is None:

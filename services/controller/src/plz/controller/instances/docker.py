@@ -12,6 +12,7 @@ from plz.controller.images import Images
 from plz.controller.instances.instance_base import \
     ExecutionInfo, Instance, Parameters
 from plz.controller.results import ResultsStorage
+from plz.controller.results.local import convert_measures_to_dict
 from plz.controller.results.results_base import CouldNotGetOutputException
 from plz.controller.volumes import \
     VolumeDirectory, VolumeEmptyDirectory, VolumeFile, Volumes
@@ -81,6 +82,9 @@ class DockerInstance(Instance):
     def measures_files_tarball(self) -> Iterator[bytes]:
         return self.volumes.get_files(self.volume_name,
                                       Volumes.MEASURES_DIRECTORY)
+
+    def measures(self) -> dict:
+        return convert_measures_to_dict(self.measures_files_tarball())
 
     def stop_execution(self):
         self.containers.stop(self.execution_id)

@@ -1,23 +1,16 @@
-import base64
-import io
 import json
 import logging
 import os
 import random
-import shutil
 import sys
-import tarfile
-import tempfile
 import uuid
 from distutils.util import strtobool
-from json import JSONDecodeError
-from typing import Any, Callable, IO, Iterator, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Iterator, Optional, TypeVar, Union
 
 import flask
 import requests
 from flask import Flask, Response, jsonify, request, stream_with_context
 from redis import StrictRedis
-from werkzeug.contrib.iterio import IterIO
 
 from plz.controller import configuration
 from plz.controller.configuration import Dependencies
@@ -119,6 +112,8 @@ def run_execution_entrypoint():
     start_metadata = request.json['start_metadata']
     execution_id = str(get_execution_uuid())
 
+    start_metadata['parameters'] = parameters
+    log.debug(f'Parameters: {parameters}')
     db_storage.store_start_metadata(execution_id, start_metadata)
 
     @_json_stream
@@ -255,20 +250,20 @@ def get_measures(execution_id):
         response.status_code = requests.codes.conflict
         return response
 
-    measures_tarball = None
+    measures = None
     with results_storage.get(execution_id) as results:
         if results is not None:
-            measures_tarball = results.measures_tarball()
+            measures = results.measures()
 
-    if measures_tarball is None:
+    if measures is None:
         instance = instance_provider.instance_for(execution_id)
-        measures_tarball = instance.output_files_tarball()
-    measures_dict = _convert_measures_to_dict(measures_tarball)
+        measures = instance.measures()
+
     if summary:
-        dict_to_return = measures_dict.get('summary', {})
+        measures_to_return = measures.get('summary', {})
     else:
-        dict_to_return = measures_dict
-    if dict_to_return == {}:
+        measures_to_return = measures
+    if measures_to_return == {}:
         return Response('', status=requests.codes.no_content,
                         mimetype='text/plain')
     # We return text that happens to be json, as we want the cli to show it
@@ -276,7 +271,7 @@ def get_measures(execution_id):
     # json <-> str.
     # In the future we can have another entrypoint or a parameter
     # to return the json if we use it programmatically in the CLI.
-    str_response = json.dumps(dict_to_return, indent=2) + '\n'
+    str_response = json.dumps(measures_to_return, indent=2) + '\n'
 
     @stream_with_context
     def act():
@@ -442,48 +437,6 @@ class ExecutionIDNotFound(Exception):
 
     def __str__(self):
         return self.message.format(self.execution_id)
-
-
-def _convert_measures_to_dict(measures_tarball: Iterator[bytes]) -> dict:
-    measures_dict = {}
-    for path, file_content in _tar_iterator(measures_tarball):
-        content = file_content.read()
-        content_as_json = None
-        try:
-            content_as_json = json.load(io.BytesIO(content))
-        except JSONDecodeError or UnicodeDecodeError:
-            pass
-        if content_as_json is not None:
-            measures_dict[path] = content_as_json
-        else:
-            measures_dict[path] = {
-                'base64_bytes': base64.encodebytes(content).decode('ascii')
-            }
-    return measures_dict
-
-
-def _tar_iterator(tarball_bytes: Iterator[bytes]) \
-        -> Iterator[Tuple[str, Optional[IO]]]:
-    # The response is a tarball we need to extract into `output_dir`.
-    with tempfile.TemporaryFile() as tarball:
-        # `tarfile.open` needs to read from a real file, so we copy to one.
-        shutil.copyfileobj(IterIO(tarball_bytes), tarball)
-        # And rewind to the start.
-        tarball.seek(0)
-        tar = tarfile.open(fileobj=tarball)
-        for tarinfo in tar.getmembers():
-            # Drop the first segment, because it's just the name of the
-            # directory that was tarred up, and we don't care.
-            path_segments = tarinfo.name.split(os.sep)[1:]
-            if path_segments:
-                # Unfortunately we can't just pass `*path_segments`
-                # because `os.path.join` explicitly expects an argument
-                # for the first parameter.
-                path = os.path.join(path_segments[0], *path_segments[1:])
-                file_bytes = tar.extractfile(tarinfo.name)
-                # Not None for files and links
-                if file_bytes is not None:
-                    yield path, tar.extractfile(tarinfo.name)
 
 
 if __name__ == '__main__':
