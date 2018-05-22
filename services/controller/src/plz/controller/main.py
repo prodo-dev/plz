@@ -113,7 +113,6 @@ def run_execution_entrypoint():
     execution_id = str(get_execution_uuid())
 
     start_metadata['parameters'] = parameters
-    log.debug(f'Parameters: {parameters}')
     db_storage.store_start_metadata(execution_id, start_metadata)
 
     @_json_stream
