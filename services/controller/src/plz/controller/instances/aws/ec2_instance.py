@@ -78,6 +78,9 @@ class EC2Instance(Instance):
     def output_files_tarball(self) -> Iterator[bytes]:
         return self.delegate.output_files_tarball()
 
+    def measures(self) -> dict:
+            return self.delegate.measures()
+
     def _dispose(self):
         self.client.terminate_instances(InstanceIds=[self._instance_id])
 

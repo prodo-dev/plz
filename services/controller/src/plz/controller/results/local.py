@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+from itertools import tee
 from typing import ContextManager, Iterator, Optional
 
 from redis import StrictRedis
@@ -8,7 +9,8 @@ from redis.lock import Lock
 
 from plz.controller.db_storage import DBStorage
 from plz.controller.results.results_base \
-    import Results, ResultsContext, ResultsStorage, compile_metadata
+    import Results, ResultsContext, ResultsStorage, compile_metadata, \
+    convert_measures_to_dict
 
 LOCK_TIMEOUT = 60  # 1 minute
 CHUNK_SIZE = 1024 * 1024  # 1 MB
@@ -47,11 +49,13 @@ class LocalResultsStorage(ResultsStorage):
 
             write_bytes(paths.logs, logs)
             write_bytes(paths.output, output_tarball)
+            measures_tarball, measures_tarball_copy = tee(measures_tarball)
             write_bytes(paths.measures, measures_tarball)
+            metadata = compile_metadata(
+                self.db_storage, execution_id, finish_timestamp,
+                measures_tarball_copy)
             with open(paths.metadata, 'w') as metadata_file:
-                json.dump(compile_metadata(
-                            self.db_storage, execution_id, finish_timestamp),
-                          metadata_file)
+                json.dump(metadata, metadata_file)
             with open(paths.finished_file, 'w') as _:  # noqa: F841 (unused)
                 pass
 
@@ -99,8 +103,8 @@ class LocalResults(Results):
     def output_tarball(self) -> Iterator[bytes]:
         return read_bytes(self.paths.output)
 
-    def measures_tarball(self) -> Iterator[bytes]:
-        return read_bytes(self.paths.measures)
+    def measures(self) -> dict:
+        return convert_measures_to_dict(read_bytes(self.paths.measures))
 
     def metadata(self) -> Iterator[bytes]:
         return read_bytes(self.paths.metadata)
