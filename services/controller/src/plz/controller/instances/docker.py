@@ -76,12 +76,12 @@ class DockerInstance(Instance):
                                     stderr=stderr)
 
     def output_files_tarball(self) -> Iterator[bytes]:
-        return self.volumes.get_files(self.volume_name,
-                                      Volumes.OUTPUT_DIRECTORY)
+        return self.containers.get_files(
+            self.execution_id, Volumes.OUTPUT_DIRECTORY_PATH)
 
     def measures_files_tarball(self) -> Iterator[bytes]:
-        return self.volumes.get_files(self.volume_name,
-                                      Volumes.MEASURES_DIRECTORY)
+        return self.containers.get_files(
+            self.execution_id, Volumes.MEASURES_DIRECTORY_PATH)
 
     def measures(self) -> dict:
         return convert_measures_to_dict(self.measures_files_tarball())
