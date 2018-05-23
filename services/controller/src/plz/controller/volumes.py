@@ -3,7 +3,7 @@ import os.path
 import tarfile
 import tempfile
 from abc import ABC, abstractmethod
-from typing import Iterator, List
+from typing import List
 
 import docker
 import docker.errors
@@ -98,16 +98,6 @@ class Volumes:
         finally:
             container.kill()
         return volume
-
-    def get_files(self, volume_name: str, path: str) -> Iterator[bytes]:
-        container = self.docker_client.containers.create(
-            image=self._busybox_image(),
-            mounts=[Mount(source=volume_name, target='/input')])
-        try:
-            tar, _ = container.get_archive(os.path.join('/input', path))
-            yield from tar
-        finally:
-            container.remove()
 
     def remove(self, name: str):
         try:

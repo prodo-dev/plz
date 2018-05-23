@@ -56,21 +56,21 @@ class Containers:
              stderr: bool = True) \
             -> Iterator[bytes]:
         container = self.from_execution_id(execution_id)
-        if not container:
-            return iter([])
         return container.logs(
             stdout=stdout, stderr=stderr, stream=True, follow=True,
             since=since)
 
     def stop(self, name: str):
-        container = self.from_execution_id(name)
-        if not container:
+        try:
+            container = self.from_execution_id(name)
+        except docker.errors.NotFound:
             return
         container.stop()
 
     def rm(self, execution_id: str):
-        container = self.from_execution_id(execution_id)
-        if not container:
+        try:
+            container = self.from_execution_id(execution_id)
+        except docker.errors.NotFound:
             return
         container.stop()
         container.remove()
@@ -88,6 +88,11 @@ class Containers:
             success=success,
             exit_code=container_state['ExitCode'],
             finished_at=finished_at)
+
+    def get_files(self, execution_id: str, path: str) -> Iterator[bytes]:
+        container = self.from_execution_id(execution_id)
+        tar, _ = container.get_archive(path)
+        yield from tar
 
     def execution_ids(self):
         return [container.name[len(self._CONTAINER_NAME_PREFIX):]
