@@ -2,9 +2,13 @@ import argparse
 import sys
 from typing import Dict, Type
 
+import requests
+import urllib3.exceptions
+
 from plz.cli.configuration import Configuration, ValidationException
 from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
 from plz.cli.list_executions_operation import ListExecutionsOperation
+from plz.cli.log import log_error
 from plz.cli.logs_operation import LogsOperation
 from plz.cli.operation import Operation
 from plz.cli.retrieve_history_operation import RetrieveHistoryOperation
@@ -49,6 +53,17 @@ def main(args=sys.argv[1:]):
         configuration=configuration, **option_dict)
     try:
         operation.run()
+    except KeyboardInterrupt:
+        log_error('Interrupted by the user.')
+        sys.exit(1)
+    except (ConnectionError,
+            requests.ConnectionError,
+            urllib3.exceptions.NewConnectionError):
+        log_error("We couldn't establish a connection to the server.")
+        sys.exit(1)
+    except requests.Timeout:
+        log_error('Our connection to the server timed out.')
+        sys.exit(1)
     except CLIException as e:
         e.print(configuration)
         sys.exit(e.exit_code)

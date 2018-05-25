@@ -11,6 +11,7 @@ python-dateutil = "*"
 docker = "*"
 requests = "*"
 prettytable = "*"
+urllib3 = "*"
 
 [dev-packages]
 flake8 = "*"
