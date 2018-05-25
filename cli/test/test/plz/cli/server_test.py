@@ -11,14 +11,19 @@ from plz.cli.server import Server
 
 
 class ServerTest(unittest.TestCase):
-    def setUp(self):
-        self.host = 'localhost'
-        self.port = find_free_port()
-        self.app = create_app()
+    host = None
+    port = None
+    app = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.host = 'localhost'
+        cls.port = find_free_port()
+        cls.app = create_app()
         latch = multiprocessing.Condition()
 
         def start_app():
-            self.app.run(host='localhost', port=self.port)
+            cls.app.run(host='localhost', port=cls.port)
             with latch:
                 latch.notify()
 
@@ -27,8 +32,9 @@ class ServerTest(unittest.TestCase):
             app_thread.start()
             latch.wait(timeout=1)
 
-    def tearDown(self):
-        requests.post(f'http://{self.host}:{self.port}/shutdown')
+    @classmethod
+    def tearDownClass(cls):
+        requests.post(f'http://{cls.host}:{cls.port}/shutdown')
 
     def test_makes_a_GET_request(self):
         server = Server(host=self.host, port=self.port)
