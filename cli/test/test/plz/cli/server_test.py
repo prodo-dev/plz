@@ -48,6 +48,11 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(response.status_code, requests.codes.ok)
         self.assertEqual(response.text, 'THIS IS LOWERCASE')
 
+    def test_makes_a_DELETE_request(self):
+        server = Server(host=self.host, port=self.port)
+        response = server.delete('delete')
+        self.assertEqual(response.status_code, requests.codes.not_found)
+
     def test_compose_paths_from_segments(self):
         server = Server(host=self.host, port=self.port)
         response = server.get('one', 'two', 'three')
@@ -74,6 +79,10 @@ def create_app():
     def post_endpoint():
         body: str = flask.request.data
         return body.upper()
+
+    @app.route('/delete', methods=['DELETE'])
+    def delete_endpoint():
+        return flask.Response(status=requests.codes.not_found)
 
     @app.route('/shutdown', methods=['POST'])
     def shutdown():
