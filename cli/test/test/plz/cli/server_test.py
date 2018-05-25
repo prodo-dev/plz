@@ -36,6 +36,12 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(response.status_code, requests.codes.ok)
         self.assertEqual(response.text, 'Hello, World!')
 
+    def test_makes_a_POST_request(self):
+        server = Server(host=self.host, port=self.port)
+        response = server.post('uppercase', data='this is lowercase')
+        self.assertEqual(response.status_code, requests.codes.ok)
+        self.assertEqual(response.text, 'THIS IS LOWERCASE')
+
 
 def create_app():
     app = flask.Flask(__name__)
@@ -47,6 +53,11 @@ def create_app():
     @app.route('/get', methods=['GET'])
     def get_endpoint():
         return 'Hello, World!'
+
+    @app.route('/uppercase', methods=['POST'])
+    def post_endpoint():
+        body: str = flask.request.data
+        return body.upper()
 
     @app.route('/shutdown', methods=['POST'])
     def shutdown():

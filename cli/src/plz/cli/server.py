@@ -12,4 +12,10 @@ class Server:
         self.prefix = f'http://{host}:{port}'
 
     def get(self, path: str):
-        return requests.get(self.prefix + '/' + path)
+        return requests.get(self._url(path))
+
+    def post(self, path: str, **kwargs):
+        return requests.post(self._url(path), **kwargs)
+
+    def _url(self, path: str):
+        return self.prefix + '/' + path
