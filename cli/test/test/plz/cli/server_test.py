@@ -42,6 +42,12 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(response.status_code, requests.codes.ok)
         self.assertEqual(response.text, 'THIS IS LOWERCASE')
 
+    def test_compose_paths_from_segments(self):
+        server = Server(host=self.host, port=self.port)
+        response = server.get('one', 'two', 'three')
+        self.assertEqual(response.status_code, requests.codes.ok)
+        self.assertEqual(response.text, '123')
+
 
 def create_app():
     app = flask.Flask(__name__)
@@ -53,6 +59,10 @@ def create_app():
     @app.route('/get', methods=['GET'])
     def get_endpoint():
         return 'Hello, World!'
+
+    @app.route('/one/two/three', methods=['GET'])
+    def deep_endpoint():
+        return '123'
 
     @app.route('/uppercase', methods=['POST'])
     def post_endpoint():
