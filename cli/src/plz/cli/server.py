@@ -31,3 +31,6 @@ class Server:
 
     def _url(self, path_segments: Sequence[str]) -> str:
         return self.prefix + '/' + '/'.join(path_segments)
+
+
+http_codes = requests.codes
