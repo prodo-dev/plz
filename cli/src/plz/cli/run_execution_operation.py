@@ -166,8 +166,8 @@ class RunExecutionOperation(Operation):
             io.BytesIO(metadata_bytes),
             io.BytesIO(b'\n'),
             build_context)
-        response = requests.post(
-            self.url('snapshots'),
+        response = self.server.post(
+            'snapshots',
             data=request_data,
             stream=True)
         check_status(response, requests.codes.ok)
@@ -207,14 +207,19 @@ class RunExecutionOperation(Operation):
             'docker_run_args': configuration.docker_run_args
         }
         commit = _get_head_commit() if _is_git_present() else None
-        response = requests.post(self.url('executions'), json={
-            'command': self.command,
-            'snapshot_id': snapshot_id,
-            'parameters': params,
-            'execution_spec': execution_spec,
-            'start_metadata': {'commit': commit,
-                               'configuration': configuration.as_dict()}
-        }, stream=True)
+        response = self.server.post(
+            'executions',
+            stream=True,
+            json={
+                'command': self.command,
+                'snapshot_id': snapshot_id,
+                'parameters': params,
+                'execution_spec': execution_spec,
+                'start_metadata': {
+                    'commit': commit,
+                    'configuration': configuration.as_dict()
+                },
+            })
         check_status(response, requests.codes.accepted)
         execution_id: Optional[str] = None
         ok = True

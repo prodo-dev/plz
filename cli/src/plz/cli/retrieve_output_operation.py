@@ -2,7 +2,7 @@ import os
 import shutil
 import tarfile
 import tempfile
-from typing import Iterator, Optional, IO
+from typing import IO, Iterator, Optional
 
 import requests
 
@@ -27,8 +27,8 @@ class RetrieveOutputOperation(Operation):
         self.execution_id = execution_id
 
     def harvest(self):
-        response = requests.delete(
-            self.url('executions', self.get_execution_id()),
+        response = self.server.delete(
+            'executions', self.get_execution_id(),
             params={'fail_if_running': True})
         if response.status_code == requests.codes.conflict:
             raise CLIException(
@@ -39,8 +39,8 @@ class RetrieveOutputOperation(Operation):
     @on_exception_reraise('Retrieving the output failed.')
     def retrieve_output(self):
         execution_id = self.get_execution_id()
-        response = requests.get(
-            self.url('executions', execution_id, 'output', 'files'),
+        response = self.server.get(
+            'executions', execution_id, 'output', 'files',
             stream=True)
         check_status(response, requests.codes.ok)
         formatted_output_dir = self.output_dir.replace('%e', execution_id)
