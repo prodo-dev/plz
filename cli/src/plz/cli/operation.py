@@ -40,8 +40,7 @@ class Operation(ABC):
         # Positional arguments cannot be optional, but we don't want the user
         # to type it each time. If the user is doing simply
         # `plz operation [other_args]` we do
-        # not add the argument, unless it was specified or the user is asking
-        # for help
+        # not add the argument, unless the user is asking for help
         add_arg = True
         if len(args) > 0 and args[0] == cls.name():
             if len(args) == 1:
