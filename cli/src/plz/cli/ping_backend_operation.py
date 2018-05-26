@@ -25,7 +25,7 @@ class PingBackendOperation(Operation):
         self.ping_timeout = ping_timeout
 
     def run(self):
-        response = requests.get(self.url('ping'), timeout=self.ping_timeout)
+        response = self.server.get('ping', timeout=self.ping_timeout)
         is_ok = response.status_code == requests.codes.ok
         if is_ok and json.loads(response.content).get('plz', None) != 'pong':
             is_ok = False

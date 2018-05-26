@@ -34,9 +34,6 @@ class InputData(contextlib.AbstractContextManager):
 
 
 class NoInputData(InputData):
-    def __init__(self, configuration: Configuration):
-        super().__init__(configuration)
-
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
