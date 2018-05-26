@@ -51,8 +51,8 @@ class LogsOperation(Operation):
                 since_timestamp = str(int(time.mktime(
                     dateutil.parser.parse(self.since).timetuple())))
             params = {'since': since_timestamp}
-        response = requests.get(
-            self.url('executions', execution_id, 'logs'),
+        response = self.server.get(
+            'executions', execution_id, 'logs',
             params=params,
             stream=True)
         check_status(response, requests.codes.ok)

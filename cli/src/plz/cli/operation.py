@@ -6,6 +6,7 @@ import requests
 
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
+from plz.cli.server import Server
 
 
 class Operation(ABC):
@@ -16,18 +17,15 @@ class Operation(ABC):
 
     def __init__(self, configuration: Configuration):
         self.configuration = configuration
-        self.prefix = f'http://{configuration.host}:{configuration.port}'
+        self.server = Server.from_configuration(configuration)
         self.user = configuration.user
         self.execution_id = None
-
-    def url(self, *path_segments: str):
-        return self.prefix + '/' + '/'.join(path_segments)
 
     def get_execution_id(self):
         if self.execution_id is not None:
             return self.execution_id
-        response = requests.get(
-            self.url('users', self.user, 'last_execution_id'))
+        response = self.server.get(
+            'users', self.user, 'last_execution_id')
         check_status(response, requests.codes.ok)
         response_object = json.loads(response.content)
         if 'execution_id' in response_object:

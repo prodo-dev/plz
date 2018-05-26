@@ -19,9 +19,11 @@ class RetrieveHistoryOperation(Operation):
 
     @on_exception_reraise('Retrieving the history failed.')
     def retrieve_history(self):
-        response = requests.get(
-            self.url('executions', self.configuration.user,
-                     self.configuration.project, 'history'),
+        response = self.server.get(
+            'executions',
+            self.configuration.user,
+            self.configuration.project,
+            'history',
             stream=True)
         check_status(response, requests.codes.ok)
         for r in response.raw:

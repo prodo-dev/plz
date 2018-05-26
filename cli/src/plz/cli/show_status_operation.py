@@ -28,8 +28,8 @@ class ShowStatusOperation(Operation):
 
     @on_exception_reraise('Retrieving the status failed.')
     def get_status(self):
-        response = requests.get(
-            self.url('executions', self.get_execution_id(), 'status'))
+        response = self.server.get(
+            'executions', self.get_execution_id(), 'status')
         check_status(response, requests.codes.ok)
         body = response.json()
         return ExecutionStatus(

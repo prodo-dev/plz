@@ -24,9 +24,11 @@ class StopExecutionOperation(Operation):
         self.execution_id = execution_id
 
     def run(self):
-        response = requests.delete(
-            self.url('executions', self.get_execution_id()),
-            params={'fail_if_deleted': True})
+        response = self.server.delete(
+            'executions', self.get_execution_id(),
+            params={
+                'fail_if_deleted': True,
+            })
         if response.status_code == requests.codes.expectation_failed:
             # Returned when already deleted
             log_info('Process already stopped')

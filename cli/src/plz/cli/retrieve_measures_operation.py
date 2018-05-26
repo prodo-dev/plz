@@ -26,8 +26,8 @@ class RetrieveMeasuresOperation(Operation):
 
     @on_exception_reraise('Retrieving the measures failed.')
     def retrieve_measures(self):
-        response = requests.get(
-            self.url('executions', self.get_execution_id(), 'measures'),
+        response = self.server.get(
+            'executions', self.get_execution_id(), 'measures',
             params={'summary': self.summary},
             stream=True)
         if response.status_code == requests.codes.conflict:
