@@ -6,8 +6,12 @@ from plz.cli.operation import Operation, check_status, \
 
 
 class RetrieveHistoryOperation(Operation):
-    @staticmethod
-    def prepare_argument_parser(parser, args):
+    @classmethod
+    def name(cls):
+        return 'history'
+
+    @classmethod
+    def prepare_argument_parser(cls, parser, args):
         pass
 
     def __init__(self, configuration: Configuration):

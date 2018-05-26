@@ -37,7 +37,7 @@ setup(
         'docker >= 3.2.1',
         'prettytable >= 0.7.2',
         'requests >= 2.18.4',
-        'python-dateutil == 2.7.2',
+        'python-dateutil >= 2.7.2', 'urllib3',
     ],
     extras_require={
         'test': [

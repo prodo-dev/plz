@@ -26,6 +26,10 @@ from plz.cli.show_status_operation import ShowStatusOperation
 class RunExecutionOperation(Operation):
     """Run an arbitrary command on a remote machine."""
 
+    @classmethod
+    def name(cls):
+        return 'run'
+
     @staticmethod
     def prepare_argument_parser(parser, args):
         parser.add_argument('--command', type=str)

@@ -9,6 +9,11 @@ from plz.cli.exceptions import CLIException
 
 
 class Operation(ABC):
+    @classmethod
+    @abstractmethod
+    def name(cls):
+        pass
+
     def __init__(self, configuration: Configuration):
         self.configuration = configuration
         self.prefix = f'http://{configuration.host}:{configuration.port}'
@@ -29,6 +34,23 @@ class Operation(ABC):
             return response_object['execution_id']
         else:
             raise ValueError('Expected an execution ID')
+
+    @classmethod
+    def maybe_add_execution_id_arg(cls, parser, args):
+        # Positional arguments cannot be optional, so we check whether the
+        # execution ID was specified and specify the argument only in that
+        # case. Also display it when the user asks for help.
+        try:
+            idx = args.index(cls.name())
+        except ValueError:
+            # User is not calling this operation, include the execution_id as
+            # it's helpful when the user is asking for help
+            parser.add_argument('execution_id')
+            return
+
+        if idx + 1 < len(args) and (
+                args[idx + 1][0] != '-' or args[idx + 1] in {'-h', '--help'}):
+            parser.add_argument('execution_id')
 
     @staticmethod
     @abstractmethod
@@ -68,14 +90,6 @@ def on_exception_reraise(message: str):
         return wrapped
 
     return wrapper
-
-
-def maybe_add_execution_id_arg(parser, args):
-    # Positional arguments cannot be optional, so we check whether the
-    # execution ID was specified and specify the argument only in that
-    # case. Also display it when the user asks for help.
-    if len(args) > 1 and (args[1][0] != '-' or args[1] in {'-h', '--help'}):
-        parser.add_argument('execution_id')
 
 
 def add_output_dir_arg(parser):

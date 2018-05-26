@@ -10,13 +10,17 @@ from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
 from plz.cli.log import log_info
 from plz.cli.operation import Operation, add_output_dir_arg, check_status, \
-    maybe_add_execution_id_arg, on_exception_reraise
+    on_exception_reraise
 
 
 class RetrieveOutputOperation(Operation):
-    @staticmethod
-    def prepare_argument_parser(parser, args):
-        maybe_add_execution_id_arg(parser, args)
+    @classmethod
+    def name(cls):
+        return 'output'
+
+    @classmethod
+    def prepare_argument_parser(cls, parser, args):
+        cls.maybe_add_execution_id_arg(parser, args)
         add_output_dir_arg(parser)
 
     def __init__(self, configuration: Configuration,
