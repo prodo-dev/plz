@@ -8,8 +8,12 @@ from plz.cli.operation import Operation, check_status
 
 
 class ListExecutionsOperation(Operation):
-    @staticmethod
-    def prepare_argument_parser(parser, args):
+    @classmethod
+    def name(cls):
+        return 'list'
+
+    @classmethod
+    def prepare_argument_parser(cls, parser, args):
         pass
 
     def run(self):

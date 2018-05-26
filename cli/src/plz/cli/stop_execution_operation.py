@@ -8,8 +8,12 @@ from plz.cli.operation import Operation, check_status
 
 
 class StopExecutionOperation(Operation):
-    @staticmethod
-    def prepare_argument_parser(parser, args):
+    @classmethod
+    def name(cls):
+        return 'stop'
+
+    @classmethod
+    def prepare_argument_parser(cls, parser, args):
         if len(args) > 1:
             # Execution ID was specified
             parser.add_argument(dest='execution_id')
