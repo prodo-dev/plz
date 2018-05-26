@@ -37,19 +37,19 @@ class Operation(ABC):
 
     @classmethod
     def maybe_add_execution_id_arg(cls, parser, args):
-        # Positional arguments cannot be optional, so we check whether the
-        # execution ID was specified and specify the argument only in that
-        # case. Also display it when the user asks for help.
-        try:
-            idx = args.index(cls.name())
-        except ValueError:
-            # User is not calling this operation, include the execution_id as
-            # it's helpful when the user is asking for help
-            parser.add_argument('execution_id')
-            return
-
-        if idx + 1 < len(args) and (
-                args[idx + 1][0] != '-' or args[idx + 1] in {'-h', '--help'}):
+        # Positional arguments cannot be optional, but we don't want the user
+        # to type it each time. If the user is doing simply
+        # `plz operation [other_args]` we do
+        # not add the argument, unless it was specified or the user is asking
+        # for help
+        add_arg = True
+        if len(args) > 0 and args[0] == cls.name():
+            if len(args) == 1:
+                add_arg = False
+            else:
+                if args[1][0] == '-' and not args[1] in {'-h', '--help'}:
+                    add_arg = False
+        if add_arg:
             parser.add_argument('execution_id')
 
     @classmethod
