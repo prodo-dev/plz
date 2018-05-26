@@ -52,9 +52,9 @@ class Operation(ABC):
                 args[idx + 1][0] != '-' or args[idx + 1] in {'-h', '--help'}):
             parser.add_argument('execution_id')
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def prepare_argument_parser(parser, args):
+    def prepare_argument_parser(cls, parser, args):
         pass
 
     @abstractmethod

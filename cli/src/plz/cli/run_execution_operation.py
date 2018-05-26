@@ -30,8 +30,8 @@ class RunExecutionOperation(Operation):
     def name(cls):
         return 'run'
 
-    @staticmethod
-    def prepare_argument_parser(parser, args):
+    @classmethod
+    def prepare_argument_parser(cls, parser, args):
         parser.add_argument('--command', type=str)
         add_output_dir_arg(parser)
         parser.add_argument('-p', '--parameters', dest='parameters_file',

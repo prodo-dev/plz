@@ -13,8 +13,8 @@ class PingBackendOperation(Operation):
     def name(cls):
         return 'ping-backend'
 
-    @staticmethod
-    def prepare_argument_parser(parser, args):
+    @classmethod
+    def prepare_argument_parser(cls, parser, args):
         parser.add_argument('-s', '--silent-on-success', action='store_true',
                             default=False)
 
