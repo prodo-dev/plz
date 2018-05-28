@@ -1,5 +1,4 @@
 import functools
-from typing import Sequence
 
 import requests
 import urllib3
@@ -19,7 +18,8 @@ class Server:
 
     def request(self, method: str, *path_segments: str, **kwargs) -> Response:
         try:
-            return requests.request(method, self._url(path_segments), **kwargs)
+            url = self.prefix + '/' + '/'.join(path_segments)
+            return requests.request(method, url, **kwargs)
         except (ConnectionError,
                 requests.ConnectionError,
                 urllib3.exceptions.NewConnectionError) as e:
@@ -36,9 +36,6 @@ class Server:
     patch = functools.partialmethod(request, 'PATCH')
     post = functools.partialmethod(request, 'POST')
     put = functools.partialmethod(request, 'PUT')
-
-    def _url(self, path_segments: Sequence[str]) -> str:
-        return self.prefix + '/' + '/'.join(path_segments)
 
 
 http_codes = requests.codes
