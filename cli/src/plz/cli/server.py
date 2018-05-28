@@ -36,6 +36,3 @@ class Server:
     patch = functools.partialmethod(request, 'PATCH')
     post = functools.partialmethod(request, 'POST')
     put = functools.partialmethod(request, 'PUT')
-
-
-http_codes = requests.codes
