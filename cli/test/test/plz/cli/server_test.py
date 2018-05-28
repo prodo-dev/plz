@@ -4,6 +4,7 @@ import socket
 import unittest
 from contextlib import closing
 
+# noinspection PyPackageRequirements
 import flask
 import requests
 
