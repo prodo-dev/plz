@@ -1,10 +1,7 @@
 import argparse
+import os
 import sys
 from typing import Type
-
-import os
-import requests
-import urllib3.exceptions
 
 from plz.cli.configuration import Configuration, ValidationException
 from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
@@ -81,14 +78,6 @@ def main(args=sys.argv[1:]):
         operation.run()
     except KeyboardInterrupt:
         log_error('Interrupted by the user.')
-        sys.exit(1)
-    except (ConnectionError,
-            requests.ConnectionError,
-            urllib3.exceptions.NewConnectionError):
-        log_error("We couldn't establish a connection to the server.")
-        sys.exit(1)
-    except requests.Timeout:
-        log_error('Our connection to the server timed out.')
         sys.exit(1)
     except CLIException as e:
         e.print(configuration)

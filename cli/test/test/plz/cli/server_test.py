@@ -7,6 +7,7 @@ from contextlib import closing
 import flask
 import requests
 
+from plz.cli.exceptions import CLIException
 from plz.cli.server import Server
 
 
@@ -58,6 +59,20 @@ class ServerTest(unittest.TestCase):
         response = server.get('one', 'two', 'three')
         self.assertEqual(response.status_code, requests.codes.ok)
         self.assertEqual(response.text, '123')
+
+    def test_handles_connection_errors(self):
+        server = Server(host=self.host, port=self.port + 1)
+        with self.assertRaises(CLIException) as cm:
+            server.get()
+        self.assertEqual(cm.exception.args[0],
+                         "We couldn't establish a connection to the server.")
+
+    def test_handles_timeouts(self):
+        server = Server(host=self.host, port=self.port)
+        with self.assertRaises(CLIException) as cm:
+            server.get(timeout=0.00001)
+        self.assertEqual(cm.exception.args[0],
+                         'Our connection to the server timed out.')
 
 
 def create_app():
