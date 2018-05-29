@@ -1,6 +1,6 @@
 import os
 import subprocess
-from typing import Optional, Iterator
+from typing import Optional
 
 import glob2
 

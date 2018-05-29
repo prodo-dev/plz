@@ -69,13 +69,13 @@ def main(args=sys.argv[1:]):
     operation = operation_classes[0](
         configuration=configuration, **option_dict)
     try:
-        # if operation_name != 'ping-backend':
-        #     # Ping the backend anyway as to avoid wasting user's time when the
-        #     # backend is down
-        #     PingBackendOperation(
-        #         configuration,
-        #         silent_on_success=True,
-        #         ping_timeout=ping_timeout).run()
+        if operation_name != 'ping-backend':
+            # Ping the backend anyway as to avoid wasting user's time when the
+            # backend is down
+            PingBackendOperation(
+                configuration,
+                silent_on_success=True,
+                ping_timeout=ping_timeout).run()
 
         operation.run()
     except KeyboardInterrupt:
