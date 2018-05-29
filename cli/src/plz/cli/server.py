@@ -1,16 +1,11 @@
-from typing import Sequence
+import functools
 
 import requests
+import urllib3
 from requests import Response
 
 from plz.cli.configuration import Configuration
-
-
-def _method(name: str):
-    def impl(self, *path_segments: str, **kwargs) -> Response:
-        return requests.request(name, self._url(path_segments), **kwargs)
-
-    return impl
+from plz.cli.exceptions import CLIException
 
 
 class Server:
@@ -21,16 +16,23 @@ class Server:
     def __init__(self, host: str, port: int):
         self.prefix = f'http://{host}:{port}'
 
-    delete = _method('DELETE')
-    get = _method('GET')
-    head = _method('HEAD')
-    options = _method('OPTIONS')
-    patch = _method('PATCH')
-    post = _method('POST')
-    put = _method('PUT')
+    def request(self, method: str, *path_segments: str, **kwargs) -> Response:
+        try:
+            url = self.prefix + '/' + '/'.join(path_segments)
+            return requests.request(method, url, **kwargs)
+        except (ConnectionError,
+                requests.ConnectionError,
+                urllib3.exceptions.NewConnectionError) as e:
+            raise CLIException(
+                "We couldn't establish a connection to the server.") from e
+        except (TimeoutError, requests.Timeout) as e:
+            raise CLIException(
+                'Our connection to the server timed out.') from e
 
-    def _url(self, path_segments: Sequence[str]) -> str:
-        return self.prefix + '/' + '/'.join(path_segments)
-
-
-http_codes = requests.codes
+    delete = functools.partialmethod(request, 'DELETE')
+    get = functools.partialmethod(request, 'GET')
+    head = functools.partialmethod(request, 'HEAD')
+    options = functools.partialmethod(request, 'OPTIONS')
+    patch = functools.partialmethod(request, 'PATCH')
+    post = functools.partialmethod(request, 'POST')
+    put = functools.partialmethod(request, 'PUT')
