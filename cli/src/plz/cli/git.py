@@ -14,6 +14,31 @@ def get_head_commit_or_none(snapshot_path: str) -> Optional[str]:
         return None
 
 
+def get_ignored_git_files(snapshot_path: str) -> [str]:
+    all_files = os.linesep.join(
+        glob2.iglob(
+            os.path.join(snapshot_path, '**'),
+            recursive=True,
+            include_hidden=True))
+    # Using --no-index, so that .gitignored but indexed files need to be
+    # included explicitly.
+    result = subprocess.run(
+        ['git', '-C', snapshot_path, 'check-ignore', '--stdin', '--no-index'],
+        input=all_files,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        encoding='utf-8')
+    return_code = result.returncode
+    # When there are no ignored files it returns with exit code 1
+    correct_return_code = return_code == 0 or (
+            return_code == 1 and result.stdout == '')
+    if not correct_return_code or result.stderr != '':
+        raise SystemError('Cannot list files from git.\n'
+                          f'Return code is: {result.returncode}\n'
+                          f'Stderr: [{result.stderr}]')
+    return [os.path.abspath(p) for p in result.stdout.splitlines()]
+
+
 def is_git_present(snapshot_path: str) -> bool:
     # noinspection PyBroadException
     try:
@@ -62,28 +87,3 @@ def _is_there_a_head_commit(snapshot_path: str) -> bool:
                            f'Stdout: {result.stdout}. \n'
                            f'Stderr: [{result.stderr}]. \n')
     return result.returncode == 0 and ' HEAD\n' in result.stdout
-
-
-def get_ignored_git_files(snapshot_path: str) -> [str]:
-    all_files = os.linesep.join(
-        glob2.iglob(
-            os.path.join(snapshot_path, '**'),
-            recursive=True,
-            include_hidden=True))
-    # Using --no-index, so that .gitignored but indexed files need to be
-    # included explicitly.
-    result = subprocess.run(
-        ['git', '-C', snapshot_path, 'check-ignore', '--stdin', '--no-index'],
-        input=all_files,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding='utf-8')
-    return_code = result.returncode
-    # When there are no ignored files it returns with exit code 1
-    correct_return_code = return_code == 0 or (
-            return_code == 1 and result.stdout == '')
-    if not correct_return_code or result.stderr != '':
-        raise SystemError('Cannot list files from git.\n'
-                          f'Return code is: {result.returncode}\n'
-                          f'Stderr: [{result.stderr}]')
-    return [os.path.abspath(p) for p in result.stdout.splitlines()]
