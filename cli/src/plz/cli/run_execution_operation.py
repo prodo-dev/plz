@@ -2,17 +2,15 @@ import io
 import itertools
 import json
 import os
-import subprocess
-from glob import iglob
+import time
 from typing import Any, Callable, Optional, Tuple
 
-import docker.utils.build
 import requests
-import time
 
 from plz.cli import parameters
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
+from plz.cli.git import get_head_commit_or_none
 from plz.cli.input_data import InputData
 from plz.cli.log import log_debug, log_error, log_info
 from plz.cli.logs_operation import LogsOperation
@@ -21,6 +19,7 @@ from plz.cli.parameters import Parameters
 from plz.cli.retrieve_measures_operation import RetrieveMeasuresOperation
 from plz.cli.retrieve_output_operation import RetrieveOutputOperation
 from plz.cli.show_status_operation import ShowStatusOperation
+from plz.cli.snapshot import capture_build_context
 
 
 class RunExecutionOperation(Operation):
@@ -61,9 +60,24 @@ class RunExecutionOperation(Operation):
 
         params = parameters.parse_file(self.parameters_file)
 
+        exclude_gitignored_files = \
+            self.configuration.exclude_gitignored_files
+        snapshot_path = '.'
+
+        def build_context_suboperation():
+            return capture_build_context(
+                image=self.configuration.image,
+                image_extensions=self.configuration.image_extensions,
+                command=self.configuration.command,
+                snapshot_path=snapshot_path,
+                excluded_paths=self.configuration.excluded_paths,
+                included_paths=self.configuration.included_paths,
+                exclude_gitignored_files=exclude_gitignored_files,
+            )
+
         with self.suboperation(
                 'Capturing the context',
-                self.capture_build_context) as build_context:
+                build_context_suboperation) as build_context:
             snapshot_id = self.suboperation(
                     'Building the program snapshot',
                     lambda: self.submit_context_for_building(build_context))
@@ -73,7 +87,8 @@ class RunExecutionOperation(Operation):
                 if_set=self.configuration.input)
         execution_id, ok = self.suboperation(
                 'Sending request to start execution',
-                lambda: self.start_execution(snapshot_id, params, input_id))
+                lambda: self.start_execution(snapshot_id, params, input_id,
+                                             snapshot_path))
         self.execution_id = execution_id
         log_info(f'Execution ID is: {execution_id}')
 
@@ -130,36 +145,6 @@ class RunExecutionOperation(Operation):
                 f'Execution failed with an exit status of {status.code}.',
                 exit_code=status.code)
 
-    def capture_build_context(self) -> io.FileIO:
-        context_dir = os.getcwd()
-        dockerfile_path = os.path.join(context_dir, 'plz.Dockerfile')
-        dockerfile_created = False
-        try:
-            with open(dockerfile_path, mode='x') as dockerfile:
-                dockerfile_created = True
-                dockerfile.write(f'FROM {self.configuration.image}\n')
-                for step in self.configuration.image_extensions:
-                    dockerfile.write(step)
-                    dockerfile.write('\n')
-                dockerfile.write(
-                    f'WORKDIR /src\n'
-                    f'COPY . ./\n'
-                    f'CMD {self.configuration.command}\n'
-                )
-            os.chmod(dockerfile_path, 0o644)
-            build_context = docker.utils.build.tar(
-                path='.',
-                exclude=_get_excluded_paths(self.configuration),
-                gzip=True,
-            )
-        except FileExistsError as e:
-            raise CLIException(
-                    'The directory cannot have a plz.Dockerfile.', e)
-        finally:
-            if dockerfile_created:
-                os.remove(dockerfile_path)
-        return build_context
-
     def submit_context_for_building(self, build_context: io.FileIO) -> str:
         metadata = {
             'user': self.configuration.user,
@@ -201,7 +186,8 @@ class RunExecutionOperation(Operation):
             self,
             snapshot_id: str,
             params: Parameters,
-            input_id: Optional[str]) \
+            input_id: Optional[str],
+            snapshot_path: str) \
             -> Tuple[Optional[str], bool]:
         configuration = self.configuration
         execution_spec = {
@@ -210,7 +196,7 @@ class RunExecutionOperation(Operation):
             'input_id': input_id,
             'docker_run_args': configuration.docker_run_args
         }
-        commit = _get_head_commit() if _is_git_present() else None
+        commit = get_head_commit_or_none(snapshot_path)
         response = self.server.post(
             'executions',
             stream=True,
@@ -254,97 +240,3 @@ class RunExecutionOperation(Operation):
         if self.configuration.debug:
             log_debug('Time taken: %.2fs' % time_taken)
         return result
-
-
-def _is_git_present() -> bool:
-    # noinspection PyBroadException
-    try:
-        result = subprocess.run(
-            ['git', 'rev-parse', '--show-toplevel'],
-            input=None,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            encoding='utf-8')
-        return result.returncode == 0 and result.stderr == '' and \
-            len(result.stdout) > 0
-    except Exception:
-        return False
-
-
-def _get_head_commit() -> Optional[str]:
-    if not _is_there_a_head_commit():
-        return None
-    result = subprocess.run(
-        ['git', 'rev-parse', 'HEAD'],
-        input=None,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding='utf-8')
-    commit = result.stdout.strip()
-    if result.returncode != 0 or result.stderr != '' or len(commit) == 0:
-        raise CLIException('Couldn\'t get HEAD commit. \n'
-                           f'Return code: {result.returncode}. \n'
-                           f'Stdout: {result.stdout}. \n'
-                           f'Stderr: [{result.stderr}]. \n')
-    return commit
-
-
-def _is_there_a_head_commit() -> bool:
-    # We could be doing `git rev-list -n 1 --all`, and check that the output
-    # is non-empty, but Ubuntu ships with ridiculous versions of git
-    result = subprocess.run(
-        ['git', 'show-ref', '--head'],
-        input=None,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding='utf-8')
-    if result.returncode not in {0, 1} or result.stderr != '':
-        raise CLIException('Error finding if there are commits. \n'
-                           f'Return code: {result.returncode}. \n'
-                           f'Stdout: {result.stdout}. \n'
-                           f'Stderr: [{result.stderr}]. \n')
-    return result.returncode == 0 and ' HEAD\n' in result.stdout
-
-
-def _get_excluded_paths(configuration: Configuration):
-    excluded_paths = [os.path.abspath(ep)
-                      for p in configuration.excluded_paths
-                      for ep in iglob(p, recursive=True)]
-    included_paths = set(os.path.abspath(ip)
-                         for p in configuration.included_paths
-                         for ip in iglob(p, recursive=True))
-    git_ignored_files = []
-
-    # A value of None means "exclude if git is available"
-    use_git = configuration.exclude_gitignored_files or (
-        configuration.exclude_gitignored_files is None and _is_git_present())
-
-    if use_git:
-        git_ignored_files = _get_ignored_git_files()
-    excluded_paths += git_ignored_files
-    ep = [p[len(os.path.abspath('.')) + 1:]
-          for p in excluded_paths if p not in included_paths]
-    return ep
-
-
-def _get_ignored_git_files() -> [str]:
-    all_files = os.linesep.join(iglob('**', recursive=True))
-    # Using --no-index, so that .gitignored but indexed files need to be
-    # included explicitly. This is easy for development as, when testing, we
-    # want to commit files and instruct the test to ignore them. If it's
-    # annoying for users this can be changed in the future
-    result = subprocess.run(
-        ['git', 'check-ignore', '--stdin', '--no-index'],
-        input=all_files,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding='utf-8')
-    return_code = result.returncode
-    # When there are no ignored files it returns with exit code 1
-    correct_return_code = return_code == 0 or (
-            return_code == 1 and result.stdout == '')
-    if not correct_return_code or result.stderr != '':
-        raise SystemError('Cannot list files from git.\n'
-                          f'Return code is: {result.returncode}\n'
-                          f'Stderr: [{result.stderr}]')
-    return [os.path.abspath(p) for p in result.stdout.splitlines()]

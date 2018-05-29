@@ -5,6 +5,7 @@ from typing import Type
 
 from plz.cli.configuration import Configuration, ValidationException
 from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
+from plz.cli.list_context_operation import ListContextOperation
 from plz.cli.list_executions_operation import ListExecutionsOperation
 from plz.cli.log import log_error
 from plz.cli.logs_operation import LogsOperation
@@ -27,6 +28,7 @@ OPERATIONS: [Type[Operation]] = [
     RetrieveHistoryOperation,
     RetrieveMeasuresOperation,
     PingBackendOperation,
+    ListContextOperation,
 ]
 
 

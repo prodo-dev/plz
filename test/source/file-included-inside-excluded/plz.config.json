@@ -1,0 +1,12 @@
+{
+  "image": "python:3-slim",
+  "command": [
+    "./main.py"
+  ],
+  "excluded_paths": [
+    "dir_excluded"
+  ],
+  "included_paths": [
+    "**/file_included"
+  ]
+}
