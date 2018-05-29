@@ -35,9 +35,11 @@ setup(
     python_requires='>= 3.6',
     install_requires=[
         'docker >= 3.2.1',
+        'glob2 >= 0.6',
         'prettytable >= 0.7.2',
+        'python-dateutil >= 2.7.3',
         'requests >= 2.18.4',
-        'python-dateutil == 2.7.2',
+        'urllib3 >= 1.22'
     ],
     extras_require={
         'test': [
