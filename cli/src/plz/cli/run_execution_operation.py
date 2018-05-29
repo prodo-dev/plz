@@ -35,10 +35,6 @@ class RunExecutionOperation(Operation):
         add_output_dir_arg(parser)
         parser.add_argument('-p', '--parameters', dest='parameters_file',
                             type=str)
-        parser.add_argument('-e', '--list-excluded-paths',
-                            action='store_const', const=True, default=False)
-        parser.add_argument('-l', '--list-snapshot-files',
-                            action='store_const', const=True, default=False)
 
     def __init__(self,
                  configuration: Configuration,
