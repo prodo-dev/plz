@@ -22,7 +22,7 @@ class InputData(contextlib.AbstractContextManager):
     @staticmethod
     def from_configuration(configuration: Configuration):
         if not configuration.input:
-            return NoInputData(configuration)
+            return NoInputData()
         if configuration.input.startswith('file://'):
             path = configuration.input[len('file://'):]
             return LocalInputData(configuration, path)
