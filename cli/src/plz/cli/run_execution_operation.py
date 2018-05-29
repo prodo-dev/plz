@@ -40,15 +40,11 @@ class RunExecutionOperation(Operation):
                  configuration: Configuration,
                  command: Optional[str],
                  output_dir: str,
-                 parameters_file: str,
-                 list_excluded_paths: bool,
-                 list_snapshot_files: bool):
+                 parameters_file: str):
         super().__init__(configuration)
         self.configuration = configuration
         self.output_dir = output_dir
         self.parameters_file = parameters_file
-        self.list_excluded_paths = list_excluded_paths
-        self.list_snapshot_files = list_snapshot_files
         if command:
             self.command = ['sh', '-c', command, '-s']
         else:
