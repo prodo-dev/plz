@@ -2,7 +2,7 @@ import os
 import shutil
 import tarfile
 import tempfile
-from typing import Iterator, Optional, IO
+from typing import IO, Iterator, Optional
 
 import requests
 
@@ -10,13 +10,17 @@ from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
 from plz.cli.log import log_info
 from plz.cli.operation import Operation, add_output_dir_arg, check_status, \
-    maybe_add_execution_id_arg, on_exception_reraise
+    on_exception_reraise
 
 
 class RetrieveOutputOperation(Operation):
-    @staticmethod
-    def prepare_argument_parser(parser, args):
-        maybe_add_execution_id_arg(parser, args)
+    @classmethod
+    def name(cls):
+        return 'output'
+
+    @classmethod
+    def prepare_argument_parser(cls, parser, args):
+        cls.maybe_add_execution_id_arg(parser, args)
         add_output_dir_arg(parser)
 
     def __init__(self, configuration: Configuration,
@@ -27,8 +31,8 @@ class RetrieveOutputOperation(Operation):
         self.execution_id = execution_id
 
     def harvest(self):
-        response = requests.delete(
-            self.url('executions', self.get_execution_id()),
+        response = self.server.delete(
+            'executions', self.get_execution_id(),
             params={'fail_if_running': True})
         if response.status_code == requests.codes.conflict:
             raise CLIException(
@@ -39,8 +43,8 @@ class RetrieveOutputOperation(Operation):
     @on_exception_reraise('Retrieving the output failed.')
     def retrieve_output(self):
         execution_id = self.get_execution_id()
-        response = requests.get(
-            self.url('executions', execution_id, 'output', 'files'),
+        response = self.server.get(
+            'executions', execution_id, 'output', 'files',
             stream=True)
         check_status(response, requests.codes.ok)
         formatted_output_dir = self.output_dir.replace('%e', execution_id)

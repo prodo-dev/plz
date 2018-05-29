@@ -16,4 +16,5 @@ urllib3 = "*"
 
 [dev-packages]
 flake8 = "*"
+flask = "*"
 nose = "*"

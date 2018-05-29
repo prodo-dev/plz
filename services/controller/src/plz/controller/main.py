@@ -95,6 +95,12 @@ def handle_chunked_input():
         request.environ['wsgi.input_terminated'] = True
 
 
+@app.route('/ping', methods=['GET'])
+def ping_entrypoint():
+    # This is plz, and we're up and running
+    return jsonify({'plz': 'pong'})
+
+
 @app.route('/', methods=['GET'])
 def root():
     return jsonify({})

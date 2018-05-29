@@ -13,6 +13,7 @@ from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
 from plz.cli.log import log_debug, log_info
 from plz.cli.operation import check_status
+from plz.cli.server import Server
 
 READ_BUFFER_SIZE = 16384
 
@@ -27,21 +28,12 @@ class InputData(contextlib.AbstractContextManager):
             return LocalInputData(configuration, path)
         raise CLIException('Could not parse the configured input.')
 
-    def __init__(self, configuration: Configuration):
-        self.prefix = f'http://{configuration.host}:{configuration.port}'
-
-    def url(self, *path_segments: str):
-        return self.prefix + '/' + '/'.join(path_segments)
-
     @abstractmethod
     def publish(self) -> Optional[str]:
         pass
 
 
 class NoInputData(InputData):
-    def __init__(self, configuration: Configuration):
-        super().__init__(configuration)
-
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
@@ -51,7 +43,7 @@ class NoInputData(InputData):
 
 class LocalInputData(InputData):
     def __init__(self, configuration: Configuration, path: str):
-        super().__init__(configuration)
+        self.server = Server.from_configuration(configuration)
         self.user = configuration.user
         self.project = configuration.project
         self.path = os.path.normpath(path)
@@ -102,8 +94,8 @@ class LocalInputData(InputData):
         return input_id
 
     def _get_input_from_controller_or_none(self) -> Optional[dict]:
-        response = requests.get(
-            self.url('data', 'input', 'id'),
+        response = self.server.get(
+            'data', 'input', 'id',
             params={'user': self.user,
                     'project': self.project,
                     'path': self.path,
@@ -122,13 +114,13 @@ class LocalInputData(InputData):
         return file_hash.hexdigest()
 
     def _has_input(self, input_id: str) -> bool:
-        response = requests.head(self.url('data', 'input', input_id))
+        response = self.server.head('data', 'input', input_id)
         return response.status_code == requests.codes.ok
 
     def _put_tarball(self, input_id: str) -> str:
         self.tarball.seek(0)
-        response = requests.put(
-            self.url('data', 'input', input_id),
+        response = self.server.put(
+            'data', 'input', input_id,
             data=self.tarball,
             stream=True,
             params={'user': self.user,

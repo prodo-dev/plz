@@ -5,8 +5,7 @@ import requests
 
 from plz.cli.configuration import Configuration
 from plz.cli.log import log_info
-from plz.cli.operation import Operation, check_status, \
-    maybe_add_execution_id_arg, on_exception_reraise
+from plz.cli.operation import Operation, check_status, on_exception_reraise
 
 ExecutionStatus = collections.namedtuple(
     'ExecutionStatus',
@@ -14,9 +13,13 @@ ExecutionStatus = collections.namedtuple(
 
 
 class ShowStatusOperation(Operation):
-    @staticmethod
-    def prepare_argument_parser(parser, args):
-        maybe_add_execution_id_arg(parser, args)
+    @classmethod
+    def name(cls):
+        return 'status'
+
+    @classmethod
+    def prepare_argument_parser(cls, parser, args):
+        cls.maybe_add_execution_id_arg(parser, args)
 
     def __init__(self, configuration: Configuration,
                  execution_id: Optional[str] = None):
@@ -25,8 +28,8 @@ class ShowStatusOperation(Operation):
 
     @on_exception_reraise('Retrieving the status failed.')
     def get_status(self):
-        response = requests.get(
-            self.url('executions', self.get_execution_id(), 'status'))
+        response = self.server.get(
+            'executions', self.get_execution_id(), 'status')
         check_status(response, requests.codes.ok)
         body = response.json()
         return ExecutionStatus(

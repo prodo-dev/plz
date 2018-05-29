@@ -4,8 +4,12 @@ from plz.cli.snapshot import get_context_files, get_matching_excluded_paths
 
 
 class ListContextOperation(Operation):
-    @staticmethod
-    def prepare_argument_parser(parser, args):
+    @classmethod
+    def name(cls):
+        return 'list-context'
+
+    @classmethod
+    def prepare_argument_parser(cls, parser, args):
         parser.add_argument(
             '-e', '--excluded-paths', action='store_const', const=True,
             default=False)

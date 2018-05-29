@@ -25,8 +25,12 @@ from plz.cli.snapshot import capture_build_context
 class RunExecutionOperation(Operation):
     """Run an arbitrary command on a remote machine."""
 
-    @staticmethod
-    def prepare_argument_parser(parser, args):
+    @classmethod
+    def name(cls):
+        return 'run'
+
+    @classmethod
+    def prepare_argument_parser(cls, parser, args):
         parser.add_argument('--command', type=str)
         add_output_dir_arg(parser)
         parser.add_argument('-p', '--parameters', dest='parameters_file',
@@ -159,8 +163,8 @@ class RunExecutionOperation(Operation):
             io.BytesIO(metadata_bytes),
             io.BytesIO(b'\n'),
             build_context)
-        response = requests.post(
-            self.url('snapshots'),
+        response = self.server.post(
+            'snapshots',
             data=request_data,
             stream=True)
         check_status(response, requests.codes.ok)
@@ -201,14 +205,19 @@ class RunExecutionOperation(Operation):
             'docker_run_args': configuration.docker_run_args
         }
         commit = get_head_commit_or_none(snapshot_path)
-        response = requests.post(self.url('executions'), json={
-            'command': self.command,
-            'snapshot_id': snapshot_id,
-            'parameters': params,
-            'execution_spec': execution_spec,
-            'start_metadata': {'commit': commit,
-                               'configuration': configuration.as_dict()}
-        }, stream=True)
+        response = self.server.post(
+            'executions',
+            stream=True,
+            json={
+                'command': self.command,
+                'snapshot_id': snapshot_id,
+                'parameters': params,
+                'execution_spec': execution_spec,
+                'start_metadata': {
+                    'commit': commit,
+                    'configuration': configuration.as_dict()
+                },
+            })
         check_status(response, requests.codes.accepted)
         execution_id: Optional[str] = None
         ok = True
