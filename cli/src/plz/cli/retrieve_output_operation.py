@@ -22,12 +22,20 @@ class RetrieveOutputOperation(Operation):
     def prepare_argument_parser(cls, parser, args):
         cls.maybe_add_execution_id_arg(parser, args)
         add_output_dir_arg(parser)
+        parser.add_argument(
+            '--force-if-running', '-f', action='store_true', default=False,
+            help='Download output even if the process is still running. '
+                 'Discouraged as the output might be in an inconsistent '
+                 'state. If the output directory is present it\'ll be '
+                 'overwritten')
 
     def __init__(self, configuration: Configuration,
                  output_dir: str,
+                 force_if_running: bool,
                  execution_id: Optional[str] = None):
         super().__init__(configuration)
         self.output_dir = output_dir
+        self.force_if_running = force_if_running
         self.execution_id = execution_id
 
     def harvest(self):
@@ -35,9 +43,13 @@ class RetrieveOutputOperation(Operation):
             'executions', self.get_execution_id(),
             params={'fail_if_running': True})
         if response.status_code == requests.codes.conflict:
-            raise CLIException(
-                'Process is still running, run `plz stop` if you want to '
-                'terminate it')
+            if self.force_if_running:
+                log_info('Process is still running')
+                return
+            else:
+                raise CLIException(
+                    'Process is still running, run `plz stop` if you want to '
+                    'terminate it, \nor use --force-if-running (discouraged)')
         check_status(response, requests.codes.no_content)
 
     @on_exception_reraise('Retrieving the output failed.')
@@ -51,9 +63,14 @@ class RetrieveOutputOperation(Operation):
         try:
             os.makedirs(formatted_output_dir)
         except FileExistsError:
-            raise CLIException(
-                f'The output directory "{formatted_output_dir}" '
-                'already exists.')
+            if self.force_if_running:
+                log_info('Removing existing output directory')
+                shutil.rmtree(formatted_output_dir)
+                os.makedirs(formatted_output_dir)
+            else:
+                raise CLIException(
+                    f'The output directory "{formatted_output_dir}" '
+                    'already exists.')
         for path in untar(response.raw, formatted_output_dir):
             print(path)
 

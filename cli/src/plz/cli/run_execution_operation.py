@@ -95,7 +95,8 @@ class RunExecutionOperation(Operation):
         retrieve_output_operation = RetrieveOutputOperation(
             self.configuration,
             output_dir=self.output_dir,
-            execution_id=execution_id)
+            execution_id=execution_id,
+            force_if_running=False)
 
         cancelled = False
         try:
