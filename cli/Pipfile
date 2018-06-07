@@ -7,12 +7,7 @@ name = "pypi"
 python_version = "3.6"
 
 [packages]
-glob2 = "*"
-python-dateutil = "*"
-docker = "*"
-requests = "*"
-prettytable = "*"
-urllib3 = "*"
+"e1839a8" = {path = ".", editable = true}
 
 [dev-packages]
 flake8 = "*"
