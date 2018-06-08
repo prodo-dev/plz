@@ -74,7 +74,10 @@ class Localhost(InstanceProvider):
     def push(self, image_tag: str):
         pass
 
-    def instance_iterator(self) \
+    def instance_iterator(self, only_running: bool) \
             -> Iterator[Instance]:
         return iter(self.instance_for(execution_id)
                     for execution_id in self.containers.execution_ids())
+
+    def get_forensics(self, execution_id) -> dict:
+        return {}

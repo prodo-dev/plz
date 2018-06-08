@@ -84,6 +84,14 @@ class DockerInstance(Instance):
         # Doesn't make sense for local instances
         return 0
 
+    def get_resource_state(self) -> str:
+        # Docker is always running
+        return 'running'
+
+    def delete_resource(self) -> None:
+        # No underlying resource to delete
+        pass
+
     def get_execution_id(self) -> str:
         return self.execution_id
 
@@ -121,6 +129,9 @@ class DockerInstance(Instance):
                 raise CouldNotGetOutputException(
                     f'Couldn\'t read the results for {self.execution_id}')
             self._cleanup()
+
+    def get_forensics(self) -> dict:
+        return {}
 
     def _publish_results(self, results_storage: ResultsStorage,
                          finish_timestamp: int):

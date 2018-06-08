@@ -7,21 +7,23 @@ import uuid
 from distutils.util import strtobool
 from typing import Any, Callable, Iterator, Optional, TypeVar, Union
 
-import flask
 import requests
 from flask import Flask, Response, jsonify, request, stream_with_context
 from redis import StrictRedis
 
 from plz.controller import configuration
+from plz.controller.arbitrary_object_json_encoder import \
+    ArbitraryObjectJSONEncoder
 from plz.controller.configuration import Dependencies
 from plz.controller.db_storage import DBStorage
-from plz.controller.exceptions import JSONResponseException, \
-    ResponseHandledException
+from plz.controller.exceptions import AbortedExecutionException, \
+    JSONResponseException, ResponseHandledException, WorkerUnreachableException
 from plz.controller.execution import Executions
 from plz.controller.images import Images
 from plz.controller.input_data import InputDataConfiguration
 from plz.controller.instances.instance_base import Instance, \
-    InstanceProvider, InstanceStillRunningException
+    InstanceNotRunningException, InstanceProvider, \
+    InstanceStillRunningException
 from plz.controller.results import ResultsStorage
 
 T = TypeVar('T')
@@ -45,18 +47,6 @@ os.makedirs(input_dir, exist_ok=True)
 os.makedirs(temp_data_dir, exist_ok=True)
 input_data_configuration = InputDataConfiguration(
     redis, input_dir=input_dir, temp_data_dir=temp_data_dir)
-
-
-class ArbitraryObjectJSONEncoder(flask.json.JSONEncoder):
-    """
-    This encoder tries very hard to encode any kind of object. It uses the
-     object's ``__dict__`` property if the object itself is not encodable.
-    """
-    def default(self, o):
-        try:
-            return super().default(o)
-        except TypeError:
-            return o.__dict__
 
 
 def _setup_logging():
@@ -99,10 +89,27 @@ def handle_chunked_input():
 
 @app.errorhandler(ResponseHandledException)
 def handle_exception(exception: ResponseHandledException):
+    if isinstance(exception, WorkerUnreachableException):
+        exception = add_forensics(exception)
     return jsonify(type=type(exception).__name__,
                    **{k: v for k, v in exception.__dict__.items()
                       if k != 'response_code'}), \
         exception.response_code
+
+
+def add_forensics(exception: WorkerUnreachableException):
+    forensics = instance_provider.get_forensics(exception.execution_id)
+    log.debug(f'forensics: {forensics}')
+    spot_state = forensics.get(
+        'SpotInstanceRequest', {}).get('State', None)
+    # We know better now
+    if spot_state not in {'active', 'open', None}:
+        return AbortedExecutionException(forensics)
+    instance_state = forensics.get('InstanceState', None)
+    if instance_state not in {'running', None}:
+        return InstanceNotRunningException(forensics)
+    exception.forensics = forensics
+    return exception
 
 
 @app.route('/ping', methods=['GET'])

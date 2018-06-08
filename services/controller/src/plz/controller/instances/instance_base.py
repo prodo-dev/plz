@@ -110,8 +110,47 @@ class Instance(Results):
                 release_container: bool = True) -> bool:
         pass
 
+    @abstractmethod
+    def get_resource_state(self) -> str:
+        """Get the resource status of the underlying resource (for instance,
+           the AWS instance) such as running or terminated"""
+        pass
+
+    @abstractmethod
+    def delete_resource(self) -> None:
+        """Set the underlying resource to not be listed among the live ones"""
+        pass
+
     def harvest(self, results_storage: ResultsStorage):
+        log.debug(f'Harvesting: {self.get_execution_id()}')
         with self._lock:
+            log.debug('After lock')
+            resource_state = self.get_resource_state()
+            execution_id = self.get_execution_id()
+            if resource_state == 'terminated':
+                try:
+                    # Ensure that terminated instances with an execution ID
+                    # have results (or a tombstone)
+                    if self.get_execution_id() == '':
+                        log.warning(
+                            'There\'s a terminated instance without an '
+                            'execution ID associated.')
+                        return
+                    with results_storage.get(execution_id) as results:
+                        if results is not None:
+                            return
+                    results_storage.write_tombstone(
+                        execution_id,
+                        tombstone_dict={'forensics': self.get_forensics()})
+                finally:
+                    self.delete_resource()
+
+            # We only care about harvesting running and terminated instances
+            if resource_state != 'running':
+                log.info(f'Instance for execution ID [{execution_id}] is '
+                         f'[{resource_state}]')
+                return
+
             try:
                 info = self.get_execution_info()
             except ContainerMissingException:
@@ -133,6 +172,11 @@ class Instance(Results):
 
             if info.status in {'exited', 'idle'}:
                 self.dispose_if_its_time(info)
+
+    @abstractmethod
+    def get_forensics(self) -> dict:
+        """Gather information useful when the instance is/was misbehaving"""
+        pass
 
     @property
     @abstractmethod
@@ -192,11 +236,11 @@ class InstanceProvider(ABC):
         pass
 
     @abstractmethod
-    def instance_iterator(self) -> Iterator[Instance]:
+    def instance_iterator(self, only_running: bool) -> Iterator[Instance]:
         pass
 
     def harvest(self):
-        for instance in self.instance_iterator():
+        for instance in self.instance_iterator(only_running=False):
             # noinspection PyBroadException
             try:
                 instance.harvest(self.results_storage)
@@ -208,11 +252,18 @@ class InstanceProvider(ABC):
     def get_executions(self) -> [ExecutionInfo]:
         return [
             instance.get_execution_info()
-            for instance in self.instance_iterator()]
+            for instance in self.instance_iterator(only_running=True)]
+
+    @abstractmethod
+    def get_forensics(self, execution_id) -> dict:
+        """Gather information useful when the instance is/was misbehaving"""
+        pass
 
 
-class InstanceNotRunningException(Exception):
-    pass
+class InstanceNotRunningException(ResponseHandledException):
+    def __init__(self, forensics: dict):
+        super().__init__(response_code=requests.codes.gone)
+        self.forensics = forensics
 
 
 class InstanceStillRunningException(ResponseHandledException):

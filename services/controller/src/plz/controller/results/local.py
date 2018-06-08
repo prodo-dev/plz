@@ -1,12 +1,14 @@
 import json
 import os
 import shutil
-from typing import ContextManager, Iterator, Optional
+from typing import Any, ContextManager, Iterator, Optional
 
 from redis import StrictRedis
 from redis.lock import Lock
 
+from plz.controller.arbitrary_object_json_encoder import dumps_arbitrary_json
 from plz.controller.db_storage import DBStorage
+from plz.controller.exceptions import AbortedExecutionException
 from plz.controller.execution_metadata import compile_metadata_for_storage
 from plz.controller.results.results_base import InstanceStatus, \
     InstanceStatusFailure, InstanceStatusSuccess, Results, ResultsContext, \
@@ -35,14 +37,11 @@ class LocalResultsStorage(ResultsStorage):
                 finish_timestamp: int):
         paths = Paths(self.directory, execution_id)
         with self._lock(execution_id):
-            if os.path.exists(paths.finished_file):
+            if os.path.exists(paths.finished_file) or \
+                    os.path.exists(paths.tombstone_file):
                 return
 
-            try:
-                os.makedirs(paths.directory)
-            except OSError:
-                shutil.rmtree(paths.directory)
-                os.makedirs(paths.directory)
+            _force_mk_empty_dir(paths.directory)
 
             with open(paths.exit_status, 'w') as f:
                 print(exit_status, file=f)
@@ -59,6 +58,17 @@ class LocalResultsStorage(ResultsStorage):
             self.db_storage.add_finished_execution_id(
                 user=metadata['user'], project=metadata['project'],
                 execution_id=execution_id)
+
+    def write_tombstone(self, execution_id: str, tombstone_dict: dict) -> None:
+        paths = Paths(self.directory, execution_id)
+        with self._lock(execution_id):
+            if os.path.exists(paths.finished_file) or \
+                    os.path.exists(paths.tombstone_file):
+                return
+            _force_mk_empty_dir(paths.directory)
+            tombstone_json = dumps_arbitrary_json(tombstone_dict)
+            with open(paths.tombstone_file, 'w') as tombstone_file:
+                tombstone_file.write(tombstone_json)
 
     def get(self, execution_id: str) -> ContextManager[Optional[Results]]:
         paths = Paths(self.directory, execution_id)
@@ -83,6 +93,8 @@ class LocalResultsContext(ResultsContext):
         self.lock.acquire()
         if os.path.exists(self.paths.finished_file):
             return LocalResults(self.paths)
+        elif os.path.exists(self.paths.tombstone_file):
+            return LocalTombstone(self.paths)
         else:
             return None
 
@@ -117,10 +129,42 @@ class LocalResults(Results):
             return json.load(metadata_file)
 
 
+class LocalTombstone(Results):
+    def __init__(self, paths: 'Paths'):
+        self.paths = paths
+
+    def _raise_aborted(self) -> Any:
+        with open(self.paths.tombstone_file, 'r') as tombstone:
+            tombstone_dict = json.load(tombstone)
+        raise AbortedExecutionException(tombstone_dict)
+
+    def get_status(self) -> InstanceStatus:
+        return self._raise_aborted()
+
+    def get_logs(self, since: Optional[int] = None, stdout: bool = True,
+                 stderr: bool = True) -> Iterator[bytes]:
+        # In the future we might, for instance, store partial logs from the
+        # workers. For now, a tombstone just raises exceptions
+        return self._raise_aborted()
+
+    def get_output_files_tarball(self) -> Iterator[bytes]:
+        return self._raise_aborted()
+
+    def get_measures_files_tarball(self) -> Iterator[bytes]:
+        return self._raise_aborted()
+
+    def get_stored_metadata(self) -> dict:
+        return self._raise_aborted()
+
+
 class Paths:
-    def __init__(self, *segments):
-        self.directory = os.path.join(*segments)
+    def __init__(self, base_dir, execution_id):
+        if execution_id == '':
+            raise ValueError(
+                'Execution ID is empty when trying to publish results')
+        self.directory = os.path.join(base_dir, execution_id)
         self.finished_file = os.path.join(self.directory, '.finished')
+        self.tombstone_file = os.path.join(self.directory, '.tombstone')
         self.exit_status = os.path.join(self.directory, 'status')
         self.logs = os.path.join(self.directory, 'logs')
         self.output = os.path.join(self.directory, 'output.tar')
@@ -141,3 +185,11 @@ def write_bytes(path: str, chunks: Iterator[bytes]):
     with open(path, 'wb') as f:
         for chunk in chunks:
             f.write(chunk)
+
+
+def _force_mk_empty_dir(directory: str):
+    try:
+        os.makedirs(directory)
+    except OSError:
+        shutil.rmtree(directory)
+        os.makedirs(directory)

@@ -15,7 +15,7 @@ from plz.controller.instances.instance_base import Instance, \
 from plz.controller.results.results_base import ResultsStorage
 from plz.controller.volumes import Volumes
 from .ec2_instance import EC2Instance, InstanceAssignedException, \
-    get_running_aws_instances, get_tag
+    get_aws_instances, get_tag
 
 
 class EC2InstanceGroup(InstanceProvider):
@@ -66,9 +66,15 @@ class EC2InstanceGroup(InstanceProvider):
         self._ami_id = response['Images'][0]['ImageId']
         return self._ami_id
 
-    def instance_iterator(self) -> Iterator[Instance]:
-        for instance_data in self._get_group_running_aws_instances([]):
+    def instance_iterator(self, only_running: bool) -> Iterator[Instance]:
+        for instance_data in self._get_group_aws_instances([], only_running):
             yield self._ec2_instance_from_instance_data(instance_data)
+
+    def get_forensics(self, execution_id) -> dict:
+        instance = self.instance_for(execution_id)
+        if instance is None:
+            return {}
+        return instance.get_forensics()
 
     @property
     def instance_initialization_code(self) -> str:
@@ -117,9 +123,10 @@ class EC2InstanceGroup(InstanceProvider):
         tries_remaining = max_tries
         yield _msg('querying availability')
         instance_type = execution_spec.get('instance_type')
-        instances_not_assigned = self._get_group_running_aws_instances([
-            (f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
-            ('instance-type', instance_type)])
+        instances_not_assigned = self._get_group_aws_instances(
+            only_running=True,
+            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
+                     ('instance-type', instance_type)])
         if len(instances_not_assigned) > 0:
             yield _msg('reusing existing instance')
             is_instance_newly_created = False
@@ -160,8 +167,9 @@ class EC2InstanceGroup(InstanceProvider):
                 time.sleep(delay_in_seconds)
 
     def instance_for(self, execution_id: str) -> Optional[EC2Instance]:
-        instance_data_list = self._get_group_running_aws_instances(
-            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', execution_id)])
+        instance_data_list = self._get_group_aws_instances(
+            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', execution_id)],
+            only_running=False)
         if len(instance_data_list) == 0:
             return None
         elif len(instance_data_list) > 1:
@@ -184,9 +192,10 @@ class EC2InstanceGroup(InstanceProvider):
     def push(self, image_tag):
         self.images.push(image_tag)
 
-    def _get_group_running_aws_instances(self, filters):
+    def _get_group_aws_instances(self, filters, only_running: bool):
         filters += [(f'tag:{EC2Instance.GROUP_NAME_TAG}', self.name)]
-        return get_running_aws_instances(self.client, filters)
+        return get_aws_instances(
+            self.client, filters, only_running=only_running)
 
     def _ask_aws_for_new_instance(self, instance_type: str) -> dict:
         response = self.client.run_instances(

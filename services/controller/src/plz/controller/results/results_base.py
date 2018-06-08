@@ -22,6 +22,10 @@ class ResultsStorage(ABC):
         pass
 
     @abstractmethod
+    def write_tombstone(self, execution_id: str, tombstone_dict: dict) -> None:
+        pass
+
+    @abstractmethod
     def get(self, execution_id: str) -> ContextManager[Optional['Results']]:
         pass
 
