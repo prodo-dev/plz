@@ -152,4 +152,4 @@ class DockerInstance(Instance):
             self.execution_id, Volumes.MEASURES_DIRECTORY_PATH)
 
     def get_stored_metadata(self) -> dict:
-        raise InstanceStillRunningException
+        raise InstanceStillRunningException(self.execution_id)

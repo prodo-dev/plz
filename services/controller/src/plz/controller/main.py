@@ -15,11 +15,13 @@ from redis import StrictRedis
 from plz.controller import configuration
 from plz.controller.configuration import Dependencies
 from plz.controller.db_storage import DBStorage
-from plz.controller.exceptions import JSONResponseException
-from plz.controller.execution import Executions, ExecutionNotFound
+from plz.controller.exceptions import JSONResponseException, \
+    ResponseHandledException
+from plz.controller.execution import Executions
 from plz.controller.images import Images
 from plz.controller.input_data import InputDataConfiguration
-from plz.controller.instances.instance_base import Instance, InstanceProvider
+from plz.controller.instances.instance_base import Instance, \
+    InstanceProvider, InstanceStillRunningException
 from plz.controller.results import ResultsStorage
 
 T = TypeVar('T')
@@ -95,12 +97,12 @@ def handle_chunked_input():
         request.environ['wsgi.input_terminated'] = True
 
 
-@app.errorhandler(ExecutionNotFound)
-def handle_execution_not_found(execution_not_found: ExecutionNotFound):
-    return jsonify({
-            'type': type(execution_not_found).__name__,
-            'execution_id': execution_not_found.execution_id}), \
-        requests.codes.not_found
+@app.errorhandler(ResponseHandledException)
+def handle_exception(exception: ResponseHandledException):
+    return jsonify(type=type(exception).__name__,
+                   **{k: v for k, v in exception.__dict__.items()
+                      if k != 'response_code'}), \
+        exception.response_code
 
 
 @app.route('/ping', methods=['GET'])
@@ -244,8 +246,7 @@ def delete_execution(execution_id):
     response = jsonify({})
     status = executions.get(execution_id).get_status()
     if fail_if_running and status.running:
-        response.status_code = requests.codes.conflict
-        return response
+        raise InstanceStillRunningException(execution_id=execution_id)
     instance = instance_provider.instance_for(execution_id)
     if fail_if_deleted and instance is None:
         response.status_code = requests.codes.expectation_failed

@@ -5,10 +5,12 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 from typing import Any, ContextManager, Dict, Iterator, List, Optional
 
+import requests
 from redis import StrictRedis
 from redis.lock import Lock
 
 from plz.controller.containers import ContainerMissingException, ContainerState
+from plz.controller.exceptions import ResponseHandledException
 from plz.controller.results.results_base import InstanceStatus, \
     InstanceStatusFailure, InstanceStatusRunning, InstanceStatusSuccess, \
     Results, ResultsStorage
@@ -213,8 +215,10 @@ class InstanceNotRunningException(Exception):
     pass
 
 
-class InstanceStillRunningException(Exception):
-    pass
+class InstanceStillRunningException(ResponseHandledException):
+    def __init__(self, execution_id):
+        super().__init__(response_code=requests.codes.conflict)
+        self.execution_id = execution_id
 
 
 class InstanceMissingStateException(Exception):
