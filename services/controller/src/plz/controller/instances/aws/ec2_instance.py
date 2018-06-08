@@ -64,22 +64,11 @@ class EC2Instance(Instance):
             self._set_execution_id(
                 self.delegate.execution_id, max_idle_seconds)
 
-    def logs(self, since: Optional[int],
-             stdout: bool = True, stderr: bool = True) -> Iterator[bytes]:
-        return self.delegate.logs(
-            since=since, stdout=stdout, stderr=stderr)
-
     def is_up(self, is_instance_newly_created: bool):
         if not self._is_running():
             return False
         return self.images.can_pull(
             5 if is_instance_newly_created else 1)
-
-    def output_files_tarball(self) -> Iterator[bytes]:
-        return self.delegate.output_files_tarball()
-
-    def measures(self) -> dict:
-            return self.delegate.measures()
 
     def _dispose(self):
         self.client.terminate_instances(InstanceIds=[self._instance_id])
@@ -173,6 +162,20 @@ class EC2Instance(Instance):
     @property
     def _instance_id(self):
         return self.data['InstanceId']
+
+    def get_logs(self, since: Optional[int] = None, stdout: bool = True,
+                 stderr: bool = True) -> Iterator[bytes]:
+        return self.delegate.get_logs(
+            since=since, stdout=stdout, stderr=stderr)
+
+    def get_output_files_tarball(self) -> Iterator[bytes]:
+        return self.delegate.get_output_files_tarball()
+
+    def get_measures_files_tarball(self) -> Iterator[bytes]:
+        return self.delegate.get_measures_files_tarball()
+
+    def get_stored_metadata(self) -> dict:
+        return self.delegate.get_stored_metadata()
 
 
 def get_tag(instance_data, tag, default=None) -> Optional[str]:

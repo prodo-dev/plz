@@ -9,7 +9,9 @@ from redis import StrictRedis
 from redis.lock import Lock
 
 from plz.controller.containers import ContainerMissingException, ContainerState
-from plz.controller.results.results_base import ResultsStorage
+from plz.controller.results.results_base import InstanceStatus, \
+    InstanceStatusFailure, InstanceStatusRunning, InstanceStatusSuccess, \
+    Results, ResultsStorage
 
 log = logging.getLogger(__name__)
 
@@ -20,7 +22,7 @@ ExecutionInfo = namedtuple(
      'idle_since_timestamp'])
 
 
-class Instance(ABC):
+class Instance(Results):
     def __init__(self, redis: StrictRedis):
         self.redis = redis
         # Need to create and memoised the lock afterwards, as we need the
@@ -37,7 +39,7 @@ class Instance(ABC):
             docker_run_args: Dict[str, str]) -> None:
         pass
 
-    def status(self) -> 'InstanceStatus':
+    def get_status(self) -> InstanceStatus:
         state = self.container_state()
         if not state:
             raise InstanceMissingStateException()
@@ -47,25 +49,6 @@ class Instance(ABC):
             return InstanceStatusSuccess()
         else:
             return InstanceStatusFailure(state.exit_code)
-
-    @abstractmethod
-    def logs(self, since: Optional[int],
-             stdout: bool = True, stderr: bool = True) -> Iterator[bytes]:
-        pass
-
-    @abstractmethod
-    def output_files_tarball(self) -> Iterator[bytes]:
-        pass
-
-    @abstractmethod
-    def measures(self) -> dict:
-        pass
-
-    def exit_status(self) -> int:
-        status = self.status()
-        if status.exit_status is None:
-            raise InstanceStillRunningException(self.get_execution_id())
-        return status.exit_status
 
     @abstractmethod
     def stop_execution(self):
@@ -224,40 +207,6 @@ class InstanceProvider(ABC):
         return [
             instance.get_execution_info()
             for instance in self.instance_iterator()]
-
-
-class InstanceStatus(ABC):
-    def __init__(self,
-                 running: bool,
-                 success: Optional[bool],
-                 exit_status: Optional[int]):
-        self.running = running
-        self.success = success
-        self.exit_status = exit_status
-
-
-class InstanceStatusRunning(InstanceStatus):
-    def __init__(self):
-        super().__init__(
-            running=True,
-            success=None,
-            exit_status=None)
-
-
-class InstanceStatusSuccess(InstanceStatus):
-    def __init__(self):
-        super().__init__(
-            running=False,
-            success=True,
-            exit_status=0)
-
-
-class InstanceStatusFailure(InstanceStatus):
-    def __init__(self, exit_status: int):
-        super().__init__(
-            running=False,
-            success=False,
-            exit_status=exit_status)
 
 
 class InstanceNotRunningException(Exception):

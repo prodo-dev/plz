@@ -2,10 +2,10 @@ import io
 import itertools
 import json
 import os
-import time
 from typing import Any, Callable, Optional, Tuple
 
 import requests
+import time
 
 from plz.cli import parameters
 from plz.cli.configuration import Configuration
@@ -194,6 +194,7 @@ class RunExecutionOperation(Operation):
         execution_spec = {
             'instance_type': configuration.instance_type,
             'user': configuration.user,
+            'project': configuration.project,
             'input_id': input_id,
             'docker_run_args': configuration.docker_run_args
         }
@@ -208,7 +209,11 @@ class RunExecutionOperation(Operation):
                 'execution_spec': execution_spec,
                 'start_metadata': {
                     'commit': commit,
-                    'configuration': configuration.as_dict()
+                    'configuration': {
+                        k: v for k, v in configuration.as_dict().items()
+                        # User and project are present in the execution spec
+                        if k not in {'user', 'project'}
+                    }
                 },
             })
         check_status(response, requests.codes.accepted)
