@@ -16,7 +16,7 @@ from plz.controller import configuration
 from plz.controller.configuration import Dependencies
 from plz.controller.db_storage import DBStorage
 from plz.controller.exceptions import JSONResponseException
-from plz.controller.execution import Executions
+from plz.controller.execution import Executions, ExecutionNotFound
 from plz.controller.images import Images
 from plz.controller.input_data import InputDataConfiguration
 from plz.controller.instances.instance_base import Instance, InstanceProvider
@@ -93,6 +93,14 @@ def handle_chunked_input():
     transfer_encoding = request.headers.get('Transfer-Encoding', None)
     if transfer_encoding == 'chunked':
         request.environ['wsgi.input_terminated'] = True
+
+
+@app.errorhandler(ExecutionNotFound)
+def handle_execution_not_found(execution_not_found: ExecutionNotFound):
+    return jsonify({
+            'type': type(execution_not_found).__name__,
+            'execution_id': execution_not_found.execution_id}), \
+        requests.codes.not_found
 
 
 @app.route('/ping', methods=['GET'])
@@ -370,15 +378,6 @@ def _get_user_last_execution_id(user: str) -> Optional[str]:
         return str(execution_id_bytes, encoding='utf-8')
     else:
         return None
-
-
-class ExecutionIDNotFound(Exception):
-    def __init__(self, message: str, execution_id: str):
-        self.message = message
-        self.execution_id = execution_id
-
-    def __str__(self):
-        return self.message.format(self.execution_id)
 
 
 if __name__ == '__main__':
