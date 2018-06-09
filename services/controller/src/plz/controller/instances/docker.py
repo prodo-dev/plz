@@ -9,10 +9,9 @@ from redis import StrictRedis
 
 from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
-from plz.controller.instances.instance_base import \
-    ExecutionInfo, Instance, Parameters
+from plz.controller.instances.instance_base import ExecutionInfo, Instance, \
+    InstanceStillRunningException, Parameters
 from plz.controller.results import ResultsStorage
-from plz.controller.results.local import convert_measures_to_dict
 from plz.controller.results.results_base import CouldNotGetOutputException
 from plz.controller.volumes import \
     VolumeDirectory, VolumeEmptyDirectory, VolumeFile, Volumes
@@ -68,24 +67,6 @@ class DockerInstance(Instance):
                                           target=Volumes.VOLUME_MOUNT)],
                             docker_run_args=docker_run_args)
 
-    def logs(self, since: Optional[int], stdout: bool = True,
-             stderr: bool = True) -> Iterator[bytes]:
-        return self.containers.logs(self.execution_id,
-                                    since,
-                                    stdout=stdout,
-                                    stderr=stderr)
-
-    def output_files_tarball(self) -> Iterator[bytes]:
-        return self.containers.get_files(
-            self.execution_id, Volumes.OUTPUT_DIRECTORY_PATH)
-
-    def measures_files_tarball(self) -> Iterator[bytes]:
-        return self.containers.get_files(
-            self.execution_id, Volumes.MEASURES_DIRECTORY_PATH)
-
-    def measures(self) -> dict:
-        return convert_measures_to_dict(self.measures_files_tarball())
-
     def stop_execution(self):
         self.containers.stop(self.execution_id)
 
@@ -102,6 +83,14 @@ class DockerInstance(Instance):
             self, container_state: Optional[ContainerState] = None) -> int:
         # Doesn't make sense for local instances
         return 0
+
+    def get_resource_state(self) -> str:
+        # Docker is always running
+        return 'running'
+
+    def delete_resource(self) -> None:
+        # No underlying resource to delete
+        pass
 
     def get_execution_id(self) -> str:
         return self.execution_id
@@ -141,16 +130,37 @@ class DockerInstance(Instance):
                     f'Couldn\'t read the results for {self.execution_id}')
             self._cleanup()
 
+    def get_forensics(self) -> dict:
+        return {}
+
     def _publish_results(self, results_storage: ResultsStorage,
                          finish_timestamp: int):
         results_storage.publish(
             self.get_execution_id(),
-            exit_status=self.exit_status(),
-            logs=self.logs(since=None),
-            output_tarball=self.output_files_tarball(),
-            measures_tarball=self.measures_files_tarball(),
+            exit_status=self.get_status().exit_status,
+            logs=self.get_logs(since=None),
+            output_tarball=self.get_output_files_tarball(),
+            measures_tarball=self.get_measures_files_tarball(),
             finish_timestamp=finish_timestamp)
 
     @property
     def _instance_id(self):
         return self.execution_id
+
+    def get_logs(self, since: Optional[int] = None, stdout: bool = True,
+                 stderr: bool = True) -> Iterator[bytes]:
+        return self.containers.logs(self.execution_id,
+                                    since,
+                                    stdout=stdout,
+                                    stderr=stderr)
+
+    def get_output_files_tarball(self) -> Iterator[bytes]:
+        return self.containers.get_files(
+            self.execution_id, Volumes.OUTPUT_DIRECTORY_PATH)
+
+    def get_measures_files_tarball(self) -> Iterator[bytes]:
+        return self.containers.get_files(
+            self.execution_id, Volumes.MEASURES_DIRECTORY_PATH)
+
+    def get_stored_metadata(self) -> dict:
+        raise InstanceStillRunningException(self.execution_id)

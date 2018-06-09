@@ -11,13 +11,16 @@ class DBStorage(ABC):
             -> None:
         pass
 
+    @abstractmethod
     def retrieve_start_metadata(self, execution_id: str) -> dict:
         pass
 
-    def add_execution_id_for_user_and_project(
+    @abstractmethod
+    def add_finished_execution_id(
             self, user: str, project: str, execution_id: str) -> None:
         pass
 
-    def retrieve_execution_ids_for_user_and_project(
+    @abstractmethod
+    def retrieve_finished_execution_ids(
             self, user: str, project: str) -> Set[str]:
         pass

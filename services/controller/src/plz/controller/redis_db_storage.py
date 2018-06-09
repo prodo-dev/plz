@@ -15,11 +15,6 @@ class RedisDBStorage(DBStorage):
             self, execution_id: str, start_metadata: dict) -> None:
         self.redis.hset(
             'start_metadata', execution_id, json.dumps(start_metadata))
-        # Store by user and project in sets for quick lookup
-        user = start_metadata['configuration']['user']
-        project = start_metadata['configuration']['project']
-        self.redis.sadd(f'execution_ids_for_user#{user}', execution_id)
-        self.redis.sadd(f'execution_ids_for_project#{project}', execution_id)
 
     def retrieve_start_metadata(self, execution_id: str) -> dict:
         start_metadata_bytes = self.redis.hget('start_metadata', execution_id)
@@ -28,9 +23,16 @@ class RedisDBStorage(DBStorage):
         start_metadata = str(start_metadata_bytes, 'utf-8')
         return json.loads(str(start_metadata))
 
-    def retrieve_execution_ids_for_user_and_project(
+    def add_finished_execution_id(
+            self, user: str, project: str, execution_id: str):
+        self.redis.sadd(f'finished_execution_ids_for_user#{user}',
+                        execution_id)
+        self.redis.sadd(f'finished_execution_ids_for_project#{project}',
+                        execution_id)
+
+    def retrieve_finished_execution_ids(
             self, user: str, project: str) -> Set[str]:
         return {str(e, 'utf-8')
                 for e in self.redis.sinter([
-                    f'execution_ids_for_user#{user}',
-                    f'execution_ids_for_project#{project}'])}
+                    f'finished_execution_ids_for_user#{user}',
+                    f'finished_execution_ids_for_project#{project}'])}

@@ -6,8 +6,11 @@ from typing import Dict, Iterator, List, Optional
 import dateutil.parser
 import docker
 import docker.errors
+import requests
 from docker.models.containers import Container
 from docker.types import Mount
+
+from plz.controller.exceptions import WorkerUnreachableException
 
 ContainerState = collections.namedtuple(
     'ContainerState',
@@ -105,6 +108,9 @@ class Containers:
                 self._CONTAINER_NAME_PREFIX + execution_id)
         except docker.errors.NotFound:
             return None
+        except requests.exceptions.ConnectionError:
+            log.exception('Connecting to worker')
+            raise WorkerUnreachableException(execution_id)
 
     @staticmethod
     def _is_container_id(container_id: str):
