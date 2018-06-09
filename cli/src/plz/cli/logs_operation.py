@@ -6,14 +6,17 @@ import requests
 
 from plz.cli.configuration import Configuration
 from plz.cli.log import log_info
-from plz.cli.operation import Operation, check_status, \
-    maybe_add_execution_id_arg, on_exception_reraise
+from plz.cli.operation import Operation, check_status, on_exception_reraise
 
 
 class LogsOperation(Operation):
-    @staticmethod
-    def prepare_argument_parser(parser, args):
-        maybe_add_execution_id_arg(parser, args)
+    @classmethod
+    def name(cls):
+        return 'logs'
+
+    @classmethod
+    def prepare_argument_parser(cls, parser, args):
+        cls.maybe_add_execution_id_arg(parser, args)
         parser.add_argument('-s', '--since')
 
     def __init__(self,
@@ -48,8 +51,8 @@ class LogsOperation(Operation):
                 since_timestamp = str(int(time.mktime(
                     dateutil.parser.parse(self.since).timetuple())))
             params = {'since': since_timestamp}
-        response = requests.get(
-            self.url('executions', execution_id, 'logs'),
+        response = self.server.get(
+            'executions', execution_id, 'logs',
             params=params,
             stream=True)
         check_status(response, requests.codes.ok)

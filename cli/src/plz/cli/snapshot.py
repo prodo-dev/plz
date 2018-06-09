@@ -1,0 +1,117 @@
+import io
+import itertools
+import os
+
+import docker.utils
+import glob2
+
+from plz.cli.exceptions import CLIException
+from plz.cli.git import is_git_present, get_ignored_git_files
+
+
+def capture_build_context(
+        image: str, image_extensions: [str], command: str,
+        snapshot_path: [str],
+        excluded_paths: [str], included_paths: [str],
+        exclude_gitignored_files) -> io.FileIO:
+    context_dir = os.getcwd()
+    dockerfile_path = os.path.join(context_dir, 'plz.Dockerfile')
+    dockerfile_created = False
+    try:
+        with open(dockerfile_path, mode='x') as dockerfile:
+            dockerfile_created = True
+            dockerfile.write(f'FROM {image}\n')
+            for step in image_extensions:
+                dockerfile.write(step)
+                dockerfile.write('\n')
+            dockerfile.write(
+                f'WORKDIR /src\n'
+                f'COPY . ./\n'
+                f'CMD {command}\n'
+            )
+        os.chmod(dockerfile_path, 0o644)
+        matching_excluded_paths = get_matching_excluded_paths(
+            snapshot_path=snapshot_path, excluded_paths=excluded_paths,
+            included_paths=included_paths,
+            exclude_gitignored_files=exclude_gitignored_files)
+        build_context = docker.utils.build.tar(
+            path=snapshot_path,
+            exclude=matching_excluded_paths,
+            gzip=True,
+        )
+    except FileExistsError as e:
+        raise CLIException(
+            'The directory cannot have a plz.Dockerfile.', e)
+    finally:
+        if dockerfile_created:
+            os.remove(dockerfile_path)
+    return build_context
+
+
+def get_matching_excluded_paths(
+        snapshot_path: [str], excluded_paths: [str], included_paths: [str],
+        exclude_gitignored_files: bool) -> [str]:
+    def abs_path_glob_including_snapshot(p):
+        return os.path.abspath(os.path.join(snapshot_path, p))
+
+    def expand_if_dir(path):
+        if os.path.isdir(path):
+            # Return the dir as well as the files inside
+            return itertools.chain(
+                iter([path]),
+                glob2.iglob(
+                    os.path.join(path, '**'), recursive=True,
+                    include_hidden=True))
+        else:
+            return iter([path])
+
+    included_paths = set(
+        ip
+        for p in included_paths
+        for ip in glob2.iglob(abs_path_glob_including_snapshot(p),
+                              recursive=True,
+                              include_hidden=True))
+    # Get the files inside the directories
+    included_paths = set(p for ip in included_paths for p in expand_if_dir(ip))
+
+    all_included_prefixes = set(
+        os.sep.join(ip.split(os.sep)[:n+1])
+        for ip in included_paths
+        for n in range(len(ip.split(os.sep))))
+
+    # Expand the globs
+    excluded_paths = [ep for p in excluded_paths
+                      for ep in glob2.iglob(
+                          abs_path_glob_including_snapshot(p),
+                          recursive=True,
+                          include_hidden=True)]
+
+    # Add the git ignored files
+    git_ignored_files = []
+    # A value of None for exclude_gitignored_files means "exclude if git is
+    # available"
+    use_git = exclude_gitignored_files or (
+            exclude_gitignored_files is None and is_git_present(snapshot_path))
+    if use_git:
+        git_ignored_files = [abs_path_glob_including_snapshot('.git')] + \
+                            get_ignored_git_files(snapshot_path)
+    excluded_paths += git_ignored_files
+
+    excluded_and_not_included_paths = []
+    for ep in excluded_paths:
+        if ep in all_included_prefixes:
+            excluded_and_not_included_paths += (
+                p for p in expand_if_dir(ep) if p not in all_included_prefixes
+            )
+        else:
+            excluded_and_not_included_paths.append(ep)
+
+    return (p[len(os.path.abspath(snapshot_path)) + 1:]
+            for p in excluded_and_not_included_paths)
+
+
+def get_context_files(snapshot_path: str, matching_excluded_paths: [str]):
+    # Mimic what docker.utils.build.tar does
+    return docker.utils.build.exclude_paths(
+        os.path.abspath(snapshot_path),
+        matching_excluded_paths)

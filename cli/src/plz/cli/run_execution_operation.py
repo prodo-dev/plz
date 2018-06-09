@@ -2,31 +2,35 @@ import io
 import itertools
 import json
 import os
-import subprocess
-import time
-from glob import iglob
 from typing import Any, Callable, Optional, Tuple
 
-import docker.utils.build
 import requests
+import time
 
 from plz.cli import parameters
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
+from plz.cli.git import get_head_commit_or_none
 from plz.cli.input_data import InputData
 from plz.cli.log import log_debug, log_error, log_info
 from plz.cli.logs_operation import LogsOperation
 from plz.cli.operation import Operation, add_output_dir_arg, check_status
 from plz.cli.parameters import Parameters
+from plz.cli.retrieve_measures_operation import RetrieveMeasuresOperation
 from plz.cli.retrieve_output_operation import RetrieveOutputOperation
 from plz.cli.show_status_operation import ShowStatusOperation
+from plz.cli.snapshot import capture_build_context
 
 
 class RunExecutionOperation(Operation):
     """Run an arbitrary command on a remote machine."""
 
-    @staticmethod
-    def prepare_argument_parser(parser, args):
+    @classmethod
+    def name(cls):
+        return 'run'
+
+    @classmethod
+    def prepare_argument_parser(cls, parser, args):
         parser.add_argument('--command', type=str)
         add_output_dir_arg(parser)
         parser.add_argument('-p', '--parameters', dest='parameters_file',
@@ -56,9 +60,24 @@ class RunExecutionOperation(Operation):
 
         params = parameters.parse_file(self.parameters_file)
 
+        exclude_gitignored_files = \
+            self.configuration.exclude_gitignored_files
+        snapshot_path = '.'
+
+        def build_context_suboperation():
+            return capture_build_context(
+                image=self.configuration.image,
+                image_extensions=self.configuration.image_extensions,
+                command=self.configuration.command,
+                snapshot_path=snapshot_path,
+                excluded_paths=self.configuration.excluded_paths,
+                included_paths=self.configuration.included_paths,
+                exclude_gitignored_files=exclude_gitignored_files,
+            )
+
         with self.suboperation(
                 'Capturing the context',
-                self.capture_build_context) as build_context:
+                build_context_suboperation) as build_context:
             snapshot_id = self.suboperation(
                     'Building the program snapshot',
                     lambda: self.submit_context_for_building(build_context))
@@ -68,14 +87,16 @@ class RunExecutionOperation(Operation):
                 if_set=self.configuration.input)
         execution_id, ok = self.suboperation(
                 'Sending request to start execution',
-                lambda: self.start_execution(snapshot_id, params, input_id))
+                lambda: self.start_execution(snapshot_id, params, input_id,
+                                             snapshot_path))
         self.execution_id = execution_id
         log_info(f'Execution ID is: {execution_id}')
 
         retrieve_output_operation = RetrieveOutputOperation(
             self.configuration,
             output_dir=self.output_dir,
-            execution_id=execution_id)
+            execution_id=execution_id,
+            force_if_running=False)
 
         cancelled = False
         try:
@@ -99,6 +120,13 @@ class RunExecutionOperation(Operation):
         if cancelled:
             return
 
+        retrieve_measures_operation = RetrieveMeasuresOperation(
+            self.configuration, execution_id=self.get_execution_id(),
+            summary=True)
+        self.suboperation(
+            'Retrieving summary of measures (if present)...',
+            retrieve_measures_operation.retrieve_measures)
+
         show_status_operation = ShowStatusOperation(
             self.configuration, execution_id=execution_id)
         status = show_status_operation.get_status()
@@ -118,35 +146,6 @@ class RunExecutionOperation(Operation):
                 f'Execution failed with an exit status of {status.code}.',
                 exit_code=status.code)
 
-    def capture_build_context(self) -> io.FileIO:
-        context_dir = os.getcwd()
-        dockerfile_path = os.path.join(context_dir, 'Dockerfile')
-        dockerfile_created = False
-        try:
-            with open(dockerfile_path, mode='x') as dockerfile:
-                dockerfile_created = True
-                dockerfile.write(f'FROM {self.configuration.image}\n')
-                for step in self.configuration.image_extensions:
-                    dockerfile.write(step)
-                    dockerfile.write('\n')
-                dockerfile.write(
-                    f'WORKDIR /app\n'
-                    f'COPY . ./\n'
-                    f'CMD {self.configuration.command}\n'
-                )
-            os.chmod(dockerfile_path, 0o644)
-            build_context = docker.utils.build.tar(
-                path='.',
-                exclude=_get_excluded_paths(self.configuration),
-                gzip=True,
-            )
-        except FileExistsError as e:
-            raise CLIException('The directory cannot have a Dockerfile.', e)
-        finally:
-            if dockerfile_created:
-                os.remove(dockerfile_path)
-        return build_context
-
     def submit_context_for_building(self, build_context: io.FileIO) -> str:
         metadata = {
             'user': self.configuration.user,
@@ -157,12 +156,12 @@ class RunExecutionOperation(Operation):
             io.BytesIO(metadata_bytes),
             io.BytesIO(b'\n'),
             build_context)
-        response = requests.post(
-            self.url('snapshots'),
+        response = self.server.post(
+            'snapshots',
             data=request_data,
             stream=True)
         check_status(response, requests.codes.ok)
-        error = False
+        errors = []
         snapshot_id: str = None
         for json_bytes in response.raw:
             data = json.loads(json_bytes.decode('utf-8'))
@@ -170,12 +169,13 @@ class RunExecutionOperation(Operation):
                 if not self.configuration.quiet_build:
                     print(data['stream'].rstrip())
             if 'error' in data:
-                error = True
-                log_error('The snapshot was not successfully created.')
-                print(data['error'].rstrip())
+                errors.append(data['error'].rstrip())
             if 'id' in data:
                 snapshot_id = data['id']
-        if error or not snapshot_id:
+        if errors or not snapshot_id:
+            log_error('The snapshot was not successfully created.')
+            for error in errors:
+                print(error)
             raise CLIException('We did not receive a snapshot ID.')
         return snapshot_id
 
@@ -187,21 +187,35 @@ class RunExecutionOperation(Operation):
             self,
             snapshot_id: str,
             params: Parameters,
-            input_id: Optional[str]) \
+            input_id: Optional[str],
+            snapshot_path: str) \
             -> Tuple[Optional[str], bool]:
         configuration = self.configuration
         execution_spec = {
             'instance_type': configuration.instance_type,
             'user': configuration.user,
+            'project': configuration.project,
             'input_id': input_id,
             'docker_run_args': configuration.docker_run_args
         }
-        response = requests.post(self.url('executions'), json={
-            'command': self.command,
-            'snapshot_id': snapshot_id,
-            'parameters': params,
-            'execution_spec': execution_spec
-        }, stream=True)
+        commit = get_head_commit_or_none(snapshot_path)
+        response = self.server.post(
+            'executions',
+            stream=True,
+            json={
+                'command': self.command,
+                'snapshot_id': snapshot_id,
+                'parameters': params,
+                'execution_spec': execution_spec,
+                'start_metadata': {
+                    'commit': commit,
+                    'configuration': {
+                        k: v for k, v in configuration.as_dict().items()
+                        # User and project are present in the execution spec
+                        if k not in {'user', 'project'}
+                    }
+                },
+            })
         check_status(response, requests.codes.accepted)
         execution_id: Optional[str] = None
         ok = True
@@ -232,62 +246,3 @@ class RunExecutionOperation(Operation):
         if self.configuration.debug:
             log_debug('Time taken: %.2fs' % time_taken)
         return result
-
-
-def _is_git_present() -> bool:
-    # noinspection PyBroadException
-    try:
-        result = subprocess.run(
-            ['git', 'rev-parse', '--show-toplevel'],
-            input=None,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            encoding='utf-8')
-        return result.returncode == 0 and result.stderr == '' and \
-            len(result.stdout) > 0
-    except Exception:
-        return False
-
-
-def _get_excluded_paths(configuration: Configuration):
-    excluded_paths = [os.path.abspath(ep)
-                      for p in configuration.excluded_paths
-                      for ep in iglob(p, recursive=True)]
-    included_paths = set(os.path.abspath(ip)
-                         for p in configuration.included_paths
-                         for ip in iglob(p, recursive=True))
-    git_ignored_files = []
-
-    # A value of None means "exclude if git is available"
-    use_git = configuration.exclude_gitignored_files or (
-        configuration.exclude_gitignored_files is None and _is_git_present())
-
-    if use_git:
-        git_ignored_files = _get_ignored_git_files()
-    excluded_paths += git_ignored_files
-    ep = [p[len(os.path.abspath('.')) + 1:]
-          for p in excluded_paths if p not in included_paths]
-    return ep
-
-
-def _get_ignored_git_files() -> [str]:
-    all_files = os.linesep.join(iglob('**', recursive=True))
-    # Using --no-index, so that .gitignored but indexed files need to be
-    # included explicitly. This is easy for development as, when testing, we
-    # want to commit files and instruct the test to ignore them. If it's
-    # annoying for users this can be changed in the future
-    result = subprocess.run(
-        ['git', 'check-ignore', '--stdin', '--no-index'],
-        input=all_files,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding='utf-8')
-    return_code = result.returncode
-    # When there are no ignored files it returns with exit code 1
-    correct_return_code = return_code == 0 or (
-            return_code == 1 and result.stdout == '')
-    if not correct_return_code or result.stderr != '':
-        raise SystemError('Cannot list files from git.\n'
-                          f'Return code is: {result.returncode}\n'
-                          f'Stderr: [{result.stderr}]')
-    return [os.path.abspath(p) for p in result.stdout.splitlines()]

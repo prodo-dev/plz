@@ -13,6 +13,10 @@ variable "ami_tag" {}
 variable "key_name" {}
 variable "ssh_public_key_file" {}
 
+variable "controller_instance_type" {
+  default = "m5.2xlarge"
+}
+
 variable "ec2_role" {
   default = <<EOF
 {
@@ -28,6 +32,17 @@ variable "ec2_role" {
   ]
 }
 EOF
+}
+
+locals {
+  device_name = "/dev/sdx"
+
+  device_mount_names = {
+    t2 = "/dev/xvdx"
+    m5 = "/dev/nvme1n1"
+  }
+
+  actual_device_name = "${lookup(local.device_mount_names, element(split(".", "${var.controller_instance_type}"), 0))}"
 }
 
 provider "aws" {
@@ -78,7 +93,7 @@ data "aws_ami" "controller-ami" {
 
 resource "aws_instance" "controller" {
   subnet_id                   = "${data.aws_subnet.main.id}"
-  instance_type               = "m5.2xlarge"
+  instance_type               = "${var.controller_instance_type}"
   ami                         = "${data.aws_ami.controller-ami.id}"
   key_name                    = "${aws_key_pair.plz.key_name}"
   associate_public_ip_address = true
@@ -126,13 +141,13 @@ resource "aws_ebs_volume" "controller-cache" {
 resource "aws_volume_attachment" "controller-cache-attachment" {
   instance_id = "${aws_instance.controller.id}"
   volume_id   = "${aws_ebs_volume.controller-cache.id}"
-  device_name = "/dev/sdx"
+  device_name = "${local.device_name}"
 
   skip_destroy = true
 
   provisioner "local-exec" {
     interpreter = ["/bin/bash", "-c"]
-    command = "../../scripts/run-ansible-playbook-on-host ../../services/controller/src/plz/controller/startup/startup.yml ${aws_instance.controller.private_ip} /dev/stdin <<< 'device: /dev/nvme1n1'"
+    command     = "../../scripts/run-ansible-playbook-on-host ../../services/controller/src/plz/controller/startup/startup.yml ${aws_instance.controller.private_ip} /dev/stdin <<< 'device: ${local.actual_device_name}'"
   }
 }
 

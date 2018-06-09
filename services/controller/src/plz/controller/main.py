@@ -4,23 +4,31 @@ import os
 import random
 import sys
 import uuid
+from distutils.util import strtobool
 from typing import Any, Callable, Iterator, Optional, TypeVar, Union
 
-import flask
 import requests
 from flask import Flask, Response, jsonify, request, stream_with_context
 from redis import StrictRedis
 
 from plz.controller import configuration
+from plz.controller.arbitrary_object_json_encoder import \
+    ArbitraryObjectJSONEncoder
 from plz.controller.configuration import Dependencies
+from plz.controller.db_storage import DBStorage
+from plz.controller.exceptions import AbortedExecutionException, \
+    JSONResponseException, ResponseHandledException, WorkerUnreachableException
+from plz.controller.execution import Executions
 from plz.controller.images import Images
 from plz.controller.input_data import InputDataConfiguration
 from plz.controller.instances.instance_base import Instance, \
-    InstanceProvider, InstanceStatus, InstanceStatusFailure, \
-    InstanceStatusSuccess
+    InstanceNotRunningException, InstanceProvider, \
+    InstanceStillRunningException
 from plz.controller.results import ResultsStorage
 
 T = TypeVar('T')
+ResponseGenerator = Iterator[Union[bytes, str]]
+ResponseGeneratorFunction = Callable[[], ResponseGenerator]
 
 config = configuration.load()
 port = config.get_int('port', 8080)
@@ -29,7 +37,9 @@ dependencies: Dependencies = configuration.dependencies_from_config(config)
 images: Images = dependencies.images
 instance_provider: InstanceProvider = dependencies.instance_provider
 results_storage: ResultsStorage = dependencies.results_storage
+db_storage: DBStorage = dependencies.db_storage
 redis: StrictRedis = dependencies.redis
+executions: Executions = Executions(results_storage, instance_provider)
 
 input_dir = os.path.join(data_dir, 'input')
 temp_data_dir = os.path.join(data_dir, 'tmp')
@@ -37,18 +47,6 @@ os.makedirs(input_dir, exist_ok=True)
 os.makedirs(temp_data_dir, exist_ok=True)
 input_data_configuration = InputDataConfiguration(
     redis, input_dir=input_dir, temp_data_dir=temp_data_dir)
-
-
-class ArbitraryObjectJSONEncoder(flask.json.JSONEncoder):
-    """
-    This encoder tries very hard to encode any kind of object. It uses the
-     object's ``__dict__`` property if the object itself is not encodable.
-    """
-    def default(self, o):
-        try:
-            return super().default(o)
-        except TypeError:
-            return o.__dict__
 
 
 def _setup_logging():
@@ -89,6 +87,37 @@ def handle_chunked_input():
         request.environ['wsgi.input_terminated'] = True
 
 
+@app.errorhandler(ResponseHandledException)
+def handle_exception(exception: ResponseHandledException):
+    if isinstance(exception, WorkerUnreachableException):
+        exception = maybe_add_forensics(exception)
+    return jsonify(exception_type=type(exception).__name__,
+                   **{k: v for k, v in exception.__dict__.items()
+                      if k != 'response_code'}), \
+        exception.response_code
+
+
+def maybe_add_forensics(exception: WorkerUnreachableException) \
+        -> ResponseHandledException:
+    forensics = instance_provider.get_forensics(exception.execution_id)
+    spot_state = forensics.get(
+        'SpotInstanceRequest', {}).get('State', None)
+    # We know better now
+    if spot_state not in {'active', 'open', None}:
+        return AbortedExecutionException(forensics)
+    instance_state = forensics.get('InstanceState', None)
+    if instance_state not in {'running', None}:
+        return InstanceNotRunningException(forensics)
+    exception.forensics = forensics
+    return exception
+
+
+@app.route('/ping', methods=['GET'])
+def ping_entrypoint():
+    # This is plz, and we're up and running
+    return jsonify({'plz': 'pong'})
+
+
 @app.route('/', methods=['GET'])
 def root():
     return jsonify({})
@@ -103,7 +132,13 @@ def run_execution_entrypoint():
     snapshot_id = request.json['snapshot_id']
     parameters = request.json['parameters']
     execution_spec = request.json['execution_spec']
+    start_metadata = request.json['start_metadata']
     execution_id = str(get_execution_uuid())
+
+    start_metadata['parameters'] = parameters
+    start_metadata['user'] = execution_spec['user']
+    start_metadata['project'] = execution_spec['project']
+    db_storage.store_start_metadata(execution_id, start_metadata)
 
     @_json_stream
     @stream_with_context
@@ -162,88 +197,90 @@ def harvest_entry_point():
 @app.route(f'/executions/<execution_id>/status',
            methods=['GET'])
 def get_status_entrypoint(execution_id):
-    # Test with:
-    # curl localhost:5000/executions/some-id/status
-    status = get_status(execution_id)
-    if status is None:
-        response = jsonify({})
-        response.status_code = requests.codes.not_found
-        return response
-    else:
-        return jsonify(status)
-
-
-def get_status(execution_id: str) -> Optional[InstanceStatus]:
-    with results_storage.get(execution_id) as results:
-        if results:
-            status = results.status()
-            if status == 0:
-                return InstanceStatusSuccess()
-            else:
-                return InstanceStatusFailure(status)
-
-    instance = instance_provider.instance_for(execution_id)
-    if instance is None:
-        return None
-    else:
-        return instance.status()
+    return jsonify(executions.get(execution_id).get_status())
 
 
 @app.route(f'/executions/<execution_id>/logs',
            methods=['GET'])
 def get_logs_entrypoint(execution_id):
-    # Test with:
-    # curl localhost:5000/executions/some-id/logs
     since: Optional[int] = request.args.get(
         'since', default=None, type=int)
-    with results_storage.get(execution_id) as results:
-        if results:
-            # Use `since` parameter for logs of finished jobs
-            response = results.logs()
-            return Response(response, mimetype='application/octet-stream')
-
-    instance = instance_provider.instance_for(execution_id)
-    response = instance.logs(since=since)
-    return Response(response, mimetype='application/octet-stream')
+    return Response(executions.get(execution_id).get_logs(since=since),
+                    mimetype='application/octet-stream')
 
 
 @app.route(f'/executions/<execution_id>/output/files')
 def get_output_files_entrypoint(execution_id):
-    with results_storage.get(execution_id) as results:
-        if results:
-            response = results.output_tarball()
-            return Response(response, mimetype='application/octet-stream')
-
-    # Test with:
-    # curl localhost:5000/executions/some-id/output | tar x -C /tmp/plz-output
-    instance = instance_provider.instance_for(execution_id)
-    response = instance.output_files_tarball()
-    return Response(response, mimetype='application/octet-stream')
+    return Response(executions.get(execution_id).get_output_files_tarball(),
+                    mimetype='application/octet-stream')
 
 
-@app.route(f'/executions/<execution_id>',
-           methods=['DELETE'])
+@app.route(f'/executions/<execution_id>/measures', methods=['GET'])
+def get_measures(execution_id):
+    summary: Optional[bool] = request.args.get(
+        'summary', default=False, type=strtobool)
+
+    measures = executions.get(execution_id).get_measures()
+    if summary:
+        measures_to_return = measures.get('summary', {})
+    else:
+        measures_to_return = measures
+    if measures_to_return == {}:
+        return Response('', status=requests.codes.no_content,
+                        mimetype='text/plain')
+    # We return text that happens to be json, as we want the cli to show it
+    # indented properly and we don't want an additional conversion round
+    # json <-> str.
+    # In the future we can have another entrypoint or a parameter
+    # to return the json if we use it programmatically in the CLI.
+    str_response = json.dumps(measures_to_return, indent=2) + '\n'
+
+    @stream_with_context
+    def act():
+        for l in str_response.splitlines(keepends=True):
+            yield l
+    return Response(act(), mimetype='text/plain')
+
+
+@app.route(f'/executions/<execution_id>', methods=['DELETE'])
 def delete_execution(execution_id):
     # Test with:
     # curl -XDELETE localhost:5000/executions/some-id
     fail_if_running: bool = request.args.get(
-        'fail_if_running', default=False, type=bool)
+        'fail_if_running', default=False, type=strtobool)
     fail_if_deleted: bool = request.args.get(
-        'fail_if_deleted', default=False, type=bool)
+        'fail_if_deleted', default=False, type=strtobool)
     response = jsonify({})
-    status = get_status(execution_id)
-    if status is None:
-        response.status_code = requests.codes.not_found
-        return response
+    status = executions.get(execution_id).get_status()
     if fail_if_running and status.running:
-        response.status_code = requests.codes.conflict
-        return response
+        raise InstanceStillRunningException(execution_id=execution_id)
     instance = instance_provider.instance_for(execution_id)
     if fail_if_deleted and instance is None:
         response.status_code = requests.codes.expectation_failed
         return response
     instance_provider.release_instance(execution_id, fail_if_not_found=False)
     response.status_code = requests.codes.no_content
+    return response
+
+
+@app.route(f'/executions/<user>/<project>/history', methods=['GET'])
+def history_entrypoint(user, project):
+    execution_ids = db_storage.retrieve_finished_execution_ids(user, project)
+
+    @stream_with_context
+    def act():
+        yield '{\n'
+        first = True
+        for execution_id in execution_ids:
+            if not first:
+                yield ',\n'
+            first = False
+            yield f'"{execution_id}": ' \
+                  f'{executions.get(execution_id).get_metadata()}'
+        yield '\n}\n'
+
+    response = Response(act(), mimetype='text/plain')
+    response.status_code = requests.codes.ok
     return response
 
 
@@ -261,7 +298,7 @@ def create_snapshot():
     tag = Images.construct_tag(metadata_str)
 
     @stream_with_context
-    @_handle_lazy_exceptions(formatter=_format_error)
+    @_handle_lazy_exceptions
     def act() -> Iterator[Union[bytes, str]]:
         # Pass the rest of the stream to `docker build`
         yield from images.build(request.stream, tag)
@@ -319,24 +356,22 @@ def _json_stream(f: Callable[[], Iterator[Any]]):
     return wrapped
 
 
-def _handle_lazy_exceptions(formatter: Callable[[str], T]):
-    def wrapper(f):
-        def wrapped():
-            # noinspection PyBroadException
-            try:
-                for value in f():
-                    yield value
-            except Exception as e:
-                yield formatter(str(e) + '\n')
-                log.exception('Exception in response generator')
+def _handle_lazy_exceptions(f: ResponseGeneratorFunction) \
+        -> ResponseGeneratorFunction:
+    def wrapped() -> ResponseGenerator:
+        # noinspection PyBroadException
+        try:
+            for value in f():
+                yield value
+        except JSONResponseException as e:
+            yield e.args[0]
+            log.exception('Exception in response generator')
+        except Exception as e:
+            message = str(e) + '\n'
+            yield json.dumps({'error': message})
+            log.exception('Exception in response generator')
 
-        return wrapped
-
-    return wrapper
-
-
-def _format_error(message: str) -> bytes:
-    return json.dumps({'error': message}).encode('utf-8')
+    return wrapped
 
 
 def _set_user_last_execution_id(user: str, execution_id: str) -> None:

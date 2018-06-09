@@ -28,6 +28,7 @@
         group: cache
         mode: u=rwx,g=rws,o=
         recurse: yes
+        follow: no
 
     - name: 'Create the Docker directory'
       file:

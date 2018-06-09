@@ -2,7 +2,7 @@ import os
 import shutil
 import tarfile
 import tempfile
-from typing import Iterator, Optional, IO
+from typing import IO, Iterator, Optional
 
 import requests
 
@@ -10,46 +10,67 @@ from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
 from plz.cli.log import log_info
 from plz.cli.operation import Operation, add_output_dir_arg, check_status, \
-    maybe_add_execution_id_arg, on_exception_reraise
+    on_exception_reraise
 
 
 class RetrieveOutputOperation(Operation):
-    @staticmethod
-    def prepare_argument_parser(parser, args):
-        maybe_add_execution_id_arg(parser, args)
+    @classmethod
+    def name(cls):
+        return 'output'
+
+    @classmethod
+    def prepare_argument_parser(cls, parser, args):
+        cls.maybe_add_execution_id_arg(parser, args)
         add_output_dir_arg(parser)
+        parser.add_argument(
+            '--force-if-running', '-f', action='store_true', default=False,
+            help='Download output even if the process is still running. '
+                 'Discouraged as the output might be in an inconsistent '
+                 'state. If the output directory is present it\'ll be '
+                 'overwritten')
 
     def __init__(self, configuration: Configuration,
                  output_dir: str,
+                 force_if_running: bool,
                  execution_id: Optional[str] = None):
         super().__init__(configuration)
         self.output_dir = output_dir
+        self.force_if_running = force_if_running
         self.execution_id = execution_id
 
     def harvest(self):
-        response = requests.delete(
-            self.url('executions', self.get_execution_id()),
+        response = self.server.delete(
+            'executions', self.get_execution_id(),
             params={'fail_if_running': True})
         if response.status_code == requests.codes.conflict:
-            raise CLIException(
-                'Process is still running, run `plz stop` if you want to '
-                'terminate it')
+            if self.force_if_running:
+                log_info('Process is still running')
+                return
+            else:
+                raise CLIException(
+                    'Process is still running, run `plz stop` if you want to '
+                    'terminate it, \nor use --force-if-running (discouraged)')
         check_status(response, requests.codes.no_content)
 
     @on_exception_reraise('Retrieving the output failed.')
     def retrieve_output(self):
         execution_id = self.get_execution_id()
-        response = requests.get(
-            self.url('executions', execution_id, 'output', 'files'),
+        response = self.server.get(
+            'executions', execution_id, 'output', 'files',
             stream=True)
         check_status(response, requests.codes.ok)
         formatted_output_dir = self.output_dir.replace('%e', execution_id)
         try:
             os.makedirs(formatted_output_dir)
         except FileExistsError:
-            raise CLIException(
-                f'The output directory "{formatted_output_dir}" '
-                'already exists.')
+            if self.force_if_running:
+                log_info('Removing existing output directory')
+                shutil.rmtree(formatted_output_dir)
+                os.makedirs(formatted_output_dir)
+            else:
+                raise CLIException(
+                    f'The output directory "{formatted_output_dir}" '
+                    'already exists.')
         for path in untar(response.raw, formatted_output_dir):
             print(path)
 

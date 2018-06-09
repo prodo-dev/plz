@@ -1,0 +1,10 @@
+=> Capturing the context
+=> Building the program snapshot
+=> Sending request to start execution
+=> Execution ID is: <UUID>
+=> Streaming logs...
+Exiting with a status code of 42.
+
+=> Harvesting the output...
+=> Retrieving summary of measures (if present)...
+!! Execution failed with an exit status of 42.

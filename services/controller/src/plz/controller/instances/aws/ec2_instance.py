@@ -64,19 +64,11 @@ class EC2Instance(Instance):
             self._set_execution_id(
                 self.delegate.execution_id, max_idle_seconds)
 
-    def logs(self, since: Optional[int],
-             stdout: bool = True, stderr: bool = True) -> Iterator[bytes]:
-        return self.delegate.logs(
-            since=since, stdout=stdout, stderr=stderr)
-
     def is_up(self, is_instance_newly_created: bool):
         if not self._is_running():
             return False
         return self.images.can_pull(
             5 if is_instance_newly_created else 1)
-
-    def output_files_tarball(self) -> Iterator[bytes]:
-        return self.delegate.output_files_tarball()
 
     def _dispose(self):
         self.client.terminate_instances(InstanceIds=[self._instance_id])
@@ -93,12 +85,8 @@ class EC2Instance(Instance):
     def _set_tags(self, tags):
         instance_id = self._instance_id
         self.client.create_tags(Resources=[instance_id], Tags=tags)
-        response = self.client.describe_instances(
-            Filters=[{'Name': 'instance-id',
-                      'Values': [instance_id]}])
-        self.data = [instance
-                     for reservation in response['Reservations']
-                     for instance in reservation['Instances']][0]
+        self.data = _describe_instances(
+            self.client, [('instance-id', instance_id)])[0]
 
     def get_max_idle_seconds(self) -> int:
         return int(get_tag(
@@ -155,21 +143,64 @@ class EC2Instance(Instance):
     def _is_running_and_free(self):
         if not self._is_running():
             return False
-        instances = get_running_aws_instances(
+        instances = get_aws_instances(
             self.client,
+            only_running=True,
             filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
                      ('instance-id', self._instance_id)])
         return len(instances) > 0
 
     def _is_running(self):
-        instances = get_running_aws_instances(
+        instances = get_aws_instances(
             self.client,
+            only_running=True,
             filters=[('instance-id', self._instance_id)])
         return len(instances) > 0
+
+    def get_resource_state(self) -> str:
+        instance = _describe_instances(
+            self.client,
+            filters=[('instance-id', self._instance_id)])[0]
+        return instance['State']['Name']
+
+    def delete_resource(self) -> None:
+        # It seems AWS doesn't allow to delete an instance. We set the group
+        # tag to empty so it won't be listed for a group anymore.
+        self._set_tags([{'Key': EC2Instance.GROUP_NAME_TAG,
+                         'Value': ''}])
+
+    def get_forensics(self) -> dict:
+        spot_requests = self.client.describe_spot_instance_requests(
+            Filters=[{'Name': 'instance-id',
+                      'Values': [self._instance_id]}])['SpotInstanceRequests']
+        if len(spot_requests) == 0:
+            spot_request_info = {}
+        elif len(spot_requests) > 1:
+            spot_request_info = {}
+            log.warning('More than one spot request for instance '
+                        f'{self._instance_id}')
+        else:
+            spot_request_info = spot_requests[0]
+        return {'SpotInstanceRequest': spot_request_info,
+                'InstanceState': self.get_resource_state()}
 
     @property
     def _instance_id(self):
         return self.data['InstanceId']
+
+    def get_logs(self, since: Optional[int] = None, stdout: bool = True,
+                 stderr: bool = True) -> Iterator[bytes]:
+        return self.delegate.get_logs(
+            since=since, stdout=stdout, stderr=stderr)
+
+    def get_output_files_tarball(self) -> Iterator[bytes]:
+        return self.delegate.get_output_files_tarball()
+
+    def get_measures_files_tarball(self) -> Iterator[bytes]:
+        return self.delegate.get_measures_files_tarball()
+
+    def get_stored_metadata(self) -> dict:
+        return self.delegate.get_stored_metadata()
 
 
 def get_tag(instance_data, tag, default=None) -> Optional[str]:
@@ -179,12 +210,16 @@ def get_tag(instance_data, tag, default=None) -> Optional[str]:
     return default
 
 
-def get_running_aws_instances(client, filters: [(str, str)]):
+def get_aws_instances(
+        client, filters: [(str, str)], only_running: bool) -> [dict]:
+    if only_running:
+        filters += [('instance-state-name', 'running')]
+    return _describe_instances(client, filters)
+
+
+def _describe_instances(client, filters) -> [dict]:
     new_filters = [{'Name': n, 'Values': [v]} for (n, v) in filters]
-    instance_state_filter = [{'Name': 'instance-state-name',
-                              'Values': ['running']}]
-    response = client.describe_instances(
-        Filters=new_filters + instance_state_filter)
+    response = client.describe_instances(Filters=new_filters)
     return [instance
             for reservation in response['Reservations']
             for instance in reservation['Instances']]

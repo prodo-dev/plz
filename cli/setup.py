@@ -34,11 +34,15 @@ setup(
     packages=['plz.cli'],
     python_requires='>= 3.6',
     install_requires=[
-        'docker >= 3.2.1',
+        'docker >= 3.3.0',
+        'glob2 >= 0.6',
         'prettytable >= 0.7.2',
+        'python-dateutil >= 2.7.3',
         'requests >= 2.18.4',
-        'paramiko >= 2.4.1',
-        'python-dateutil == 2.7.2',
+        # If we specify >= 1.22, pip installs urllib3 version 1.23, which
+        # is not compatible with the version of requests it installs.
+        # Fixing to 1.22 for now.
+        'urllib3 == 1.22',
     ],
     extras_require={
         'test': [

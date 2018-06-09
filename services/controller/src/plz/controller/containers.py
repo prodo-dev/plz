@@ -6,8 +6,11 @@ from typing import Dict, Iterator, List, Optional
 import dateutil.parser
 import docker
 import docker.errors
+import requests
 from docker.models.containers import Container
 from docker.types import Mount
+
+from plz.controller.exceptions import WorkerUnreachableException
 
 ContainerState = collections.namedtuple(
     'ContainerState',
@@ -56,21 +59,21 @@ class Containers:
              stderr: bool = True) \
             -> Iterator[bytes]:
         container = self.from_execution_id(execution_id)
-        if not container:
-            return iter([])
         return container.logs(
             stdout=stdout, stderr=stderr, stream=True, follow=True,
             since=since)
 
     def stop(self, name: str):
-        container = self.from_execution_id(name)
-        if not container:
+        try:
+            container = self.from_execution_id(name)
+        except docker.errors.NotFound:
             return
         container.stop()
 
     def rm(self, execution_id: str):
-        container = self.from_execution_id(execution_id)
-        if not container:
+        try:
+            container = self.from_execution_id(execution_id)
+        except docker.errors.NotFound:
             return
         container.stop()
         container.remove()
@@ -89,6 +92,11 @@ class Containers:
             exit_code=container_state['ExitCode'],
             finished_at=finished_at)
 
+    def get_files(self, execution_id: str, path: str) -> Iterator[bytes]:
+        container = self.from_execution_id(execution_id)
+        tar, _ = container.get_archive(path)
+        yield from tar
+
     def execution_ids(self):
         return [container.name[len(self._CONTAINER_NAME_PREFIX):]
                 for container in self.docker_client.containers.list(all=True)
@@ -100,6 +108,9 @@ class Containers:
                 self._CONTAINER_NAME_PREFIX + execution_id)
         except docker.errors.NotFound:
             return None
+        except requests.exceptions.ConnectionError:
+            log.exception('Connecting to worker')
+            raise WorkerUnreachableException(execution_id)
 
     @staticmethod
     def _is_container_id(container_id: str):

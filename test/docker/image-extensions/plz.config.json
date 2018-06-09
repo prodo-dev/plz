@@ -1,0 +1,9 @@
+{
+  "image": "python:3-slim",
+  "image_extensions": [
+    "RUN pip install numpy"
+  ],
+  "command": [
+    "./main.py"
+  ]
+}

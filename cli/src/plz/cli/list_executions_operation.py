@@ -1,19 +1,23 @@
 import json
+from datetime import datetime
 
 import requests
-from datetime import datetime
 from prettytable import PrettyTable
 
 from plz.cli.operation import Operation, check_status
 
 
 class ListExecutionsOperation(Operation):
-    @staticmethod
-    def prepare_argument_parser(parser, args):
+    @classmethod
+    def name(cls):
+        return 'list'
+
+    @classmethod
+    def prepare_argument_parser(cls, parser, args):
         pass
 
     def run(self):
-        response = requests.get(self.url('executions', 'list'))
+        response = self.server.get('executions', 'list')
         check_status(response, requests.codes.ok)
         table = PrettyTable(['Execution Id', 'Running', 'Status',
                              'Type', 'Idle since', 'Disposal time'])
