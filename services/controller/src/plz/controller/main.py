@@ -91,7 +91,7 @@ def handle_chunked_input():
 def handle_exception(exception: ResponseHandledException):
     if isinstance(exception, WorkerUnreachableException):
         exception = add_forensics(exception)
-    return jsonify(type=type(exception).__name__,
+    return jsonify(exception_type=type(exception).__name__,
                    **{k: v for k, v in exception.__dict__.items()
                       if k != 'response_code'}), \
         exception.response_code

@@ -58,13 +58,13 @@ class LocalResultsStorage(ResultsStorage):
                 user=metadata['user'], project=metadata['project'],
                 execution_id=execution_id)
 
-    def write_tombstone(self, execution_id: str, tombstone_dict: dict) -> None:
+    def write_tombstone(self, execution_id: str, tombstone: object) -> None:
         paths = Paths(self.directory, execution_id)
         with self._lock(execution_id):
             if os.path.exists(paths.finished_file):
                 return
             _force_mk_empty_dir(paths.directory)
-            tombstone_json = dumps_arbitrary_json(tombstone_dict)
+            tombstone_json = dumps_arbitrary_json(tombstone)
             with open(paths.tombstone_file, 'w') as tombstone_file:
                 tombstone_file.write(tombstone_json)
             with open(paths.finished_file, 'w') as _:  # noqa: F841 (unused)
@@ -136,8 +136,8 @@ class LocalTombstone(Results):
 
     def _raise_aborted(self) -> Any:
         with open(self.paths.tombstone_file, 'r') as tombstone:
-            tombstone_dict = json.load(tombstone)
-        raise AbortedExecutionException(tombstone_dict)
+            tombstone_object = json.load(tombstone)
+        raise AbortedExecutionException(tombstone_object)
 
     def get_status(self) -> InstanceStatus:
         return self._raise_aborted()

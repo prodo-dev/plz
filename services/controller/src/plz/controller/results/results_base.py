@@ -22,7 +22,7 @@ class ResultsStorage(ABC):
         pass
 
     @abstractmethod
-    def write_tombstone(self, execution_id: str, tombstone_dict: dict) -> None:
+    def write_tombstone(self, execution_id: str, tombstone: object) -> None:
         pass
 
     @abstractmethod

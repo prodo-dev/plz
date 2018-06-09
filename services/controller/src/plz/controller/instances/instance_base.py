@@ -141,7 +141,7 @@ class Instance(Results):
                             return
                     results_storage.write_tombstone(
                         execution_id,
-                        tombstone_dict={'forensics': self.get_forensics()})
+                        tombstone={'forensics': self.get_forensics()})
                 finally:
                     self.delete_resource()
 

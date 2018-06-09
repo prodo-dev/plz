@@ -18,6 +18,6 @@ class WorkerUnreachableException(ResponseHandledException):
 
 
 class AbortedExecutionException(ResponseHandledException):
-    def __init__(self, forensics: dict):
+    def __init__(self, tombstone: object):
         super().__init__(response_code=requests.codes.gone)
-        self.forensics = forensics
+        self.tombstone = tombstone
