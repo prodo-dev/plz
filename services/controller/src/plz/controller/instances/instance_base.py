@@ -122,9 +122,7 @@ class Instance(Results):
         pass
 
     def harvest(self, results_storage: ResultsStorage):
-        log.debug(f'Harvesting: {self.get_execution_id()}')
         with self._lock:
-            log.debug('After lock')
             resource_state = self.get_resource_state()
             execution_id = self.get_execution_id()
             if resource_state == 'terminated':

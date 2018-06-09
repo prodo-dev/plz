@@ -174,11 +174,14 @@ class EC2Instance(Instance):
             Filters=[{'Name': 'instance-id',
                       'Values': [self._instance_id]}])['SpotInstanceRequests']
         if len(spot_requests) == 0:
-            return {}
-        if len(spot_requests) > 1:
+            spot_request_info = {}
+        elif len(spot_requests) > 1:
+            spot_request_info = {}
             log.warning('More than one spot request for instance '
                         f'{self._instance_id}')
-        return {'SpotInstanceRequest': spot_requests[0],
+        else:
+            spot_request_info = spot_requests[0]
+        return {'SpotInstanceRequest': spot_request_info,
                 'InstanceState': self.get_resource_state()}
 
     @property

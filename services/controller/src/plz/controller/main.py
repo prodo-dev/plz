@@ -90,16 +90,16 @@ def handle_chunked_input():
 @app.errorhandler(ResponseHandledException)
 def handle_exception(exception: ResponseHandledException):
     if isinstance(exception, WorkerUnreachableException):
-        exception = add_forensics(exception)
+        exception = maybe_add_forensics(exception)
     return jsonify(exception_type=type(exception).__name__,
                    **{k: v for k, v in exception.__dict__.items()
                       if k != 'response_code'}), \
         exception.response_code
 
 
-def add_forensics(exception: WorkerUnreachableException):
+def maybe_add_forensics(exception: WorkerUnreachableException) \
+        -> ResponseHandledException:
     forensics = instance_provider.get_forensics(exception.execution_id)
-    log.debug(f'forensics: {forensics}')
     spot_state = forensics.get(
         'SpotInstanceRequest', {}).get('State', None)
     # We know better now
