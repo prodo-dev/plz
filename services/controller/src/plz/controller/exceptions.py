@@ -21,4 +21,3 @@ class AbortedExecutionException(ResponseHandledException):
     def __init__(self, forensics: dict):
         super().__init__(response_code=requests.codes.gone)
         self.forensics = forensics
-

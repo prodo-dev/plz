@@ -37,8 +37,7 @@ class LocalResultsStorage(ResultsStorage):
                 finish_timestamp: int):
         paths = Paths(self.directory, execution_id)
         with self._lock(execution_id):
-            if os.path.exists(paths.finished_file) or \
-                    os.path.exists(paths.tombstone_file):
+            if os.path.exists(paths.finished_file):
                 return
 
             _force_mk_empty_dir(paths.directory)
@@ -62,13 +61,14 @@ class LocalResultsStorage(ResultsStorage):
     def write_tombstone(self, execution_id: str, tombstone_dict: dict) -> None:
         paths = Paths(self.directory, execution_id)
         with self._lock(execution_id):
-            if os.path.exists(paths.finished_file) or \
-                    os.path.exists(paths.tombstone_file):
+            if os.path.exists(paths.finished_file):
                 return
             _force_mk_empty_dir(paths.directory)
             tombstone_json = dumps_arbitrary_json(tombstone_dict)
             with open(paths.tombstone_file, 'w') as tombstone_file:
                 tombstone_file.write(tombstone_json)
+            with open(paths.finished_file, 'w') as _:  # noqa: F841 (unused)
+                pass
 
     def get(self, execution_id: str) -> ContextManager[Optional[Results]]:
         paths = Paths(self.directory, execution_id)
@@ -92,9 +92,10 @@ class LocalResultsContext(ResultsContext):
     def __enter__(self):
         self.lock.acquire()
         if os.path.exists(self.paths.finished_file):
-            return LocalResults(self.paths)
-        elif os.path.exists(self.paths.tombstone_file):
-            return LocalTombstone(self.paths)
+            if os.path.exists(self.paths.tombstone_file):
+                return LocalTombstone(self.paths)
+            else:
+                return LocalResults(self.paths)
         else:
             return None
 
