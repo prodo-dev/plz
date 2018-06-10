@@ -82,6 +82,7 @@ class Configuration:
             Property('included_paths', type=list, default=[]),
             Property('debug', type=bool, default=False),
             Property('docker_run_args', type=dict, default={}),
+            Property('connection_info', type=dict, default={}),
         ]
     }
 

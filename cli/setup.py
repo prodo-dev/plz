@@ -36,6 +36,7 @@ setup(
     install_requires=[
         'docker >= 3.3.0',
         'glob2 >= 0.6',
+        'paramiko >= 2.4.1',
         'prettytable >= 0.7.2',
         'python-dateutil >= 2.7.3',
         'requests >= 2.18.4',

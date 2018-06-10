@@ -1,25 +1,38 @@
 import functools
+from typing import Optional
 
 import requests
 import urllib3
 from requests import Response
 
+from plz.cli import ssh_session
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
+from plz.cli.ssh_session import add_ssh_channel_adapter
 
 
 class Server:
     @staticmethod
     def from_configuration(configuration: Configuration):
-        return Server(configuration.host, configuration.port)
+        connection_info = configuration.connection_info
+        schema = connection_info.get('schema', 'http')
+        path_to_private_key = connection_info.get('path_to_private_key', None)
+        return Server(configuration.host, configuration.port, schema,
+                      path_to_private_key)
 
-    def __init__(self, host: str, port: int):
-        self.prefix = f'http://{host}:{port}'
+    def __init__(self, host: str, port: int, schema: str = 'http',
+                 path_to_private_key: Optional[str] = None):
+        self.schema = schema
+        self.path_to_private_key = path_to_private_key
+        self.prefix = f'{schema}://{host}:{port}'
 
     def request(self, method: str, *path_segments: str, **kwargs) -> Response:
         try:
             url = self.prefix + '/' + '/'.join(path_segments)
-            return requests.request(method, url, **kwargs)
+            session = requests.session()
+            if self.schema == ssh_session.PLZ_SSH_SCHEMA:
+                add_ssh_channel_adapter(session, self.path_to_private_key)
+            return session.request(method, url, **kwargs)
         except (ConnectionError,
                 requests.ConnectionError,
                 urllib3.exceptions.NewConnectionError) as e:
