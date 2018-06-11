@@ -1,16 +1,19 @@
+import os
 import socket
 import threading
 
-from paramiko import Channel, ChannelFile, RSAKey, Transport
+from paramiko import Channel, ChannelFile, HostKeys, PKey, RSAKey, Transport
 from requests import Session
 from requests.adapters import HTTPAdapter
 from urllib3 import HTTPConnectionPool
 from urllib3.connection import HTTPConnection
 
+from plz.cli.exceptions import CLIException
+
 PLZ_SSH_SCHEMA = 'plz-ssh'
 
 
-def add_ssh_channel_adapter(session: Session, path_to_private_key: str):
+def add_ssh_channel_adapter(session: Session, connection_info: dict):
     """For sessions in ssh channels, use the same adapter as for http. We
        instruct the adapter that, for our schema, the pool connection
        manager creates SSH channels, instead of sockets."""
@@ -26,9 +29,9 @@ def add_ssh_channel_adapter(session: Session, path_to_private_key: str):
     # Use a pool that creates SSH channels
     poolmanager.pool_classes_by_scheme[PLZ_SSH_SCHEMA] = \
         type(
-            'SSHChannelHTTPConnectionPoolWithKey',
+            'SSHChannelHTTPConnectionPoolWithInfo',
             (SSHChannelHTTPConnectionPool,),
-            {'path_to_private_key': path_to_private_key})
+            {'connection_info': connection_info})
 
     #
     # Map the schema to the adapter
@@ -37,30 +40,38 @@ def add_ssh_channel_adapter(session: Session, path_to_private_key: str):
 
 
 class SSHChannelHTTPConnection(HTTPConnection):
+    connection_info = None
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def connect(self):
+        username = self.connection_info.get('username', 'plz-user')
+        path_to_private_key = self.connection_info['path_to_private_key']
         try:
-            transport = _get_transport(self.host, self.path_to_private_key)
+            transport = _get_transport(
+                hostname=self.host, username=username,
+                path_to_private_key=path_to_private_key)
             ch = transport.open_channel(
                 'direct-tcpip', ('0.0.0.0', self.port), ('0.0.0.0', 0))
             _override_makefile(ch)
             _override_channel_close(ch)
             self._prepare_conn(ch)
         except Exception as e:
-            raise ConnectionError from e
+            raise SSHAuthenticationError('Creating channel: ') from e
 
 
 class SSHChannelHTTPConnectionPool(HTTPConnectionPool):
+    connection_info = None
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        path_to_private_key = self.path_to_private_key
+        connection_info = self.connection_info
         self.ConnectionCls = type(
-            'SSHChannelHTTPConnectionWithKey',
+            'SSHChannelHTTPConnectionWithInfo',
             (SSHChannelHTTPConnection,),
-            {'path_to_private_key': path_to_private_key})
+            {'connection_info': connection_info})
 
 
 def _override_makefile(ch: Channel):
@@ -107,7 +118,7 @@ _transport = None
 _transport_lock = threading.RLock()
 
 
-def _get_transport(hostname: str, path_to_private_key: str):
+def _get_transport(hostname: str, username: str, path_to_private_key: str):
     global _transport, _transport_lock
     with _transport_lock:
         if _transport is None:
@@ -118,8 +129,32 @@ def _get_transport(hostname: str, path_to_private_key: str):
             # noinspection PyTypeChecker
             _transport = Transport(sock)
             _transport.connect(
-                None, username='plz-user', password='', pkey=key)
+                None, username=username, password='', pkey=key)
+            _validate_key(hostname, _transport.get_remote_server_key())
             if not _transport.is_authenticated():
-                raise ConnectionError(
+                raise SSHAuthenticationError(
                     'Couldn\'t authenticate the ssh transport')
         return _transport
+
+
+def _validate_key(host: str, server_key: PKey):
+    known_hosts_file = '~/.ssh/known_hosts'
+    host_keys = HostKeys()
+    host_keys.load(os.path.expanduser(known_hosts_file))
+    known_server_keys = host_keys.get(host)
+    if known_server_keys is None:
+        raise SSHAuthenticationError(
+            'plz host is not known. You can add the host key with `\n'
+            f'ssh-keyscan -H {host} >> {known_hosts_file}\n`')
+    known_server_keys = host_keys.get(host)
+    if known_server_keys.get(server_key.get_name()) is None:
+        raise SSHAuthenticationError(
+            f'No key found for host {host} with name {server_key.get_name()}')
+    if server_key != known_server_keys.get(server_key.get_name()):
+        raise SSHAuthenticationError(
+            f'Bad host key for `{host}`. Fix your `{known_hosts_file}` file')
+
+
+class SSHAuthenticationError(CLIException):
+    def __init__(self, message):
+        super().__init__(message)
