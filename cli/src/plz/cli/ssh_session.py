@@ -98,14 +98,16 @@ def _validate_key(host: str, server_key: PKey):
     host_keys = HostKeys()
     host_keys.load(os.path.expanduser(known_hosts_file))
     known_server_keys = host_keys.get(host)
+    add_host_key_instructions = 'You can add the host key with `\n' \
+        f'ssh-keyscan -H {host} >> {known_hosts_file}\n`'
     if known_server_keys is None:
         raise SSHAuthenticationError(
-            'plz host is not known. You can add the host key with `\n'
-            f'ssh-keyscan -H {host} >> {known_hosts_file}\n`')
+            f'plz host is not known. {add_host_key_instructions}')
     known_server_keys = host_keys.get(host)
     if known_server_keys.get(server_key.get_name()) is None:
         raise SSHAuthenticationError(
-            f'No key found for host {host} with name {server_key.get_name()}')
+            f'No key found for host {host} with name '
+            f'{server_key.get_name()}. {add_host_key_instructions}')
     if server_key != known_server_keys.get(server_key.get_name()):
         raise SSHAuthenticationError(
             f'Bad host key for `{host}`. Fix your `{known_hosts_file}` file')
