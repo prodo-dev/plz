@@ -73,6 +73,7 @@ class SSHChannelHTTPConnectionPool(HTTPConnectionPool):
             (SSHChannelHTTPConnection,),
             {'connection_info': connection_info})
 
+
 def _get_transport(hostname: str, username: str, path_to_private_key: str):
     global _transport, _transport_lock
     with _transport_lock:
