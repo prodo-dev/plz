@@ -13,10 +13,10 @@ PLZ_SSH_SCHEMA = 'plz-ssh'
 def add_ssh_channel_adapter(session: Session, path_to_private_key: str):
     """For sessions in ssh channels, use the same adapter as for http. We
        instruct the adapter that, for our schema, the pool connection
-       manager creates SSH tunnels, instead of sockets."""
+       manager creates SSH channels, instead of sockets."""
 
     #
-    # Modify the http adapter to create ssh tunnels
+    # Modify the http adapter to create ssh channels
     #
     http_adapter = HTTPAdapter()
     poolmanager = http_adapter.poolmanager
