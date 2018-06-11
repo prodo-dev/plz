@@ -35,7 +35,7 @@ class Server:
                 requests.ConnectionError,
                 urllib3.exceptions.NewConnectionError) as e:
             raise CLIException(
-                f'We couldn\'t establish a connection to the server') from e
+                f'We couldn\'t establish a connection to the server.') from e
         except (TimeoutError, requests.Timeout) as e:
             raise CLIException(
                 'Our connection to the server timed out.') from e
