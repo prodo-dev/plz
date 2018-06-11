@@ -15,7 +15,7 @@ def parse_file(path) -> Parameters:
             return parse_io(f, path)
     except FileNotFoundError as e:
         raise CLIException(
-            f'The parameters file "{path}" does not exist.', e)
+            f'The parameters file "{path}" does not exist.') from e
 
 
 def parse_io(handle, path) -> Parameters:
@@ -27,4 +27,4 @@ def parse_io(handle, path) -> Parameters:
         return parameters
     except JSONDecodeError as e:
         raise CLIException(
-            f'There was an error parsing "{path}".', e)
+            f'There was an error parsing "{path}".') from e

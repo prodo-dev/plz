@@ -82,7 +82,7 @@ def on_exception_reraise(message: str):
             try:
                 return f(*args, **kwargs)
             except Exception as cause:
-                raise CLIException(message, cause)
+                raise CLIException(message) from cause
 
         return wrapped
 
