@@ -44,11 +44,18 @@
           PermitOpen 0.0.0.0:80
           ForceCommand echo 'This account can only be used for ssh channels to port 80'
         dest: /etc/ssh/sshd_config
-    - name: Put sshd user in the cache group
+    - name: Put plz-user user in the cache group
       user:
-        name: sshd
+        name: plz-user
         groups: cache
         append: yes
+    - name: Set ownership of plz-user home
+      file:
+        path: /cache/plz-user-home
+        owner: plz-user
+        group: plz-user
+        recurse: yes
+        mode: 0700
     - name: Restart sshd
       service:
         name: sshd
