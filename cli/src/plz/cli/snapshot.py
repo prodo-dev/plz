@@ -6,7 +6,7 @@ import docker.utils
 import glob2
 
 from plz.cli.exceptions import CLIException
-from plz.cli.git import is_git_present, get_ignored_git_files
+from plz.cli.git import get_ignored_git_files, is_git_present
 
 
 def capture_build_context(
@@ -41,7 +41,7 @@ def capture_build_context(
         )
     except FileExistsError as e:
         raise CLIException(
-            'The directory cannot have a plz.Dockerfile.', e)
+            'The directory cannot have a plz.Dockerfile.') from e
     finally:
         if dockerfile_created:
             os.remove(dockerfile_path)
