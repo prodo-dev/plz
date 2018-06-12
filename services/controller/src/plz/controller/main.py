@@ -138,7 +138,7 @@ def run_execution_entrypoint():
     start_metadata['command'] = command
     start_metadata['snapshot_id'] = snapshot_id
     start_metadata['parameters'] = parameters
-    start_metadata['execution_spec'] = {k: v for k, v in execution_spec
+    start_metadata['execution_spec'] = {k: v for k, v in execution_spec.items()
                                         if k not in {'user', 'project'}}
     start_metadata['user'] = execution_spec['user']
     start_metadata['project'] = execution_spec['project']
