@@ -7,7 +7,47 @@
 => Harvesting the output...
 => Retrieving summary of measures (if present)...
 {
-  "loss": 0.42
+  "0": {
+    "0": {
+      "loss": 42
+    },
+    "4": {
+      "loss": 38
+    },
+    "8": {
+      "loss": 34
+    }
+  },
+  "1": {
+    "1": {
+      "loss": 41
+    },
+    "5": {
+      "loss": 37
+    },
+    "9": {
+      "loss": 33
+    }
+  },
+  "2": {
+    "10": {
+      "loss": 32
+    },
+    "2": {
+      "loss": 40
+    },
+    "6": {
+      "loss": 36
+    }
+  },
+  "3": {
+    "3": {
+      "loss": 39
+    },
+    "7": {
+      "loss": 35
+    }
+  }
 }
 => Execution succeeded.
 => Retrieving the output...
