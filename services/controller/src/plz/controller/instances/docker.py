@@ -42,7 +42,7 @@ class DockerInstance(Instance):
             'input_directory': Volumes.INPUT_DIRECTORY_PATH,
             'output_directory': Volumes.OUTPUT_DIRECTORY_PATH,
             'measures_directory': Volumes.MEASURES_DIRECTORY_PATH,
-            'summary_measures_file_name': os.path.join(
+            'summary_measures_path': os.path.join(
                 Volumes.MEASURES_DIRECTORY_PATH, 'summary'),
             'parameters': parameters
         }
