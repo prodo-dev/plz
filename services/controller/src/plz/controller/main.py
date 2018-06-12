@@ -135,7 +135,10 @@ def run_execution_entrypoint():
     start_metadata = request.json['start_metadata']
     execution_id = str(get_execution_uuid())
 
+    start_metadata['command'] = command
+    start_metadata['snapshot_id'] = snapshot_id
     start_metadata['parameters'] = parameters
+    start_metadata['execution_spec'] = execution_spec
     start_metadata['user'] = execution_spec['user']
     start_metadata['project'] = execution_spec['project']
     db_storage.store_start_metadata(execution_id, start_metadata)
