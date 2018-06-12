@@ -10,7 +10,9 @@ from urllib3.connection import HTTPConnection
 
 from plz.cli.exceptions import CLIException
 
-PLZ_SSH_SCHEMA = 'plz-ssh'
+# Must start with http, otherwise parameters for GET requests are not included
+# in the URL
+PLZ_SSH_SCHEMA = 'http-ssh'
 
 
 def add_ssh_channel_adapter(session: Session, connection_info: dict):
@@ -58,7 +60,7 @@ class SSHChannelHTTPConnection(HTTPConnection):
             _override_channel_close(ch)
             self._prepare_conn(ch)
         except Exception as e:
-            raise SSHAuthenticationError('Creating channel: ') from e
+            raise SSHAuthenticationError('Creating SSH channel: ') from e
 
 
 class SSHChannelHTTPConnectionPool(HTTPConnectionPool):
@@ -140,7 +142,7 @@ def _override_file_close(channel_file: ChannelFile):
         ChannelFile.close(channel_file)
         if channel_file.channel.close_pending:
             channel_file.channel.close()
-    return do_close
+    channel_file.close = do_close
 
 
 def _override_channel_close(ch: Channel):
@@ -152,7 +154,12 @@ def _override_channel_close(ch: Channel):
             ch.close_pending = True
             return
         else:
-            return Channel.close(ch)
+            try:
+                return Channel.close(ch)
+            except EOFError as e:
+                # Some problems while closing yield an EOFError, which is not
+                # descriptive
+                raise ConnectionError('Closing channel') from e
     ch.close = do_close
 
 
