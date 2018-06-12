@@ -10,7 +10,9 @@ from urllib3.connection import HTTPConnection
 
 from plz.cli.exceptions import CLIException
 
-PLZ_SSH_SCHEMA = 'plz-ssh'
+# Must start with http, otherwise parameters for GET requests are not included
+# in the URL
+PLZ_SSH_SCHEMA = 'http-ssh'
 
 
 def add_ssh_channel_adapter(session: Session, connection_info: dict):
