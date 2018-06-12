@@ -177,9 +177,6 @@ class EC2InstanceGroup(InstanceProvider):
                 f'More than one instance for execution ID {execution_id}')
         return self._ec2_instance_from_instance_data(instance_data_list[0])
 
-    def stop_execution(self, execution_id: str):
-        self.instance_for(execution_id).stop_execution()
-
     def release_instance(self, execution_id: str,
                          fail_if_not_found: bool=True,
                          idle_since_timestamp: Optional[int] = None):

@@ -68,9 +68,6 @@ class Localhost(InstanceProvider):
             execution_id,
             self.redis)
 
-    def stop_execution(self, execution_id):
-        self.containers.stop(execution_id)
-
     def push(self, image_tag: str):
         pass
 
