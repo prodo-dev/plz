@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Dict, List, Type, TypeVar
+from typing import Any, Dict, List, Optional, Type, TypeVar
 
 T = TypeVar('T')
 
@@ -87,17 +87,27 @@ class Configuration:
         ]
     }
 
-    CONFIGURATION_FILE = 'plz.config.json'
+    DEFAULT_CONFIGURATION_FILE_NAME = 'plz.config.json'
     MISSING_CONFIGURATION_FILE_ERROR = ValidationError(
-        f'You must create a {CONFIGURATION_FILE} file.')
+        f'You must create a {DEFAULT_CONFIGURATION_FILE_NAME} file, '
+        f'or specify a path with -c')
 
     @staticmethod
-    def load() -> 'Configuration':
+    def load(configuration_path: Optional[str] = None) -> 'Configuration':
+        if configuration_path is None:
+            config_file_name = Configuration.DEFAULT_CONFIGURATION_FILE_NAME
+        elif os.path.isdir(configuration_path):
+            config_file_name = os.path.join(
+                configuration_path,
+                Configuration.DEFAULT_CONFIGURATION_FILE_NAME)
+        else:
+            config_file_name = configuration_path
+
         default_configuration = Configuration.defaults(
             Configuration.PROPERTIES)
         try:
             file_configuration = Configuration.from_file(
-                Configuration.CONFIGURATION_FILE, Configuration.PROPERTIES)
+                config_file_name, Configuration.PROPERTIES)
         except FileNotFoundError:
             raise ValidationException(
                 [Configuration.MISSING_CONFIGURATION_FILE_ERROR])
