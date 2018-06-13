@@ -12,7 +12,7 @@ from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
 from plz.cli.git import get_head_commit_or_none
 from plz.cli.input_data import InputData
-from plz.cli.log import log_debug, log_error, log_info
+from plz.cli.log import log_debug, log_error, log_info, log_warning
 from plz.cli.logs_operation import LogsOperation
 from plz.cli.operation import Operation, add_output_dir_arg, check_status
 from plz.cli.parameters import Parameters
@@ -75,12 +75,24 @@ class RunExecutionOperation(Operation):
                 exclude_gitignored_files=exclude_gitignored_files,
             )
 
-        with self.suboperation(
-                'Capturing the context',
-                build_context_suboperation) as build_context:
-            snapshot_id = self.suboperation(
-                    'Building the program snapshot',
-                    lambda: self.submit_context_for_building(build_context))
+        retrials = self.configuration.workarounds['docker_build_retrials']
+        while retrials + 1 > 0:
+            with self.suboperation(
+                    'Capturing the context',
+                    build_context_suboperation) as build_context:
+                try:
+                    snapshot_id = self.suboperation(
+                        'Building the program snapshot',
+                        lambda: self.submit_context_for_building(
+                            build_context))
+                    break
+                except CLIException as e:
+                    if retrials > 0:
+                        log_warning(str(e) + ' Retrying')
+                        retrials -= 1
+                    else:
+                        raise e
+
         input_id = self.suboperation(
                 'Capturing the input',
                 self.capture_input,

@@ -84,6 +84,8 @@ class Configuration:
             Property('docker_run_args', type=dict, default={}),
             Property('connection_info', type=dict, default={}),
             Property('context_path', type=str, default='.'),
+            Property('workarounds', type=dict,
+                     default={'docker_build_retrials': 3}),
         ]
     }
 

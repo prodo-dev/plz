@@ -18,6 +18,16 @@ def log_info(message):
     print()
 
 
+def log_warning(message):
+    if sys.stdout.isatty():
+        print('\x1b[33m', end='')
+    print('!! ', end='')
+    print(message, end='')
+    if sys.stdout.isatty():
+        print('\x1b[0m', end='')
+    print()
+
+
 def log_error(message):
     isatty = sys.stdout.isatty()
     if isatty:
