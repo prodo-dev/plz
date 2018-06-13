@@ -212,10 +212,6 @@ class InstanceProvider(ABC):
     def instance_for(self, execution_id: str) -> Optional[Instance]:
         pass
 
-    @abstractmethod
-    def stop_execution(self, execution_id: str):
-        pass
-
     def release_instance(
             self, execution_id: str,
             fail_if_not_found: bool=True,

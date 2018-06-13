@@ -288,14 +288,6 @@ def history_entrypoint(user, project):
     return response
 
 
-@app.route(f'/executions/<execution_id>/stop', methods=['POST'])
-def stop_execution_entrypoint(execution_id: str):
-    instance_provider.stop_execution(execution_id)
-    response = jsonify({})
-    response.status_code = requests.codes.no_content
-    return response
-
-
 @app.route('/snapshots', methods=['POST'])
 def create_snapshot():
     metadata_str = request.stream.readline().decode('utf-8')
