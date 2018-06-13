@@ -11,11 +11,10 @@ from plz.cli.git import get_ignored_git_files, is_git_present
 
 def capture_build_context(
         image: str, image_extensions: [str], command: str,
-        snapshot_path: [str],
+        context_path: [str],
         excluded_paths: [str], included_paths: [str],
         exclude_gitignored_files) -> io.FileIO:
-    context_dir = os.getcwd()
-    dockerfile_path = os.path.join(context_dir, 'plz.Dockerfile')
+    dockerfile_path = os.path.join(context_path, 'plz.Dockerfile')
     dockerfile_created = False
     try:
         with open(dockerfile_path, mode='x') as dockerfile:
@@ -31,11 +30,11 @@ def capture_build_context(
             )
         os.chmod(dockerfile_path, 0o644)
         matching_excluded_paths = get_matching_excluded_paths(
-            snapshot_path=snapshot_path, excluded_paths=excluded_paths,
+            context_path=context_path, excluded_paths=excluded_paths,
             included_paths=included_paths,
             exclude_gitignored_files=exclude_gitignored_files)
         build_context = docker.utils.build.tar(
-            path=snapshot_path,
+            path=context_path,
             exclude=matching_excluded_paths,
             gzip=True,
         )
@@ -49,10 +48,10 @@ def capture_build_context(
 
 
 def get_matching_excluded_paths(
-        snapshot_path: [str], excluded_paths: [str], included_paths: [str],
+        context_path: [str], excluded_paths: [str], included_paths: [str],
         exclude_gitignored_files: bool) -> [str]:
     def abs_path_glob_including_snapshot(p):
-        return os.path.abspath(os.path.join(snapshot_path, p))
+        return os.path.abspath(os.path.join(context_path, p))
 
     def expand_if_dir(path):
         if os.path.isdir(path):
@@ -91,10 +90,10 @@ def get_matching_excluded_paths(
     # A value of None for exclude_gitignored_files means "exclude if git is
     # available"
     use_git = exclude_gitignored_files or (
-            exclude_gitignored_files is None and is_git_present(snapshot_path))
+            exclude_gitignored_files is None and is_git_present(context_path))
     if use_git:
         git_ignored_files = [abs_path_glob_including_snapshot('.git')] + \
-                            get_ignored_git_files(snapshot_path)
+                            get_ignored_git_files(context_path)
     excluded_paths += git_ignored_files
 
     excluded_and_not_included_paths = []
@@ -106,12 +105,12 @@ def get_matching_excluded_paths(
         else:
             excluded_and_not_included_paths.append(ep)
 
-    return (p[len(os.path.abspath(snapshot_path)) + 1:]
+    return (p[len(os.path.abspath(context_path)) + 1:]
             for p in excluded_and_not_included_paths)
 
 
-def get_context_files(snapshot_path: str, matching_excluded_paths: [str]):
+def get_context_files(context_path: str, matching_excluded_paths: [str]):
     # Mimic what docker.utils.build.tar does
     return docker.utils.build.exclude_paths(
-        os.path.abspath(snapshot_path),
+        os.path.abspath(context_path),
         matching_excluded_paths)

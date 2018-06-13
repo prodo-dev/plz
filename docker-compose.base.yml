@@ -15,6 +15,7 @@ services:
         results = {
           directory = /data/results
         }
+        docker_build_retrials = 3
     volumes:
       - ./services/controller/config/localhost.conf:/root/server.conf:ro
       - ${SECRETS_DIR}/config.json:/root/config.json:ro

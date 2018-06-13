@@ -83,6 +83,7 @@ class Configuration:
             Property('debug', type=bool, default=False),
             Property('docker_run_args', type=dict, default={}),
             Property('connection_info', type=dict, default={}),
+            Property('context_path', type=str, default='.'),
         ]
     }
 
