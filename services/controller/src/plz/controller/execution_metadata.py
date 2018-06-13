@@ -16,19 +16,32 @@ from plz.controller.db_storage import DBStorage
 def convert_measures_to_dict(measures_tarball: Iterator[bytes]) -> dict:
     measures_dict = {}
     for path, file_content in _tar_iterator(measures_tarball):
+
         content = file_content.read()
         content_as_json = None
         try:
             content_as_json = json.load(io.BytesIO(content))
         except JSONDecodeError or UnicodeDecodeError:
             pass
+        # Treat directories as nested dictionaries
+        obj, key = _container_object_and_key_from_path(measures_dict, path)
         if content_as_json is not None:
-            measures_dict[path] = content_as_json
+            obj[key] = content_as_json
         else:
-            measures_dict[path] = {
+            obj[key] = {
                 'base64_bytes': base64.encodebytes(content).decode('ascii')
             }
     return measures_dict
+
+
+def _container_object_and_key_from_path(measures_dict: dict, path: str):
+    fragments = [f for f in path.split(os.path.sep) if f]
+    obj = measures_dict
+    for f in fragments[:-1]:
+        if f not in obj:
+            obj[f] = {}
+        obj = obj[f]
+    return obj, fragments[-1]
 
 
 def compile_metadata_for_storage(
