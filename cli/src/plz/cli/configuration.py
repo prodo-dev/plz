@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Dict, List, Optional, Type, TypeVar, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
 
 T = TypeVar('T')
 
@@ -103,7 +103,8 @@ class Configuration:
 
         configuration, file_config_was_read = \
             Configuration._override_with_file_configs(
-                config_file_name, configuration)
+                config_file_name, configuration,
+                plz_config_set_explicitly=configuration_path is not None)
 
         if not (user_level_config_was_read or file_config_was_read):
             raise ValidationException(
@@ -115,29 +116,36 @@ class Configuration:
 
     @staticmethod
     def _override_with_file_configs(
-            config_file_name: str, configuration: 'Configuration') \
-            -> Tuple['Configuration', bool]:
+            config_file_name: str, configuration: 'Configuration',
+            plz_config_set_explicitly: bool) -> Tuple['Configuration', bool]:
         config_was_read = False
         # Load all plz.config.json in parent directories since the mount point
-        path_fragments = config_file_name.split(os.sep)[:-1]
+        path_fragments = config_file_name.split(os.path.sep)[:-1]
         mount_index = len(path_fragments) - 1
-        for n in range(len(path_fragments) - 1, -1, -1):
+        # Stopping at 0. The empty path is the first entry, if we consider
+        # path_fragments[:0] it'd be duplicated
+        for n in range(len(path_fragments), 0, -1):
             mount_index = n
-            if os.path.ismount(os.path.join('', *path_fragments[:n])):
-                print('Mount point is: ', path_fragments[:n])
+            if os.path.ismount(os.path.join('/', *path_fragments[:n])):
                 break
-        for n in range(mount_index, len(path_fragments)):
+
+        for n in range(mount_index, len(path_fragments) + 1):
             if n < len(path_fragments) - 1:
                 file_name = Configuration.DEFAULT_CONFIGURATION_FILE_NAME
             else:
                 _, file_name = os.path.split(config_file_name)
             file_configuration = Configuration.from_file(
-                os.path.join('', *path_fragments[:n], file_name),
+                os.path.join('/', *path_fragments[:n], file_name),
                 Configuration.PROPERTIES,
                 fail_on_read_error=config_was_read)
             if file_configuration is not None:
                 config_was_read = True
                 configuration = configuration.override_with(file_configuration)
+            else:
+                if n == len(path_fragments) - 1 and plz_config_set_explicitly:
+                    raise ValidationException([
+                        ValidationError(
+                            f'Couldn\'t read from {config_file_name}')])
         return configuration, config_was_read
 
     @staticmethod
@@ -159,7 +167,8 @@ class Configuration:
     @staticmethod
     def _configuration_file_from_path(configuration_path: str) -> str:
         if configuration_path is None:
-            config_file_name = Configuration.DEFAULT_CONFIGURATION_FILE_NAME
+            config_file_name = os.path.abspath(
+                Configuration.DEFAULT_CONFIGURATION_FILE_NAME)
         elif os.path.isdir(configuration_path):
             config_file_name = os.path.abspath(os.path.join(
                 configuration_path,

@@ -10,7 +10,9 @@ class ListContextOperation(Operation):
 
     @classmethod
     def prepare_argument_parser(cls, parser, args):
-        pass
+        parser.add_argument(
+            '-e', '--excluded-paths', action='store_const', const=True,
+            default=False)
 
     def __init__(self, configuration: Configuration, excluded_paths: bool):
         self.excluded_paths = excluded_paths
