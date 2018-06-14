@@ -53,6 +53,9 @@ def main(args=sys.argv[1:]):
         sys.exit(2)
 
     operation_name = options.operation_name
+    if operation_name is None:
+        parser.print_help()
+        sys.exit(2)
     option_dict = options.__dict__
     del option_dict['operation_name']
 
