@@ -185,7 +185,7 @@ class RunExecutionOperation(Operation):
             data = json.loads(json_bytes.decode('utf-8'))
             if 'stream' in data:
                 if not self.configuration.quiet_build:
-                    print(data['stream'].rstrip())
+                    print(data['stream'], end='', flush=True)
             if 'error' in data:
                 errors.append(data['error'].rstrip())
             if 'id' in data:
