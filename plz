@@ -3,7 +3,7 @@
 set -e
 set -u
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$(dirname `readlink -f "${BASH_SOURCE[0]}"`)" && pwd)"
 
 if ! command -v pipenv > /dev/null; then
   echo >&2 'Could not find `pipenv`.'

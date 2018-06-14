@@ -9,6 +9,8 @@ from plz.cli.operation import Operation
 
 
 class PingBackendOperation(Operation):
+    """Check if the backend is reachable"""
+
     @classmethod
     def name(cls):
         return 'ping-backend'
@@ -16,7 +18,9 @@ class PingBackendOperation(Operation):
     @classmethod
     def prepare_argument_parser(cls, parser, args):
         parser.add_argument('-s', '--silent-on-success', action='store_true',
-                            default=False)
+                            default=False,
+                            help='On success exit with 0 and no output. '
+                                 'Useful for scripts')
 
     def __init__(self, configuration: Configuration, silent_on_success: bool,
                  ping_timeout: int):

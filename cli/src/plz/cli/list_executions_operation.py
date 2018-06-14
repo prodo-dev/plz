@@ -8,6 +8,8 @@ from plz.cli.operation import Operation, check_status
 
 
 class ListExecutionsOperation(Operation):
+    """List all current executions"""
+
     @classmethod
     def name(cls):
         return 'list'

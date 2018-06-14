@@ -6,6 +6,8 @@ from plz.cli.operation import Operation, check_status, \
 
 
 class RetrieveHistoryOperation(Operation):
+    """Output json describing finished executions for user and project"""
+
     @classmethod
     def name(cls):
         return 'history'

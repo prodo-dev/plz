@@ -8,6 +8,8 @@ from plz.cli.operation import Operation, check_status, on_exception_reraise
 
 
 class RetrieveMeasuresOperation(Operation):
+    """Output measures for an execution"""
+
     @classmethod
     def name(cls):
         return 'measures'
@@ -15,7 +17,8 @@ class RetrieveMeasuresOperation(Operation):
     @classmethod
     def prepare_argument_parser(cls, parser, args):
         cls.maybe_add_execution_id_arg(parser, args)
-        parser.add_argument('-s', '--summary', action='store_true')
+        parser.add_argument('-s', '--summary', action='store_true',
+                            help='Retrieve only the summary measures')
         parser.set_defaults(summary=False)
 
     def __init__(self, configuration: Configuration, summary: bool,

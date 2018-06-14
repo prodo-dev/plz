@@ -13,6 +13,8 @@ ExecutionStatus = collections.namedtuple(
 
 
 class ShowStatusOperation(Operation):
+    """Output the status of an execution"""
+
     @classmethod
     def name(cls):
         return 'status'
