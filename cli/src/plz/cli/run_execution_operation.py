@@ -31,7 +31,7 @@ class RunExecutionOperation(Operation):
 
     @classmethod
     def prepare_argument_parser(cls, parser, args):
-        parser.add_argument('--command', type=str, dest='Command to run')
+        parser.add_argument('--command', type=str, help='Command to run')
         add_output_dir_arg(parser)
         parser.add_argument('-p', '--parameters', dest='parameters_file',
                             help='Json file where parameters are stored',
