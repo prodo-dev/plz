@@ -1,6 +1,8 @@
 import json
 import os
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Optional, Type, TypeVar
+
+from plz.cli.exceptions import CLIException
 
 T = TypeVar('T')
 
@@ -99,86 +101,25 @@ class Configuration:
         config_file_name = Configuration._configuration_file_from_path(
             configuration_path)
 
-        configuration = Configuration.defaults(Configuration.PROPERTIES)
-        configuration, user_level_config_was_read = \
-            Configuration._override_with_user_level_config(configuration)
+        file_configurations = [
+            Configuration._get_user_level_config(),
+            *Configuration._get_parent_dirs_configs(config_file_name),
+            Configuration._get_top_level_config(
+                config_file_name,
+                config_set_explicitly=configuration_path is not None)]
 
-        configuration, file_config_was_read = \
-            Configuration._override_with_file_configs(
-                config_file_name, configuration,
-                plz_config_set_explicitly=configuration_path is not None)
-
-        if not (user_level_config_was_read or file_config_was_read):
+        file_configurations = [c for c in file_configurations if c is not None]
+        if file_configurations is []:
             raise ValidationException(
                 [Configuration.MISSING_CONFIGURATION_FILE_ERROR])
 
-        env_configuration = Configuration.from_env(Configuration.PROPERTIES)
-
-        return configuration.override_with(env_configuration).validate()
-
-    @staticmethod
-    def _override_with_file_configs(
-            config_file_name: str, configuration: 'Configuration',
-            plz_config_set_explicitly: bool) -> Tuple['Configuration', bool]:
-        config_was_read = False
-        # Load all plz.config.json in parent directories since the mount point
-        path_fragments = config_file_name.split(os.path.sep)[:-1]
-        mount_index = len(path_fragments) - 1
-        # Stopping at 0. The empty path is the first entry, if we consider
-        # path_fragments[:0] it'd be duplicated
-        for n in range(len(path_fragments), 0, -1):
-            mount_index = n
-            if os.path.ismount(os.path.join('/', *path_fragments[:n])):
-                break
-
-        for n in range(mount_index, len(path_fragments) + 1):
-            if n < len(path_fragments) - 1:
-                file_name = Configuration.DEFAULT_CONFIGURATION_FILE_NAME
-            else:
-                _, file_name = os.path.split(config_file_name)
-            file_configuration = Configuration.from_file(
-                os.path.join('/', *path_fragments[:n], file_name),
-                Configuration.PROPERTIES,
-                fail_on_read_error=config_was_read)
-            if file_configuration is not None:
-                config_was_read = True
-                configuration = configuration.override_with(file_configuration)
-            else:
-                if n == len(path_fragments) - 1 and plz_config_set_explicitly:
-                    raise ValidationException([
-                        ValidationError(
-                            f'Couldn\'t read from {config_file_name}')])
-        return configuration, config_was_read
-
-    @staticmethod
-    def _override_with_user_level_config(configuration) \
-            -> Tuple['Configuration', bool]:
-        user_level_config_file = os.path.expanduser(
-            os.path.join('~', '.config', 'plz',
-                         Configuration.DEFAULT_CONFIGURATION_FILE_NAME))
-        # We expect to be able to read the home directory, wrt to permissions
-        user_level_config = Configuration.from_file(
-            user_level_config_file, Configuration.PROPERTIES,
-            fail_on_read_error=True)
-        config_was_read = False
-        if user_level_config is not None:
-            configuration = configuration.override_with(user_level_config)
-            config_was_read = True
-        return configuration, config_was_read
-
-    @staticmethod
-    def _configuration_file_from_path(configuration_path: str) -> str:
-        if configuration_path is None:
-            config_file_name = os.path.abspath(
-                Configuration.DEFAULT_CONFIGURATION_FILE_NAME)
-        elif os.path.isdir(configuration_path):
-            config_file_name = os.path.abspath(os.path.join(
-                configuration_path,
-                Configuration.DEFAULT_CONFIGURATION_FILE_NAME))
-        else:
-            config_file_name = os.path.abspath(
-                os.path.join(configuration_path))
-        return config_file_name
+        configurations = [*file_configurations,
+                          Configuration.from_env(Configuration.PROPERTIES)]
+        configuration = Configuration.defaults(Configuration.PROPERTIES)
+        for c in configurations:
+            print(f'Overriding with: {c.data}')
+            configuration = configuration.override_with(c)
+        return configuration
 
     @staticmethod
     def defaults(properties: Dict[str, Property]) -> 'Configuration':
@@ -233,6 +174,83 @@ class Configuration:
         if errors:
             raise ValidationException(errors)
         return self
+
+    @staticmethod
+    def _get_top_level_config(config_file_name, config_set_explicitly: bool):
+        config = Configuration.from_file(
+            config_file_name, Configuration.PROPERTIES,
+            fail_on_read_error=True)
+        # The user provided a configuration file explicitly, but we couldn't
+        # read a configuration from it
+        if config_set_explicitly and config is None:
+            raise CLIException(
+                f'Couldn\'t read a configuration from {config_file_name}')
+        return config
+
+    @staticmethod
+    def _get_parent_dirs_configs(config_file_name: str) -> ['Configuration']:
+        """Return configurations in parent directories.
+
+           Starting from the mount point onwards.
+        """
+        configurations = []
+        # Load all plz.config.json in parent directories since the mount point
+        path_fragments = config_file_name.split(os.path.sep)[:-1]
+        mount_index = Configuration._get_mount_index(path_fragments)
+
+        # Iterating until `len(path_fragments)` we don't consider the top-level
+        # directory, this is strictly for parents
+        for n in range(mount_index, len(path_fragments)):
+            configuration = Configuration.from_file(
+                os.path.join(
+                    '/', *path_fragments[:n],
+                    Configuration.DEFAULT_CONFIGURATION_FILE_NAME),
+                Configuration.PROPERTIES,
+                # If we can read a configuration at some point, we don't
+                # expect to have any permissions problems/filesystem problems
+                # upwards
+                fail_on_read_error=len(configurations) > 0)
+            if configuration is not None:
+                configurations.append(configuration)
+        return configurations
+
+    @staticmethod
+    def _get_user_level_config() -> 'Configuration':
+        user_level_config_file = os.path.expanduser(
+            os.path.join('~', '.config', 'plz',
+                         Configuration.DEFAULT_CONFIGURATION_FILE_NAME))
+
+        return Configuration.from_file(
+            user_level_config_file, Configuration.PROPERTIES,
+            # We expect to be able to read a file the home directory
+            fail_on_read_error=True)
+
+    @staticmethod
+    def _get_mount_index(path_fragments):
+        """Return largest n such that `os.path.join('/', *path_fragments[:n])`
+           is a mount point"""
+        mount_index = len(path_fragments) - 1
+        # Stopping at 0. The empty path is the first entry, if we consider
+        # path_fragments[:0] it'd be duplicated
+        for n in range(len(path_fragments), 0, -1):
+            mount_index = n
+            if os.path.ismount(os.path.join('/', *path_fragments[:n])):
+                break
+        return mount_index
+
+    @staticmethod
+    def _configuration_file_from_path(configuration_path: str) -> str:
+        if configuration_path is None:
+            config_file_name = os.path.abspath(
+                Configuration.DEFAULT_CONFIGURATION_FILE_NAME)
+        elif os.path.isdir(configuration_path):
+            config_file_name = os.path.abspath(os.path.join(
+                configuration_path,
+                Configuration.DEFAULT_CONFIGURATION_FILE_NAME))
+        else:
+            config_file_name = os.path.abspath(
+                os.path.join(configuration_path))
+        return config_file_name
 
     def __getattr__(self, name):
         if name in self.properties:
