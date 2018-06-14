@@ -12,7 +12,7 @@ from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
 from plz.cli.git import get_head_commit_or_none
 from plz.cli.input_data import InputData
-from plz.cli.log import log_debug, log_error, log_info
+from plz.cli.log import log_debug, log_error, log_info, log_warning
 from plz.cli.logs_operation import LogsOperation
 from plz.cli.operation import Operation, add_output_dir_arg, check_status
 from plz.cli.parameters import Parameters
@@ -52,7 +52,8 @@ class RunExecutionOperation(Operation):
 
     def run(self):
         if not self.command:
-            raise CLIException('No command specified!')
+            raise CLIException('No command specified! Use --command or '
+                               'include a `command` entry in plz.config.json')
 
         if os.path.exists(self.output_dir):
             raise CLIException(
@@ -75,12 +76,28 @@ class RunExecutionOperation(Operation):
                 exclude_gitignored_files=exclude_gitignored_files,
             )
 
-        with self.suboperation(
-                'Capturing the context',
-                build_context_suboperation) as build_context:
-            snapshot_id = self.suboperation(
-                    'Building the program snapshot',
-                    lambda: self.submit_context_for_building(build_context))
+        retries = self.configuration.workarounds['docker_build_retries']
+        while retries + 1 > 0:
+            with self.suboperation(
+                    'Capturing the context',
+                    build_context_suboperation) as build_context:
+                try:
+                    snapshot_id = self.suboperation(
+                        'Building the program snapshot',
+                        lambda: self.submit_context_for_building(
+                            build_context))
+                    break
+                except CLIException as e:
+                    if type(e.__cause__) == PullAccessDeniedException \
+                            and retries > 0:
+                        log_warning(str(e))
+                        log_warning(
+                            'This might be a transient error. Retrying')
+                        retries -= 1
+                        time.sleep(7)
+                    else:
+                        raise e
+
         input_id = self.suboperation(
                 'Capturing the input',
                 self.capture_input,
@@ -174,9 +191,17 @@ class RunExecutionOperation(Operation):
                 snapshot_id = data['id']
         if errors or not snapshot_id:
             log_error('The snapshot was not successfully created.')
+            pull_access_denied = False
             for error in errors:
+                if error.startswith('pull access denied'):
+                    pull_access_denied = True
                 print(error)
-            raise CLIException('We did not receive a snapshot ID.')
+            exc_message = 'We did not receive a snapshot ID.'
+            if pull_access_denied:
+                raise CLIException(exc_message) \
+                    from PullAccessDeniedException()
+            else:
+                raise CLIException(exc_message)
         return snapshot_id
 
     def capture_input(self) -> Optional[str]:
@@ -246,3 +271,7 @@ class RunExecutionOperation(Operation):
         if self.configuration.debug:
             log_debug('Time taken: %.2fs' % time_taken)
         return result
+
+
+class PullAccessDeniedException(Exception):
+    pass

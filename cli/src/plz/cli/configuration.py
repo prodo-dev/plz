@@ -86,6 +86,12 @@ class Configuration:
             Property('docker_run_args', type=dict, default={}),
             Property('connection_info', type=dict, default={}),
             Property('context_path', type=str, default='.'),
+            # Default is info, unless debug is enabled, in which case default
+            # is debug
+            Property('log_level', type=str, default=None),
+            Property('use_emojis', type=bool, default=True),
+            Property('workarounds', type=dict,
+                     default={'docker_build_retries': 3}),
         ]
     }
 

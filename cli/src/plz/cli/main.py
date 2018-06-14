@@ -7,7 +7,7 @@ from plz.cli.configuration import Configuration, ValidationException
 from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
 from plz.cli.list_context_operation import ListContextOperation
 from plz.cli.list_executions_operation import ListExecutionsOperation
-from plz.cli.log import log_error
+from plz.cli.log import log_error, setup_logger
 from plz.cli.logs_operation import LogsOperation
 from plz.cli.operation import Operation
 from plz.cli.ping_backend_operation import PingBackendOperation
@@ -51,6 +51,8 @@ def main(args=sys.argv[1:]):
     except ValidationException as e:
         e.print()
         sys.exit(2)
+
+    setup_logger(configuration)
 
     operation_name = options.operation_name
     option_dict = options.__dict__
