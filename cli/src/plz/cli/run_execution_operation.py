@@ -52,8 +52,8 @@ class RunExecutionOperation(Operation):
 
     def run(self):
         if not self.command:
-            raise CLIException('No command specified! Use --command or include'
-                               'a `command` entry in plz.config.json')
+            raise CLIException('No command specified! Use --command or '
+                               'include a `command` entry in plz.config.json')
 
         if os.path.exists(self.output_dir):
             raise CLIException(
@@ -93,6 +93,7 @@ class RunExecutionOperation(Operation):
                         log_warning(
                             'This might be a transient error. Retrying')
                         retrials -= 1
+                        time.sleep(3)
                     else:
                         raise e
 
