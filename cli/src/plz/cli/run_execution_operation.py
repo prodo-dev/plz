@@ -88,12 +88,13 @@ class RunExecutionOperation(Operation):
                             build_context))
                     break
                 except CLIException as e:
-                    if retrials > 0:
+                    if type(e.__cause__) == PullAccessDeniedException \
+                            and retrials > 0:
                         log_warning(str(e))
                         log_warning(
                             'This might be a transient error. Retrying')
                         retrials -= 1
-                        time.sleep(3)
+                        time.sleep(5)
                     else:
                         raise e
 
@@ -190,9 +191,17 @@ class RunExecutionOperation(Operation):
                 snapshot_id = data['id']
         if errors or not snapshot_id:
             log_error('The snapshot was not successfully created.')
+            pull_access_denied = False
             for error in errors:
+                if error.startswith('pull access denied'):
+                    pull_access_denied = True
                 print(error)
-            raise CLIException('We did not receive a snapshot ID.')
+            exc_message = 'We did not receive a snapshot ID.'
+            if pull_access_denied:
+                raise CLIException(exc_message) \
+                    from PullAccessDeniedException()
+            else:
+                raise CLIException(exc_message)
         return snapshot_id
 
     def capture_input(self) -> Optional[str]:
@@ -262,3 +271,7 @@ class RunExecutionOperation(Operation):
         if self.configuration.debug:
             log_debug('Time taken: %.2fs' % time_taken)
         return result
+
+
+class PullAccessDeniedException(Exception):
+    pass
