@@ -95,7 +95,7 @@ class RunExecutionOperation(Operation):
                         log_warning(
                             'This might be a transient error. Retrying')
                         retrials -= 1
-                        time.sleep(5)
+                        time.sleep(7)
                     else:
                         raise e
 
