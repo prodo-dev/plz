@@ -78,8 +78,9 @@ class RunExecutionOperation(Operation):
 
         retrials = self.configuration.workarounds['docker_build_retrials']
         while retrials + 1 > 0:
+            _, top_dir_name = os.path.split(os.path.abspath(context_path))
             with self.suboperation(
-                    'Capturing the context',
+                    f'Capturing the files in {top_dir_name}',
                     build_context_suboperation) as build_context:
                 try:
                     snapshot_id = self.suboperation(
