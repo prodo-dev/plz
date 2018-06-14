@@ -91,7 +91,7 @@ class Configuration:
             Property('log_level', type=str, default=None),
             Property('use_emojis', type=bool, default=True),
             Property('workarounds', type=dict,
-                     default={'docker_build_retrials': 3}),
+                     default={'docker_build_retries': 3}),
         ]
     }
 

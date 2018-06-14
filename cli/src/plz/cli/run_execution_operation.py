@@ -76,8 +76,8 @@ class RunExecutionOperation(Operation):
                 exclude_gitignored_files=exclude_gitignored_files,
             )
 
-        retrials = self.configuration.workarounds['docker_build_retrials']
-        while retrials + 1 > 0:
+        retries = self.configuration.workarounds['docker_build_retries']
+        while retries + 1 > 0:
             with self.suboperation(
                     'Capturing the context',
                     build_context_suboperation) as build_context:
@@ -89,11 +89,11 @@ class RunExecutionOperation(Operation):
                     break
                 except CLIException as e:
                     if type(e.__cause__) == PullAccessDeniedException \
-                            and retrials > 0:
+                            and retries > 0:
                         log_warning(str(e))
                         log_warning(
                             'This might be a transient error. Retrying')
-                        retrials -= 1
+                        retries -= 1
                         time.sleep(7)
                     else:
                         raise e
