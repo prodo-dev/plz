@@ -62,6 +62,7 @@ class LocalInputData(InputData):
             self.input_id = input_id
             return self
 
+        log_debug('Building the tarball!')
         files = (os.path.join(directory, file)
                  for directory, _, files in os.walk(self.path)
                  for file in files)
@@ -114,7 +115,13 @@ class LocalInputData(InputData):
         return file_hash.hexdigest()
 
     def _has_input(self, input_id: str) -> bool:
-        response = self.server.head('data', 'input', input_id)
+        response = self.server.head(
+            'data', 'input', input_id, params={
+                'user': self.user,
+                'project': self.project,
+                'path': self.path,
+                'timestamp_millis': self.timestamp_millis})
+        print('Response is:', response)
         return response.status_code == requests.codes.ok
 
     def _put_tarball(self, input_id: str) -> str:
