@@ -121,7 +121,6 @@ class LocalInputData(InputData):
                 'project': self.project,
                 'path': self.path,
                 'timestamp_millis': self.timestamp_millis})
-        print('Response is:', response)
         return response.status_code == requests.codes.ok
 
     def _put_tarball(self, input_id: str) -> str:
