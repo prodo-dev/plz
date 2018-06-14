@@ -21,9 +21,9 @@ class ListContextOperation(Operation):
     def run(self):
         exclude_gitignored_files = \
             self.configuration.exclude_gitignored_files
-        snapshot_path = '.'
+        context_path = self.configuration.context_path
         matching_excluded_paths = get_matching_excluded_paths(
-            snapshot_path=snapshot_path,
+            context_path=context_path,
             excluded_paths=self.configuration.excluded_paths,
             included_paths=self.configuration.included_paths,
             exclude_gitignored_files=exclude_gitignored_files)
@@ -32,5 +32,5 @@ class ListContextOperation(Operation):
                 print(p)
             return
         for f in sorted(get_context_files(
-                snapshot_path, matching_excluded_paths)):
+                context_path, matching_excluded_paths)):
             print(f)

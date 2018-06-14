@@ -35,6 +35,7 @@ OPERATIONS: [Type[Operation]] = [
 def main(args=sys.argv[1:]):
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--ping-timeout', type=int, default=5)
+    parser.add_argument('-c', '--configuration-path', type=str, default=None)
     subparsers = parser.add_subparsers(title='operations',
                                        dest='operation_name')
     for operation in OPERATIONS:
@@ -44,7 +45,9 @@ def main(args=sys.argv[1:]):
     options = parser.parse_args(args)
 
     try:
-        configuration = Configuration.load()
+        configuration_path = options.configuration_path \
+                             or os.environ.get('PLZ_CONFIGURATION_PATH', None)
+        configuration = Configuration.load(configuration_path)
     except ValidationException as e:
         e.print()
         sys.exit(2)
@@ -56,6 +59,8 @@ def main(args=sys.argv[1:]):
     ping_timeout = options.ping_timeout
     if operation_name != 'ping-backend':
         del option_dict['ping_timeout']
+
+    del option_dict['configuration_path']
 
     operation_classes = [o for o in OPERATIONS if o.name() == operation_name]
     if len(operation_classes) == 0:

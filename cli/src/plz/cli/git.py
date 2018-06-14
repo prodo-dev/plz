@@ -7,23 +7,23 @@ import glob2
 from plz.cli.exceptions import CLIException
 
 
-def get_head_commit_or_none(snapshot_path: str) -> Optional[str]:
-    if is_git_present(snapshot_path):
-        return _get_head_commit(snapshot_path)
+def get_head_commit_or_none(context_path: str) -> Optional[str]:
+    if is_git_present(context_path):
+        return _get_head_commit(context_path)
     else:
         return None
 
 
-def get_ignored_git_files(snapshot_path: str) -> [str]:
+def get_ignored_git_files(context_path: str) -> [str]:
     all_files = os.linesep.join(
         glob2.iglob(
-            os.path.join(snapshot_path, '**'),
+            os.path.join(context_path, '**'),
             recursive=True,
             include_hidden=True))
     # Using --no-index, so that .gitignored but indexed files need to be
     # included explicitly.
     result = subprocess.run(
-        ['git', '-C', snapshot_path, 'check-ignore', '--stdin', '--no-index'],
+        ['git', '-C', context_path, 'check-ignore', '--stdin', '--no-index'],
         input=all_files,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -39,11 +39,11 @@ def get_ignored_git_files(snapshot_path: str) -> [str]:
     return [os.path.abspath(p) for p in result.stdout.splitlines()]
 
 
-def is_git_present(snapshot_path: str) -> bool:
+def is_git_present(context_path: str) -> bool:
     # noinspection PyBroadException
     try:
         result = subprocess.run(
-            ['git', '-C', snapshot_path, 'rev-parse', '--show-toplevel'],
+            ['git', '-C', context_path, 'rev-parse', '--show-toplevel'],
             input=None,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -54,11 +54,11 @@ def is_git_present(snapshot_path: str) -> bool:
         return False
 
 
-def _get_head_commit(snapshot_path: str) -> Optional[str]:
-    if not _is_there_a_head_commit(snapshot_path):
+def _get_head_commit(context_path: str) -> Optional[str]:
+    if not _is_there_a_head_commit(context_path):
         return None
     result = subprocess.run(
-        ['git', '-C', snapshot_path, 'rev-parse', 'HEAD'],
+        ['git', '-C', context_path, 'rev-parse', 'HEAD'],
         input=None,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -72,11 +72,11 @@ def _get_head_commit(snapshot_path: str) -> Optional[str]:
     return commit
 
 
-def _is_there_a_head_commit(snapshot_path: str) -> bool:
+def _is_there_a_head_commit(context_path: str) -> bool:
     # We could be doing `git rev-list -n 1 --all`, and check that the output
     # is non-empty, but Ubuntu ships with ridiculous versions of git
     result = subprocess.run(
-        ['git', '-C', snapshot_path, 'show-ref', '--head'],
+        ['git', '-C', context_path, 'show-ref', '--head'],
         input=None,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

@@ -2,10 +2,10 @@ import io
 import itertools
 import json
 import os
+import time
 from typing import Any, Callable, Optional, Tuple
 
 import requests
-import time
 
 from plz.cli import parameters
 from plz.cli.configuration import Configuration
@@ -62,14 +62,14 @@ class RunExecutionOperation(Operation):
 
         exclude_gitignored_files = \
             self.configuration.exclude_gitignored_files
-        snapshot_path = '.'
+        context_path = self.configuration.context_path
 
         def build_context_suboperation():
             return capture_build_context(
                 image=self.configuration.image,
                 image_extensions=self.configuration.image_extensions,
                 command=self.configuration.command,
-                snapshot_path=snapshot_path,
+                context_path=context_path,
                 excluded_paths=self.configuration.excluded_paths,
                 included_paths=self.configuration.included_paths,
                 exclude_gitignored_files=exclude_gitignored_files,
@@ -88,7 +88,7 @@ class RunExecutionOperation(Operation):
         execution_id, ok = self.suboperation(
                 'Sending request to start execution',
                 lambda: self.start_execution(snapshot_id, params, input_id,
-                                             snapshot_path))
+                                             context_path))
         self.execution_id = execution_id
         log_info(f'Execution ID is: {execution_id}')
 
@@ -188,7 +188,7 @@ class RunExecutionOperation(Operation):
             snapshot_id: str,
             params: Parameters,
             input_id: Optional[str],
-            snapshot_path: str) \
+            context_path: str) \
             -> Tuple[Optional[str], bool]:
         configuration = self.configuration
         execution_spec = {
@@ -198,7 +198,7 @@ class RunExecutionOperation(Operation):
             'input_id': input_id,
             'docker_run_args': configuration.docker_run_args
         }
-        commit = get_head_commit_or_none(snapshot_path)
+        commit = get_head_commit_or_none(context_path)
         response = self.server.post(
             'executions',
             stream=True,

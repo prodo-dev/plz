@@ -1,6 +1,8 @@
 import json
 import os
-from typing import Any, Dict, List, Type, TypeVar
+from typing import Any, Dict, List, Optional, Type, TypeVar
+
+from plz.cli.exceptions import CLIException
 
 T = TypeVar('T')
 
@@ -83,29 +85,38 @@ class Configuration:
             Property('debug', type=bool, default=False),
             Property('docker_run_args', type=dict, default={}),
             Property('connection_info', type=dict, default={}),
+            Property('context_path', type=str, default='.'),
         ]
     }
 
-    CONFIGURATION_FILE = 'plz.config.json'
+    DEFAULT_CONFIGURATION_FILE_NAME = 'plz.config.json'
     MISSING_CONFIGURATION_FILE_ERROR = ValidationError(
-        f'You must create a {CONFIGURATION_FILE} file.')
+        f'You must create a {DEFAULT_CONFIGURATION_FILE_NAME} file, '
+        f'or specify a path to it with -c')
 
     @staticmethod
-    def load() -> 'Configuration':
-        default_configuration = Configuration.defaults(
-            Configuration.PROPERTIES)
-        try:
-            file_configuration = Configuration.from_file(
-                Configuration.CONFIGURATION_FILE, Configuration.PROPERTIES)
-        except FileNotFoundError:
+    def load(configuration_path: Optional[str] = None) -> 'Configuration':
+        config_file_name = Configuration._configuration_file_from_path(
+            configuration_path)
+
+        file_configurations = [
+            Configuration._get_user_level_config(),
+            *Configuration._get_parent_dirs_configs(config_file_name),
+            Configuration._get_top_level_config(
+                config_file_name,
+                config_set_explicitly=configuration_path is not None)]
+
+        file_configurations = [c for c in file_configurations if c is not None]
+        if file_configurations is []:
             raise ValidationException(
                 [Configuration.MISSING_CONFIGURATION_FILE_ERROR])
-        env_configuration = Configuration.from_env(Configuration.PROPERTIES)
 
-        return default_configuration \
-            .override_with(file_configuration) \
-            .override_with(env_configuration) \
-            .validate()
+        configurations = [*file_configurations,
+                          Configuration.from_env(Configuration.PROPERTIES)]
+        configuration = Configuration.defaults(Configuration.PROPERTIES)
+        for c in configurations:
+            configuration = configuration.override_with(c)
+        return configuration
 
     @staticmethod
     def defaults(properties: Dict[str, Property]) -> 'Configuration':
@@ -113,11 +124,19 @@ class Configuration:
         return Configuration(properties, data)
 
     @staticmethod
-    def from_file(filepath: str, properties: Dict[str, Property]) \
-            -> 'Configuration':
-        with open(filepath, 'r') as f:
-            data = json.load(f)
-        return Configuration(properties, data)
+    def from_file(filepath: str, properties: Dict[str, Property],
+                  fail_on_read_error: bool) -> Optional['Configuration']:
+        try:
+            if not os.path.exists(filepath):
+                return None
+            with open(filepath, 'r') as f:
+                file_content = f.read()
+        except Exception as e:
+            if fail_on_read_error:
+                raise e
+            return None
+
+        return Configuration(properties, json.loads(file_content))
 
     @staticmethod
     def from_env(properties: Dict[str, Property]) -> 'Configuration':
@@ -152,6 +171,83 @@ class Configuration:
         if errors:
             raise ValidationException(errors)
         return self
+
+    @staticmethod
+    def _get_top_level_config(config_file_name, config_set_explicitly: bool):
+        config = Configuration.from_file(
+            config_file_name, Configuration.PROPERTIES,
+            fail_on_read_error=True)
+        # The user provided a configuration file explicitly, but we couldn't
+        # read a configuration from it
+        if config_set_explicitly and config is None:
+            raise CLIException(
+                f'Couldn\'t read a configuration from {config_file_name}')
+        return config
+
+    @staticmethod
+    def _get_parent_dirs_configs(config_file_name: str) -> ['Configuration']:
+        """Return configurations in parent directories.
+
+           Starting from the mount point onwards.
+        """
+        configurations = []
+        # Load all plz.config.json in parent directories since the mount point
+        path_fragments = config_file_name.split(os.path.sep)[:-1]
+        mount_index = Configuration._get_mount_index(path_fragments)
+
+        # Iterating until `len(path_fragments)` we don't consider the top-level
+        # directory, this is strictly for parents
+        for n in range(mount_index, len(path_fragments)):
+            configuration = Configuration.from_file(
+                os.path.join(
+                    '/', *path_fragments[:n],
+                    Configuration.DEFAULT_CONFIGURATION_FILE_NAME),
+                Configuration.PROPERTIES,
+                # If we can read a configuration at some point, we don't
+                # expect to have any permissions problems/filesystem problems
+                # upwards
+                fail_on_read_error=len(configurations) > 0)
+            if configuration is not None:
+                configurations.append(configuration)
+        return configurations
+
+    @staticmethod
+    def _get_user_level_config() -> 'Configuration':
+        user_level_config_file = os.path.expanduser(
+            os.path.join('~', '.config', 'plz',
+                         Configuration.DEFAULT_CONFIGURATION_FILE_NAME))
+
+        return Configuration.from_file(
+            user_level_config_file, Configuration.PROPERTIES,
+            # We expect to be able to read a file the home directory
+            fail_on_read_error=True)
+
+    @staticmethod
+    def _get_mount_index(path_fragments):
+        """Return largest n such that `os.path.join('/', *path_fragments[:n])`
+           is a mount point"""
+        mount_index = len(path_fragments) - 1
+        # Stopping at 0. The empty path is the first entry, if we consider
+        # path_fragments[:0] it'd be duplicated
+        for n in range(len(path_fragments), 0, -1):
+            mount_index = n
+            if os.path.ismount(os.path.join('/', *path_fragments[:n])):
+                break
+        return mount_index
+
+    @staticmethod
+    def _configuration_file_from_path(configuration_path: str) -> str:
+        if configuration_path is None:
+            config_file_name = os.path.abspath(
+                Configuration.DEFAULT_CONFIGURATION_FILE_NAME)
+        elif os.path.isdir(configuration_path):
+            config_file_name = os.path.abspath(os.path.join(
+                configuration_path,
+                Configuration.DEFAULT_CONFIGURATION_FILE_NAME))
+        else:
+            config_file_name = os.path.abspath(
+                os.path.join(configuration_path))
+        return config_file_name
 
     def __getattr__(self, name):
         if name in self.properties:
