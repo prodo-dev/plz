@@ -2,6 +2,8 @@ import json
 import os
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
+from plz.cli.exceptions import CLIException
+
 T = TypeVar('T')
 
 
@@ -179,7 +181,7 @@ class Configuration:
         # The user provided a configuration file explicitly, but we couldn't
         # read a configuration from it
         if config_set_explicitly and config is None:
-            raise FileNotFoundError(
+            raise CLIException(
                 f'Couldn\'t read a configuration from {config_file_name}')
         return config
 
