@@ -115,7 +115,6 @@ class Configuration:
                           Configuration.from_env(Configuration.PROPERTIES)]
         configuration = Configuration.defaults(Configuration.PROPERTIES)
         for c in configurations:
-            print(f'Overriding with: {c.data}')
             configuration = configuration.override_with(c)
         return configuration
 
