@@ -23,7 +23,7 @@ from plz.cli.snapshot import capture_build_context
 
 
 class RunExecutionOperation(Operation):
-    """Run an arbitrary command on a remote machine."""
+    """Run an arbitrary command on a remote machine"""
 
     @classmethod
     def name(cls):
@@ -79,9 +79,9 @@ class RunExecutionOperation(Operation):
 
         retrials = self.configuration.workarounds['docker_build_retrials']
         while retrials + 1 > 0:
-            _, top_dir_name = os.path.split(os.path.abspath(context_path))
+            context_abs_path = os.path.split(os.path.abspath(context_path))
             with self.suboperation(
-                    f'Capturing the files in {top_dir_name}',
+                    f'Capturing the files in {context_abs_path}',
                     build_context_suboperation) as build_context:
                 try:
                     snapshot_id = self.suboperation(
