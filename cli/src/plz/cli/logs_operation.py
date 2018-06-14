@@ -10,6 +10,8 @@ from plz.cli.operation import Operation, check_status, on_exception_reraise
 
 
 class LogsOperation(Operation):
+    """Output logs for a given execution"""
+
     @classmethod
     def name(cls):
         return 'logs'
@@ -17,7 +19,11 @@ class LogsOperation(Operation):
     @classmethod
     def prepare_argument_parser(cls, parser, args):
         cls.maybe_add_execution_id_arg(parser, args)
-        parser.add_argument('-s', '--since')
+        parser.add_argument(
+            '-s', '--since',
+            help='Specify a start time for the log output. Unfilled fields are'
+                 'assumed to be same as of current time: `10:30` is today\'s '
+                 '10:30. Use `start` to print all logs')
 
     def __init__(self,
                  configuration: Configuration,
@@ -58,7 +64,7 @@ class LogsOperation(Operation):
         check_status(response, requests.codes.ok)
         try:
             for line in response.raw:
-                print(line.decode('utf-8'), end='')
+                print(line.decode('utf-8'), end='', flush=True)
         except KeyboardInterrupt:
             print()
             if print_interrupt_message:

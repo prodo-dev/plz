@@ -93,5 +93,7 @@ def add_output_dir_arg(parser):
     parser.add_argument('-o', '--output-dir',
                         type=str,
                         default=os.path.join(os.getcwd(), 'output/%e'),
-                        help='Directory to store output. The string %e is '
+                        # Note, it's actually the string `%e`, the argparser
+                        # lib does string replacement the old Python 2 way...
+                        help='Directory to store output. The string %%e is '
                              'replaced by the execution id')

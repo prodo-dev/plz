@@ -14,6 +14,8 @@ from plz.cli.operation import Operation, add_output_dir_arg, check_status, \
 
 
 class RetrieveOutputOperation(Operation):
+    """Download output for an execution"""
+
     @classmethod
     def name(cls):
         return 'output'

@@ -8,15 +8,15 @@ from plz.cli.operation import Operation, check_status
 
 
 class StopExecutionOperation(Operation):
+    """Stops an execution"""
+
     @classmethod
     def name(cls):
         return 'stop'
 
     @classmethod
     def prepare_argument_parser(cls, parser, args):
-        if len(args) > 1:
-            # Execution ID was specified
-            parser.add_argument(dest='execution_id')
+        cls.maybe_add_execution_id_arg(parser, args)
 
     def __init__(self, configuration: Configuration,
                  execution_id: Optional[str] = None):

@@ -23,7 +23,7 @@ from plz.cli.snapshot import capture_build_context
 
 
 class RunExecutionOperation(Operation):
-    """Run an arbitrary command on a remote machine."""
+    """Run an arbitrary command on a remote machine"""
 
     @classmethod
     def name(cls):
@@ -31,9 +31,10 @@ class RunExecutionOperation(Operation):
 
     @classmethod
     def prepare_argument_parser(cls, parser, args):
-        parser.add_argument('--command', type=str)
+        parser.add_argument('--command', type=str, help='Command to run')
         add_output_dir_arg(parser)
         parser.add_argument('-p', '--parameters', dest='parameters_file',
+                            help='Json file where parameters are stored',
                             type=str)
 
     def __init__(self,
@@ -79,7 +80,7 @@ class RunExecutionOperation(Operation):
         retries = self.configuration.workarounds['docker_build_retries']
         while retries + 1 > 0:
             with self.suboperation(
-                    'Capturing the context',
+                    f'Capturing the files in {os.path.abspath(context_path)}',
                     build_context_suboperation) as build_context:
                 try:
                     snapshot_id = self.suboperation(
@@ -184,7 +185,7 @@ class RunExecutionOperation(Operation):
             data = json.loads(json_bytes.decode('utf-8'))
             if 'stream' in data:
                 if not self.configuration.quiet_build:
-                    print(data['stream'].rstrip())
+                    print(data['stream'], end='', flush=True)
             if 'error' in data:
                 errors.append(data['error'].rstrip())
             if 'id' in data:
