@@ -128,13 +128,39 @@ def run_execution_entrypoint():
     # Test with:
     # curl -X POST -d '{"command": "ls /" }'
     #    -H 'Content-Type: application/json' localhost:5000/executions
+    execution_spec = request.json['execution_spec']
     command = request.json['command']
     snapshot_id = request.json['snapshot_id']
     parameters = request.json['parameters']
-    execution_spec = request.json['execution_spec']
     start_metadata = request.json['start_metadata']
-    execution_id = str(get_execution_uuid())
+    return run_execution(command, snapshot_id, parameters, execution_spec,
+                         start_metadata)
 
+
+@app.route(f'/executions/rerun', methods=['POST'])
+def rerun_execution_entrypoint():
+    # Test with:
+    # curl -X POST -d '{"command": "ls /" }'
+    #    -H 'Content-Type: application/json' localhost:5000/executions
+    previous_execution_id = request.json['execution_id']
+    start_metadata = db_storage.retrieve_start_metadata(previous_execution_id)
+
+    user = start_metadata['user']
+    project = start_metadata['project']
+    command = start_metadata['command']
+    snapshot_id = start_metadata['snapshot_id']
+    parameters = start_metadata['parameters']
+    execution_spec = start_metadata['execution_spec']
+    execution_spec['user'] = user
+    execution_spec['project'] = project
+    return run_execution(command, snapshot_id, parameters, execution_spec,
+                         start_metadata, previous_execution_id)
+
+
+def run_execution(command, snapshot_id, parameters,
+                  execution_spec, start_metadata,
+                  previous_execution_id: Optional[str] = None):
+    execution_id = str(get_execution_uuid())
     start_metadata['command'] = command
     start_metadata['snapshot_id'] = snapshot_id
     start_metadata['parameters'] = parameters
@@ -142,6 +168,7 @@ def run_execution_entrypoint():
                                         if k not in {'user', 'project'}}
     start_metadata['user'] = execution_spec['user']
     start_metadata['project'] = execution_spec['project']
+    start_metadata['previous_execution_id'] = previous_execution_id
     db_storage.store_start_metadata(execution_id, start_metadata)
 
     @_json_stream
