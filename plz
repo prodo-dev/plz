@@ -3,9 +3,14 @@
 set -e
 set -u
 
-ROOT="$(cd "$(dirname `readlink -f "${BASH_SOURCE[0]}"`)" && pwd)"
+if command -v realpath > /dev/null; then
+  ROOT="$(cd "$(dirname "$(realpath "${BASH_SOURCE[0]}")")" && pwd)"
+else
+  ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+fi
 
 if ! command -v pipenv > /dev/null; then
+  # shellcheck disable=SC2016
   echo >&2 'Could not find `pipenv`.'
   exit 2
 fi
