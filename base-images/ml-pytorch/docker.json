@@ -34,6 +34,7 @@
         "apt-get update -qq",
         "apt-get install -y bzip2 curl g++",
         "/install/anaconda.sh -b -u -p {{user `anaconda_dir`}}",
+        "{{user `anaconda_dir`}}/bin/conda update -y -n base conda",
         "{{user `anaconda_dir`}}/bin/conda env create --name={{user `anaconda_env`}} --file=/env/environment.yml"
       ]
     },
