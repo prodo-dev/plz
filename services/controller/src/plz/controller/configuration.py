@@ -15,7 +15,7 @@ from plz.controller.redis_db_storage import RedisDBStorage
 from plz.controller.results import LocalResultsStorage
 from plz.controller.volumes import Volumes
 
-AMI_TAG = '2018-05-03'
+AMI_TAG = '2018-06-18'
 WORKER_AMI = f'plz-worker-{AMI_TAG}'
 
 Dependencies = collections.namedtuple(
@@ -93,9 +93,9 @@ def _instance_provider_from(
 def _images_from(config, docker_host):
     images_type = config.get('images.provider', 'local')
     docker_api_client_timeout = config.get(
-        'images.docker_api_client_timeout', None)
+        'assumptions.docker_api_client_timeout_in_minutes', None)
     if docker_api_client_timeout is not None:
-        client_extra_args = {'timeout': docker_api_client_timeout}
+        client_extra_args = {'timeout': docker_api_client_timeout * 60}
     else:
         client_extra_args = {}
     docker_api_client = docker.APIClient(
@@ -109,7 +109,9 @@ def _images_from(config, docker_host):
             region_name=config['images.region'])
         registry = config['images.registry']
         repository = f'{registry}/{config["images.repository"]}'
-        images = ECRImages(docker_api_client, ecr_client, registry, repository)
+        images = ECRImages(
+            docker_api_client, ecr_client, registry, repository,
+            config['assumptions.ecr_login_validity_in_minutes'])
     else:
         raise ValueError('Invalid image provider.')
     return images

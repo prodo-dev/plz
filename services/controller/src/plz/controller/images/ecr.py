@@ -1,11 +1,10 @@
 import base64
 import json
 import logging
-import time
 from typing import BinaryIO, Iterator
 
 import docker
-import os
+import time
 from requests.exceptions import ChunkedEncodingError, ConnectionError
 
 from plz.controller.images.images_base import Images
@@ -32,7 +31,8 @@ class ECRImages(Images):
             new_docker_api_client,
             self.ecr_client,
             self.registry,
-            self.repository)
+            self.repository,
+            self.login_validity_in_minutes)
 
     def build(self, fileobj: BinaryIO, tag: str) -> Iterator[bytes]:
         self._login()
@@ -59,11 +59,12 @@ class ECRImages(Images):
             return False
 
     def _login(self) -> None:
-        time_since_last_login = time.time() - self.last_login_time
-        if self.last_login_time and \
-                time_since_last_login < self.login_validity_in_minutes * 60:
-            return
-        log.debug(f'Yes login! Pid: {os.getpid()}. Last login time: {self.last_login_time}')
+        if self.last_login_time:
+            time_since_last_login = time.time() - self.last_login_time
+            if time_since_last_login < self.login_validity_in_minutes * 60:
+                log.debug('Skipping ECR login')
+                return
+        log.debug('Logging in to ECR')
         authorization_token = self.ecr_client.get_authorization_token()
         authorization_data = authorization_token['authorizationData']
         encoded_token = authorization_data[0]['authorizationToken']
