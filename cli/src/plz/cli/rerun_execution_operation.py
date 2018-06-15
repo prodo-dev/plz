@@ -6,7 +6,7 @@ from plz.cli.run_execution_operation import RunExecutionOperation
 
 
 class RerunExecutionOperation(Operation):
-    """Check if the backend is reachable"""
+    """Rerun an execution given an execution ID"""
 
     @classmethod
     def name(cls):
