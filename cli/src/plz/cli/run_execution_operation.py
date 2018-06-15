@@ -41,7 +41,7 @@ class RunExecutionOperation(Operation):
                  configuration: Configuration,
                  command: Optional[str],
                  output_dir: str,
-                 parameters_file: str):
+                 parameters_file: Optional[str]):
         super().__init__(configuration)
         self.configuration = configuration
         self.output_dir = output_dir
@@ -103,27 +103,30 @@ class RunExecutionOperation(Operation):
                 'Capturing the input',
                 self.capture_input,
                 if_set=self.configuration.input)
-        execution_id, ok = self.suboperation(
+        execution_id, was_start_ok = self.suboperation(
                 'Sending request to start execution',
                 lambda: self.start_execution(snapshot_id, params, input_id,
                                              context_path))
         self.execution_id = execution_id
-        log_info(f'Execution ID is: {execution_id}')
+        self.follow_execution(was_start_ok)
+
+    def follow_execution(self, was_start_ok: bool):
+        log_info(f'Execution ID is: {self.execution_id}')
 
         retrieve_output_operation = RetrieveOutputOperation(
             self.configuration,
             output_dir=self.output_dir,
-            execution_id=execution_id,
+            execution_id=self.execution_id,
             force_if_running=False)
 
         cancelled = False
         try:
-            if not ok:
+            if not was_start_ok:
                 raise CLIException('The command failed.')
             logs = LogsOperation(self.configuration,
-                                 execution_id=execution_id,
+                                 execution_id=self.execution_id,
                                  since='start')
-            logs.display_logs(execution_id, print_interrupt_message=True)
+            logs.display_logs(self.execution_id, print_interrupt_message=True)
         except CLIException as e:
             e.print(self.configuration)
             raise ExitWithStatusCodeException(e.exit_code)
@@ -139,14 +142,13 @@ class RunExecutionOperation(Operation):
             return
 
         retrieve_measures_operation = RetrieveMeasuresOperation(
-            self.configuration, execution_id=self.get_execution_id(),
-            summary=True)
+            self.configuration, execution_id=self.execution_id, summary=True)
         self.suboperation(
             'Retrieving summary of measures (if present)...',
             retrieve_measures_operation.retrieve_measures)
 
         show_status_operation = ShowStatusOperation(
-            self.configuration, execution_id=execution_id)
+            self.configuration, execution_id=self.execution_id)
         status = show_status_operation.get_status()
         if status.running:
             raise CLIException(
@@ -242,6 +244,11 @@ class RunExecutionOperation(Operation):
                     }
                 },
             })
+        return RunExecutionOperation.get_execution_id_from_start_response(
+            response)
+
+    @staticmethod
+    def get_execution_id_from_start_response(response) -> Tuple[str, bool]:
         check_status(response, requests.codes.accepted)
         execution_id: Optional[str] = None
         ok = True
