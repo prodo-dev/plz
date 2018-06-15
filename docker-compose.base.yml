@@ -15,8 +15,16 @@ services:
         results = {
           directory = /data/results
         }
+        assumptions = {
+          # We assume that 10 minutes is sufficient for socket
+          # operations on the docker client
+          docker_api_client_timeout_in_minutes = 10
+          # We assume that the auth tokens from ECR last for
+          # at least 5 minutes
+          ecr_login_validity_in_minutes = 5
+        }
+
     volumes:
-      - ./services/controller/config/localhost.conf:/root/server.conf:ro
       - ${SECRETS_DIR}/config.json:/root/config.json:ro
       - ${SECRETS_DIR}/keys/id_rsa:/root/.ssh/id_rsa:ro
       - /var/run/docker.sock:/var/run/docker.sock
