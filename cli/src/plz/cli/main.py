@@ -11,6 +11,7 @@ from plz.cli.log import log_error, setup_logger
 from plz.cli.logs_operation import LogsOperation
 from plz.cli.operation import Operation
 from plz.cli.ping_backend_operation import PingBackendOperation
+from plz.cli.rerun_execution_operation import RerunExecutionOperation
 from plz.cli.retrieve_history_operation import RetrieveHistoryOperation
 from plz.cli.retrieve_measures_operation import RetrieveMeasuresOperation
 from plz.cli.retrieve_output_operation import RetrieveOutputOperation
@@ -28,6 +29,7 @@ OPERATIONS: [Type[Operation]] = [
     RetrieveHistoryOperation,
     RetrieveMeasuresOperation,
     PingBackendOperation,
+    RerunExecutionOperation,
     ListContextOperation,
 ]
 

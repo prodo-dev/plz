@@ -60,6 +60,8 @@ class RunExecutionOperation(Operation):
             raise CLIException(
                 f'The output directory "{self.output_dir}" already exists.')
 
+        debug = self.configuration.debug
+
         params = parameters.parse_file(self.parameters_file)
 
         exclude_gitignored_files = \
@@ -81,12 +83,14 @@ class RunExecutionOperation(Operation):
         while retries + 1 > 0:
             with self.suboperation(
                     f'Capturing the files in {os.path.abspath(context_path)}',
-                    build_context_suboperation) as build_context:
+                    build_context_suboperation,
+                    debug) as build_context:
                 try:
                     snapshot_id = self.suboperation(
                         'Building the program snapshot',
                         lambda: self.submit_context_for_building(
-                            build_context))
+                            build_context),
+                        debug)
                     break
                 except CLIException as e:
                     if type(e.__cause__) == PullAccessDeniedException \
@@ -102,17 +106,24 @@ class RunExecutionOperation(Operation):
         input_id = self.suboperation(
                 'Capturing the input',
                 self.capture_input,
+                debug,
                 if_set=self.configuration.input)
+
         execution_id, ok = self.suboperation(
                 'Sending request to start execution',
                 lambda: self.start_execution(snapshot_id, params, input_id,
                                              context_path))
-        self.execution_id = execution_id
+
+        RunExecutionOperation.follow_execution(
+            execution_id, ok, self.configuration, self.output_dir, debug)
+
+    @staticmethod
+    def follow_execution(execution_id, ok, configuration, output_dir, debug):
         log_info(f'Execution ID is: {execution_id}')
 
         retrieve_output_operation = RetrieveOutputOperation(
-            self.configuration,
-            output_dir=self.output_dir,
+            configuration,
+            output_dir=output_dir,
             execution_id=execution_id,
             force_if_running=False)
 
@@ -120,33 +131,33 @@ class RunExecutionOperation(Operation):
         try:
             if not ok:
                 raise CLIException('The command failed.')
-            logs = LogsOperation(self.configuration,
+            logs = LogsOperation(configuration,
                                  execution_id=execution_id,
                                  since='start')
             logs.display_logs(execution_id, print_interrupt_message=True)
         except CLIException as e:
-            e.print(self.configuration)
+            e.print(configuration)
             raise ExitWithStatusCodeException(e.exit_code)
         except KeyboardInterrupt:
             cancelled = True
         finally:
             if not cancelled:
-                self.suboperation(
+                RunExecutionOperation.suboperation(
                         'Harvesting the output...',
-                        retrieve_output_operation.harvest)
+                        retrieve_output_operation.harvest,
+                        debug)
 
         if cancelled:
             return
 
         retrieve_measures_operation = RetrieveMeasuresOperation(
-            self.configuration, execution_id=self.get_execution_id(),
-            summary=True)
-        self.suboperation(
+            configuration, execution_id=execution_id, summary=True)
+        RunExecutionOperation.suboperation(
             'Retrieving summary of measures (if present)...',
             retrieve_measures_operation.retrieve_measures)
 
         show_status_operation = ShowStatusOperation(
-            self.configuration, execution_id=execution_id)
+            configuration, execution_id=execution_id)
         status = show_status_operation.get_status()
         if status.running:
             raise CLIException(
@@ -154,7 +165,7 @@ class RunExecutionOperation(Operation):
                 ' Please report it.')
         elif status.success:
             log_info('Execution succeeded.')
-            self.suboperation(
+            RunExecutionOperation.suboperation(
                     'Retrieving the output...',
                     retrieve_output_operation.retrieve_output)
             log_info('Done and dusted.')
@@ -242,6 +253,11 @@ class RunExecutionOperation(Operation):
                     }
                 },
             })
+        return RunExecutionOperation.get_execution_id_from_start_response(
+            response)
+
+    @staticmethod
+    def get_execution_id_from_start_response(response):
         check_status(response, requests.codes.accepted)
         execution_id: Optional[str] = None
         ok = True
@@ -258,9 +274,10 @@ class RunExecutionOperation(Operation):
             raise CLIException('We did not receive an execution ID.')
         return execution_id, ok
 
-    def suboperation(self,
-                     name: str,
+    @staticmethod
+    def suboperation(name: str,
                      f: Callable[..., Any],
+                     debug: bool = False,
                      if_set: bool = True):
         if not if_set:
             return
@@ -269,7 +286,7 @@ class RunExecutionOperation(Operation):
         result = f()
         end_time = time.time()
         time_taken = end_time - start_time
-        if self.configuration.debug:
+        if debug:
             log_debug('Time taken: %.2fs' % time_taken)
         return result
 
