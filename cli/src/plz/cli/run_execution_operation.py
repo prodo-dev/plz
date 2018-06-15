@@ -60,8 +60,6 @@ class RunExecutionOperation(Operation):
             raise CLIException(
                 f'The output directory "{self.output_dir}" already exists.')
 
-        debug = self.configuration.debug
-
         params = parameters.parse_file(self.parameters_file)
 
         exclude_gitignored_files = \
@@ -83,14 +81,12 @@ class RunExecutionOperation(Operation):
         while retries + 1 > 0:
             with self.suboperation(
                     f'Capturing the files in {os.path.abspath(context_path)}',
-                    build_context_suboperation,
-                    debug) as build_context:
+                    build_context_suboperation) as build_context:
                 try:
                     snapshot_id = self.suboperation(
                         'Building the program snapshot',
                         lambda: self.submit_context_for_building(
-                            build_context),
-                        debug)
+                            build_context))
                     break
                 except CLIException as e:
                     if type(e.__cause__) == PullAccessDeniedException \

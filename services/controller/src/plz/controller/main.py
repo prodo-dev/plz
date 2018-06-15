@@ -128,10 +128,10 @@ def run_execution_entrypoint():
     # Test with:
     # curl -X POST -d '{"command": "ls /" }'
     #    -H 'Content-Type: application/json' localhost:5000/executions
-    execution_spec = request.json['execution_spec']
     command = request.json['command']
     snapshot_id = request.json['snapshot_id']
     parameters = request.json['parameters']
+    execution_spec = request.json['execution_spec']
     start_metadata = request.json['start_metadata']
     return run_execution(command, snapshot_id, parameters, execution_spec,
                          start_metadata)
@@ -157,8 +157,8 @@ def rerun_execution_entrypoint():
                          start_metadata, previous_execution_id)
 
 
-def run_execution(command, snapshot_id, parameters,
-                  execution_spec, start_metadata,
+def run_execution(command: [str], snapshot_id: str, parameters: dict,
+                  execution_spec: dict, start_metadata: dict,
                   previous_execution_id: Optional[str] = None):
     execution_id = str(get_execution_uuid())
     start_metadata['command'] = command
