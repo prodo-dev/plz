@@ -91,6 +91,24 @@ data "aws_ami" "controller-ami" {
   }
 }
 
+resource "aws_security_group" "plz_controller_ssh" {
+  name        = "allow_plz_controller_ssh"
+  description = "Allow ssh connections to the plz controller"
+
+  ingress {
+    from_port   = 0
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  
+  tags {
+    Name        = "Plz ${var.environment_name} SSH Security Group"
+    Environment = "${var.environment_name}"
+    Owner       = "Infrastructure"
+  }
+}
+
 resource "aws_instance" "controller" {
   subnet_id                   = "${data.aws_subnet.main.id}"
   instance_type               = "${var.controller_instance_type}"
@@ -98,7 +116,8 @@ resource "aws_instance" "controller" {
   key_name                    = "${aws_key_pair.plz.key_name}"
   associate_public_ip_address = true
   iam_instance_profile        = "${aws_iam_instance_profile.controller.name}"
-
+  security_groups             = ["{aws_security_group.plz_controller_ssh}",
+                                 "{aws_security_group.default}"]
   tags {
     Name        = "Plz ${var.environment_name} Controller"
     Environment = "${var.environment_name}"
