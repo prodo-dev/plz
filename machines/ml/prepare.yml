@@ -105,6 +105,10 @@
         name: ubuntu
         groups: docker
         append: yes
+    - name: Pull ml-pytorch image
+      docker_image:
+        name: prodoai/plz_ml-pytorch
+        pull: yes
 
 - hosts: worker
   remote_user: root

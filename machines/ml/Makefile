@@ -3,7 +3,7 @@ SHELL := zsh -e -u
 include ../../vars.mk
 
 IMAGE_GROUPS = controller worker
-INSTANCE_TYPES = t2.small p2.xlarge
+INSTANCE_TYPES = m5.2xlarge p2.xlarge
 
 AWS_REGION = $(shell jq -r '.aws_region' $(CONFIG_FILE))
 SSH_PRIVATE_KEY_FILE = $(SECRETS_DIR)/keys/id_rsa
