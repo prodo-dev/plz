@@ -111,6 +111,7 @@ class EC2InstanceGroup(InstanceProvider):
             snapshot_id: str,
             parameters: Parameters,
             input_stream: Optional[io.BytesIO],
+            instance_market_spec: dict,
             execution_spec: dict,
             max_tries: int = 30,
             delay_in_seconds: int = 5) -> Iterator[Dict[str, Any]]:
@@ -134,7 +135,8 @@ class EC2InstanceGroup(InstanceProvider):
         else:
             yield _msg('requesting new instance')
             is_instance_newly_created = True
-            instance_data = self._ask_aws_for_new_instance(instance_type)
+            instance_data = self._ask_aws_for_new_instance(
+                instance_type, instance_market_spec)
         instance = self._ec2_instance_from_instance_data(
             instance_data, container_execution_id=execution_id)
         dns_name = _get_dns_name(instance_data)
@@ -151,11 +153,13 @@ class EC2InstanceGroup(InstanceProvider):
                         snapshot_id=snapshot_id,
                         parameters=parameters,
                         input_stream=input_stream,
-                        docker_run_args=execution_spec['docker_run_args'])
+                        docker_run_args=execution_spec['docker_run_args'],
+                        max_idle_seconds=instance_market_spec[
+                            'instance_max_idle_time_in_minutes']*60)
                 except InstanceAssignedException:
                     yield _msg('taken while waiting')
                     instance_data = self._ask_aws_for_new_instance(
-                        instance_type)
+                        instance_type, instance_market_spec)
                     instance = self._ec2_instance_from_instance_data(
                         instance_data, container_execution_id=execution_id)
                     continue
@@ -194,9 +198,10 @@ class EC2InstanceGroup(InstanceProvider):
         return get_aws_instances(
             self.client, filters, only_running=only_running)
 
-    def _ask_aws_for_new_instance(self, instance_type: str) -> dict:
+    def _ask_aws_for_new_instance(
+            self, instance_type: str, instance_market_spec: dict) -> dict:
         response = self.client.run_instances(
-            **self._get_instance_spec(instance_type),
+            **self._get_instance_spec(instance_type, instance_market_spec),
             MinCount=1, MaxCount=1)
         return response['Instances'][0]
 
@@ -219,7 +224,8 @@ class EC2InstanceGroup(InstanceProvider):
             instance_data,
             self.redis)
 
-    def _get_instance_spec(self, instance_type) -> dict:
+    def _get_instance_spec(
+            self, instance_type: str, instance_market_spec: dict) -> dict:
         spec = _BASE_INSTANCE_SPEC.copy()
         spec['ImageId'] = self.ami_id
         if self.aws_key_name:
@@ -255,6 +261,14 @@ class EC2InstanceGroup(InstanceProvider):
         }]
         spec['UserData'] = self.instance_initialization_code
         spec['InstanceType'] = instance_type
+        if instance_market_spec['instance_market_type'] == 'spot':
+            spec['InstanceMarketOptions'] = {
+                'MarketType': instance_market_spec['instance_market_type']
+            }
+            spec['InstanceMarketOptions']['SpotOptions'] = {
+                'MaxPrice': str(
+                    instance_market_spec['max_bid_price_in_dollars_per_hour']),
+            }
         return spec
 
 
@@ -272,13 +286,6 @@ def _msg(s) -> Dict:
 
 
 _BASE_INSTANCE_SPEC = {
-    'InstanceType': 't2.micro',
-    'InstanceMarketOptions': {
-        'MarketType': 'spot',
-        'SpotOptions': {
-            'MaxPrice': '3',
-        }
-    },
     'BlockDeviceMappings': [
         {
             'DeviceName': '/dev/sdx',

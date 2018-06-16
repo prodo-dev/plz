@@ -1,8 +1,10 @@
 import json
 import os
-from typing import Any, Dict, List, Optional, Type, TypeVar
+from collections import defaultdict
+from typing import Any, Callable, Dict, List, Optional, Type, TypeVar
 
 from plz.cli.exceptions import CLIException
+from plz.cli.log import format_warning
 
 T = TypeVar('T')
 
@@ -36,18 +38,27 @@ class Property:
         int: 'an integer',
         bool: 'true or false',
         list: 'a list',
+        float: 'a float number'
     }
 
+    SUBTYPES = defaultdict(lambda: set())
+    SUBTYPES[float] = {int}
+
     # noinspection PyShadowingBuiltins
-    def __init__(self,
-                 name: str,
-                 type: Type[T] = str,
-                 required: bool = False,
-                 default: T = None):
+    def __init__(
+            self,
+            name: str,
+            type: Type[T] = str,
+            required: bool = False,
+            default: T = None,
+            validations: [
+                Callable[
+                    ['Configuration', List[ValidationError]], None]] = None):
         self.name = name
         self.type = type
         self.required = required
         self.default = default
+        self.validations = validations or []
 
     def required_error(self) -> ValidationError:
         return ValidationError(f'The property "{self.name}" is required.')
@@ -57,6 +68,32 @@ class Property:
             f'The property "{self.name}" '
             f'must be {self.TYPE_DESCRIPTIONS[self.type]}.\n'
             f'Invalid value: {repr(value)}')
+
+
+def _validate_market_spec(configuration, errors):
+    if configuration.instance_market_type not in {'spot', 'on_demand'}:
+        errors.append(['Possible values for `instance_market_type` are '
+                       '`spot` or `on_demand`'])
+    if configuration.instance_market_type == 'spot' \
+            and configuration.max_bid_price_in_dollars_per_hour is None:
+        errors.append(
+            'In order to use spot instances, in your plz.config.json file '
+            'please set `\n'
+            '"max_bid_price_in_dollars_per_hour": N\n'
+            '` for some N (or set `"instance_market_type": "on-demand"`, '
+            'which will be more expensive than any bid price you use)')
+    if configuration.instance_market_type == 'on_demand' and \
+            configuration.max_bid_price_in_dollars_per_hour is not None:
+        # The logger is not ready yet as it depends on the configuration,
+        # using the same method the logger uses
+        print(
+            format_warning(
+                'You\'re not asking for a spot instance '
+                '(`instance_market_type` is set to '
+                f'{configuration.instance_market_type}), yet you\'re '
+                'specifying a bid price (`max_bid_price_in_dollars_per_hour`).'
+                ' Ignoring the bid price',
+                use_emojis=False))
 
 
 class Configuration:
@@ -92,6 +129,12 @@ class Configuration:
             Property('use_emojis', type=bool, default=True),
             Property('workarounds', type=dict,
                      default={'docker_build_retries': 3}),
+            Property('instance_market_type', type=str, default='spot',
+                     validations=[_validate_market_spec]),
+            Property('instance_max_idle_time_in_minutes', type=int,
+                     default=0),
+            Property('max_bid_price_in_dollars_per_hour', type=float,
+                     default=None),
         ]
     }
 
@@ -122,7 +165,7 @@ class Configuration:
         configuration = Configuration.defaults(Configuration.PROPERTIES)
         for c in configurations:
             configuration = configuration.override_with(c)
-        return configuration
+        return configuration.validate()
 
     @staticmethod
     def defaults(properties: Dict[str, Property]) -> 'Configuration':
@@ -172,8 +215,12 @@ class Configuration:
             value = self.data.get(prop.name)
             if value is None and prop.required:
                 errors.append(prop.required_error())
-            elif value is not None and not isinstance(value, prop.type):
-                errors.append(prop.type_error(value))
+            elif value is not None and not isinstance(value, prop.type) and \
+                    not type(value) in Property.SUBTYPES[prop.type]:
+                errors.append(Property.type_error(prop, value))
+        for prop in self.properties.values():
+            for validation in prop.validations:
+                validation(self, errors)
         if errors:
             raise ValidationException(errors)
         return self

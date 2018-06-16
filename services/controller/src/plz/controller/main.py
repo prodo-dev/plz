@@ -133,7 +133,16 @@ def run_execution_entrypoint():
     parameters = request.json['parameters']
     execution_spec = request.json['execution_spec']
     start_metadata = request.json['start_metadata']
-    return run_execution(command, snapshot_id, parameters, execution_spec,
+    instance_market_spec = request.json.get(
+        'instance_market_spec',
+        # TODO: delete this once people update their CLI
+        {
+            'instance_market_type': 'spot',
+            'max_bid_price_in_dollars_per_hour': 3,
+            'instance_max_idle_time_in_minutes': 30
+        })
+    return run_execution(command, snapshot_id, parameters,
+                         instance_market_spec, execution_spec,
                          start_metadata)
 
 
@@ -142,28 +151,35 @@ def rerun_execution_entrypoint():
     # Test with:
     # curl -X POST -d '{"command": "ls /" }'
     #    -H 'Content-Type: application/json' localhost:5000/executions
+    user = request.json['user']
+    project = request.json['project']
     previous_execution_id = request.json['execution_id']
     start_metadata = db_storage.retrieve_start_metadata(previous_execution_id)
 
-    user = start_metadata['user']
-    project = start_metadata['project']
     command = start_metadata['command']
     snapshot_id = start_metadata['snapshot_id']
     parameters = start_metadata['parameters']
+    # Using market spec from the request. Results should be independent of the
+    # market and bid price. If a user is trying to run cheaper at the moment,
+    # there'll be surprises if we do not to honor the current configuration
+    instance_market_spec = request.json['instance_market_spec']
     execution_spec = start_metadata['execution_spec']
     execution_spec['user'] = user
     execution_spec['project'] = project
-    return run_execution(command, snapshot_id, parameters, execution_spec,
+    return run_execution(command, snapshot_id, parameters,
+                         instance_market_spec, execution_spec,
                          start_metadata, previous_execution_id)
 
 
 def run_execution(command: [str], snapshot_id: str, parameters: dict,
-                  execution_spec: dict, start_metadata: dict,
+                  instance_market_spec: dict, execution_spec: dict,
+                  start_metadata: dict,
                   previous_execution_id: Optional[str] = None):
     execution_id = str(get_execution_uuid())
     start_metadata['command'] = command
     start_metadata['snapshot_id'] = snapshot_id
     start_metadata['parameters'] = parameters
+    start_metadata['instance_market_spec'] = instance_market_spec
     start_metadata['execution_spec'] = {k: v for k, v in execution_spec.items()
                                         if k not in {'user', 'project'}}
     start_metadata['user'] = execution_spec['user']
@@ -181,7 +197,7 @@ def run_execution(command: [str], snapshot_id: str, parameters: dict,
                 execution_spec)
             startup_statuses = instance_provider.run_in_instance(
                 execution_id, command, snapshot_id, parameters, input_stream,
-                execution_spec)
+                instance_market_spec, execution_spec)
             instance: Optional[Instance] = None
             for status in startup_statuses:
                 if 'message' in status:

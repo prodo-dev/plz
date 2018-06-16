@@ -32,7 +32,7 @@ def log_warning(message):
     logging.getLogger(__name__).warning(message)
 
 
-def _format_warning(message: str, use_emojis: bool) -> str:
+def format_warning(message: str, use_emojis: bool) -> str:
     is_a_tty = sys.stdout.isatty()
     message_frags = [
         # Change to yellow
@@ -87,7 +87,7 @@ class _LogFormatter(logging.Formatter):
         self.formatter_map = defaultdict(lambda: lambda msg, _: msg)
         self.formatter_map.update({
             logging.INFO: _format_info,
-            logging.WARNING: _format_warning,
+            logging.WARNING: format_warning,
             logging.ERROR: _format_error,
         })
 
