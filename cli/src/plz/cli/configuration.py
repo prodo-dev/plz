@@ -1,8 +1,10 @@
 import json
 import os
+from collections import defaultdict
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
 from plz.cli.exceptions import CLIException
+from plz.cli.log import log_warning
 
 T = TypeVar('T')
 
@@ -36,7 +38,11 @@ class Property:
         int: 'an integer',
         bool: 'true or false',
         list: 'a list',
+        float: 'a float number'
     }
+
+    SUBTYPES = defaultdict(lambda: set())
+    SUBTYPES[float] = {int}
 
     # noinspection PyShadowingBuiltins
     def __init__(self,
@@ -95,7 +101,7 @@ class Configuration:
             Property('instance_market_type', type=str, default='spot'),
             Property('instance_max_idle_time_in_minutes', type=int,
                      default=0),
-            Property('max_bid_price_in_dollars_per_hour', type=int,
+            Property('max_bid_price_in_dollars_per_hour', type=float,
                      default=None),
         ]
     }
@@ -127,7 +133,7 @@ class Configuration:
         configuration = Configuration.defaults(Configuration.PROPERTIES)
         for c in configurations:
             configuration = configuration.override_with(c)
-        return configuration
+        return configuration.validate()
 
     @staticmethod
     def defaults(properties: Dict[str, Property]) -> 'Configuration':
@@ -177,11 +183,34 @@ class Configuration:
             value = self.data.get(prop.name)
             if value is None and prop.required:
                 errors.append(prop.required_error())
-            elif value is not None and not isinstance(value, prop.type):
-                errors.append(prop.type_error(value))
+            elif value is not None and not isinstance(value, prop.type) and \
+                    not type(value) in Property.SUBTYPES[prop.type]:
+                errors.append(Property.type_error(prop, value))
+        self.validate_market_spec(errors)
         if errors:
             raise ValidationException(errors)
         return self
+
+    def validate_market_spec(self, errors):
+        if self.instance_market_type not in {'spot', 'on_demand'}:
+            errors.append(['Possible values for `instance_market_type` are '
+                           '`spot` or `on_demand`'])
+        if self.instance_market_type == 'spot' \
+                and self.max_bid_price_in_dollars_per_hour is None:
+            errors.append(
+                'In order to use spot instances, in your plz.config.json file '
+                'please set `\n'
+                '"max_bid_price_in_dollars_per_hour": N\n'
+                '` for some N (or set `"instance_market_type": "on-demand"`, '
+                'which will be more expensive than any bid price you use)')
+        if self.instance_market_type == 'on_demand' and \
+                self.max_bid_price_in_dollars_per_hour is not None:
+            log_warning('You\'re not asking for a spot instance '
+                        '(`instance_market_type` is set to '
+                        f'{self.instance_market_type}), yet you\'re '
+                        'specifying a bid price ('
+                        '`max_bid_price_in_dollars_per_hour`). Ignoring the'
+                        'bid price')
 
     @staticmethod
     def _get_top_level_config(config_file_name, config_set_explicitly: bool):

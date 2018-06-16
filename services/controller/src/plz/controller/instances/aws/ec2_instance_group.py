@@ -261,10 +261,10 @@ class EC2InstanceGroup(InstanceProvider):
         }]
         spec['UserData'] = self.instance_initialization_code
         spec['InstanceType'] = instance_type
-        spec['InstanceMarketOptions'] = {
-            'MarketType': instance_market_spec['instance_market_type'],
-        }
         if instance_market_spec['instance_market_type'] == 'spot':
+            spec['InstanceMarketOptions'] = {
+                'MarketType': instance_market_spec['instance_market_type']
+            }
             spec['InstanceMarketOptions']['SpotOptions'] = {
                 'MaxPrice': str(
                     instance_market_spec['max_bid_price_in_dollars_per_hour']),

@@ -2,5 +2,8 @@
   "image": "python:3-slim",
   "command": [
     "./main.py"
-  ]
+  ],
+  "instance_max_idle_time_in_minutes": 30,
+  "max_bid_price_in_dollars_per_hour": 2,
+  "instance_market_type": "on_demand"
 }

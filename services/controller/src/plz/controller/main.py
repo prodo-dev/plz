@@ -151,16 +151,18 @@ def rerun_execution_entrypoint():
     # Test with:
     # curl -X POST -d '{"command": "ls /" }'
     #    -H 'Content-Type: application/json' localhost:5000/executions
+    user = request.json['user']
+    project = request.json['project']
     previous_execution_id = request.json['execution_id']
     start_metadata = db_storage.retrieve_start_metadata(previous_execution_id)
 
-    user = start_metadata['user']
-    project = start_metadata['project']
     command = start_metadata['command']
     snapshot_id = start_metadata['snapshot_id']
     parameters = start_metadata['parameters']
-    instance_market_spec = start_metadata['instance_market_spec']
-    log.debug(f'Market spec is: {instance_market_spec}')
+    # Using market spec from the request. Results should be independent of the
+    # market and bid price. If a user is trying to run cheaper at the moment,
+    # there'll be surprises if we do not to honor the current configuration
+    instance_market_spec = request.json['instance_market_spec']
     execution_spec = start_metadata['execution_spec']
     execution_spec['user'] = user
     execution_spec['project'] = project
