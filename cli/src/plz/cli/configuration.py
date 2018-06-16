@@ -45,13 +45,15 @@ class Property:
     SUBTYPES[float] = {int}
 
     # noinspection PyShadowingBuiltins
-    def __init__(self,
-                 name: str,
-                 type: Type[T] = str,
-                 required: bool = False,
-                 default: T = None,
-                 validations: [
-                     Callable[['Configuration', [ValidationError]]]] = None):
+    def __init__(
+            self,
+            name: str,
+            type: Type[T] = str,
+            required: bool = False,
+            default: T = None,
+            validations: [
+                Callable[
+                    ['Configuration', List[ValidationError]], None]] = None):
         self.name = name
         self.type = type
         self.required = required
@@ -219,8 +221,6 @@ class Configuration:
         for prop in self.properties.values():
             for validation in prop.validations:
                 validation(self, errors)
-
-        self.validate_market_spec(errors)
         if errors:
             raise ValidationException(errors)
         return self
