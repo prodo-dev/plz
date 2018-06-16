@@ -133,7 +133,9 @@ def run_execution_entrypoint():
     parameters = request.json['parameters']
     execution_spec = request.json['execution_spec']
     start_metadata = request.json['start_metadata']
-    return run_execution(command, snapshot_id, parameters, execution_spec,
+    instance_allocation_spec = request.json['instance_allocation_spec']
+    return run_execution(command, snapshot_id, parameters,
+                         instance_allocation_spec, execution_spec,
                          start_metadata)
 
 
@@ -150,20 +152,24 @@ def rerun_execution_entrypoint():
     command = start_metadata['command']
     snapshot_id = start_metadata['snapshot_id']
     parameters = start_metadata['parameters']
+    instance_allocation_spec = start_metadata['instance_allocation_spec']
     execution_spec = start_metadata['execution_spec']
     execution_spec['user'] = user
     execution_spec['project'] = project
-    return run_execution(command, snapshot_id, parameters, execution_spec,
+    return run_execution(command, snapshot_id, parameters,
+                         instance_allocation_spec, execution_spec,
                          start_metadata, previous_execution_id)
 
 
 def run_execution(command: [str], snapshot_id: str, parameters: dict,
-                  execution_spec: dict, start_metadata: dict,
+                  instance_allocation_spec: dict, execution_spec: dict,
+                  start_metadata: dict,
                   previous_execution_id: Optional[str] = None):
     execution_id = str(get_execution_uuid())
     start_metadata['command'] = command
     start_metadata['snapshot_id'] = snapshot_id
     start_metadata['parameters'] = parameters
+    start_metadata['instance_allocation_spec'] = instance_allocation_spec
     start_metadata['execution_spec'] = {k: v for k, v in execution_spec.items()
                                         if k not in {'user', 'project'}}
     start_metadata['user'] = execution_spec['user']
