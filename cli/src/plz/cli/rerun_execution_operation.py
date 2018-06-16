@@ -33,8 +33,8 @@ class RerunExecutionOperation(Operation):
             json={'user': self.configuration.user,
                   'project': self.configuration.project,
                   'execution_id': self.get_execution_id(),
-                  'instance_allocation_spec':
-                      run_operation.get_instance_allocation_spec()})
+                  'instance_market_spec':
+                      run_operation.get_instance_market_spec()})
 
         new_execution_id, was_start_ok = \
             RunExecutionOperation.get_execution_id_from_start_response(

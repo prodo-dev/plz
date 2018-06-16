@@ -35,6 +35,7 @@ class Localhost(InstanceProvider):
                         snapshot_id: str,
                         parameters: Parameters,
                         input_stream: Optional[io.BytesIO],
+                        instance_market_spec: dict,
                         execution_spec: dict) -> Iterator[Dict[str, Any]]:
         """
         Runs a job in an instance, that happens to be always the localhost

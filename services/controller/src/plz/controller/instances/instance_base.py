@@ -205,7 +205,8 @@ class InstanceProvider(ABC):
                         snapshot_id: str,
                         parameters: Parameters,
                         input_stream: Optional[io.BytesIO],
-                        execution_spec: dict,) -> Iterator[Dict[str, Any]]:
+                        instance_market_spec: dict,
+                        execution_spec: dict) -> Iterator[Dict[str, Any]]:
         pass
 
     @abstractmethod

@@ -92,11 +92,11 @@ class Configuration:
             Property('use_emojis', type=bool, default=True),
             Property('workarounds', type=dict,
                      default={'docker_build_retries': 3}),
-            Property('instance_keep_alive_time_in_minutes', type=int,
+            Property('instance_market_type', type=str, default='spot'),
+            Property('instance_max_idle_time_in_minutes', type=int,
                      default=0),
             Property('max_bid_price_in_dollars_per_hour', type=int,
                      default=None),
-            Property('on_demand_instance', type=bool, default=False)
         ]
     }
 

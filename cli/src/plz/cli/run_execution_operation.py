@@ -226,7 +226,7 @@ class RunExecutionOperation(Operation):
             'input_id': input_id,
             'docker_run_args': configuration.docker_run_args
         }
-        instance_allocation_spec = self.get_instance_allocation_spec()
+        instance_market_spec = self.get_instance_market_spec()
         commit = get_head_commit_or_none(context_path)
         response = self.server.post(
             'executions',
@@ -236,7 +236,7 @@ class RunExecutionOperation(Operation):
                 'snapshot_id': snapshot_id,
                 'parameters': params,
                 'execution_spec': execution_spec,
-                'instance_allocation_spec': instance_allocation_spec,
+                'instance_market_spec': instance_market_spec,
                 'start_metadata': {
                     'commit': commit,
                     'configuration': {
@@ -267,12 +267,12 @@ class RunExecutionOperation(Operation):
             raise CLIException('We did not receive an execution ID.')
         return execution_id, ok
 
-    def get_instance_allocation_spec(self) -> dict:
+    def get_instance_market_spec(self) -> dict:
         return {
             k: getattr(self.configuration, k)
-            for k in ('instance_keep_alive_time_in_minutes',
-                      'max_bid_price_in_dollars_per_hour'
-                      'on_demand_instance')
+            for k in ('instance_market_type',
+                      'instance_max_idle_time_in_minutes',
+                      'max_bid_price_in_dollars_per_hour')
         }
 
     def get_execution_id(self):
