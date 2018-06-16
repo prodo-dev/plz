@@ -4,7 +4,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
 from plz.cli.exceptions import CLIException
-from plz.cli.log import log_warning
+from plz.cli.log import log_warning, format_warning
 
 T = TypeVar('T')
 
@@ -205,12 +205,16 @@ class Configuration:
                 'which will be more expensive than any bid price you use)')
         if self.instance_market_type == 'on_demand' and \
                 self.max_bid_price_in_dollars_per_hour is not None:
-            log_warning('You\'re not asking for a spot instance '
-                        '(`instance_market_type` is set to '
-                        f'{self.instance_market_type}), yet you\'re '
-                        'specifying a bid price ('
-                        '`max_bid_price_in_dollars_per_hour`). Ignoring the'
-                        'bid price')
+            # The logger is not ready yet as it depends on the configuration,
+            # using the same method the logger uses
+            print(
+                format_warning(
+                    'You\'re not asking for a spot instance '
+                    '(`instance_market_type` is set to '
+                    f'{self.instance_market_type}), yet you\'re specifying a '
+                    'bid price (`max_bid_price_in_dollars_per_hour`). '
+                    'Ignoring the bid price',
+                    use_emojis=False))
 
     @staticmethod
     def _get_top_level_config(config_file_name, config_set_explicitly: bool):
