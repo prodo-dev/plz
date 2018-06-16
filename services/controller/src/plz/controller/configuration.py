@@ -15,7 +15,7 @@ from plz.controller.redis_db_storage import RedisDBStorage
 from plz.controller.results import LocalResultsStorage
 from plz.controller.volumes import Volumes
 
-AMI_TAG = '2018-06-18'
+AMI_TAG = '2018-05-03'
 WORKER_AMI = f'plz-worker-{AMI_TAG}'
 
 Dependencies = collections.namedtuple(
