@@ -21,10 +21,11 @@ class ListExecutionsOperation(Operation):
     def run(self):
         response = self.server.get('executions', 'list')
         check_status(response, requests.codes.ok)
-        table = PrettyTable(['Execution Id', 'Running', 'Status',
-                             'Type', 'Idle since', 'Disposal time'])
+        table = PrettyTable(['Execution Id', 'Instance Id', 'Running',
+                             'Status', 'Type', 'Idle since', 'Disposal time'])
         for execution in json.loads(response.content)['executions']:
             execution_id = execution['execution_id']
+            instance_id = execution['instance_id']
             running = execution['running']
             status = execution['status']
             instance_type = execution['instance_type']
@@ -36,8 +37,8 @@ class ListExecutionsOperation(Operation):
             else:
                 idle_since = ''
                 disposal_time = ''
-            table.add_row([execution_id, running, status, instance_type,
-                           idle_since, disposal_time])
+            table.add_row([execution_id, instance_id, running, status,
+                           instance_type, idle_since, disposal_time])
         print(table)
 
 
