@@ -78,9 +78,11 @@
 
             redis:
               image: redis:4
-              entrypoint: redis-server
+              # We assume that 5 minutes it's a reasonable
+              # time as to dump the redis DB
+              entrypoint: redis-server --save 300 1
               volumes:
-                - redis_data:/data
+                - /cache/redis_data:/data
 
           volumes:
             redis_data: {}
