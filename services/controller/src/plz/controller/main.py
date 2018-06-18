@@ -381,6 +381,14 @@ def last_execution_id_entrypoint(user: str):
     return response
 
 
+@app.route('f/instances/kill', methods=['POST'])
+def kill_instances_entrypoint():
+    instance_ids: [str] = request.json['instance_ids']
+    force_if_not_idle: bool = request.json['force_if_not_idle']
+    instance_provider.kill_instances(
+        instance_ids=instance_ids, force_if_not_idle=force_if_not_idle)
+
+
 def get_execution_uuid() -> str:
     # Recommended method for the node if you don't want to disclose the
     # physical address (see Python uuid docs)
