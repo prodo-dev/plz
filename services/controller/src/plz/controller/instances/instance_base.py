@@ -21,7 +21,7 @@ Parameters = Dict[str, Any]
 ExecutionInfo = namedtuple(
     'ExecutionInfo',
     ['execution_id', 'running', 'status', 'instance_type', 'max_idle_seconds',
-     'idle_since_timestamp'])
+     'idle_since_timestamp', 'instance_id'])
 
 
 class Instance(Results):
@@ -94,6 +94,7 @@ class Instance(Results):
                 container_state)
         return ExecutionInfo(
             instance_type=self.get_instance_type(),
+            instance_id=self._instance_id,
             execution_id=self.get_execution_id(),
             running=running,
             status=status,

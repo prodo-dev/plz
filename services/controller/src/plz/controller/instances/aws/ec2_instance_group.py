@@ -226,7 +226,7 @@ class EC2InstanceGroup(InstanceProvider):
 
     def _get_instance_spec(
             self, instance_type: str, instance_market_spec: dict) -> dict:
-        spec = _BASE_INSTANCE_SPEC.copy()
+        spec: dict = _BASE_INSTANCE_SPEC.copy()
         spec['ImageId'] = self.ami_id
         if self.aws_key_name:
             spec['KeyName'] = self.aws_key_name
