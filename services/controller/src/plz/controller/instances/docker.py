@@ -107,6 +107,9 @@ class DockerInstance(Instance):
         # It's never time for a local instance
         pass
 
+    def kill(self, force_if_not_idle: bool) -> Optional[str]:
+        return 'Local resource can\'t be killed, you can try to stop instead'
+
     def container_state(self) -> Optional[ContainerState]:
         if self.execution_id == '':
             return None
@@ -144,7 +147,7 @@ class DockerInstance(Instance):
             finish_timestamp=finish_timestamp)
 
     @property
-    def _instance_id(self):
+    def instance_id(self):
         return self.execution_id
 
     def get_logs(self, since: Optional[int] = None, stdout: bool = True,

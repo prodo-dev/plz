@@ -1,6 +1,8 @@
 import io
 import logging
 import os.path
+import traceback
+
 import time
 from typing import Dict, Iterator, List, Optional
 
@@ -55,7 +57,7 @@ class EC2Instance(Instance):
         with self._lock:
             if not self._is_running_and_free():
                 raise InstanceAssignedException(
-                    f'Instance {self._instance_id} cannot execute '
+                    f'Instance {self.instance_id} cannot execute '
                     f'{self.delegate.execution_id} as it\'s not '
                     f'free (executing [{self.get_execution_id()}])')
             self.images.pull(snapshot_id)
@@ -70,8 +72,14 @@ class EC2Instance(Instance):
         return self.images.can_pull(
             5 if is_instance_newly_created else 1)
 
-    def _dispose(self):
-        self.client.terminate_instances(InstanceIds=[self._instance_id])
+    def kill(self, force_if_not_idle: bool) -> Optional[str]:
+        if not force_if_not_idle and self._is_idle(self.container_state()):
+            return 'Instance is not idle'
+        # noinspection PyBroadException
+        try:
+            self.client.terminate_instances(InstanceIds=[self.instance_id])
+        except Exception:
+            return traceback.format_exc()
 
     def _set_execution_id(
             self, execution_id: str, max_idle_seconds: int):
@@ -83,7 +91,7 @@ class EC2Instance(Instance):
         ])
 
     def _set_tags(self, tags):
-        instance_id = self._instance_id
+        instance_id = self.instance_id
         self.client.create_tags(Resources=[instance_id], Tags=tags)
         self.data = _describe_instances(
             self.client, [('instance-id', instance_id)])[0]
@@ -107,7 +115,8 @@ class EC2Instance(Instance):
         return self.data['InstanceType']
 
     def dispose_if_its_time(
-            self, execution_info: Optional[ExecutionInfo] = None):
+            self, execution_info: Optional[ExecutionInfo] = None) \
+            -> Optional[str]:
         if execution_info is not None:
             ei = execution_info
         else:
@@ -118,8 +127,14 @@ class EC2Instance(Instance):
         if now - ei.idle_since_timestamp > ei.max_idle_seconds or \
                 ei.idle_since_timestamp > now or \
                 ei.max_idle_seconds <= 0:
-            log.info(f'Disposing of instance {self._instance_id}')
-            self._dispose()
+            log.info(f'Disposing of instance {self.instance_id}')
+            # We check that it's idle. That shouldn't happen as the lock is
+            # held and this method is called after the execution ID for the
+            # instance was set to the empty string. But, y'know, computers...
+            result = self.kill(force_if_not_idle=False)
+            return result
+
+        return None
 
     def stop_execution(self):
         return self.delegate.stop_execution()
@@ -147,20 +162,20 @@ class EC2Instance(Instance):
             self.client,
             only_running=True,
             filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
-                     ('instance-id', self._instance_id)])
+                     ('instance-id', self.instance_id)])
         return len(instances) > 0
 
     def _is_running(self):
         instances = get_aws_instances(
             self.client,
             only_running=True,
-            filters=[('instance-id', self._instance_id)])
+            filters=[('instance-id', self.instance_id)])
         return len(instances) > 0
 
     def get_resource_state(self) -> str:
         instance = _describe_instances(
             self.client,
-            filters=[('instance-id', self._instance_id)])[0]
+            filters=[('instance-id', self.instance_id)])[0]
         return instance['State']['Name']
 
     def delete_resource(self) -> None:
@@ -172,20 +187,20 @@ class EC2Instance(Instance):
     def get_forensics(self) -> dict:
         spot_requests = self.client.describe_spot_instance_requests(
             Filters=[{'Name': 'instance-id',
-                      'Values': [self._instance_id]}])['SpotInstanceRequests']
+                      'Values': [self.instance_id]}])['SpotInstanceRequests']
         if len(spot_requests) == 0:
             spot_request_info = {}
         elif len(spot_requests) > 1:
             spot_request_info = {}
             log.warning('More than one spot request for instance '
-                        f'{self._instance_id}')
+                        f'{self.instance_id}')
         else:
             spot_request_info = spot_requests[0]
         return {'SpotInstanceRequest': spot_request_info,
                 'InstanceState': self.get_resource_state()}
 
     @property
-    def _instance_id(self):
+    def instance_id(self):
         return self.data['InstanceId']
 
     def get_logs(self, since: Optional[int] = None, stdout: bool = True,
