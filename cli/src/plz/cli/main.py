@@ -7,6 +7,7 @@ from plz.cli.configuration import Configuration, ValidationException
 from plz.cli.describe_execution_operation import DescribeExecutionOperation
 from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
 from plz.cli.kill_instances_operation import KillInstancesOperation
+from plz.cli.last_execution_id_operation import LastExecutionIDOperation
 from plz.cli.list_context_operation import ListContextOperation
 from plz.cli.list_executions_operation import ListExecutionsOperation
 from plz.cli.log import log_error, setup_logger
@@ -35,6 +36,7 @@ OPERATIONS: [Type[Operation]] = [
     ListContextOperation,
     KillInstancesOperation,
     DescribeExecutionOperation,
+    LastExecutionIDOperation
 ]
 
 
