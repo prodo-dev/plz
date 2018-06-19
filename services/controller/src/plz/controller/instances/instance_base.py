@@ -1,11 +1,11 @@
 import io
 import logging
-import time
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from typing import Any, ContextManager, Dict, Iterator, List, Optional
 
 import requests
+import time
 from redis import StrictRedis
 from redis.lock import Lock
 
@@ -81,20 +81,29 @@ class Instance(Results):
         # workers), so we allow to pass the info as parameter
         pass
 
+    def _is_idle(self, container_state: Optional[ContainerState]) -> bool:
+        return self.get_execution_id() == '' or container_state is None
+
     def get_execution_info(self) -> ExecutionInfo:
-        container_state = self.container_state()
-        if container_state is None:
+        resource_state = self.get_resource_state()
+        if resource_state != 'running':
             running = False
-            status = 'idle'
-            idle_since_timestamp = self.get_idle_since_timestamp()
+            status = resource_state
+            idle_since_timestamp = None
         else:
-            running = container_state.running
-            status = container_state.status
-            idle_since_timestamp = self.get_idle_since_timestamp(
-                container_state)
+            container_state = self.container_state()
+            if self._is_idle(container_state):
+                running = False
+                status = 'idle'
+                idle_since_timestamp = self.get_idle_since_timestamp()
+            else:
+                running = container_state.running
+                status = container_state.status
+                idle_since_timestamp = self.get_idle_since_timestamp(
+                    container_state)
         return ExecutionInfo(
             instance_type=self.get_instance_type(),
-            instance_id=self._instance_id,
+            instance_id=self.instance_id,
             execution_id=self.get_execution_id(),
             running=running,
             status=status,
@@ -157,7 +166,7 @@ class Instance(Results):
                 # we have an instance for it. Release the instance without
                 # trying to access the container
                 log.exception(
-                    f'Instance {self._instance_id} for execution id: '
+                    f'Instance {self.instance_id} for execution ID: '
                     f'{self.get_execution_id()} missing container')
                 self.release(
                     results_storage,
@@ -170,7 +179,24 @@ class Instance(Results):
                 self.release(results_storage, info.idle_since_timestamp)
 
             if info.status in {'exited', 'idle'}:
-                self.dispose_if_its_time(info)
+                result = self.dispose_if_its_time(execution_info=info)
+                if result is not None:
+                    log.error(f'Harvesting: Instance {self.instance_id} for '
+                              f'execution ID: {self.get_execution_id()}: '
+                              f'{result}')
+
+    def is_terminated(self) -> bool:
+        return self.get_resource_state() == 'terminated'
+
+    @abstractmethod
+    def kill(self, force_if_not_idle: bool) -> Optional[str]:
+        """Kills an instance.
+
+        :param force_if_not_idle: force termination for non-idle instances
+        :return: a failure message in case the instance wasn't terminated
+        :rtype: Optional[str]
+        """
+        pass
 
     @abstractmethod
     def get_forensics(self) -> dict:
@@ -179,14 +205,14 @@ class Instance(Results):
 
     @property
     @abstractmethod
-    def _instance_id(self):
+    def instance_id(self) -> str:
         pass
 
     @property
     def _redis_lock(self) -> Lock:
         if self._memoised_lock is None:
             lock_name = f'lock:{__name__}.{self.__class__.__name__}' + \
-                        f'#_lock:{self._instance_id}'
+                        f'#_lock:{self.instance_id}'
             self._memoised_lock = Lock(self.redis, lock_name)
         return self._memoised_lock
 
@@ -227,6 +253,50 @@ class InstanceProvider(ABC):
                 return
         instance.release(self.results_storage, idle_since_timestamp)
 
+    def kill_instances(
+            self, instance_ids: Optional[str], force_if_not_idle: bool) \
+            -> None:
+        """ Hard stop for a set of instances
+
+        :param instance_ids: instances to dispose of. A value of `None` means
+               all instances in the group
+        :param force_if_not_idle: force termination for non-idle instances
+        :raises: :class:`ProviderKillingInstancesException` if some instances
+                 failed to terminate
+        :raises: :class:`NoInstancesFound` if asked for the termination of all
+                 instances, and there are no instances
+        """
+        terminate_all_instances = instance_ids is None
+
+        if not terminate_all_instances:
+            unprocessed_instance_ids = [i for i in instance_ids]
+        else:
+            unprocessed_instance_ids = []
+
+        instance_ids_to_messages = {}
+        there_is_one_instance = False
+        for instance in self.instance_iterator(only_running=False):
+            if instance.is_terminated():
+                continue
+            there_is_one_instance = True
+            if terminate_all_instances or instance.instance_id in instance_ids:
+                    try:
+                        instance.kill(force_if_not_idle)
+                    except KillingInstanceException as e:
+                        instance_ids_to_messages[instance.instance_id] = \
+                            e.message
+                    if not terminate_all_instances:
+                        unprocessed_instance_ids.remove(instance.instance_id)
+
+        for instance_id in unprocessed_instance_ids:
+            instance_ids_to_messages[instance_id] = 'Instance not found'
+
+        if len(instance_ids_to_messages) > 0:
+            raise ProviderKillingInstancesException(instance_ids_to_messages)
+
+        if terminate_all_instances and not there_is_one_instance:
+            raise NoInstancesFound()
+
     @abstractmethod
     def push(self, image_tag: str):
         pass
@@ -248,10 +318,11 @@ class InstanceProvider(ABC):
     def get_executions(self) -> [ExecutionInfo]:
         return [
             instance.get_execution_info()
-            for instance in self.instance_iterator(only_running=True)]
+            for instance in self.instance_iterator(only_running=False)
+            if not instance.is_terminated()]
 
     @abstractmethod
-    def get_forensics(self, execution_id) -> dict:
+    def get_forensics(self, execution_id: str) -> dict:
         """Gather information useful when the instance is/was misbehaving"""
         pass
 
@@ -270,6 +341,21 @@ class InstanceStillRunningException(ResponseHandledException):
 
 class InstanceMissingStateException(Exception):
     pass
+
+
+class NoInstancesFound(Exception):
+    pass
+
+
+class KillingInstanceException(Exception):
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
+class ProviderKillingInstancesException(Exception):
+    def __init__(self, instance_ids_to_messages: Dict[str, str]):
+        self.instance_ids_to_messages = instance_ids_to_messages
 
 
 class _InstanceContextManager(ContextManager):

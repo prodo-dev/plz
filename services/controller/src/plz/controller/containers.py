@@ -112,6 +112,10 @@ class Containers:
             log.exception('Connecting to worker')
             raise WorkerUnreachableException(execution_id)
 
+    def kill(self, execution_id: str):
+        container = self.from_execution_id(execution_id)
+        container.kill()
+
     @staticmethod
     def _is_container_id(container_id: str):
         if len(container_id) != 64:

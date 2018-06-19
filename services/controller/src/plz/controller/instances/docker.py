@@ -10,7 +10,7 @@ from redis import StrictRedis
 from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
 from plz.controller.instances.instance_base import ExecutionInfo, Instance, \
-    InstanceStillRunningException, Parameters
+    InstanceStillRunningException, KillingInstanceException, Parameters
 from plz.controller.results import ResultsStorage
 from plz.controller.results.results_base import CouldNotGetOutputException
 from plz.controller.volumes import \
@@ -107,6 +107,15 @@ class DockerInstance(Instance):
         # It's never time for a local instance
         pass
 
+    def kill(self, force_if_not_idle: bool):
+        if not force_if_not_idle:
+            raise KillingInstanceException(
+                'Attempt to kill a running local container, which is not idle')
+        try:
+            self.containers.kill(self.get_execution_id())
+        except Exception as e:
+            raise KillingInstanceException(str(e)) from e
+
     def container_state(self) -> Optional[ContainerState]:
         if self.execution_id == '':
             return None
@@ -144,7 +153,7 @@ class DockerInstance(Instance):
             finish_timestamp=finish_timestamp)
 
     @property
-    def _instance_id(self):
+    def instance_id(self):
         return self.execution_id
 
     def get_logs(self, since: Optional[int] = None, stdout: bool = True,

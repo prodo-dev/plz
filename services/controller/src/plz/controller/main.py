@@ -23,7 +23,8 @@ from plz.controller.images import Images
 from plz.controller.input_data import InputDataConfiguration
 from plz.controller.instances.instance_base import Instance, \
     InstanceNotRunningException, InstanceProvider, \
-    InstanceStillRunningException
+    InstanceStillRunningException, NoInstancesFound, \
+    ProviderKillingInstancesException
 from plz.controller.results import ResultsStorage
 
 T = TypeVar('T')
@@ -378,6 +379,32 @@ def last_execution_id_entrypoint(user: str):
         response_object['execution_id'] = last_execution_id
     response = jsonify(response_object)
     response.status_code = requests.codes.ok
+    return response
+
+
+@app.route(f'/instances/kill', methods=['POST'])
+def kill_instances_entrypoint():
+    all_of_them_plz: bool = request.json['all_of_them_plz']
+    if all_of_them_plz:
+        instance_ids = None
+    else:
+        instance_ids: [str] = request.json['instance_ids']
+    force_if_not_idle = request.json['force_if_not_idle']
+
+    status_code = requests.codes.ok
+    response_dict = {}
+    try:
+        instance_provider.kill_instances(
+            instance_ids=instance_ids, force_if_not_idle=force_if_not_idle)
+    except ProviderKillingInstancesException as e:
+        response_dict['failed_instance_ids_to_messages'] = \
+            e.instance_ids_to_messages
+        status_code = requests.codes.conflict
+    except NoInstancesFound:
+        response_dict['warning_message'] = 'Request to kill all instances, ' \
+                                           'yet no instances were found.'
+    response = jsonify(response_dict)
+    response.status_code = status_code
     return response
 
 
