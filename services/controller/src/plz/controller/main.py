@@ -389,7 +389,7 @@ def kill_instances_entrypoint():
         instance_ids = None
     else:
         instance_ids: [str] = request.json['instance_ids']
-    force_if_not_idle: bool = request.json['force_if_not_idle']
+    force_if_not_idle = request.json['force_if_not_idle']
 
     status_code = requests.codes.ok
     response_dict = {}
