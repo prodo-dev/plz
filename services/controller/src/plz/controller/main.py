@@ -18,7 +18,7 @@ from plz.controller.configuration import Dependencies
 from plz.controller.db_storage import DBStorage
 from plz.controller.exceptions import AbortedExecutionException, \
     JSONResponseException, ResponseHandledException, WorkerUnreachableException
-from plz.controller.execution import Executions
+from plz.controller.execution import ExecutionNotFoundException, Executions
 from plz.controller.images import Images
 from plz.controller.input_data import InputDataConfiguration
 from plz.controller.instances.instance_base import Instance, \
@@ -406,6 +406,14 @@ def kill_instances_entrypoint():
     response = jsonify(response_dict)
     response.status_code = status_code
     return response
+
+
+@app.route(f'/executions/describe/<execution_id>', methods=['GET'])
+def describe_execution_entrypoint(execution_id: str):
+    start_metadata = db_storage.retrieve_start_metadata(execution_id)
+    if start_metadata is None:
+        raise ExecutionNotFoundException(execution_id)
+    return jsonify({'start_metadata': start_metadata})
 
 
 def get_execution_uuid() -> str:

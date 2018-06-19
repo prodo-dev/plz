@@ -4,6 +4,7 @@ import sys
 from typing import Type
 
 from plz.cli.configuration import Configuration, ValidationException
+from plz.cli.describe_execution_operation import DescribeExecutionOperation
 from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
 from plz.cli.kill_instances_operation import KillInstancesOperation
 from plz.cli.list_context_operation import ListContextOperation
@@ -33,6 +34,7 @@ OPERATIONS: [Type[Operation]] = [
     RerunExecutionOperation,
     ListContextOperation,
     KillInstancesOperation,
+    DescribeExecutionOperation,
 ]
 
 
