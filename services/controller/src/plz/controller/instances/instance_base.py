@@ -1,11 +1,11 @@
 import io
 import logging
-import time
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from typing import Any, ContextManager, Dict, Iterator, List, Optional
 
 import requests
+import time
 from redis import StrictRedis
 from redis.lock import Lock
 
@@ -85,16 +85,22 @@ class Instance(Results):
         return self.get_execution_id() == '' or container_state is None
 
     def get_execution_info(self) -> ExecutionInfo:
-        container_state = self.container_state()
-        if self._is_idle(container_state):
+        resource_state = self.get_resource_state()
+        if resource_state != 'running':
             running = False
-            status = 'idle'
-            idle_since_timestamp = self.get_idle_since_timestamp()
+            status = resource_state
+            idle_since_timestamp = None
         else:
-            running = container_state.running
-            status = container_state.status
-            idle_since_timestamp = self.get_idle_since_timestamp(
-                container_state)
+            container_state = self.container_state()
+            if self._is_idle(container_state):
+                running = False
+                status = 'idle'
+                idle_since_timestamp = self.get_idle_since_timestamp()
+            else:
+                running = container_state.running
+                status = container_state.status
+                idle_since_timestamp = self.get_idle_since_timestamp(
+                    container_state)
         return ExecutionInfo(
             instance_type=self.get_instance_type(),
             instance_id=self.instance_id,
@@ -179,6 +185,9 @@ class Instance(Results):
                               f'execution ID: {self.get_execution_id()}: '
                               f'{result}')
 
+    def is_terminated(self) -> bool:
+        return self.get_resource_state() == 'terminated'
+
     @abstractmethod
     def kill(self, force_if_not_idle: bool) -> Optional[str]:
         """Kills an instance.
@@ -246,15 +255,16 @@ class InstanceProvider(ABC):
 
     def kill_instances(
             self, instance_ids: Optional[str], force_if_not_idle: bool) \
-            -> [Dict[Instance, str]]:
+            -> None:
         """ Hard stop for a set of instances
 
         :param instance_ids: instances to dispose of. A value of `None` means
                all instances in the group
         :param force_if_not_idle: force termination for non-idle instances
-        :return: a dictionary including a failure message for each instance
-                 that failed to terminate
-        :rtype: [Dict[Instance, str]]
+        :raises: :class:`ProviderKillingInstancesException` if some instances
+                 failed to terminate
+        :raises: :class:`NoInstancesFound` if asked for the termination of all
+                 instances, and there are no instances
         """
         terminate_all_instances = instance_ids is None
 
@@ -263,19 +273,29 @@ class InstanceProvider(ABC):
         else:
             unprocessed_instance_ids = []
 
-        failed_instances = {}
+        instance_ids_to_messages = {}
+        there_is_one_instance = False
         for instance in self.instance_iterator(only_running=False):
+            if instance.is_terminated():
+                continue
+            there_is_one_instance = True
             if terminate_all_instances or instance.instance_id in instance_ids:
-                    result = instance.kill(force_if_not_idle)
-                    if result is not None:
-                        failed_instances[instance.instance_id] = result
+                    try:
+                        instance.kill(force_if_not_idle)
+                    except KillingInstanceException as e:
+                        instance_ids_to_messages[instance.instance_id] = \
+                            e.message
                     if not terminate_all_instances:
                         unprocessed_instance_ids.remove(instance.instance_id)
 
         for instance_id in unprocessed_instance_ids:
-            failed_instances[instance_id] = 'Instance not found'
+            instance_ids_to_messages[instance_id] = 'Instance not found'
 
-        return failed_instances
+        if len(instance_ids_to_messages) > 0:
+            raise ProviderKillingInstancesException(instance_ids_to_messages)
+
+        if terminate_all_instances and not there_is_one_instance:
+            raise NoInstancesFound()
 
     @abstractmethod
     def push(self, image_tag: str):
@@ -298,7 +318,8 @@ class InstanceProvider(ABC):
     def get_executions(self) -> [ExecutionInfo]:
         return [
             instance.get_execution_info()
-            for instance in self.instance_iterator(only_running=True)]
+            for instance in self.instance_iterator(only_running=False)
+            if not instance.is_terminated()]
 
     @abstractmethod
     def get_forensics(self, execution_id: str) -> dict:
@@ -320,6 +341,21 @@ class InstanceStillRunningException(ResponseHandledException):
 
 class InstanceMissingStateException(Exception):
     pass
+
+
+class NoInstancesFound(Exception):
+    pass
+
+
+class KillingInstanceException(Exception):
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
+class ProviderKillingInstancesException(Exception):
+    def __init__(self, instance_ids_to_messages: Dict[str, str]):
+        self.instance_ids_to_messages = instance_ids_to_messages
 
 
 class _InstanceContextManager(ContextManager):

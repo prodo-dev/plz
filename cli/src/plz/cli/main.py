@@ -5,6 +5,7 @@ from typing import Type
 
 from plz.cli.configuration import Configuration, ValidationException
 from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
+from plz.cli.kill_instances_operation import KillInstancesOperation
 from plz.cli.list_context_operation import ListContextOperation
 from plz.cli.list_executions_operation import ListExecutionsOperation
 from plz.cli.log import log_error, setup_logger
@@ -31,6 +32,7 @@ OPERATIONS: [Type[Operation]] = [
     PingBackendOperation,
     RerunExecutionOperation,
     ListContextOperation,
+    KillInstancesOperation,
 ]
 
 

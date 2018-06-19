@@ -1,18 +1,16 @@
 import io
 import logging
 import os.path
-import traceback
-
-import time
 from typing import Dict, Iterator, List, Optional
 
+import time
 from redis import StrictRedis
 
 from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
 from plz.controller.instances.docker import DockerInstance
-from plz.controller.instances.instance_base \
-    import ExecutionInfo, Instance, Parameters
+from plz.controller.instances.instance_base import ExecutionInfo, Instance, \
+    KillingInstanceException, Parameters
 from plz.controller.results import ResultsStorage
 from plz.controller.volumes import Volumes
 
@@ -72,14 +70,15 @@ class EC2Instance(Instance):
         return self.images.can_pull(
             5 if is_instance_newly_created else 1)
 
-    def kill(self, force_if_not_idle: bool) -> Optional[str]:
-        if not force_if_not_idle and self._is_idle(self.container_state()):
-            return 'Instance is not idle'
-        # noinspection PyBroadException
-        try:
-            self.client.terminate_instances(InstanceIds=[self.instance_id])
-        except Exception:
-            return traceback.format_exc()
+    def kill(self, force_if_not_idle: bool):
+        with self._lock:
+            if not force_if_not_idle and not self._is_idle(
+                    self.container_state()):
+                raise KillingInstanceException('Instance is not idle')
+            try:
+                self.client.terminate_instances(InstanceIds=[self.instance_id])
+            except Exception as e:
+                raise KillingInstanceException(str(e)) from e
 
     def _set_execution_id(
             self, execution_id: str, max_idle_seconds: int):
@@ -140,6 +139,10 @@ class EC2Instance(Instance):
         return self.delegate.stop_execution()
 
     def container_state(self) -> Optional[ContainerState]:
+        if self.get_resource_state() != 'running':
+            # Do not try to get a container for instances that are pending,
+            # shutting down, etc.
+            return None
         return self.delegate.container_state()
 
     def release(self,
