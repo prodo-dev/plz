@@ -105,7 +105,7 @@ class Configuration:
             Property('user', required=True),
             Property('instance_type', default='t2.micro'),
             Property('project', required=True),
-            Property('image', type=str, required=True),
+            Property('image', type=str),
             Property('image_extensions', type=list, default=[]),
             Property('command', type=list),
             Property('input', type=str),

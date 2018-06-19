@@ -56,6 +56,10 @@ class RunExecutionOperation(Operation):
             raise CLIException('No command specified! Use --command or '
                                'include a `command` entry in plz.config.json')
 
+        if not self.configuration.image:
+            raise CLIException('No image specified! Include an `image` entry '
+                               'in plz.config.json')
+
         if os.path.exists(self.output_dir):
             raise CLIException(
                 f'The output directory "{self.output_dir}" already exists.')
