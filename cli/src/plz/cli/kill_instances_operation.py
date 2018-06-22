@@ -45,6 +45,10 @@ class KillInstancesOperation(Operation):
                 if answer != 'yeah':
                     raise CLIException('Cancelled by user')
         else:
+            if self.instance_ids is None or len(self.instance_ids) == 0:
+                raise CLIException(
+                    'You must specify a list of instance IDs with the -i '
+                    'option. Use `plz list` to get instance IDs')
             log_info('Killing instances: ' + ' '.join(self.instance_ids))
         if not self.all_of_them_plz and not self.instance_ids:
             raise CLIException('No instance IDs specified')
