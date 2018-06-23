@@ -355,7 +355,7 @@ def create_snapshot():
 def put_input_entrypoint(input_id: str):
     return jsonify(
         input_data_configuration.publish_input_data(
-            input_id, get_input_metadata_from_request()))
+            input_id, get_input_metadata_from_request(), request.stream))
 
 
 @app.route('/data/input/<expected_input_id>', methods=['HEAD'])

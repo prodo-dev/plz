@@ -6,7 +6,6 @@ import tempfile
 from typing import IO, Optional
 
 import requests
-from flask import request
 from redis import StrictRedis
 
 from plz.controller.exceptions import ResponseHandledException
@@ -24,10 +23,11 @@ class InputDataConfiguration:
         self.temp_data_dir = temp_data_dir
 
     def publish_input_data(
-            self, expected_input_id: str, metadata: 'InputMetadata') -> dict:
+            self, expected_input_id: str, metadata: 'InputMetadata',
+            input_data_stream: IO) -> dict:
         input_file_path = self.input_file(expected_input_id)
         if os.path.exists(input_file_path):
-            request.stream.close()
+            input_data_stream.close()
             return {
                 'id': expected_input_id,
             }
@@ -38,7 +38,7 @@ class InputDataConfiguration:
             with os.fdopen(fd, 'wb') as f:
                 bytes_read = 0
                 while True:
-                    data = request.stream.read(READ_BUFFER_SIZE)
+                    data = input_data_stream.read(READ_BUFFER_SIZE)
                     bytes_read += len(data)
                     log.debug(f'{bytes_read} bytes of input read')
                     if not data:
