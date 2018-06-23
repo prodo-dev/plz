@@ -80,7 +80,7 @@ class InputDataConfiguration:
             input_id = str(input_id_bytes, 'utf-8')
         return jsonify({'id': input_id})
 
-    def check_input_data(self, input_id: str):
+    def check_input_data(self, input_id: str) -> bool:
         metadata = _InputMetadata.from_request()
         if self._input_file_exists(input_id):
             if metadata.has_all_args():
@@ -90,11 +90,9 @@ class InputDataConfiguration:
                 # the tarball will be constructed all the times on the client
                 # side. It happened.
                 self._store_input_id(metadata, input_id)
-            return jsonify({
-                'id': input_id,
-            })
+            return True
         else:
-            abort(requests.codes.not_found)
+            return False
 
     def prepare_input_stream(self, execution_spec: dict):
         input_id: Optional[str] = execution_spec.get('input_id')

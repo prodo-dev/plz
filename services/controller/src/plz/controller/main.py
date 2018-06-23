@@ -358,7 +358,11 @@ def put_input_entrypoint(input_id: str):
 
 @app.route('/data/input/<expected_input_id>', methods=['HEAD'])
 def check_input_data_entrypoint(expected_input_id: str):
-    return input_data_configuration.check_input_data(expected_input_id)
+    is_present = input_data_configuration.check_input_data(expected_input_id)
+    if is_present:
+        return jsonify({'id': expected_input_id})
+    else:
+        abort(requests.codes.not_found)
 
 
 @app.route('/data/input/id', methods=['GET'])
