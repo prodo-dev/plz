@@ -6,7 +6,7 @@ import tempfile
 from typing import IO, Optional
 
 import requests
-from flask import abort, request
+from flask import request
 from redis import StrictRedis
 
 from plz.controller.exceptions import ResponseHandledException
@@ -23,8 +23,8 @@ class InputDataConfiguration:
         self.input_dir = input_dir
         self.temp_data_dir = temp_data_dir
 
-    def publish_input_data(self, expected_input_id: str) -> dict:
-        metadata: InputMetadata = InputMetadata.from_request()
+    def publish_input_data(
+            self, expected_input_id: str, metadata: 'InputMetadata') -> dict:
         input_file_path = self.input_file(expected_input_id)
         if os.path.exists(input_file_path):
             request.stream.close()
@@ -74,8 +74,8 @@ class InputDataConfiguration:
         else:
             return input_id
 
-    def check_input_data(self, input_id: str) -> bool:
-        metadata = InputMetadata.from_request()
+    def check_input_data(
+            self, input_id: str, metadata: 'InputMetadata') -> bool:
         if self._input_file_exists(input_id):
             if metadata.has_all_args():
                 # The reason to do this is that, if there's a blob that
@@ -122,24 +122,10 @@ class InputMetadata:
         self.path: Optional[str] = None
         self.timestamp_millis: Optional[int] = None
 
-    @staticmethod
-    def from_request() -> 'InputMetadata':
-        metadata: InputMetadata = InputMetadata()
-        metadata.user = request.args.get('user', default=None, type=str)
-        metadata.project = request.args.get(
-            'project', default=None, type=str)
-        metadata.path = request.args.get(
-            'path', default=None, type=str)
-        metadata.timestamp_millis = request.args.get(
-            'timestamp_millis', default=None, type=str)
-        if not metadata._has_all_args_or_none():
-            abort(request.codes.bad_request)
-        return metadata
-
     def has_all_args(self) -> bool:
         return all(self.__dict__.values())
 
-    def _has_all_args_or_none(self) -> bool:
+    def has_all_args_or_none(self) -> bool:
         return self.has_all_args() or not any(self.__dict__.values())
 
     def redis_field(self) -> str:

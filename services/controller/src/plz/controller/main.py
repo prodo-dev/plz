@@ -353,22 +353,39 @@ def create_snapshot():
 
 @app.route('/data/input/<input_id>', methods=['PUT'])
 def put_input_entrypoint(input_id: str):
-    return jsonify(input_data_configuration.publish_input_data(input_id))
+    return jsonify(
+        input_data_configuration.publish_input_data(
+            input_id, get_input_metadata_from_request()))
 
 
 @app.route('/data/input/<expected_input_id>', methods=['HEAD'])
 def check_input_data_entrypoint(expected_input_id: str):
-    is_present = input_data_configuration.check_input_data(expected_input_id)
+    is_present = input_data_configuration.check_input_data(
+        expected_input_id, get_input_metadata_from_request())
     if is_present:
         return jsonify({'id': expected_input_id})
     else:
         abort(requests.codes.not_found)
 
 
+def get_input_metadata_from_request() -> 'InputMetadata':
+    metadata: InputMetadata = InputMetadata()
+    metadata.user = request.args.get('user', default=None, type=str)
+    metadata.project = request.args.get(
+        'project', default=None, type=str)
+    metadata.path = request.args.get(
+        'path', default=None, type=str)
+    metadata.timestamp_millis = request.args.get(
+        'timestamp_millis', default=None, type=str)
+    if not metadata.has_all_args_or_none():
+        abort(request.codes.bad_request)
+    return metadata
+
+
 @app.route('/data/input/id', methods=['GET'])
 def get_input_id_entrypoint():
     try:
-        metadata = InputMetadata.from_request()
+        metadata = get_input_metadata_from_request()
     except ValueError:
         abort(requests.codes.bad_request)
         return
