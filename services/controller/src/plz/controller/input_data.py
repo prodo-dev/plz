@@ -6,7 +6,7 @@ import tempfile
 from typing import Optional
 
 import requests
-from flask import Response, abort, jsonify, request
+from flask import abort, request
 from redis import StrictRedis
 
 READ_BUFFER_SIZE = 16384
@@ -22,7 +22,7 @@ class InputDataConfiguration:
         self.temp_data_dir = temp_data_dir
 
     def publish_input_data(self, expected_input_id: str) -> dict:
-        metadata: _InputMetadata = _InputMetadata.from_request()
+        metadata: InputMetadata = InputMetadata.from_request()
         input_file_path = self.input_file(expected_input_id)
         if os.path.exists(input_file_path):
             request.stream.close()
@@ -58,30 +58,22 @@ class InputDataConfiguration:
             os.remove(temp_file_path)
             raise
 
-    def get_input_id_from_metadata_or_none(
-            self,
-            metadata: Optional['_InputMetadata'] = None) -> Response:
-        try:
-            metadata = metadata or _InputMetadata.from_request()
-        except ValueError:
-            abort(requests.codes.bad_request)
-            # Make static analyser happy by having this return statement...
-            return Response()
+    def get_input_id_from_metadata_or_none(self, metadata: 'InputMetadata') \
+            -> Optional[str]:
         input_id_bytes = self.redis.hget(_INPUT_ID_KEY, metadata.redis_field())
         if not input_id_bytes:
-            return jsonify({'id': None})
+            return None
         input_id = str(input_id_bytes, 'utf-8')
         # We have the metadata stored, but the file doesn't exist. I can
         # imagine this happening so let's make this cache mechanism resilient
         # to that.
         if not self._input_file_exists(input_id):
-            input_id = None
+            return None
         else:
-            input_id = str(input_id_bytes, 'utf-8')
-        return jsonify({'id': input_id})
+            return input_id
 
     def check_input_data(self, input_id: str) -> bool:
-        metadata = _InputMetadata.from_request()
+        metadata = InputMetadata.from_request()
         if self._input_file_exists(input_id):
             if metadata.has_all_args():
                 # The reason to do this is that, if there's a blob that
@@ -111,7 +103,7 @@ class InputDataConfiguration:
         return input_file_path
 
     def _store_input_id(
-            self, metadata: '_InputMetadata', input_id: str) -> None:
+            self, metadata: 'InputMetadata', input_id: str) -> None:
         field = metadata.redis_field()
         self.redis.hset(_INPUT_ID_KEY, field, input_id)
         log.debug(field + ': ' +
@@ -121,7 +113,7 @@ class InputDataConfiguration:
         return os.path.exists(self.input_file(input_id))
 
 
-class _InputMetadata:
+class InputMetadata:
     def __init__(self):
         self.user: Optional[str] = None
         self.project: Optional[str] = None
@@ -129,8 +121,8 @@ class _InputMetadata:
         self.timestamp_millis: Optional[int] = None
 
     @staticmethod
-    def from_request() -> '_InputMetadata':
-        metadata: _InputMetadata = _InputMetadata()
+    def from_request() -> 'InputMetadata':
+        metadata: InputMetadata = InputMetadata()
         metadata.user = request.args.get('user', default=None, type=str)
         metadata.project = request.args.get(
             'project', default=None, type=str)

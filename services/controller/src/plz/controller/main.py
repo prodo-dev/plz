@@ -20,7 +20,8 @@ from plz.controller.exceptions import AbortedExecutionException, \
     JSONResponseException, ResponseHandledException, WorkerUnreachableException
 from plz.controller.execution import ExecutionNotFoundException, Executions
 from plz.controller.images import Images
-from plz.controller.input_data import IncorrectInputID, InputDataConfiguration
+from plz.controller.input_data import IncorrectInputID, InputDataConfiguration, \
+    InputMetadata
 from plz.controller.instances.instance_base import Instance, \
     InstanceNotRunningException, InstanceProvider, \
     InstanceStillRunningException, NoInstancesFound, \
@@ -367,7 +368,14 @@ def check_input_data_entrypoint(expected_input_id: str):
 
 @app.route('/data/input/id', methods=['GET'])
 def get_input_id_entrypoint():
-    return input_data_configuration.get_input_id_from_metadata_or_none()
+    try:
+        metadata = InputMetadata.from_request()
+    except ValueError:
+        abort(requests.codes.bad_request)
+        return
+    id_or_none = input_data_configuration.get_input_id_from_metadata_or_none(
+        metadata)
+    return jsonify({'id': id_or_none})
 
 
 @app.route('/data/input/<input_id>', methods=['DELETE'])
