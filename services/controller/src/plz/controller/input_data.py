@@ -26,11 +26,11 @@ class InputDataConfiguration:
 
     def publish_input_data(
             self, expected_input_id: str, metadata: 'InputMetadata',
-            input_data_stream: IO) -> InputID:
+            input_data_stream: IO) -> None:
         input_file_path = self.input_file(expected_input_id)
         if os.path.exists(input_file_path):
             input_data_stream.close()
-            return expected_input_id
+            return
 
         file_hash = hashlib.sha256()
         fd, temp_file_path = tempfile.mkstemp(dir=self.temp_data_dir)
@@ -53,7 +53,7 @@ class InputDataConfiguration:
             os.rename(temp_file_path, input_file_path)
             if metadata.has_all_args():
                 self._store_input_id(metadata, input_id)
-            return expected_input_id
+            return
         except Exception:
             os.remove(temp_file_path)
             raise
