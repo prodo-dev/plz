@@ -3,7 +3,7 @@ import logging
 import os
 import re
 import tempfile
-from typing import IO, Optional
+from typing import BinaryIO, Optional
 
 import requests
 from redis import StrictRedis
@@ -26,7 +26,7 @@ class InputDataConfiguration:
 
     def publish_input_data(
             self, expected_input_id: str, metadata: 'InputMetadata',
-            input_data_stream: IO) -> None:
+            input_data_stream: BinaryIO) -> None:
         input_file_path = self.input_file(expected_input_id)
         if os.path.exists(input_file_path):
             input_data_stream.close()
@@ -86,7 +86,7 @@ class InputDataConfiguration:
         else:
             return False
 
-    def prepare_input_stream(self, execution_spec: dict) -> Optional[IO]:
+    def prepare_input_stream(self, execution_spec: dict) -> Optional[BinaryIO]:
         input_id: Optional[str] = execution_spec.get('input_id')
         if not input_id:
             return None
