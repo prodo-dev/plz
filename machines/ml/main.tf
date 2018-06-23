@@ -92,7 +92,7 @@ data "aws_ami" "controller-ami" {
 }
 
 resource "aws_security_group" "plz_controller_ssh" {
-  name        = "allow_plz_controller_ssh"
+  name        = "allow_plz_${var.environment_name}_controller_ssh"
   description = "Allow ssh connections to the plz controller"
 
   vpc_id = "${data.aws_vpc.main.id}"
