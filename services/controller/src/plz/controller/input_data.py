@@ -6,7 +6,7 @@ import tempfile
 from typing import Optional
 
 import requests
-from flask import abort, jsonify, request, Response
+from flask import Response, abort, jsonify, request
 from redis import StrictRedis
 
 READ_BUFFER_SIZE = 16384
@@ -21,14 +21,14 @@ class InputDataConfiguration:
         self.input_dir = input_dir
         self.temp_data_dir = temp_data_dir
 
-    def publish_input_data(self, expected_input_id: str):
+    def publish_input_data(self, expected_input_id: str) -> dict:
         metadata: _InputMetadata = _InputMetadata.from_request()
         input_file_path = self.input_file(expected_input_id)
         if os.path.exists(input_file_path):
             request.stream.close()
-            return jsonify({
+            return {
                 'id': expected_input_id,
-            })
+            }
 
         file_hash = hashlib.sha256()
         fd, temp_file_path = tempfile.mkstemp(dir=self.temp_data_dir)
@@ -46,15 +46,14 @@ class InputDataConfiguration:
 
             input_id = file_hash.hexdigest()
             if input_id != expected_input_id:
-                abort(
-                    requests.codes.bad_request, 'The input ID was incorrect.')
+                raise IncorrectInputID()
 
             os.rename(temp_file_path, input_file_path)
             if metadata.has_all_args():
                 self._store_input_id(metadata, input_id)
-            return jsonify({
+            return {
                 'id': input_id,
-            })
+            }
         except Exception:
             os.remove(temp_file_path)
             raise
@@ -154,3 +153,7 @@ class _InputMetadata:
     def redis_field(self) -> str:
         return (f'{self.user}#{self.project}#{self.path}'
                 f'#{self.timestamp_millis}')
+
+
+class IncorrectInputID(Exception):
+    pass

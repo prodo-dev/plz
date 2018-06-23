@@ -8,7 +8,7 @@ from distutils.util import strtobool
 from typing import Any, Callable, Iterator, Optional, TypeVar, Union
 
 import requests
-from flask import Flask, Response, jsonify, request, stream_with_context
+from flask import Flask, Response, abort, jsonify, request, stream_with_context
 from redis import StrictRedis
 
 from plz.controller import configuration
@@ -20,7 +20,7 @@ from plz.controller.exceptions import AbortedExecutionException, \
     JSONResponseException, ResponseHandledException, WorkerUnreachableException
 from plz.controller.execution import ExecutionNotFoundException, Executions
 from plz.controller.images import Images
-from plz.controller.input_data import InputDataConfiguration
+from plz.controller.input_data import IncorrectInputID, InputDataConfiguration
 from plz.controller.instances.instance_base import Instance, \
     InstanceNotRunningException, InstanceProvider, \
     InstanceStillRunningException, NoInstancesFound, \
@@ -265,7 +265,7 @@ def get_output_files_entrypoint(execution_id):
 
 @app.route(f'/executions/<execution_id>/measures', methods=['GET'])
 def get_measures(execution_id):
-    summary: Optional[bool] = request.args.get(
+    summary: bool = request.args.get(
         'summary', default=False, type=strtobool)
 
     measures = executions.get(execution_id).get_measures()
@@ -350,7 +350,10 @@ def create_snapshot():
 
 @app.route('/data/input/<input_id>', methods=['PUT'])
 def put_input_entrypoint(input_id: str):
-    return input_data_configuration.publish_input_data(input_id)
+    try:
+        return jsonify(input_data_configuration.publish_input_data(input_id))
+    except IncorrectInputID:
+        abort(requests.codes.bad_request, 'The input ID was incorrect.')
 
 
 @app.route('/data/input/<expected_input_id>', methods=['HEAD'])
