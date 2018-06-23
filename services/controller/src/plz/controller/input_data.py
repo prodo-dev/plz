@@ -3,11 +3,13 @@ import logging
 import os
 import re
 import tempfile
-from typing import Optional
+from typing import IO, Optional
 
 import requests
 from flask import abort, request
 from redis import StrictRedis
+
+from plz.controller.exceptions import ResponseHandledException
 
 READ_BUFFER_SIZE = 16384
 _INPUT_ID_KEY = f'{__name__}#input_id'
@@ -86,7 +88,7 @@ class InputDataConfiguration:
         else:
             return False
 
-    def prepare_input_stream(self, execution_spec: dict):
+    def prepare_input_stream(self, execution_spec: dict) -> Optional[IO]:
         input_id: Optional[str] = execution_spec.get('input_id')
         if not input_id:
             return None
@@ -94,11 +96,11 @@ class InputDataConfiguration:
             input_file_path = self.input_file(input_id)
             return open(input_file_path, 'rb')
         except FileNotFoundError:
-            abort(requests.codes.bad_request, 'Invalid input ID.')
+            raise IncorrectInputID()
 
     def input_file(self, input_id: str):
         if not re.match(r'^\w{64}$', input_id):
-            abort(requests.codes.bad_request, 'Invalid input ID.')
+            raise IncorrectInputID()
         input_file_path = os.path.join(self.input_dir, input_id)
         return input_file_path
 
@@ -145,5 +147,6 @@ class InputMetadata:
                 f'#{self.timestamp_millis}')
 
 
-class IncorrectInputID(Exception):
-    pass
+class IncorrectInputID(ResponseHandledException):
+    def __init__(self):
+        super().__init__(requests.codes.bad_request)

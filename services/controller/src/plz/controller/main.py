@@ -20,8 +20,8 @@ from plz.controller.exceptions import AbortedExecutionException, \
     JSONResponseException, ResponseHandledException, WorkerUnreachableException
 from plz.controller.execution import ExecutionNotFoundException, Executions
 from plz.controller.images import Images
-from plz.controller.input_data import IncorrectInputID, InputDataConfiguration, \
-    InputMetadata
+from plz.controller.input_data import IncorrectInputID, \
+    InputDataConfiguration, InputMetadata
 from plz.controller.instances.instance_base import Instance, \
     InstanceNotRunningException, InstanceProvider, \
     InstanceStillRunningException, NoInstancesFound, \
@@ -211,6 +211,8 @@ def run_execution(command: [str], snapshot_id: str, parameters: dict,
                     'error': 'Couldn\'t get an instance.',
                 }
                 return
+        except IncorrectInputID:
+            abort(requests.codes.bad_request, 'Invalid input ID.')
         except Exception as e:
             log.exception('Exception running command.')
             yield {'error': str(e)}
@@ -351,10 +353,7 @@ def create_snapshot():
 
 @app.route('/data/input/<input_id>', methods=['PUT'])
 def put_input_entrypoint(input_id: str):
-    try:
-        return jsonify(input_data_configuration.publish_input_data(input_id))
-    except IncorrectInputID:
-        abort(requests.codes.bad_request, 'The input ID was incorrect.')
+    return jsonify(input_data_configuration.publish_input_data(input_id))
 
 
 @app.route('/data/input/<expected_input_id>', methods=['HEAD'])
