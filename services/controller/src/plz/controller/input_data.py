@@ -48,7 +48,7 @@ class InputDataConfiguration:
 
             input_id = file_hash.hexdigest()
             if input_id != expected_input_id:
-                raise IncorrectInputID()
+                raise IncorrectInputIDException()
 
             os.rename(temp_file_path, input_file_path)
             if metadata.has_all_args():
@@ -94,11 +94,11 @@ class InputDataConfiguration:
             input_file_path = self.input_file(input_id)
             return open(input_file_path, 'rb')
         except FileNotFoundError:
-            raise IncorrectInputID()
+            raise IncorrectInputIDException()
 
     def input_file(self, input_id: str):
         if not re.match(r'^\w{64}$', input_id):
-            raise IncorrectInputID()
+            raise IncorrectInputIDException()
         input_file_path = os.path.join(self.input_dir, input_id)
         return input_file_path
 
@@ -131,6 +131,6 @@ class InputMetadata:
                 f'#{self.timestamp_millis}')
 
 
-class IncorrectInputID(ResponseHandledException):
+class IncorrectInputIDException(ResponseHandledException):
     def __init__(self):
         super().__init__(requests.codes.bad_request)

@@ -34,6 +34,7 @@ class RetrieveMeasuresOperation(Operation):
             params={'summary': self.summary},
             stream=True)
         if response.status_code == requests.codes.conflict:
+            # TODO: can this still happen?
             raise CLIException(
                 'Process is still running, run `plz stop` if you want to '
                 'terminate it')
