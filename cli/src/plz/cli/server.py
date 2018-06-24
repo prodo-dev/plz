@@ -7,8 +7,7 @@ from requests import Response
 
 from plz.cli import ssh_session
 from plz.cli.configuration import Configuration
-from plz.cli.exceptions import CLIException
-from plz.cli.operation import RequestException
+from plz.cli.exceptions import CLIException, RequestException
 from plz.cli.ssh_session import add_ssh_channel_adapter
 from plz.controller.exceptions import AbortedExecutionException, \
     BadInputMetadataException, ExecutionAlreadyHarvestedException, \

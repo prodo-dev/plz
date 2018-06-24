@@ -5,9 +5,9 @@ from typing import BinaryIO, Iterator, Optional
 
 import requests
 
-from plz.cli.exceptions import CLIException
+from plz.cli.exceptions import CLIException, RequestException
 from plz.cli.log import log_error
-from plz.cli.operation import RequestException, check_status
+from plz.cli.operation import check_status
 from plz.cli.server import Server
 from plz.controller import Controller
 from plz.controller.controller import JSONString

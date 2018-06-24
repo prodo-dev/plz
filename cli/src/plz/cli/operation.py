@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 import requests
 
 from plz.cli.configuration import Configuration
-from plz.cli.exceptions import CLIException
+from plz.cli.exceptions import CLIException, RequestException
 from plz.cli.server import Server
 
 
@@ -57,18 +57,6 @@ class Operation(ABC):
     @abstractmethod
     def run(self):
         pass
-
-
-class RequestException(Exception):
-    def __init__(self, response: requests.Response):
-        try:
-            body = response.json()
-        except ValueError:
-            body = response.text
-        super().__init__(
-            f'Request failed with status code {response.status_code}.\n' +
-            f'Response:\n{body}'
-        )
 
 
 def check_status(response: requests.Response, expected_status: int):

@@ -1,5 +1,7 @@
 import traceback
 
+import requests
+
 from plz.cli.log import log_error
 
 
@@ -23,3 +25,15 @@ class CLIException(ExitWithStatusCodeException):
             if configuration.debug:
                 traceback.print_exception(
                     type(cause), cause, cause.__traceback__)
+
+
+class RequestException(Exception):
+    def __init__(self, response: requests.Response):
+        try:
+            body = response.json()
+        except ValueError:
+            body = response.text
+        super().__init__(
+            f'Request failed with status code {response.status_code}.\n' +
+            f'Response:\n{body}'
+        )
