@@ -8,7 +8,7 @@ from distutils.util import strtobool
 from typing import Any, Callable, Iterator, Optional, TypeVar, Union
 
 import requests
-from flask import Flask, Response, jsonify, request, stream_with_context
+from flask import Flask, Response, abort, jsonify, request, stream_with_context
 from redis import StrictRedis
 
 from plz.controller import configuration
@@ -20,7 +20,8 @@ from plz.controller.exceptions import AbortedExecutionException, \
     JSONResponseException, ResponseHandledException, WorkerUnreachableException
 from plz.controller.execution import ExecutionNotFoundException, Executions
 from plz.controller.images import Images
-from plz.controller.input_data import InputDataConfiguration
+from plz.controller.input_data import IncorrectInputID, \
+    InputDataConfiguration, InputMetadata
 from plz.controller.instances.instance_base import Instance, \
     InstanceNotRunningException, InstanceProvider, \
     InstanceStillRunningException, NoInstancesFound, \
@@ -210,6 +211,8 @@ def run_execution(command: [str], snapshot_id: str, parameters: dict,
                     'error': 'Couldn\'t get an instance.',
                 }
                 return
+        except IncorrectInputID:
+            abort(requests.codes.bad_request, 'Invalid input ID.')
         except Exception as e:
             log.exception('Exception running command.')
             yield {'error': str(e)}
@@ -265,7 +268,7 @@ def get_output_files_entrypoint(execution_id):
 
 @app.route(f'/executions/<execution_id>/measures', methods=['GET'])
 def get_measures(execution_id):
-    summary: Optional[bool] = request.args.get(
+    summary: bool = request.args.get(
         'summary', default=False, type=strtobool)
 
     measures = executions.get(execution_id).get_measures()
@@ -350,17 +353,45 @@ def create_snapshot():
 
 @app.route('/data/input/<input_id>', methods=['PUT'])
 def put_input_entrypoint(input_id: str):
-    return input_data_configuration.publish_input_data(input_id)
+    input_data_configuration.publish_input_data(
+        input_id, get_input_metadata_from_request(), request.stream)
+    return jsonify({'id': input_id})
 
 
 @app.route('/data/input/<expected_input_id>', methods=['HEAD'])
 def check_input_data_entrypoint(expected_input_id: str):
-    return input_data_configuration.check_input_data(expected_input_id)
+    is_present = input_data_configuration.check_input_data(
+        expected_input_id, get_input_metadata_from_request())
+    if is_present:
+        return jsonify({'id': expected_input_id})
+    else:
+        abort(requests.codes.not_found)
+
+
+def get_input_metadata_from_request() -> 'InputMetadata':
+    metadata: InputMetadata = InputMetadata()
+    metadata.user = request.args.get('user', default=None, type=str)
+    metadata.project = request.args.get(
+        'project', default=None, type=str)
+    metadata.path = request.args.get(
+        'path', default=None, type=str)
+    metadata.timestamp_millis = request.args.get(
+        'timestamp_millis', default=None, type=str)
+    if not metadata.has_all_args_or_none():
+        abort(request.codes.bad_request)
+    return metadata
 
 
 @app.route('/data/input/id', methods=['GET'])
 def get_input_id_entrypoint():
-    return input_data_configuration.get_input_id_from_metadata_or_none()
+    try:
+        metadata = get_input_metadata_from_request()
+    except ValueError:
+        abort(requests.codes.bad_request)
+        return
+    id_or_none = input_data_configuration.get_input_id_from_metadata_or_none(
+        metadata)
+    return jsonify({'id': id_or_none})
 
 
 @app.route('/data/input/<input_id>', methods=['DELETE'])
