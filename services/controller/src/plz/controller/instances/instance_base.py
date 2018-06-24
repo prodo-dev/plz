@@ -4,13 +4,11 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 from typing import Any, ContextManager, Dict, Iterator, List, Optional
 
-import requests
 import time
 from redis import StrictRedis
 from redis.lock import Lock
 
 from plz.controller.containers import ContainerMissingException, ContainerState
-from plz.controller.exceptions import ResponseHandledException
 from plz.controller.results.results_base import InstanceStatus, \
     InstanceStatusFailure, InstanceStatusRunning, InstanceStatusSuccess, \
     Results, ResultsStorage
@@ -327,23 +325,11 @@ class InstanceProvider(ABC):
         pass
 
 
-class InstanceNotRunningException(ResponseHandledException):
-    def __init__(self, forensics: dict):
-        super().__init__(response_code=requests.codes.gone)
-        self.forensics = forensics
-
-
-class InstanceStillRunningException(ResponseHandledException):
-    def __init__(self, execution_id):
-        super().__init__(response_code=requests.codes.conflict)
-        self.execution_id = execution_id
-
-
 class InstanceMissingStateException(Exception):
     pass
 
 
-class NoInstancesFound(Exception):
+class NoInstancesFoundException(Exception):
     pass
 
 
@@ -351,11 +337,6 @@ class KillingInstanceException(Exception):
     def __init__(self, message: str):
         super().__init__(message)
         self.message = message
-
-
-class ProviderKillingInstancesException(Exception):
-    def __init__(self, instance_ids_to_messages: Dict[str, str]):
-        self.instance_ids_to_messages = instance_ids_to_messages
 
 
 class _InstanceContextManager(ContextManager):

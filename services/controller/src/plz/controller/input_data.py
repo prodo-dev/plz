@@ -5,10 +5,9 @@ import re
 import tempfile
 from typing import BinaryIO, Optional
 
-import requests
 from redis import StrictRedis
 
-from plz.controller.exceptions import ResponseHandledException
+from plz.controller.exceptions import IncorrectInputIDException
 
 READ_BUFFER_SIZE = 16384
 _INPUT_ID_KEY = f'{__name__}#input_id'
@@ -113,24 +112,3 @@ class InputDataConfiguration:
         return os.path.exists(self.input_file(input_id))
 
 
-class InputMetadata:
-    def __init__(self):
-        self.user: Optional[str] = None
-        self.project: Optional[str] = None
-        self.path: Optional[str] = None
-        self.timestamp_millis: Optional[int] = None
-
-    def has_all_args(self) -> bool:
-        return all(self.__dict__.values())
-
-    def has_all_args_or_none(self) -> bool:
-        return self.has_all_args() or not any(self.__dict__.values())
-
-    def redis_field(self) -> str:
-        return (f'{self.user}#{self.project}#{self.path}'
-                f'#{self.timestamp_millis}')
-
-
-class IncorrectInputIDException(ResponseHandledException):
-    def __init__(self):
-        super().__init__(requests.codes.bad_request)

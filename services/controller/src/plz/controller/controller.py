@@ -2,32 +2,27 @@ import json
 import logging
 import os
 import random
-import sys
 import uuid
 from abc import ABC, abstractmethod
-from distutils.util import strtobool
-from typing import Any, Callable, Iterator, Optional, TypeVar, Union, BinaryIO
+from typing import BinaryIO, Iterator, Optional
 
 import requests
-from flask import Flask, Response, jsonify, request, stream_with_context
+from flask import jsonify, request
 from pyhocon import ConfigTree
 from redis import StrictRedis
 
 from plz.controller import configuration
-from plz.controller.arbitrary_object_json_encoder import \
-    ArbitraryObjectJSONEncoder
 from plz.controller.configuration import Dependencies
 from plz.controller.db_storage import DBStorage
-from plz.controller.exceptions import AbortedExecutionException, \
-    JSONResponseException, ResponseHandledException, WorkerUnreachableException
-from plz.controller.execution import ExecutionNotFoundException, Executions
+from plz.controller.exceptions import BadInputMetadataException, \
+    ExecutionAlreadyHarvestedException, ExecutionNotFoundException, \
+    InstanceStillRunningException, ResponseHandledException
+from plz.controller.execution import Executions
 from plz.controller.images import Images
-from plz.controller.input_data import InputDataConfiguration, InputMetadata, \
-    IncorrectInputIDException
-from plz.controller.instances.instance_base import Instance, \
-    InstanceNotRunningException, InstanceProvider, \
-    InstanceStillRunningException, NoInstancesFound, \
-    ProviderKillingInstancesException
+from plz.controller.input_data import InputDataConfiguration
+from plz.controller.instances.instance_base import Instance, InstanceProvider, \
+    NoInstancesFoundException
+from plz.controller.types import InputMetadata
 
 JSONString = str
 
@@ -87,21 +82,22 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def get_history(self, user: str, project: str) -> JSONString:
+    def get_history(self, user: str, project: str) -> Iterator[JSONString]:
         pass
 
     @abstractmethod
-    def create_snapshot(self, metadata_str: str, context: BinaryIO) \
-            -> Iterator[Union[bytes, str]]:
+    def create_snapshot(self, image_metadata: dict, context: BinaryIO) \
+            -> Iterator[JSONString]:
         pass
 
     @abstractmethod
-    def put_input(self, input_id: str, input_data_stream: BinaryIO) -> None:
+    def put_input(self, input_id: str, input_metadata: InputMetadata,
+                  input_data_stream: BinaryIO) -> None:
         pass
 
     @abstractmethod
     def check_input_data(
-            self, expected_input_id: str, metadata: InputMetadata) -> bool:
+            self, input_id: str, metadata: InputMetadata) -> bool:
         pass
 
     @abstractmethod
@@ -113,12 +109,16 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def get_user_last_execution_id(self, user: str) -> str:
+    def get_user_last_execution_id(self, user: str) -> Optional[str]:
         pass
 
     @abstractmethod
     def kill_instances(
-            self, instance_ids: [str], force_if_not_idle: bool) -> dict:
+            self, instance_ids: Optional[str], force_if_not_idle: bool) -> bool:
+        """:raises ProviderKillingInstancesException:
+
+           :returns bool: false if there are no instances to kill
+        """
         pass
 
     @abstractmethod
@@ -186,7 +186,7 @@ class ControllerImpl(Controller):
             if instance is None:
                 yield {'error': 'Couldn\'t get an instance.'}
                 return
-            self.set_user_last_execution_id(
+            self._set_user_last_execution_id(
                 execution_spec['user'], execution_id)
         except Exception as e:
             self.log.exception('Exception running command.')
@@ -254,45 +254,63 @@ class ControllerImpl(Controller):
             raise InstanceStillRunningException(execution_id=execution_id)
         instance = self.instance_provider.instance_for(execution_id)
         if fail_if_deleted and instance is None:
-            raise ExecutionAlreadyHarvestedException()
+            raise ExecutionAlreadyHarvestedException(execution_id)
         self.instance_provider.release_instance(
             execution_id, fail_if_not_found=False)
         response.status_code = requests.codes.no_content
         return response
 
-    def get_history(self, user: str, project: str) -> JSONString:
-        pass
+    def get_history(self, user: str, project: str) -> Iterator[JSONString]:
+        execution_ids = self.db_storage.retrieve_finished_execution_ids(
+            user, project)
 
-    def create_snapshot(self, metadata_str: str, context: BinaryIO) -> \
-            Iterator[Union[bytes, str]]:
-        pass
+        yield '{\n'
+        first = True
+        for execution_id in execution_ids:
+            if not first:
+                yield ',\n'
+            first = False
+            yield f'"{execution_id}": ' \
+                  f'{self.executions.get(execution_id).get_metadata()}'
+        yield '\n}\n'
 
-    def put_input(self, input_id: str, input_data_stream: BinaryIO) -> None:
-        pass
+    def create_snapshot(self, image_metadata: dict, context: BinaryIO) -> \
+            Iterator[JSONString]:
+        tag = Images.construct_tag(image_metadata)
+        yield from (
+            frag.decode('utf-8') for frag in self.images.build(context, tag))
+        self.instance_provider.push(tag)
+        yield json.dumps({'id': tag})
 
-    def check_input_data(self, expected_input_id: str,
-                         metadata: InputMetadata) -> bool:
-        pass
+    def put_input(self, input_id: str, input_metadata: InputMetadata,
+                  input_data_stream: BinaryIO) -> None:
+        if not input_metadata.has_all_args_or_none():
+            raise BadInputMetadataException(input_metadata.__dict__)
+        self.input_data_configuration.publish_input_data(
+            input_id, input_metadata, request.stream)
+        return jsonify({'id': input_id})
 
-    def get_input_id_or_none(self, metadata: InputMetadata) -> Optional[str]:
-        pass
+    def check_input_data(self, input_id: str,
+                         input_metadata: InputMetadata) -> bool:
+        if not input_metadata.has_all_args_or_none():
+            raise BadInputMetadataException(input_metadata.__dict__)
+        return self.input_data_configuration.check_input_data(
+            input_id, input_metadata)
+
+    def get_input_id_or_none(
+            self, input_metadata: InputMetadata) -> Optional[str]:
+        if not input_metadata.has_all_args_or_none():
+            raise BadInputMetadataException(input_metadata.__dict__)
+        id_or_none = \
+            self.input_data_configuration.get_input_id_from_metadata_or_none(
+                input_metadata)
+        return id_or_none
 
     def delete_input_data(self, input_id: str):
-        pass
-
-    def last_execution_id(self, user: str):
-        pass
-
-    def kill_instances(self, instance_ids: [str],
-                       force_if_not_idle: bool) -> dict:
-        pass
-
-    def describe_execution_entrypoint(self, execution_id: str) -> dict:
-        pass
-
-    @classmethod
-    def handle_exception(cls, exception: ResponseHandledException):
-        pass
+        try:
+            os.remove(self.input_data_configuration.input_file(input_id))
+        except FileNotFoundError:
+            pass
 
     def get_user_last_execution_id(self, user: str) -> Optional[str]:
         execution_id_bytes = self.redis.get(
@@ -302,7 +320,25 @@ class ControllerImpl(Controller):
         else:
             return None
 
-    def set_user_last_execution_id(self, user: str, execution_id: str) -> None:
+    def kill_instances(self, instance_ids: Optional[str],
+                       force_if_not_idle: bool) -> bool:
+        try:
+            self.instance_provider.kill_instances(
+                instance_ids=instance_ids, force_if_not_idle=force_if_not_idle)
+        except NoInstancesFoundException:
+            return False
+
+    def describe_execution_entrypoint(self, execution_id: str) -> dict:
+        start_metadata = self.db_storage.retrieve_start_metadata(execution_id)
+        if start_metadata is None:
+            raise ExecutionNotFoundException(execution_id)
+        return {'start_metadata': start_metadata}
+
+    @classmethod
+    def handle_exception(cls, exception: ResponseHandledException):
+        pass
+
+    def _set_user_last_execution_id(self, user: str, execution_id: str) -> None:
         self.redis.set(f'key:{__name__}#user_last_execution_id:{user}',
                        execution_id)
 
@@ -312,7 +348,3 @@ def _get_execution_uuid() -> str:
     # physical address (see Python uuid docs)
     random_node = random.getrandbits(48) | 0x010000000000
     return str(uuid.uuid1(node=random_node))
-
-
-class ExecutionAlreadyHarvestedException(Exception):
-    pass

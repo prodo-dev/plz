@@ -1,9 +1,7 @@
 import json
 import logging
 import os
-import random
 import sys
-import uuid
 from distutils.util import strtobool
 from typing import Any, Callable, Iterator, Optional, TypeVar, Union
 
@@ -16,19 +14,17 @@ from plz.controller.arbitrary_object_json_encoder import \
     ArbitraryObjectJSONEncoder
 from plz.controller.configuration import Dependencies
 from plz.controller.controller import ControllerImpl, \
-    ExecutionAlreadyHarvestedException
+    JSONString
 from plz.controller.db_storage import DBStorage
 from plz.controller.exceptions import AbortedExecutionException, \
-    JSONResponseException, ResponseHandledException, WorkerUnreachableException
-from plz.controller.execution import ExecutionNotFoundException, Executions
+    InstanceNotRunningException, JSONResponseException, \
+    ResponseHandledException, WorkerUnreachableException
+from plz.controller.execution import Executions
 from plz.controller.images import Images
-from plz.controller.input_data import IncorrectInputIDException, \
-    InputDataConfiguration, InputMetadata
-from plz.controller.instances.instance_base import Instance, \
-    InstanceNotRunningException, InstanceProvider, \
-    InstanceStillRunningException, NoInstancesFound, \
-    ProviderKillingInstancesException
+from plz.controller.input_data import InputDataConfiguration
+from plz.controller.instances.instance_base import InstanceProvider
 from plz.controller.results import ResultsStorage
+from plz.controller.types import InputMetadata
 
 T = TypeVar('T')
 ResponseGenerator = Iterator[Union[bytes, str]]
@@ -150,12 +146,9 @@ def run_execution_entrypoint():
     @_json_stream
     @stream_with_context
     def act() -> Iterator[dict]:
-        try:
-            return controller.run_execution(
-                command, snapshot_id, parameters, instance_market_spec,
-                execution_spec, start_metadata)
-        except IncorrectInputIDException:
-            abort(requests.codes.bad_request, 'Invalid input ID.')
+        yield from controller.run_execution(
+            command, snapshot_id, parameters, instance_market_spec,
+            execution_spec, start_metadata)
     return Response(
         act(), mimetype='text/plain', status=requests.codes.accepted)
 
@@ -177,11 +170,8 @@ def rerun_execution_entrypoint():
     @_json_stream
     @stream_with_context
     def act() -> Iterator[dict]:
-        try:
-            return controller.rerun_execution(
-                user, project, previous_execution_id, instance_market_spec)
-        except IncorrectInputIDException:
-            abort(requests.codes.bad_request, 'Invalid input ID.')
+        yield from controller.rerun_execution(
+            user, project, previous_execution_id, instance_market_spec)
     return Response(
         act(), mimetype='text/plain', status=requests.codes.accepted)
 
@@ -238,101 +228,58 @@ def delete_execution(execution_id):
         'fail_if_running', default=False, type=strtobool)
     fail_if_deleted: bool = request.args.get(
         'fail_if_deleted', default=False, type=strtobool)
-    try:
-        controller.delete_execution(
-            execution_id, fail_if_running=fail_if_running,
-            fail_if_deleted=fail_if_deleted)
-    except ExecutionAlreadyHarvestedException:
-        return jsonify({}), requests.codes.expectation_failed
+    controller.delete_execution(
+        execution_id, fail_if_running=fail_if_running,
+        fail_if_deleted=fail_if_deleted)
     return jsonify({}), requests.codes.no_content
 
 
 @app.route(f'/executions/<user>/<project>/history', methods=['GET'])
 def history_entrypoint(user, project):
-    execution_ids = db_storage.retrieve_finished_execution_ids(user, project)
-
-    @stream_with_context
-    def act():
-        yield '{\n'
-        first = True
-        for execution_id in execution_ids:
-            if not first:
-                yield ',\n'
-            first = False
-            yield f'"{execution_id}": ' \
-                  f'{executions.get(execution_id).get_metadata()}'
-        yield '\n}\n'
-
-    response = Response(act(), mimetype='text/plain')
-    response.status_code = requests.codes.ok
-    return response
+    return Response(
+        stream_with_context(controller.get_history(user, project)),
+        mimetype='text/plain')
 
 
 @app.route('/snapshots', methods=['POST'])
 def create_snapshot():
-    metadata_str = request.stream.readline().decode('utf-8')
-    tag = Images.construct_tag(metadata_str)
+    image_metadata = json.loads(request.stream.readline().decode('utf-8'))
 
     @stream_with_context
     @_handle_lazy_exceptions
-    def act() -> Iterator[Union[bytes, str]]:
+    def act() -> Iterator[JSONString]:
         # Pass the rest of the stream to `docker build`
-        yield from images.build(request.stream, tag)
-        instance_provider.push(tag)
-        yield json.dumps({'id': tag})
+        yield from controller.create_snapshot(image_metadata, request.stream)
 
     return Response(act(), mimetype='text/plain')
 
 
 @app.route('/data/input/<input_id>', methods=['PUT'])
 def put_input_entrypoint(input_id: str):
-    input_data_configuration.publish_input_data(
-        input_id, get_input_metadata_from_request(), request.stream)
+    input_metadata = _get_input_metadata_from_request()
+    controller.put_input(input_id, input_metadata, request.stream)
     return jsonify({'id': input_id})
 
 
-@app.route('/data/input/<expected_input_id>', methods=['HEAD'])
-def check_input_data_entrypoint(expected_input_id: str):
-    is_present = input_data_configuration.check_input_data(
-        expected_input_id, get_input_metadata_from_request())
+@app.route('/data/input/<input_id>', methods=['HEAD'])
+def check_input_data_entrypoint(input_id: str):
+    is_present = controller.check_input_data(
+        input_id, _get_input_metadata_from_request())
     if is_present:
-        return jsonify({'id': expected_input_id})
+        return jsonify({'id': input_id})
     else:
         abort(requests.codes.not_found)
 
 
-def get_input_metadata_from_request() -> 'InputMetadata':
-    metadata: InputMetadata = InputMetadata()
-    metadata.user = request.args.get('user', default=None, type=str)
-    metadata.project = request.args.get(
-        'project', default=None, type=str)
-    metadata.path = request.args.get(
-        'path', default=None, type=str)
-    metadata.timestamp_millis = request.args.get(
-        'timestamp_millis', default=None, type=str)
-    if not metadata.has_all_args_or_none():
-        abort(request.codes.bad_request)
-    return metadata
-
-
 @app.route('/data/input/id', methods=['GET'])
 def get_input_id_entrypoint():
-    try:
-        metadata = get_input_metadata_from_request()
-    except ValueError:
-        abort(requests.codes.bad_request)
-        return
-    id_or_none = input_data_configuration.get_input_id_from_metadata_or_none(
-        metadata)
-    return jsonify({'id': id_or_none})
+    input_metadata = _get_input_metadata_from_request()
+    return jsonify({'id': controller.get_input_id_or_none(input_metadata)})
 
 
 @app.route('/data/input/<input_id>', methods=['DELETE'])
 def delete_input_data(input_id: str):
-    try:
-        os.remove(input_data_configuration.input_file(input_id))
-    except FileNotFoundError:
-        pass
+    controller.delete_input_data(input_id)
 
 
 @app.route(f'/users/<user>/last_execution_id')
@@ -341,9 +288,7 @@ def last_execution_id_entrypoint(user: str):
     response_object = {}
     if last_execution_id is not None:
         response_object['execution_id'] = last_execution_id
-    response = jsonify(response_object)
-    response.status_code = requests.codes.ok
-    return response
+    return jsonify(response_object)
 
 
 @app.route(f'/instances/kill', methods=['POST'])
@@ -355,29 +300,22 @@ def kill_instances_entrypoint():
         instance_ids: [str] = request.json['instance_ids']
     force_if_not_idle = request.json['force_if_not_idle']
 
-    status_code = requests.codes.ok
-    response_dict = {}
-    try:
-        instance_provider.kill_instances(
-            instance_ids=instance_ids, force_if_not_idle=force_if_not_idle)
-    except ProviderKillingInstancesException as e:
-        response_dict['failed_instance_ids_to_messages'] = \
-            e.instance_ids_to_messages
-        status_code = requests.codes.conflict
-    except NoInstancesFound:
+    were_there_instances_to_kill = controller.kill_instances(
+        instance_ids=instance_ids, force_if_not_idle=force_if_not_idle)
+
+    response_dict = {
+        'were_there_instances_to_kill': were_there_instances_to_kill}
+
+    # TODO: For backwards compatibility, remove when we adapted the CLI
+    if not were_there_instances_to_kill:
         response_dict['warning_message'] = 'Request to kill all instances, ' \
                                            'yet no instances were found.'
-    response = jsonify(response_dict)
-    response.status_code = status_code
-    return response
+    return jsonify(response_dict)
 
 
 @app.route(f'/executions/describe/<execution_id>', methods=['GET'])
 def describe_execution_entrypoint(execution_id: str):
-    start_metadata = db_storage.retrieve_start_metadata(execution_id)
-    if start_metadata is None:
-        raise ExecutionNotFoundException(execution_id)
-    return jsonify({'start_metadata': start_metadata})
+    return jsonify(controller.describe_execution_entrypoint(execution_id))
 
 
 def _json_stream(f: Callable[[], Iterator[Any]]):
@@ -403,6 +341,18 @@ def _handle_lazy_exceptions(f: ResponseGeneratorFunction) \
             log.exception('Exception in response generator')
 
     return wrapped
+
+
+def _get_input_metadata_from_request() -> 'InputMetadata':
+    metadata: InputMetadata = InputMetadata()
+    metadata.user = request.args.get('user', default=None, type=str)
+    metadata.project = request.args.get(
+        'project', default=None, type=str)
+    metadata.path = request.args.get(
+        'path', default=None, type=str)
+    metadata.timestamp_millis = request.args.get(
+        'timestamp_millis', default=None, type=str)
+    return metadata
 
 
 if __name__ == '__main__':

@@ -1,8 +1,6 @@
 from abc import ABC
 
-import requests
-
-from plz.controller.exceptions import ResponseHandledException
+from plz.controller.exceptions import ExecutionNotFoundException
 from plz.controller.execution_metadata import convert_measures_to_dict
 from plz.controller.instances.instance_base import InstanceProvider
 from plz.controller.results import ResultsStorage
@@ -50,12 +48,6 @@ class Executions:
         if instance is None:
             raise ExecutionNotFoundException(execution_id=execution_id)
         return _OngoingExecution(instance)
-
-
-class ExecutionNotFoundException(ResponseHandledException):
-    def __init__(self, execution_id):
-        super().__init__(response_code=requests.codes.not_found)
-        self.execution_id = execution_id
 
 
 class _OngoingExecution(Execution):
