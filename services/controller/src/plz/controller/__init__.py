@@ -1,1 +1,1 @@
-from .controller import Controller
+from .controller import Controller  # noqa: F401 (unused)

@@ -284,6 +284,7 @@ def delete_input_data(input_id: str):
 
 @app.route(f'/users/<user>/last_execution_id')
 def last_execution_id_entrypoint(user: str):
+    log.info('Last!!!!')
     last_execution_id = controller.get_user_last_execution_id(user)
     response_object = {}
     if last_execution_id is not None:
@@ -343,7 +344,7 @@ def _handle_lazy_exceptions(f: ResponseGeneratorFunction) \
     return wrapped
 
 
-def _get_input_metadata_from_request() -> 'InputMetadata':
+def _get_input_metadata_from_request() -> InputMetadata:
     metadata: InputMetadata = InputMetadata()
     metadata.user = request.args.get('user', default=None, type=str)
     metadata.project = request.args.get(

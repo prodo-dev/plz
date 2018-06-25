@@ -8,6 +8,7 @@ from typing import BinaryIO, Optional
 from redis import StrictRedis
 
 from plz.controller.exceptions import IncorrectInputIDException
+from plz.controller.types import InputMetadata
 
 READ_BUFFER_SIZE = 16384
 _INPUT_ID_KEY = f'{__name__}#input_id'
@@ -24,7 +25,7 @@ class InputDataConfiguration:
         self.temp_data_dir = temp_data_dir
 
     def publish_input_data(
-            self, expected_input_id: str, metadata: 'InputMetadata',
+            self, expected_input_id: str, metadata: InputMetadata,
             input_data_stream: BinaryIO) -> None:
         input_file_path = self.input_file(expected_input_id)
         if os.path.exists(input_file_path):
@@ -57,7 +58,7 @@ class InputDataConfiguration:
             os.remove(temp_file_path)
             raise
 
-    def get_input_id_from_metadata_or_none(self, metadata: 'InputMetadata') \
+    def get_input_id_from_metadata_or_none(self, metadata: InputMetadata) \
             -> Optional[str]:
         input_id_bytes = self.redis.hget(_INPUT_ID_KEY, metadata.redis_field())
         if not input_id_bytes:
@@ -72,7 +73,7 @@ class InputDataConfiguration:
             return input_id
 
     def check_input_data(
-            self, input_id: str, metadata: 'InputMetadata') -> bool:
+            self, input_id: str, metadata: InputMetadata) -> bool:
         if self._input_file_exists(input_id):
             if metadata.has_all_args():
                 # The reason to do this is that, if there's a blob that
@@ -102,7 +103,7 @@ class InputDataConfiguration:
         return input_file_path
 
     def _store_input_id(
-            self, metadata: 'InputMetadata', input_id: str) -> None:
+            self, metadata: InputMetadata, input_id: str) -> None:
         field = metadata.redis_field()
         self.redis.hset(_INPUT_ID_KEY, field, input_id)
         log.debug(field + ': ' +

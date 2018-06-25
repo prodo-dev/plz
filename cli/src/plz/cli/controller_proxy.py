@@ -33,9 +33,7 @@ class ControllerProxy(Controller):
 
     def run_execution(self, command: [str], snapshot_id: str, parameters: dict,
                       instance_market_spec: dict, execution_spec: dict,
-                      start_metadata: dict,
-                      previous_execution_id: Optional[str] = None) \
-            -> Iterator[dict]:
+                      start_metadata: dict) -> Iterator[dict]:
         response = self.server.post(
             'executions',
             stream=True,
@@ -45,7 +43,7 @@ class ControllerProxy(Controller):
                 'parameters': parameters,
                 'execution_spec': execution_spec,
                 'instance_market_spec': instance_market_spec,
-                'start_metadata': start_metadata,
+                'start_metadata': start_metadata
             })
         check_status(response, requests.codes.accepted)
         return (json.loads(line) for line in response.iter_lines())

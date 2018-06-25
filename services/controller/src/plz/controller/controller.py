@@ -20,8 +20,8 @@ from plz.controller.exceptions import BadInputMetadataException, \
 from plz.controller.execution import Executions
 from plz.controller.images import Images
 from plz.controller.input_data import InputDataConfiguration
-from plz.controller.instances.instance_base import Instance, InstanceProvider, \
-    NoInstancesFoundException
+from plz.controller.instances.instance_base import Instance, \
+    InstanceProvider, NoInstancesFoundException
 from plz.controller.types import InputMetadata
 
 JSONString = str
@@ -114,7 +114,8 @@ class Controller(ABC):
 
     @abstractmethod
     def kill_instances(
-            self, instance_ids: Optional[str], force_if_not_idle: bool) -> bool:
+            self, instance_ids: Optional[str], force_if_not_idle: bool) \
+            -> bool:
         """:raises ProviderKillingInstancesException:
 
            :returns bool: false if there are no instances to kill
@@ -338,7 +339,8 @@ class ControllerImpl(Controller):
     def handle_exception(cls, exception: ResponseHandledException):
         pass
 
-    def _set_user_last_execution_id(self, user: str, execution_id: str) -> None:
+    def _set_user_last_execution_id(self, user: str, execution_id: str) \
+            -> None:
         self.redis.set(f'key:{__name__}#user_last_execution_id:{user}',
                        execution_id)
 

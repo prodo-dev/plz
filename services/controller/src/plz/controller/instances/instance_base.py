@@ -9,6 +9,7 @@ from redis import StrictRedis
 from redis.lock import Lock
 
 from plz.controller.containers import ContainerMissingException, ContainerState
+from plz.controller.exceptions import ProviderKillingInstancesException
 from plz.controller.results.results_base import InstanceStatus, \
     InstanceStatusFailure, InstanceStatusRunning, InstanceStatusSuccess, \
     Results, ResultsStorage
@@ -293,7 +294,7 @@ class InstanceProvider(ABC):
             raise ProviderKillingInstancesException(instance_ids_to_messages)
 
         if terminate_all_instances and not there_is_one_instance:
-            raise NoInstancesFound()
+            raise NoInstancesFoundException()
 
     @abstractmethod
     def push(self, image_tag: str):
