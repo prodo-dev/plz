@@ -284,7 +284,6 @@ def delete_input_data(input_id: str):
 
 @app.route(f'/users/<user>/last_execution_id')
 def last_execution_id_entrypoint(user: str):
-    log.info('Last!!!!')
     last_execution_id = controller.get_user_last_execution_id(user)
     response_object = {}
     if last_execution_id is not None:
