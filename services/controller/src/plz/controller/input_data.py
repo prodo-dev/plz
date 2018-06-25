@@ -111,5 +111,3 @@ class InputDataConfiguration:
 
     def _input_file_exists(self, input_id: str) -> bool:
         return os.path.exists(self.input_file(input_id))
-
-
