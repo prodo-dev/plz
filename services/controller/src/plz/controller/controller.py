@@ -326,6 +326,7 @@ class ControllerImpl(Controller):
         try:
             self.instance_provider.kill_instances(
                 instance_ids=instance_ids, force_if_not_idle=force_if_not_idle)
+            return True
         except NoInstancesFoundException:
             return False
 
