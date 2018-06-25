@@ -327,7 +327,7 @@ def history_entrypoint(user, project):
                 yield ',\n'
             first = False
             yield f'"{execution_id}": ' \
-                  f'{executions.get(execution_id).get_metadata()}'
+                  f'{json.dumps(executions.get(execution_id).get_metadata())}'
         yield '\n}\n'
 
     response = Response(act(), mimetype='text/plain')
