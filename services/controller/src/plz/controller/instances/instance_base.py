@@ -1,10 +1,10 @@
 import io
 import logging
+import time
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from typing import Any, ContextManager, Dict, Iterator, List, Optional
 
-import time
 from redis import StrictRedis
 from redis.lock import Lock
 
@@ -253,7 +253,7 @@ class InstanceProvider(ABC):
         instance.release(self.results_storage, idle_since_timestamp)
 
     def kill_instances(
-            self, instance_ids: Optional[str], force_if_not_idle: bool) \
+            self, instance_ids: Optional[List[str]], force_if_not_idle: bool) \
             -> None:
         """ Hard stop for a set of instances
 

@@ -4,7 +4,7 @@ import os
 import random
 import uuid
 from abc import ABC, abstractmethod
-from typing import BinaryIO, Iterator, Optional
+from typing import BinaryIO, Iterator, List, Optional
 
 import requests
 from flask import jsonify, request
@@ -114,7 +114,7 @@ class Controller(ABC):
 
     @abstractmethod
     def kill_instances(
-            self, instance_ids: Optional[str], force_if_not_idle: bool) \
+            self, instance_ids: Optional[List[str]], force_if_not_idle: bool) \
             -> bool:
         """:raises ProviderKillingInstancesException:
 
@@ -321,7 +321,7 @@ class ControllerImpl(Controller):
         else:
             return None
 
-    def kill_instances(self, instance_ids: Optional[str],
+    def kill_instances(self, instance_ids: Optional[List[str]],
                        force_if_not_idle: bool) -> bool:
         try:
             self.instance_provider.kill_instances(

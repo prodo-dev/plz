@@ -1,18 +1,17 @@
 import io
 import itertools
 import json
-from typing import BinaryIO, Iterator, Optional
+from typing import BinaryIO, Iterator, List, Optional
 
 import requests
-
-from plz.cli.exceptions import CLIException, RequestException
-from plz.cli.log import log_error
-from plz.cli.operation import check_status
-from plz.cli.server import Server
 from plz.controller import Controller
 from plz.controller.controller import JSONString
 from plz.controller.exceptions import ResponseHandledException
 from plz.controller.types import InputMetadata
+
+from plz.cli.exceptions import CLIException, RequestException
+from plz.cli.operation import check_status
+from plz.cli.server import Server
 
 
 class ControllerProxy(Controller):
@@ -147,7 +146,7 @@ class ControllerProxy(Controller):
                          metadata: InputMetadata) -> bool:
         response = self.server.head(
             'data', 'input', input_id,
-            codes_with_exception={requests.codes.bad_request},
+            codes_with_exceptions={requests.codes.bad_request},
             params={
                 'user': metadata.user,
                 'project': metadata.project,
@@ -189,25 +188,19 @@ class ControllerProxy(Controller):
             raise ValueError('Expected an execution ID')
 
     def kill_instances(
-            self, instance_ids: Optional[str], force_if_not_idle: bool) \
+            self, instance_ids: Optional[List[str]], force_if_not_idle: bool) \
             -> bool:
-        response = self.server.post('instances', 'kill', json={
-            'all_of_them_plz': instance_ids is None,
-            'instance_ids': instance_ids if instance_ids is not None else [],
-            'force_if_not_idle': force_if_not_idle
-        })
-
+        instance_ids = instance_ids if instance_ids is not None else []
+        response = self.server.post(
+            'instances', 'kill',
+            json={
+                'all_of_them_plz': instance_ids is None,
+                'instance_ids': instance_ids,
+                'force_if_not_idle': force_if_not_idle
+            },
+            codes_with_exceptions={requests.codes.conflict})
+        check_status(response, requests.codes.ok)
         response_json = response.json()
-        if response.status_code != requests.codes.ok:
-            if 'failed_instance_ids_to_messages' in response_json:
-                fails = response_json['failed_instance_ids_to_messages']
-                log_error(
-                    'Error terminating instances: \n' + ''.join(
-                        [f'{instance_id}: {message}\n'
-                         for instance_id, message in fails.items()]))
-            raise CLIException(
-                'Couldn\'t terminate all instances. You can use '
-                '--force-if-not-idle for non-idle instances')
         # TODO: The warning message was the mechanism before serverless
         return response_json.get('were_there_instances_to_kill', True) and \
             'warning_message' not in response_json
