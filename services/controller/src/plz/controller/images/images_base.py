@@ -20,15 +20,11 @@ class Images(ABC):
         self.repository = repository
 
     @staticmethod
-    def construct_tag(metadata_string: str) -> str:
-        metadata = Images.parse_metadata(metadata_string)
-        return f'{metadata.user}-{metadata.project}-{metadata.timestamp}'
-
-    @staticmethod
-    def parse_metadata(json_string: str) -> Metadata:
-        data = json.loads(json_string)
+    def construct_tag(image_metadata: dict) -> str:
         timestamp = str(int(time.time() * 1000))
-        return Metadata(data['user'], data['project'], timestamp)
+        metadata = Metadata(
+            image_metadata['user'], image_metadata['project'], timestamp)
+        return f'{metadata.user}-{metadata.project}-{metadata.timestamp}'
 
     @abstractmethod
     def for_host(self, docker_url: str) -> 'Images':

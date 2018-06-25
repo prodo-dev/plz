@@ -10,7 +10,8 @@ from redis import StrictRedis
 from plz.controller.containers import ContainerState, Containers
 from plz.controller.images import Images
 from plz.controller.instances.instance_base import ExecutionInfo, Instance, \
-    InstanceStillRunningException, KillingInstanceException, Parameters
+    KillingInstanceException, Parameters
+from plz.controller.exceptions import InstanceStillRunningException
 from plz.controller.results import ResultsStorage
 from plz.controller.results.results_base import CouldNotGetOutputException
 from plz.controller.volumes import \

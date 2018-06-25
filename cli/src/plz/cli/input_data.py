@@ -124,6 +124,7 @@ class LocalInputData(InputData):
         return response.status_code == requests.codes.ok
 
     def _put_tarball(self, input_id: str) -> str:
+        # TODO: do not return anything, it's always what we've got back
         self.tarball.seek(0)
         response = self.server.put(
             'data', 'input', input_id,

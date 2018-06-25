@@ -5,10 +5,10 @@ import re
 import tempfile
 from typing import BinaryIO, Optional
 
-import requests
 from redis import StrictRedis
 
-from plz.controller.exceptions import ResponseHandledException
+from plz.controller.exceptions import IncorrectInputIDException
+from plz.controller.types import InputMetadata
 
 READ_BUFFER_SIZE = 16384
 _INPUT_ID_KEY = f'{__name__}#input_id'
@@ -25,7 +25,7 @@ class InputDataConfiguration:
         self.temp_data_dir = temp_data_dir
 
     def publish_input_data(
-            self, expected_input_id: str, metadata: 'InputMetadata',
+            self, expected_input_id: str, metadata: InputMetadata,
             input_data_stream: BinaryIO) -> None:
         input_file_path = self.input_file(expected_input_id)
         if os.path.exists(input_file_path):
@@ -48,7 +48,7 @@ class InputDataConfiguration:
 
             input_id = file_hash.hexdigest()
             if input_id != expected_input_id:
-                raise IncorrectInputID()
+                raise IncorrectInputIDException()
 
             os.rename(temp_file_path, input_file_path)
             if metadata.has_all_args():
@@ -58,7 +58,7 @@ class InputDataConfiguration:
             os.remove(temp_file_path)
             raise
 
-    def get_input_id_from_metadata_or_none(self, metadata: 'InputMetadata') \
+    def get_input_id_from_metadata_or_none(self, metadata: InputMetadata) \
             -> Optional[str]:
         input_id_bytes = self.redis.hget(_INPUT_ID_KEY, metadata.redis_field())
         if not input_id_bytes:
@@ -73,7 +73,7 @@ class InputDataConfiguration:
             return input_id
 
     def check_input_data(
-            self, input_id: str, metadata: 'InputMetadata') -> bool:
+            self, input_id: str, metadata: InputMetadata) -> bool:
         if self._input_file_exists(input_id):
             if metadata.has_all_args():
                 # The reason to do this is that, if there's a blob that
@@ -94,16 +94,16 @@ class InputDataConfiguration:
             input_file_path = self.input_file(input_id)
             return open(input_file_path, 'rb')
         except FileNotFoundError:
-            raise IncorrectInputID()
+            raise IncorrectInputIDException()
 
     def input_file(self, input_id: str):
         if not re.match(r'^\w{64}$', input_id):
-            raise IncorrectInputID()
+            raise IncorrectInputIDException()
         input_file_path = os.path.join(self.input_dir, input_id)
         return input_file_path
 
     def _store_input_id(
-            self, metadata: 'InputMetadata', input_id: str) -> None:
+            self, metadata: InputMetadata, input_id: str) -> None:
         field = metadata.redis_field()
         self.redis.hset(_INPUT_ID_KEY, field, input_id)
         log.debug(field + ': ' +
@@ -111,26 +111,3 @@ class InputDataConfiguration:
 
     def _input_file_exists(self, input_id: str) -> bool:
         return os.path.exists(self.input_file(input_id))
-
-
-class InputMetadata:
-    def __init__(self):
-        self.user: Optional[str] = None
-        self.project: Optional[str] = None
-        self.path: Optional[str] = None
-        self.timestamp_millis: Optional[int] = None
-
-    def has_all_args(self) -> bool:
-        return all(self.__dict__.values())
-
-    def has_all_args_or_none(self) -> bool:
-        return self.has_all_args() or not any(self.__dict__.values())
-
-    def redis_field(self) -> str:
-        return (f'{self.user}#{self.project}#{self.path}'
-                f'#{self.timestamp_millis}')
-
-
-class IncorrectInputID(ResponseHandledException):
-    def __init__(self):
-        super().__init__(requests.codes.bad_request)
