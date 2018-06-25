@@ -271,8 +271,8 @@ class ControllerImpl(Controller):
             if not first:
                 yield ',\n'
             first = False
-            yield f'"{execution_id}": ' \
-                  f'{self.executions.get(execution_id).get_metadata()}'
+            metadata = self.executions.get(execution_id).get_metadata()
+            yield f'"{execution_id}": {json.dumps(metadata)}'
         yield '\n}\n'
 
     def create_snapshot(self, image_metadata: dict, context: BinaryIO) -> \
