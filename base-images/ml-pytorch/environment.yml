@@ -58,7 +58,6 @@ dependencies:
     - backcall==0.1.0
     - bleach==1.5.0
     - dotmap==1.2.20
-    - enum34==1.1.6
     - gast==0.2.0
     - grpcio==1.10.0
     - html5lib==0.9999999
