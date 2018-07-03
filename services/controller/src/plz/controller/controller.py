@@ -40,9 +40,7 @@ class Controller(ABC):
     @abstractmethod
     def run_execution(self, command: [str], snapshot_id: str, parameters: dict,
                       instance_market_spec: dict, execution_spec: dict,
-                      start_metadata: dict,
-                      previous_execution_id: Optional[str] = None) \
-            -> Iterator[dict]:
+                      start_metadata: dict) -> Iterator[dict]:
         """:raises IncorrectInputIDException:"""
         pass
 
@@ -155,8 +153,16 @@ class ControllerImpl(Controller):
     def run_execution(
             self, command: [str], snapshot_id: str, parameters: dict,
             instance_market_spec: dict, execution_spec: dict,
+            start_metadata: dict) -> Iterator[dict]:
+        return self._do_run_execution(
+            command, snapshot_id, parameters, instance_market_spec,
+            execution_spec, start_metadata, previous_execution_id=None)
+
+    def _do_run_execution(
+            self, command: [str], snapshot_id: str, parameters: dict,
+            instance_market_spec: dict, execution_spec: dict,
             start_metadata: dict,
-            previous_execution_id: Optional[str] = None) -> Iterator[dict]:
+            previous_execution_id: Optional[str]) -> Iterator[dict]:
         execution_id = str(_get_execution_uuid())
         start_metadata['command'] = command
         start_metadata['snapshot_id'] = snapshot_id
@@ -205,7 +211,7 @@ class ControllerImpl(Controller):
         execution_spec = start_metadata['execution_spec']
         execution_spec['user'] = user
         execution_spec['project'] = project
-        return self.run_execution(
+        return self._do_run_execution(
             command, snapshot_id, parameters, instance_market_spec,
             execution_spec, start_metadata, previous_execution_id)
 

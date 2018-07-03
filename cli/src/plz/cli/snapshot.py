@@ -105,8 +105,8 @@ def get_matching_excluded_paths(
         else:
             excluded_and_not_included_paths.append(ep)
 
-    return (p[len(os.path.abspath(context_path)) + 1:]
-            for p in excluded_and_not_included_paths)
+    return [p[len(os.path.abspath(context_path)) + 1:]
+            for p in excluded_and_not_included_paths]
 
 
 def get_context_files(context_path: str, matching_excluded_paths: [str]):
