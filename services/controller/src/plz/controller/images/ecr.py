@@ -1,10 +1,10 @@
 import base64
 import json
 import logging
-from typing import BinaryIO, Iterator
+import time
+from typing import Any, BinaryIO, Callable, Iterator
 
 import docker
-import time
 from requests.exceptions import ChunkedEncodingError, ConnectionError
 
 from plz.controller.images.images_base import Images
@@ -14,14 +14,15 @@ log = logging.getLogger(__name__)
 
 class ECRImages(Images):
     def __init__(self,
-                 docker_api_client: docker.APIClient,
-                 ecr_client,
+                 docker_api_client_creator: Callable[None, docker.APIClient],
+                 ecr_client_creator: Callable[None, Any],
                  registry: str,
                  repository: str,
                  login_validity_in_minutes: int):
-        super().__init__(docker_api_client, repository)
+        super().__init__(docker_api_client_creator, repository)
         self.registry = registry
-        self.ecr_client = ecr_client
+        self.ecr_client_creator = ecr_client_creator
+        self.ecr_client = self.ecr_client_creator()
         self.last_login_time = None
         self.login_validity_in_minutes = login_validity_in_minutes
 
@@ -65,6 +66,9 @@ class ECRImages(Images):
                 log.debug('Skipping ECR login')
                 return
         log.debug('Logging in to ECR')
+        # Recreating the clients in each login, as otherwise over time we
+        # start noticing weird authentication errors
+        self.docker_api_client = self.docker_api_client_creator()
         authorization_token = self.ecr_client.get_authorization_token()
         authorization_data = authorization_token['authorizationData']
         encoded_token = authorization_data[0]['authorizationToken']

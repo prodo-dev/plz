@@ -3,7 +3,7 @@ import json
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import BinaryIO, Iterator
+from typing import BinaryIO, Callable, Iterator
 
 import docker
 
@@ -15,8 +15,11 @@ log = logging.getLogger(__name__)
 
 
 class Images(ABC):
-    def __init__(self, docker_api_client: docker.APIClient, repository: str):
-        self.docker_api_client = docker_api_client
+    def __init__(self,
+                 docker_api_client_creator: Callable[None, docker.APIClient],
+                 repository: str):
+        self.docker_api_client_creator = docker_api_client_creator
+        self.docker_api_client = docker_api_client_creator()
         self.repository = repository
 
     @staticmethod
