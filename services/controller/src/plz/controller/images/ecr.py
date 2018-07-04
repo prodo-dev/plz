@@ -68,7 +68,10 @@ class ECRImages(Images):
                 return
         log.debug('Logging in to ECR')
         # Recreating the clients in each login, as otherwise over time we
-        # start noticing weird authentication errors
+        # start noticing weird authentication errors. The errors stop when
+        # we restart the controller (without restarting the docker daemon)
+        # which suggests that the problem is with the state of the (clients
+        # of the) controller.
         self.docker_api_client = self.docker_api_client_creator()
         authorization_token = self.ecr_client.get_authorization_token()
         authorization_data = authorization_token['authorizationData']
