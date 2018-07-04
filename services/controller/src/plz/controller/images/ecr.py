@@ -31,7 +31,7 @@ class ECRImages(Images):
             return docker.APIClient(base_url=docker_url)
         return ECRImages(
             new_docker_api_client_creator,
-            self.ecr_client,
+            self.ecr_client_creator,
             self.registry,
             self.repository,
             self.login_validity_in_minutes)
