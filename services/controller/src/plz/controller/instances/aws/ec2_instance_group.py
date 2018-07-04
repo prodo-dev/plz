@@ -94,13 +94,18 @@ class EC2InstanceGroup(InstanceProvider):
             initialization_code,
             'EOF',
             '',
-            ' '.join([shlex.quote(s) for s in [
-                'ansible-playbook',
-                '--inventory=localhost,',
-                '--connection=local',
-                f'--extra-vars=device={self._CACHE_DEVICE}',
-                '/tmp/playbook.yml',
-            ]])
+            ' '.join([
+                shlex.quote(s) for s in (
+                    'ansible-playbook',
+                    '--inventory=localhost,',
+                    '--connection=local',
+                    f'--extra-vars=device={self._CACHE_DEVICE}',
+                    '/tmp/playbook.yml'
+                )
+            ]),
+            '',
+            'nvidia-persistenced',
+            '',
         ])
         return self._instance_initialization_code
 
