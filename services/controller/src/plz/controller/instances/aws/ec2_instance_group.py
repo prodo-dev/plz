@@ -103,7 +103,9 @@ class EC2InstanceGroup(InstanceProvider):
                     '/tmp/playbook.yml'
                 )
             ]),
-            'nvidia-persistenced'
+            '',
+            'nvidia-persistenced',
+            '',
         ])
         return self._instance_initialization_code
 
