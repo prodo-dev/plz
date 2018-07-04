@@ -73,6 +73,7 @@ class ECRImages(Images):
         # which suggests that the problem is with the state of the (clients
         # of the) controller.
         self.docker_api_client = self.docker_api_client_creator()
+        self.ecr_client = self.ecr_client_creator()
         authorization_token = self.ecr_client.get_authorization_token()
         authorization_data = authorization_token['authorizationData']
         encoded_token = authorization_data[0]['authorizationToken']
