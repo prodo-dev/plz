@@ -29,6 +29,21 @@
     - name: Install awscli
       pip:
         name: awscli
+    # Need to restart after installing: in case the kernel changed, things
+    # can get messy for instance when installing the nvidia driver
+    # It seems there's no pre-made way to reboot in ansible. It doesn't seem
+    # to be a bad thing to do either:
+    # https://github.com/ansible/ansible/issues/14413
+    - name: Restart the system
+      shell: "sleep 5 && reboot"
+      async: 1
+      poll: 0
+    - name: Wait for the system to reboot
+      wait_for_connection:
+        connect_timeout: 20
+        sleep: 5
+        delay: 5
+        timeout: 60
 
 # Build packages
 - hosts: controller

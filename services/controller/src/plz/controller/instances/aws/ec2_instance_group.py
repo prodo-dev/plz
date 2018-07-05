@@ -1,6 +1,4 @@
 import io
-import os
-import shlex
 import socket
 import time
 from contextlib import closing
@@ -20,10 +18,6 @@ from .ec2_instance import EC2Instance, InstanceAssignedException, \
 
 class EC2InstanceGroup(InstanceProvider):
     DOCKER_PORT = 2375
-
-    _INITIALIZATION_CODE_PATH = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', 'startup', 'startup.yml'))
-    _CACHE_DEVICE = '/dev/xvdx'
 
     def __init__(self,
                  name,
@@ -75,39 +69,6 @@ class EC2InstanceGroup(InstanceProvider):
         if instance is None:
             return {}
         return instance.get_forensics()
-
-    @property
-    def instance_initialization_code(self) -> str:
-        if self._instance_initialization_code is not None:
-            return self._instance_initialization_code
-        with open(self._INITIALIZATION_CODE_PATH, 'r') as f:
-            initialization_code = f.read()
-        self._instance_initialization_code = '\n'.join([
-            '#!/bin/sh',
-            '',
-            'set -e',
-            'set -u',
-            '',
-            'export HOME=/root',
-            '',
-            'cat > /tmp/playbook.yml <<EOF',
-            initialization_code,
-            'EOF',
-            '',
-            ' '.join([
-                shlex.quote(s) for s in (
-                    'ansible-playbook',
-                    '--inventory=localhost,',
-                    '--connection=local',
-                    f'--extra-vars=device={self._CACHE_DEVICE}',
-                    '/tmp/playbook.yml'
-                )
-            ]),
-            '',
-            'nvidia-persistenced',
-            '',
-        ])
-        return self._instance_initialization_code
 
     def run_in_instance(
             self,
@@ -231,8 +192,7 @@ class EC2InstanceGroup(InstanceProvider):
 
     def _get_instance_spec(
             self, instance_type: str, instance_market_spec: dict) -> dict:
-        spec: dict = _BASE_INSTANCE_SPEC.copy()
-        spec['ImageId'] = self.ami_id
+        spec = {'ImageId': self.ami_id}
         if self.aws_key_name:
             spec['KeyName'] = self.aws_key_name
         spec['TagSpecifications'] = [{
@@ -264,15 +224,19 @@ class EC2InstanceGroup(InstanceProvider):
                 },
             ]
         }]
-        spec['UserData'] = self.instance_initialization_code
+        # Script to execute at the beginning. We only need to start the nvidia
+        # persistence daemon. This is needed because containers might take too
+        # long to start and docker might timeout when starting them
+        spec['UserData'] = 'nvidia-persistenced\n'
         spec['InstanceType'] = instance_type
         if instance_market_spec['instance_market_type'] == 'spot':
             spec['InstanceMarketOptions'] = {
-                'MarketType': instance_market_spec['instance_market_type']
-            }
-            spec['InstanceMarketOptions']['SpotOptions'] = {
-                'MaxPrice': str(
-                    instance_market_spec['max_bid_price_in_dollars_per_hour']),
+                'MarketType': instance_market_spec['instance_market_type'],
+                'SpotOptions': {
+                    'MaxPrice': str(
+                        instance_market_spec[
+                            'max_bid_price_in_dollars_per_hour']),
+                }
             }
         return spec
 
@@ -288,15 +252,3 @@ def _get_dns_name(instance_data: dict) -> str:
 
 def _msg(s) -> Dict:
         return {'message': s}
-
-
-_BASE_INSTANCE_SPEC = {
-    'BlockDeviceMappings': [
-        {
-            'DeviceName': '/dev/sdx',
-            'Ebs': {
-                'VolumeSize': 100,
-            },
-        },
-    ]
-}
