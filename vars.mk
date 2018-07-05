@@ -6,4 +6,4 @@ endif
 
 CONFIG_FILE = $(SECRETS_DIR)/config.json
 
-AMI_TAG = 2018-06-18
+AMI_TAG = 2018-07-05
