@@ -98,20 +98,21 @@ def _images_from(config, docker_host):
         client_extra_args = {'timeout': docker_api_client_timeout * 60}
     else:
         client_extra_args = {}
-    docker_api_client = docker.APIClient(
-        base_url=docker_host, **client_extra_args)
+
+    def docker_api_client_creator():
+        return docker.APIClient(base_url=docker_host, **client_extra_args)
     if images_type == 'local':
         repository = config.get('images.repository', 'plz/builds')
-        images = LocalImages(docker_api_client, repository)
+        images = LocalImages(docker_api_client_creator, repository)
     elif images_type == 'aws-ecr':
-        ecr_client = boto3.client(
-            service_name='ecr',
-            region_name=config['images.region'])
+        def ecr_client_creator():
+            return boto3.client(service_name='ecr',
+                                region_name=config['images.region'])
         registry = config['images.registry']
         repository = f'{registry}/{config["images.repository"]}'
         images = ECRImages(
-            docker_api_client, ecr_client, registry, repository,
-            config['assumptions.ecr_login_validity_in_minutes'])
+            docker_api_client_creator, ecr_client_creator, registry,
+            repository, config['assumptions.ecr_login_validity_in_minutes'])
     else:
         raise ValueError('Invalid image provider.')
     return images
