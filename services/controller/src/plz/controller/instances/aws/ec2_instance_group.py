@@ -227,7 +227,7 @@ class EC2InstanceGroup(InstanceProvider):
         # Script to execute at the beginning. We only need to start the nvidia
         # persistence daemon. This is needed because containers might take too
         # long to start and docker might timeout when starting them
-        spec['UserData'] = 'nvidia-persistenced\n'
+        spec['UserData'] = '\n'.join(['#!/bin/sh', 'nvidia-persistenced', ''])
         spec['InstanceType'] = instance_type
         if instance_market_spec['instance_market_type'] == 'spot':
             spec['InstanceMarketOptions'] = {
