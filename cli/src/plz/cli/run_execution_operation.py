@@ -201,7 +201,8 @@ class RunExecutionOperation(Operation):
         return snapshot_id
 
     def capture_input(self) -> Optional[str]:
-        with InputData.from_configuration(self.configuration) as input_data:
+        with InputData.from_configuration(
+                self.configuration, self.controller) as input_data:
             return input_data.publish()
 
     def start_execution(

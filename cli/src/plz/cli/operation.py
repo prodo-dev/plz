@@ -1,11 +1,9 @@
 import os
 from abc import ABC, abstractmethod
 
-import requests
-
 from plz.cli.configuration import Configuration
 from plz.cli.controller_proxy import ControllerProxy
-from plz.cli.exceptions import CLIException, RequestException
+from plz.cli.exceptions import CLIException
 from plz.cli.server import Server
 from plz.controller.api import Controller
 
@@ -52,11 +50,6 @@ class Operation(ABC):
     @abstractmethod
     def run(self):
         pass
-
-
-def check_status(response: requests.Response, expected_status: int):
-    if response.status_code != expected_status:
-        raise RequestException(response)
 
 
 def on_exception_reraise(message: str):

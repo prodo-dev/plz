@@ -1,31 +1,33 @@
 import contextlib
 import hashlib
-import json
 import os
 import tarfile
 import tempfile
 from abc import abstractmethod
 from typing import Optional
 
-import requests
-
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
 from plz.cli.log import log_debug, log_info
-from plz.cli.operation import check_status
-from plz.cli.server import Server
+from plz.controller.api import Controller
+from plz.controller.api.types import InputMetadata
 
 READ_BUFFER_SIZE = 16384
 
 
 class InputData(contextlib.AbstractContextManager):
     @staticmethod
-    def from_configuration(configuration: Configuration):
+    def from_configuration(
+            configuration: Configuration, controller: Controller):
         if not configuration.input:
             return NoInputData()
         if configuration.input.startswith('file://'):
             path = configuration.input[len('file://'):]
-            return LocalInputData(configuration, path)
+            return LocalInputData(
+                controller=controller,
+                user=configuration.user,
+                project=configuration.project,
+                path=path)
         raise CLIException('Could not parse the configured input.')
 
     @abstractmethod
@@ -42,20 +44,29 @@ class NoInputData(InputData):
 
 
 class LocalInputData(InputData):
-    def __init__(self, configuration: Configuration, path: str):
-        self.server = Server.from_configuration(configuration)
-        self.user = configuration.user
-        self.project = configuration.project
+    def __init__(self,
+                 controller: Controller,
+                 user: str,
+                 project: str,
+                 path: str):
+        self.controller = controller
+        self.user = user
+        self.project = project
         self.path = os.path.normpath(path)
         self.tarball = None
         self.input_id = None
         self._timestamp_millis = None
 
     def __enter__(self):
+        input_metadata = InputMetadata.of(
+            user=self.user,
+            project=self.project,
+            path=self.path,
+            timestamp_millis=self.timestamp_millis)
         # Try to avoid building the tarball. Look at maximum modification
         # time in the input, and if we have in input for the timestamp, use
         # that one
-        input_id = self._get_input_from_controller_or_none().get('id', None)
+        input_id = self.controller.get_input_id_or_none(input_metadata)
         log_debug(f'Input ID from the controller: {input_id}')
         if input_id:
             log_info('Input files not changed according to modification times')
@@ -94,16 +105,6 @@ class LocalInputData(InputData):
             self._put_tarball(input_id)
         return input_id
 
-    def _get_input_from_controller_or_none(self) -> Optional[dict]:
-        response = self.server.get(
-            'data', 'input', 'id',
-            params={'user': self.user,
-                    'project': self.project,
-                    'path': self.path,
-                    'timestamp_millis': self.timestamp_millis})
-        check_status(response, requests.codes.ok)
-        return json.loads(response.content)
-
     def _compute_input_id(self) -> str:
         file_hash = hashlib.sha256()
         self.tarball.seek(0)
@@ -115,27 +116,25 @@ class LocalInputData(InputData):
         return file_hash.hexdigest()
 
     def _has_input(self, input_id: str) -> bool:
-        response = self.server.head(
-            'data', 'input', input_id, params={
-                'user': self.user,
-                'project': self.project,
-                'path': self.path,
-                'timestamp_millis': self.timestamp_millis})
-        return response.status_code == requests.codes.ok
+        input_metadata = InputMetadata.of(
+            user=self.user,
+            project=self.project,
+            path=self.path,
+            timestamp_millis=self.timestamp_millis)
+        return self.controller.check_input_data(input_id, input_metadata)
 
-    def _put_tarball(self, input_id: str) -> str:
-        # TODO: do not return anything, it's always what we've got back
+    def _put_tarball(self, input_id: str) -> None:
         self.tarball.seek(0)
-        response = self.server.put(
-            'data', 'input', input_id,
-            data=self.tarball,
-            stream=True,
-            params={'user': self.user,
-                    'project': self.project,
-                    'path': self.path,
-                    'timestamp_millis': self.timestamp_millis})
-        check_status(response, requests.codes.ok)
-        return response.json()['id']
+        input_metadata = InputMetadata.of(
+            user=self.user,
+            project=self.project,
+            path=self.path,
+            timestamp_millis=self.timestamp_millis
+        )
+        self.controller.put_input(
+            input_id=input_id,
+            input_metadata=input_metadata,
+            input_data_stream=self.tarball)
 
     @property
     def timestamp_millis(self) -> int:
