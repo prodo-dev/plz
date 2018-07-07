@@ -1,11 +1,8 @@
 import io
-import itertools
 import json
 import os
 import time
-from typing import Any, Callable, Optional, Tuple
-
-import requests
+from typing import Any, Callable, Iterator, Optional, Tuple
 
 from plz.cli import parameters
 from plz.cli.configuration import Configuration
@@ -14,13 +11,12 @@ from plz.cli.git import get_head_commit_or_none
 from plz.cli.input_data import InputData
 from plz.cli.log import log_debug, log_error, log_info, log_warning
 from plz.cli.logs_operation import LogsOperation
-from plz.cli.operation import Operation, add_output_dir_arg, check_status
+from plz.cli.operation import Operation, add_output_dir_arg
 from plz.cli.parameters import Parameters
 from plz.cli.retrieve_measures_operation import RetrieveMeasuresOperation
 from plz.cli.retrieve_output_operation import RetrieveOutputOperation
 from plz.cli.show_status_operation import ShowStatusOperation
 from plz.cli.snapshot import capture_build_context
-from plz.controller.api.types import JSONString
 
 
 class RunExecutionOperation(Operation):
@@ -171,27 +167,16 @@ class RunExecutionOperation(Operation):
                 f'Execution failed with an exit status of {status.code}.',
                 exit_code=status.code)
 
-    def submit_context_for_building(self, build_context: io.FileIO) -> str:
+    def submit_context_for_building(self, build_context: io.BytesIO) -> str:
         metadata = {
             'user': self.configuration.user,
             'project': self.configuration.project,
         }
-        metadata_bytes = json.dumps(metadata).encode('utf-8')
-        request_data = itertools.chain(
-            io.BytesIO(metadata_bytes),
-            io.BytesIO(b'\n'),
-            build_context)
-        response = self.server.post(
-            'snapshots',
-            data=request_data,
-            stream=True)
-        check_status(response, requests.codes.ok)
+        status_json_strings = self.controller.create_snapshot(
+            metadata, build_context)
         errors = []
         snapshot_id: str = None
-        for json_bytes in response.raw:
-            # Make sure we can use a type from the controller API
-            # (i.e., JSONString)
-            json_str: JSONString = json_bytes.decode('utf-8')
+        for json_str in status_json_strings:
             data = json.loads(json_str)
             if 'stream' in data:
                 if not self.configuration.quiet_build:
@@ -236,34 +221,30 @@ class RunExecutionOperation(Operation):
         }
         instance_market_spec = self.get_instance_market_spec()
         commit = get_head_commit_or_none(context_path)
-        response = self.server.post(
-            'executions',
-            stream=True,
-            json={
-                'command': self.command,
-                'snapshot_id': snapshot_id,
-                'parameters': params,
-                'execution_spec': execution_spec,
-                'instance_market_spec': instance_market_spec,
-                'start_metadata': {
-                    'commit': commit,
-                    'configuration': {
-                        k: v for k, v in configuration.as_dict().items()
-                        # User and project are present in the execution spec
-                        if k not in {'user', 'project'}
-                    }
-                },
-            })
+        response_dicts = self.controller.run_execution(
+            command=self.command,
+            snapshot_id=snapshot_id,
+            parameters=params,
+            execution_spec=execution_spec,
+            instance_market_spec=instance_market_spec,
+            start_metadata={
+                'commit': commit,
+                'configuration': {
+                    k: v for k, v in configuration.as_dict().items()
+                    # User and project are present in the execution spec
+                    if k not in {'user', 'project'}
+                }
+            }
+        )
         return RunExecutionOperation.get_execution_id_from_start_response(
-            response)
+            response_dicts)
 
     @staticmethod
-    def get_execution_id_from_start_response(response) -> Tuple[str, bool]:
-        check_status(response, requests.codes.accepted)
+    def get_execution_id_from_start_response(
+            response_dicts: Iterator[dict]) -> Tuple[str, bool]:
         execution_id: Optional[str] = None
         ok = True
-        for line in response.iter_lines():
-            data = json.loads(line)
+        for data in response_dicts:
             if 'id' in data:
                 execution_id = data['id']
             elif 'status' in data:

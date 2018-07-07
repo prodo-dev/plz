@@ -1,10 +1,8 @@
 import json
 from typing import Optional
 
-import requests
-
 from plz.cli.configuration import Configuration
-from plz.cli.operation import Operation, check_status
+from plz.cli.operation import Operation
 
 
 class DescribeExecutionOperation(Operation):
@@ -24,8 +22,7 @@ class DescribeExecutionOperation(Operation):
         self.execution_id = execution_id
 
     def run(self):
-        response = self.server.get(
-            'executions', 'describe', self.get_execution_id(),
-            stream=True)
-        check_status(response, requests.codes.ok)
-        print(json.dumps(response.json()['start_metadata'], indent=2))
+        description = self.controller.describe_execution_entrypoint(
+            self.get_execution_id()
+        )
+        print(json.dumps(description['start_metadata'], indent=2))

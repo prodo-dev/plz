@@ -1,29 +1,29 @@
 import io
 import itertools
 import json
+from io import BytesIO
 from typing import BinaryIO, Iterator, List, Optional
 
 import requests
-from plz.controller.api import Controller
-from plz.controller.api.exceptions import ResponseHandledException
-from plz.controller.api.types import InputMetadata, JSONString
 
 from plz.cli.exceptions import CLIException, RequestException
 from plz.cli.operation import check_status
 from plz.cli.server import Server
+from plz.controller.api import Controller
+from plz.controller.api.exceptions import ResponseHandledException
+from plz.controller.api.types import InputMetadata, JSONString
 
 
 class ControllerProxy(Controller):
-    def __init__(self, server: Server, ping_timeout: int):
+    def __init__(self, server: Server):
         self.server = server
-        self.ping_timeout = ping_timeout
 
     @classmethod
     def handle_exception(cls, exception: ResponseHandledException):
         pass
 
-    def ping(self) -> dict:
-        response = self.server.get('ping', timeout=self.ping_timeout)
+    def ping(self, ping_timeout: int) -> dict:
+        response = self.server.get('ping', timeout=ping_timeout)
         is_ok = response.status_code == requests.codes.ok
         if is_ok:
             return json.loads(response.content)
@@ -113,7 +113,7 @@ class ControllerProxy(Controller):
         check_status(response, requests.codes.ok)
         return (line.decode('utf-8') for line in response.raw)
 
-    def create_snapshot(self, image_metadata: dict, context: BinaryIO) -> \
+    def create_snapshot(self, image_metadata: dict, context: BytesIO) -> \
             Iterator[JSONString]:
         metadata_bytes = json.dumps(image_metadata).encode('utf-8')
         request_data = itertools.chain(
@@ -178,7 +178,7 @@ class ControllerProxy(Controller):
             'users', user, 'last_execution_id')
         check_status(response, requests.codes.ok)
         response_object = json.loads(response.content)
-        # Make it consistent with the input data methods, and return None
+        # TODO: Make it consistent with the input data methods, and return None
         if 'execution_id' in response_object:
             return response_object['execution_id']
         else:
@@ -201,8 +201,7 @@ class ControllerProxy(Controller):
         check_status(response, requests.codes.ok)
         response_json = response.json()
         # TODO: The warning message was the mechanism before serverless
-        return response_json.get('were_there_instances_to_kill', True) and \
-            'warning_message' not in response_json
+        return response_json['were_there_instances_to_kill']
 
     def describe_execution_entrypoint(self, execution_id: str) -> dict:
         response = self.server.get(

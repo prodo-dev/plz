@@ -1,12 +1,13 @@
-import json
 import os
 from abc import ABC, abstractmethod
 
 import requests
 
 from plz.cli.configuration import Configuration
+from plz.cli.controller_proxy import ControllerProxy
 from plz.cli.exceptions import CLIException, RequestException
 from plz.cli.server import Server
+from plz.controller.api import Controller
 
 
 class Operation(ABC):
@@ -17,21 +18,15 @@ class Operation(ABC):
 
     def __init__(self, configuration: Configuration):
         self.configuration = configuration
-        self.server = Server.from_configuration(configuration)
+        server = Server.from_configuration(configuration)
+        self.controller: Controller = ControllerProxy(server)
         self.user = configuration.user
         self.execution_id = None
 
     def get_execution_id(self):
         if self.execution_id is not None:
             return self.execution_id
-        response = self.server.get(
-            'users', self.user, 'last_execution_id')
-        check_status(response, requests.codes.ok)
-        response_object = json.loads(response.content)
-        if 'execution_id' in response_object:
-            return response_object['execution_id']
-        else:
-            raise ValueError('Expected an execution ID')
+        return self.controller.get_user_last_execution_id(self.user)
 
     @classmethod
     def maybe_add_execution_id_arg(cls, parser, args):

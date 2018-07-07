@@ -1,9 +1,8 @@
-import requests
-
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
 from plz.cli.log import log_error, log_info, log_warning
 from plz.cli.operation import Operation
+from plz.controller.api.exceptions import ProviderKillingInstancesException
 
 
 class KillInstancesOperation(Operation):
@@ -44,34 +43,33 @@ class KillInstancesOperation(Operation):
                 answer = input('Are you sure? (yeah/Nope): ')
                 if answer != 'yeah':
                     raise CLIException('Cancelled by user')
+            instance_ids_for_controller = None
         else:
             if self.instance_ids is None or len(self.instance_ids) == 0:
                 raise CLIException(
                     'You must specify a list of instance IDs with the -i '
                     'option. Use `plz list` to get instance IDs')
             log_info('Killing instances: ' + ' '.join(self.instance_ids))
+            instance_ids_for_controller = self.instance_ids
         if not self.all_of_them_plz and not self.instance_ids:
             raise CLIException('No instance IDs specified')
 
-        response = self.server.post('instances', 'kill', json={
-            'all_of_them_plz': self.all_of_them_plz,
-            'instance_ids': self.instance_ids,
-            'force_if_not_idle': self.force_if_not_idle
-        })
-
-        response_json = response.json()
-        if 'warning_message' in response_json:
-            log_warning(response_json['warning_message'])
-
-        if response.status_code != requests.codes.ok:
-            if 'failed_instance_ids_to_messages' in response_json:
-                fails = response_json['failed_instance_ids_to_messages']
-                log_error(
-                    'Error terminating instances: \n' + ''.join(
-                        [f'{instance_id}: {message}\n'
-                         for instance_id, message in fails.items()]))
+        try:
+            were_there_instances_to_kill = self.controller.kill_instances(
+                instance_ids=instance_ids_for_controller,
+                force_if_not_idle=self.force_if_not_idle)
+        except ProviderKillingInstancesException as e:
+            fails = e.failed_instance_ids_to_messages
+            log_error(
+                'Error terminating instances: \n' + ''.join(
+                    [f'{instance_id}: {message}\n'
+                     for instance_id, message in fails.items()]))
             raise CLIException(
                 'Couldn\'t terminate all instances. You can use '
                 '--force-if-not-idle for non-idle instances')
+
+        if not were_there_instances_to_kill:
+            log_warning(
+                'Request to kill all instances, yet no instances were found.')
 
         log_info('It was a clean job')

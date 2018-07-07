@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from io import BytesIO
 from typing import BinaryIO, Iterator, List, Optional
 
 from plz.controller.api.exceptions import ResponseHandledException
@@ -12,7 +13,7 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def ping(self) -> dict:
+    def ping(self, ping_timeout: int) -> dict:
         pass
 
     @abstractmethod
@@ -62,7 +63,7 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def create_snapshot(self, image_metadata: dict, context: BinaryIO) \
+    def create_snapshot(self, image_metadata: dict, context: BytesIO) \
             -> Iterator[JSONString]:
         pass
 

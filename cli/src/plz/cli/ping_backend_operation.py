@@ -1,7 +1,3 @@
-import json
-
-import requests
-
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import ExitWithStatusCodeException
 from plz.cli.log import log_error, log_info
@@ -29,12 +25,8 @@ class PingBackendOperation(Operation):
         self.ping_timeout = ping_timeout
 
     def run(self):
-        response = self.server.get('ping', timeout=self.ping_timeout)
-        is_ok = response.status_code == requests.codes.ok
-        if is_ok and json.loads(response.content).get('plz', None) != 'pong':
-            is_ok = False
-
-        if is_ok:
+        response_dict = self.controller.ping(self.ping_timeout)
+        if response_dict.get('plz', None) != 'pong':
             if not self.silent_on_success:
                 log_info('Backend is reachable')
         else:

@@ -2,11 +2,10 @@ import time
 from typing import Optional
 
 import dateutil.parser
-import requests
 
 from plz.cli.configuration import Configuration
 from plz.cli.log import log_info
-from plz.cli.operation import Operation, check_status, on_exception_reraise
+from plz.cli.operation import Operation, on_exception_reraise
 
 
 class LogsOperation(Operation):
@@ -46,25 +45,21 @@ class LogsOperation(Operation):
         # backend uses whatever timestamp we pass.
         if self.since is None:
             # Default: show since the current time
-            params = {'since': str(int(time.time()))}
+            since_timestamp = str(int(time.time()))
         elif self.since == 'start':
             # Log from the beginning, that's the default for the backend
-            params = {}
+            since_timestamp = None
         else:
             try:
                 since_timestamp = str(int(self.since))
             except ValueError:
                 since_timestamp = str(int(time.mktime(
                     dateutil.parser.parse(self.since).timetuple())))
-            params = {'since': since_timestamp}
-        response = self.server.get(
-            'executions', execution_id, 'logs',
-            params=params,
-            stream=True)
-        check_status(response, requests.codes.ok)
+        byte_lines = self.controller.get_logs(
+            self.get_execution_id(), since=since_timestamp)
         try:
-            for line in response.raw:
-                print(line.decode('utf-8'), end='', flush=True)
+            for byte_line in byte_lines:
+                print(byte_line.decode('utf-8'), end='', flush=True)
         except KeyboardInterrupt:
             print()
             if print_interrupt_message:

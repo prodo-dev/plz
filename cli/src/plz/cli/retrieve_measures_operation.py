@@ -1,10 +1,7 @@
 from typing import Optional
 
-import requests
-
 from plz.cli.configuration import Configuration
-from plz.cli.exceptions import CLIException
-from plz.cli.operation import Operation, check_status, on_exception_reraise
+from plz.cli.operation import Operation, on_exception_reraise
 
 
 class RetrieveMeasuresOperation(Operation):
@@ -29,20 +26,11 @@ class RetrieveMeasuresOperation(Operation):
 
     @on_exception_reraise('Retrieving the measures failed.')
     def retrieve_measures(self):
-        response = self.server.get(
-            'executions', self.get_execution_id(), 'measures',
-            params={'summary': self.summary},
-            stream=True)
-        if response.status_code == requests.codes.conflict:
-            # TODO: can this still happen?
-            raise CLIException(
-                'Process is still running, run `plz stop` if you want to '
-                'terminate it')
-        elif response.status_code == requests.codes.no_content:
-            return
-        check_status(response, requests.codes.ok)
-        for line in response.raw:
-            print(line.decode('utf-8'), end='')
+        json_strings = self.controller.get_measures(
+            execution_id=self.get_execution_id(),
+            summary=self.summary)
+        for line in json_strings:
+            print(line, end='')
 
     def run(self):
         self.retrieve_measures()
