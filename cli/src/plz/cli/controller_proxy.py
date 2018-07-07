@@ -25,7 +25,7 @@ class ControllerProxy(Controller):
         response = self.server.get('ping', timeout=ping_timeout)
         is_ok = response.status_code == requests.codes.ok
         if is_ok:
-            return json.loads(response.content)
+            return response.json()
         return {}
 
     def run_execution(self, command: [str], snapshot_id: str, parameters: dict,
