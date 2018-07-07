@@ -17,3 +17,6 @@ class InputMetadata:
     def redis_field(self) -> str:
         return (f'{self.user}#{self.project}#{self.path}'
                 f'#{self.timestamp_millis}')
+
+
+JSONString = str

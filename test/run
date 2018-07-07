@@ -31,8 +31,8 @@ function stop_controller {
 
 function build_cli {
   info "Building the CLI..."
-  docker image build --quiet --target=builder --tag=$CLI_BUILDER_IMAGE cli
-  docker image build --quiet --tag=$CLI_IMAGE cli
+  docker image build --quiet --target=builder --tag=$CLI_BUILDER_IMAGE --file=cli/Dockerfile .
+  docker image build --quiet --tag=$CLI_IMAGE --file=cli/Dockerfile .
 }
 
 function cleanup {

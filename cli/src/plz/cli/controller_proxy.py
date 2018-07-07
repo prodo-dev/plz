@@ -4,10 +4,9 @@ import json
 from typing import BinaryIO, Iterator, List, Optional
 
 import requests
-from plz.controller import Controller
-from plz.controller.controller import JSONString
-from plz.controller.exceptions import ResponseHandledException
-from plz.controller.types import InputMetadata
+from plz.controller.api import Controller
+from plz.controller.api.exceptions import ResponseHandledException
+from plz.controller.api.types import InputMetadata, JSONString
 
 from plz.cli.exceptions import CLIException, RequestException
 from plz.cli.operation import check_status

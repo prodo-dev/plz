@@ -20,6 +20,7 @@ from plz.cli.retrieve_measures_operation import RetrieveMeasuresOperation
 from plz.cli.retrieve_output_operation import RetrieveOutputOperation
 from plz.cli.show_status_operation import ShowStatusOperation
 from plz.cli.snapshot import capture_build_context
+from plz.controller.api.types import JSONString
 
 
 class RunExecutionOperation(Operation):
@@ -188,7 +189,10 @@ class RunExecutionOperation(Operation):
         errors = []
         snapshot_id: str = None
         for json_bytes in response.raw:
-            data = json.loads(json_bytes.decode('utf-8'))
+            # Make sure we can use a type from the controller API
+            # (i.e., JSONString)
+            json_str: JSONString = json_bytes.decode('utf-8')
+            data = json.loads(json_str)
             if 'stream' in data:
                 if not self.configuration.quiet_build:
                     print(data['stream'], end='', flush=True)
