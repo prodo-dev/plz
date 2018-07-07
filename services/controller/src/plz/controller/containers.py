@@ -10,7 +10,7 @@ import requests
 from docker.models.containers import Container
 from docker.types import Mount
 
-from plz.controller.exceptions import WorkerUnreachableException
+from plz.controller.api.exceptions import WorkerUnreachableException
 
 ContainerState = collections.namedtuple(
     'ContainerState',

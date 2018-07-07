@@ -7,7 +7,7 @@ from typing import BinaryIO, Callable, Iterator
 
 import docker
 
-from plz.controller.exceptions import JSONResponseException
+from plz.controller.api.exceptions import JSONResponseException
 
 Metadata = collections.namedtuple('Metadata', ['user', 'project', 'timestamp'])
 

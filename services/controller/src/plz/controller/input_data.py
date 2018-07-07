@@ -7,8 +7,8 @@ from typing import BinaryIO, Optional
 
 from redis import StrictRedis
 
-from plz.controller.exceptions import IncorrectInputIDException
-from plz.controller.types import InputMetadata
+from plz.controller.api.exceptions import IncorrectInputIDException
+from plz.controller.api.types import InputMetadata
 
 READ_BUFFER_SIZE = 16384
 _INPUT_ID_KEY = f'{__name__}#input_id'

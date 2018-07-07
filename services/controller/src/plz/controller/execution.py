@@ -1,6 +1,6 @@
 from abc import ABC
 
-from plz.controller.exceptions import ExecutionNotFoundException
+from plz.controller.api.exceptions import ExecutionNotFoundException
 from plz.controller.execution_metadata import convert_measures_to_dict
 from plz.controller.instances.instance_base import InstanceProvider
 from plz.controller.results import ResultsStorage

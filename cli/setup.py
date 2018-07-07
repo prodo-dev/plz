@@ -30,8 +30,12 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
     ],
-    package_dir={'': 'src'},
-    packages=['plz.cli'],
+    package_dir={
+        '': 'src',
+        'plz.controller.api':
+            '../services/controller/src/plz/controller/api'
+    },
+    packages=['plz.cli', 'plz.controller.api'],
     python_requires='>= 3.6',
     install_requires=[
         'docker >= 3.3.0',

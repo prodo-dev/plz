@@ -8,7 +8,7 @@ from redis.lock import Lock
 
 from plz.controller.arbitrary_object_json_encoder import dumps_arbitrary_json
 from plz.controller.db_storage import DBStorage
-from plz.controller.exceptions import AbortedExecutionException
+from plz.controller.api.exceptions import AbortedExecutionException
 from plz.controller.execution_metadata import compile_metadata_for_storage
 from plz.controller.results.results_base import InstanceStatus, \
     InstanceStatusFailure, InstanceStatusSuccess, Results, ResultsContext, \

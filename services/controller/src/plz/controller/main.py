@@ -13,10 +13,9 @@ from plz.controller import configuration
 from plz.controller.arbitrary_object_json_encoder import \
     ArbitraryObjectJSONEncoder
 from plz.controller.configuration import Dependencies
-from plz.controller.controller import ControllerImpl, \
-    JSONString
+from plz.controller.controller_impl import ControllerImpl
 from plz.controller.db_storage import DBStorage
-from plz.controller.exceptions import AbortedExecutionException, \
+from plz.controller.api.exceptions import AbortedExecutionException, \
     InstanceNotRunningException, JSONResponseException, \
     ResponseHandledException, WorkerUnreachableException
 from plz.controller.execution import Executions
@@ -24,7 +23,7 @@ from plz.controller.images import Images
 from plz.controller.input_data import InputDataConfiguration
 from plz.controller.instances.instance_base import InstanceProvider
 from plz.controller.results import ResultsStorage
-from plz.controller.types import InputMetadata
+from plz.controller.api.types import InputMetadata, JSONString
 
 T = TypeVar('T')
 ResponseGenerator = Iterator[Union[bytes, str]]
