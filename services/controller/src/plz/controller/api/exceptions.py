@@ -69,3 +69,19 @@ class WorkerUnreachableException(ResponseHandledException):
         super().__init__(
             response_code=requests.codes.unavailable, **kwargs)
         self.execution_id = execution_id
+
+
+EXCEPTION_NAMES_TO_CLASSES = {
+    type(e).__name__: e
+    for e in (
+        AbortedExecutionException,
+        BadInputMetadataException,
+        ExecutionAlreadyHarvestedException,
+        ExecutionNotFoundException,
+        IncorrectInputIDException,
+        InstanceNotRunningException,
+        InstanceStillRunningException,
+        ProviderKillingInstancesException,
+        WorkerUnreachableException,
+    )
+}

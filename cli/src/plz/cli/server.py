@@ -9,36 +9,23 @@ from plz.cli import ssh_session
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException, RequestException
 from plz.cli.ssh_session import add_ssh_channel_adapter
-from plz.controller.api.exceptions import AbortedExecutionException, \
-    BadInputMetadataException, ExecutionAlreadyHarvestedException, \
-    ExecutionNotFoundException, IncorrectInputIDException, \
-    InstanceNotRunningException, InstanceStillRunningException, \
-    ProviderKillingInstancesException, WorkerUnreachableException
-
-_EXCEPTION_NAMES_TO_CLASSES = {
-    type(e).__name__: e
-    for e in (
-        AbortedExecutionException,
-        BadInputMetadataException,
-        ExecutionAlreadyHarvestedException,
-        ExecutionNotFoundException,
-        IncorrectInputIDException,
-        InstanceNotRunningException,
-        InstanceStillRunningException,
-        ProviderKillingInstancesException,
-        WorkerUnreachableException,
-    )
-}
 
 
 class Server:
     @staticmethod
-    def from_configuration(configuration: Configuration):
+    def from_configuration(
+            configuration: Configuration, exception_names_to_classes: dict):
         connection_info = configuration.connection_info
-        return Server(configuration.host, configuration.port, connection_info)
+        return Server(
+            host=configuration.host,
+            port=configuration.port,
+            connection_info=connection_info,
+            exception_names_to_classes=exception_names_to_classes)
 
     def __init__(self, host: str, port: int,
+                 exception_names_to_classes: Optional[dict] = None,
                  connection_info: Optional[dict] = None):
+        self.exceptions_names_to_classes = exception_names_to_classes or {}
         connection_info = connection_info or {}
         self.schema = connection_info.get('schema', 'http')
         self.connection_info = connection_info
@@ -65,14 +52,13 @@ class Server:
             raise CLIException(
                 'Our connection to the server timed out.') from e
 
-    @staticmethod
-    def _maybe_raise_exception(response, codes_with_exceptions):
+    def _maybe_raise_exception(self, response, codes_with_exceptions):
         response_code = response.status_code
         if response_code in codes_with_exceptions:
             try:
                 response_json = response.json()
                 assert(isinstance(response_json, dict))
-                exception_class = _EXCEPTION_NAMES_TO_CLASSES[
+                exception_class = self.exceptions_names_to_classes[
                     response_json['exception_type']]
                 del response_json['exception_type']
             except Exception as e:
