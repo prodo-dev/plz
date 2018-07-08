@@ -20,3 +20,6 @@ dist
 # Terraform
 .terraform
 *.tfstate.backup
+
+# Make controller api available from the CLI
+cli/src/plz/controller
