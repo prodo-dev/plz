@@ -63,8 +63,7 @@ class Server:
                 del response_json['exception_type']
             except Exception as e:
                 raise RequestException(response) from e
-            raise exception_class(
-                response_code=response_code, **response_json)
+            raise exception_class(**response_json)
 
     delete = functools.partialmethod(request, 'DELETE')
     get = functools.partialmethod(request, 'GET')

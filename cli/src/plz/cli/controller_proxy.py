@@ -192,7 +192,7 @@ class ControllerProxy(Controller):
         response = self.server.post(
             'instances', 'kill',
             json={
-                'all_of_them_plz': instance_ids is None,
+                'all_of_them_plz': instance_ids == [],
                 'instance_ids': instance_ids,
                 'force_if_not_idle': force_if_not_idle
             },
