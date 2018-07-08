@@ -26,7 +26,7 @@ class PingBackendOperation(Operation):
 
     def run(self):
         response_dict = self.controller.ping(self.ping_timeout)
-        if response_dict.get('plz', None) != 'pong':
+        if response_dict.get('plz', None) == 'pong':
             if not self.silent_on_success:
                 log_info('Backend is reachable')
         else:
