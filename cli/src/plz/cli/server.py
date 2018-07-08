@@ -1,5 +1,5 @@
 import functools
-from typing import Optional
+from typing import Optional, Set
 
 import requests
 import urllib3
@@ -7,8 +7,28 @@ from requests import Response
 
 from plz.cli import ssh_session
 from plz.cli.configuration import Configuration
-from plz.cli.exceptions import CLIException
+from plz.cli.exceptions import CLIException, RequestException
 from plz.cli.ssh_session import add_ssh_channel_adapter
+from plz.controller.api.exceptions import AbortedExecutionException, \
+    BadInputMetadataException, ExecutionAlreadyHarvestedException, \
+    ExecutionNotFoundException, IncorrectInputIDException, \
+    InstanceNotRunningException, InstanceStillRunningException, \
+    ProviderKillingInstancesException, WorkerUnreachableException
+
+_EXCEPTION_NAMES_TO_CLASSES = {
+    type(e).__name__: e
+    for e in (
+        AbortedExecutionException,
+        BadInputMetadataException,
+        ExecutionAlreadyHarvestedException,
+        ExecutionNotFoundException,
+        IncorrectInputIDException,
+        InstanceNotRunningException,
+        InstanceStillRunningException,
+        ProviderKillingInstancesException,
+        WorkerUnreachableException,
+    )
+}
 
 
 class Server:
@@ -24,13 +44,18 @@ class Server:
         self.connection_info = connection_info
         self.prefix = f'{self.schema}://{host}:{port}'
 
-    def request(self, method: str, *path_segments: str, **kwargs) -> Response:
+    def request(self, method: str, *path_segments: str,
+                codes_with_exceptions: Optional[Set[int]] = None, **kwargs) \
+            -> Response:
+        codes_with_exceptions = codes_with_exceptions or set()
         try:
             url = self.prefix + '/' + '/'.join(path_segments)
             session = requests.session()
             if self.schema == ssh_session.PLZ_SSH_SCHEMA:
                 add_ssh_channel_adapter(session, self.connection_info)
-            return session.request(method, url, **kwargs)
+            response = session.request(method, url, **kwargs)
+            self._maybe_raise_exception(response, codes_with_exceptions)
+            return response
         except (ConnectionError,
                 requests.ConnectionError,
                 urllib3.exceptions.NewConnectionError) as e:
@@ -39,6 +64,21 @@ class Server:
         except (TimeoutError, requests.Timeout) as e:
             raise CLIException(
                 'Our connection to the server timed out.') from e
+
+    @staticmethod
+    def _maybe_raise_exception(response, codes_with_exceptions):
+        response_code = response.status_code
+        if response_code in codes_with_exceptions:
+            try:
+                response_json = response.json()
+                assert(isinstance(response_json, dict))
+                exception_class = _EXCEPTION_NAMES_TO_CLASSES[
+                    response_json['exception_type']]
+                del response_json['exception_type']
+            except Exception as e:
+                raise RequestException(response) from e
+            raise exception_class(
+                response_code=response_code, **response_json)
 
     delete = functools.partialmethod(request, 'DELETE')
     get = functools.partialmethod(request, 'GET')
