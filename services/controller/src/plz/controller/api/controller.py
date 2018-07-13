@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from io import BytesIO
 from typing import BinaryIO, Iterator, List, Optional
 
 from plz.controller.api.exceptions import ResponseHandledException
