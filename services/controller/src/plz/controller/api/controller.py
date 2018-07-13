@@ -63,7 +63,7 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def create_snapshot(self, image_metadata: dict, context: BytesIO) \
+    def create_snapshot(self, image_metadata: dict, context: BinaryIO) \
             -> Iterator[JSONString]:
         pass
 

@@ -1,7 +1,6 @@
 import io
 import itertools
 import json
-from io import BytesIO
 from typing import BinaryIO, Iterator, List, Optional
 
 import requests
@@ -112,7 +111,7 @@ class ControllerProxy(Controller):
         _check_status(response, requests.codes.ok)
         return (line.decode('utf-8') for line in response.raw)
 
-    def create_snapshot(self, image_metadata: dict, context: BytesIO) -> \
+    def create_snapshot(self, image_metadata: dict, context: BinaryIO) -> \
             Iterator[JSONString]:
         metadata_bytes = json.dumps(image_metadata).encode('utf-8')
         request_data = itertools.chain(

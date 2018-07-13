@@ -1,8 +1,8 @@
-import io
 import json
 import os
+from typing import Any, BinaryIO, Callable, Iterator, Optional, Tuple
+
 import time
-from typing import Any, Callable, Iterator, Optional, Tuple
 
 from plz.cli import parameters
 from plz.cli.configuration import Configuration
@@ -167,7 +167,7 @@ class RunExecutionOperation(Operation):
                 f'Execution failed with an exit status of {status.code}.',
                 exit_code=status.code)
 
-    def submit_context_for_building(self, build_context: io.BytesIO) -> str:
+    def submit_context_for_building(self, build_context: BinaryIO) -> str:
         metadata = {
             'user': self.configuration.user,
             'project': self.configuration.project,
