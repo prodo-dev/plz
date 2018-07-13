@@ -8,4 +8,4 @@ CONFIG_FILE = $(SECRETS_DIR)/config.json
 
 AMI_TAG = 2018-07-05
 
-BUILD_TIMESTAMP = `date +%y%m%d%H%M%S`
+BUILD_TIMESTAMP = $(shell date +%y%m%d%H%M%S)
