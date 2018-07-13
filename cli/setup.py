@@ -4,6 +4,8 @@ https://packaging.python.org/en/latest/distributing.html
 https://github.com/pypa/sampleproject
 """
 
+import os
+
 from codecs import open
 from os import path
 
@@ -16,7 +18,7 @@ with open(path.join(root, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='plz-cli',
-    version='0.1.0',
+    version='0.1.' + os.environ.get('BUILD_TIMESTAMP', '0'),
     description='Send jobs to the Plz server',
     long_description=long_description,
     url='https://github.com/prodo-ai/plz',
@@ -63,4 +65,8 @@ setup(
     project_urls={
         'Bug Reports': 'https://github.com/prodo-ai/plz/issues',
     },
+    package_data={
+        'plz.cli': ['BUILD_TIMESTAMP'],
+    },
+    include_package_data=True,
 )

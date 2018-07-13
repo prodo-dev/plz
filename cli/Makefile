@@ -1,5 +1,6 @@
 check: test lint
 
+include ../vars.mk
 include ../python.mk
 
 .PHONY: test

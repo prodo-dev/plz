@@ -4,10 +4,15 @@ SHELL := zsh -e -u
 lint: environment
 	pipenv run flake8 src
 
+BUILD_TIMESTAMP_FILE=src/plz/cli/BUILD_TIMESTAMP
+
+
 .PHONY: dist
 dist: environment
 	rm -rf build dist
-	pipenv run python setup.py bdist_wheel
+	echo BUILD "$(BUILD_TIMESTAMP)" > "$(BUILD_TIMESTAMP_FILE)"
+	BUILD_TIMESTAMP="$(BUILD_TIMESTAMP)" pipenv run python setup.py bdist_wheel
+	rm "$(BUILD_TIMESTAMP_FILE)"
 
 .PHONY: environment
 environment: .environment
