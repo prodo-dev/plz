@@ -91,10 +91,10 @@ done
 
 if [[ $# -eq 0 ]]; then
   # Run all tests, except in directories named "*.ignored".
-  tests=($((cd $TEST_DIRECTORY && echo */*/plz.config.json~*/*.ignored/*) \
+  tests=($((cd $TEST_DIRECTORY && echo end-to-end/*/*/plz.config.json~*/*.ignored/*) \
              | xargs -n1 dirname))
 else
-  # Run selected tests.
+  # Run selected end-to-end tests.
   # But first, verify all arguments are actually test directories.
   for dir in $@; do
     if [[ ! ( $dir =~ '^[A-Za-z0-9\-]+/[A-Za-z0-9\-]+$' ) \
