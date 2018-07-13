@@ -115,7 +115,8 @@ def maybe_add_forensics(exception: WorkerUnreachableException) \
 
 @app.route('/ping', methods=['GET'])
 def ping_entrypoint():
-    return jsonify(controller.ping())
+    # We are not calling a server, so the timeout is not used
+    return jsonify(controller.ping(ping_timeout=0))
 
 
 @app.route('/', methods=['GET'])
@@ -292,6 +293,10 @@ def last_execution_id_entrypoint(user: str):
 
 @app.route(f'/instances/kill', methods=['POST'])
 def kill_instances_entrypoint():
+    # TODO: make the entrypoint receive the instance ids instead of
+    # implementing this logic. The CLI converts the all_of_them_plz boolean to
+    # a list of instances, then the proxy on the CLI side reconverts that
+    # to all_of_them_plz as to fit the entrypoint, which is bizarre
     all_of_them_plz: bool = request.json['all_of_them_plz']
     if all_of_them_plz:
         instance_ids = None
@@ -305,10 +310,6 @@ def kill_instances_entrypoint():
     response_dict = {
         'were_there_instances_to_kill': were_there_instances_to_kill}
 
-    # TODO: For backwards compatibility, remove when we adapted the CLI
-    if not were_there_instances_to_kill:
-        response_dict['warning_message'] = 'Request to kill all instances, ' \
-                                           'yet no instances were found.'
     return jsonify(response_dict)
 
 

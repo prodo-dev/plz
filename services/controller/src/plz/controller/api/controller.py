@@ -12,7 +12,7 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def ping(self) -> dict:
+    def ping(self, ping_timeout: int) -> dict:
         pass
 
     @abstractmethod

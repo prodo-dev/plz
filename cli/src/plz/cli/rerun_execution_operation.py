@@ -28,16 +28,14 @@ class RerunExecutionOperation(Operation):
         run_operation = RunExecutionOperation(
             self.configuration, command=None, output_dir=self.output_dir,
             parameters_file=None)
-        response = self.server.post(
-            'executions/rerun', stream=True,
-            json={'user': self.configuration.user,
-                  'project': self.configuration.project,
-                  'execution_id': self.get_execution_id(),
-                  'instance_market_spec':
-                      run_operation.get_instance_market_spec()})
+        response_dicts = self.controller.rerun_execution(
+            user=self.configuration.user,
+            project=self.configuration.project,
+            previous_execution_id=self.get_execution_id(),
+            instance_market_spec=run_operation.get_instance_market_spec())
 
         new_execution_id, was_start_ok = \
             RunExecutionOperation.get_execution_id_from_start_response(
-                response)
+                response_dicts)
         run_operation.execution_id = new_execution_id
         run_operation.follow_execution(was_start_ok)

@@ -1,11 +1,9 @@
 import collections
 from typing import Optional
 
-import requests
-
 from plz.cli.configuration import Configuration
 from plz.cli.log import log_info
-from plz.cli.operation import Operation, check_status, on_exception_reraise
+from plz.cli.operation import Operation, on_exception_reraise
 
 ExecutionStatus = collections.namedtuple(
     'ExecutionStatus',
@@ -30,14 +28,11 @@ class ShowStatusOperation(Operation):
 
     @on_exception_reraise('Retrieving the status failed.')
     def get_status(self):
-        response = self.server.get(
-            'executions', self.get_execution_id(), 'status')
-        check_status(response, requests.codes.ok)
-        body = response.json()
+        status = self.controller.get_status(self.get_execution_id())
         return ExecutionStatus(
-            running=body['running'],
-            success=body['success'],
-            code=body['exit_status'])
+            running=status['running'],
+            success=status['success'],
+            code=status['exit_status'])
 
     def run(self):
         status = self.get_status()

@@ -8,6 +8,15 @@ class InputMetadata:
         self.path: Optional[str] = None
         self.timestamp_millis: Optional[int] = None
 
+    @staticmethod
+    def of(user: str, project: str, path: str, timestamp_millis: int):
+        input_metadata = InputMetadata()
+        input_metadata.user: Optional[str] = user
+        input_metadata.project: Optional[str] = project
+        input_metadata.path: Optional[str] = path
+        input_metadata.timestamp_millis: Optional[int] = timestamp_millis
+        return input_metadata
+
     def has_all_args(self) -> bool:
         return all(self.__dict__.values())
 

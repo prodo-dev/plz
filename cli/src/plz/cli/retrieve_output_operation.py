@@ -4,13 +4,12 @@ import tarfile
 import tempfile
 from typing import IO, Iterator, Optional
 
-import requests
-
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
 from plz.cli.log import log_info
-from plz.cli.operation import Operation, add_output_dir_arg, check_status, \
+from plz.cli.operation import Operation, add_output_dir_arg, \
     on_exception_reraise
+from plz.controller.api.exceptions import InstanceStillRunningException
 
 
 class RetrieveOutputOperation(Operation):
@@ -41,10 +40,12 @@ class RetrieveOutputOperation(Operation):
         self.execution_id = execution_id
 
     def harvest(self):
-        response = self.server.delete(
-            'executions', self.get_execution_id(),
-            params={'fail_if_running': True})
-        if response.status_code == requests.codes.conflict:
+        try:
+            self.controller.delete_execution(
+                execution_id=self.get_execution_id(),
+                fail_if_running=True,
+                fail_if_deleted=False)
+        except InstanceStillRunningException:
             if self.force_if_running:
                 log_info('Process is still running')
                 return
@@ -52,15 +53,12 @@ class RetrieveOutputOperation(Operation):
                 raise CLIException(
                     'Process is still running, run `plz stop` if you want to '
                     'terminate it, \nor use --force-if-running (discouraged)')
-        check_status(response, requests.codes.no_content)
 
     @on_exception_reraise('Retrieving the output failed.')
     def retrieve_output(self):
         execution_id = self.get_execution_id()
-        response = self.server.get(
-            'executions', execution_id, 'output', 'files',
-            stream=True)
-        check_status(response, requests.codes.ok)
+        output_tarball_bytes = self.controller.get_output_files(
+            self.get_execution_id())
         formatted_output_dir = self.output_dir.replace('%e', execution_id)
         try:
             os.makedirs(formatted_output_dir)
@@ -73,7 +71,7 @@ class RetrieveOutputOperation(Operation):
                 raise CLIException(
                     f'The output directory "{formatted_output_dir}" '
                     'already exists.')
-        for path in untar(response.raw, formatted_output_dir):
+        for path in untar(output_tarball_bytes, formatted_output_dir):
             print(path)
 
     def run(self):
@@ -83,11 +81,13 @@ class RetrieveOutputOperation(Operation):
         self.retrieve_output()
 
 
-def untar(stream: IO, formatted_output_dir: str) -> Iterator[str]:
-    # The response is a tarball we need to extract into `output_dir`.
+def untar(tarball_bytes: Iterator[bytes], formatted_output_dir: str) \
+        -> Iterator[str]:
+    # The first parameter is a tarball we need to extract into `output_dir`.
     with tempfile.TemporaryFile() as tarball:
         # `tarfile.open` needs to read from a real file, so we copy to one.
-        shutil.copyfileobj(stream, tarball)
+        for bs in tarball_bytes:
+            tarball.write(bs)
         # And rewind to the start.
         tarball.seek(0)
         tar = tarfile.open(fileobj=tarball)

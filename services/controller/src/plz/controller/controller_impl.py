@@ -47,7 +47,7 @@ class ControllerImpl(Controller):
         self.log = log
 
     # noinspection PyMethodMayBeStatic
-    def ping(self) -> dict:
+    def ping(self, ping_timeout: int) -> dict:
         # This is plz, and we're up and running
         return {'plz': 'pong'}
 

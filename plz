@@ -15,6 +15,16 @@ if ! command -v pipenv > /dev/null; then
   exit 2
 fi
 
+# Create a symlink to the controller code from the CLI. This is needed
+# since, even if we add the controller code to the PYTHONPATH, python
+# doesn't merge both paths as to create the package plz (it just takes
+# the first plz root in the PYTHONPATH). The way setup.py works is by
+# merging the two directories, which we "emulate" with this symlink
+
+if [[ ! -a ${ROOT}/cli/src/plz/controller ]]; then
+  ln -s ${ROOT}/services/controller/src/plz/controller ${ROOT}/cli/src/plz/controller
+fi
+
 PYTHON="$(cd "${ROOT}/cli" && pipenv --venv)/bin/python"
 
 PYTHONPATH="${ROOT}/cli/src" "${PYTHON}" "${ROOT}/cli/src/plz/cli/main.py" "$@"

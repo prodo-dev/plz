@@ -1,10 +1,9 @@
 from typing import Optional
 
-import requests
-
 from plz.cli.configuration import Configuration
 from plz.cli.log import log_info
-from plz.cli.operation import Operation, check_status
+from plz.cli.operation import Operation
+from plz.controller.api.exceptions import ExecutionAlreadyHarvestedException
 
 
 class StopExecutionOperation(Operation):
@@ -24,14 +23,12 @@ class StopExecutionOperation(Operation):
         self.execution_id = execution_id
 
     def run(self):
-        response = self.server.delete(
-            'executions', self.get_execution_id(),
-            params={
-                'fail_if_deleted': True,
-            })
-        if response.status_code == requests.codes.expectation_failed:
-            # Returned when already deleted
+        try:
+            self.controller.delete_execution(
+                execution_id=self.get_execution_id(),
+                fail_if_running=False,
+                fail_if_deleted=True)
+        except ExecutionAlreadyHarvestedException:
             log_info('Process already stopped')
             return
-        check_status(response, requests.codes.no_content)
         log_info('Stopped')

@@ -1,8 +1,5 @@
-import requests
-
 from plz.cli.configuration import Configuration
-from plz.cli.operation import Operation, check_status, \
-    on_exception_reraise
+from plz.cli.operation import Operation, on_exception_reraise
 
 
 class RetrieveHistoryOperation(Operation):
@@ -21,15 +18,11 @@ class RetrieveHistoryOperation(Operation):
 
     @on_exception_reraise('Retrieving the history failed.')
     def retrieve_history(self):
-        response = self.server.get(
-            'executions',
-            self.configuration.user,
-            self.configuration.project,
-            'history',
-            stream=True)
-        check_status(response, requests.codes.ok)
-        for r in response.raw:
-            print(r.decode('utf-8'), end='')
+        json_strings = self.controller.get_history(
+            user=self.configuration.user,
+            project=self.configuration.project)
+        for s in json_strings:
+            print(s, end='')
 
     def run(self):
         self.retrieve_history()

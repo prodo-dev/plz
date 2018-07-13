@@ -59,9 +59,10 @@ class InstanceStillRunningException(ResponseHandledException):
 
 
 class ProviderKillingInstancesException(ResponseHandledException):
-    def __init__(self, instance_ids_to_messages: Dict[str, str], **kwargs):
+    def __init__(
+            self, failed_instance_ids_to_messages: Dict[str, str], **kwargs):
         super().__init__(requests.codes.conflict, **kwargs)
-        self.failed_instance_ids_to_messages = instance_ids_to_messages
+        self.failed_instance_ids_to_messages = failed_instance_ids_to_messages
 
 
 class WorkerUnreachableException(ResponseHandledException):
@@ -69,3 +70,19 @@ class WorkerUnreachableException(ResponseHandledException):
         super().__init__(
             response_code=requests.codes.unavailable, **kwargs)
         self.execution_id = execution_id
+
+
+EXCEPTION_NAMES_TO_CLASSES = {
+    e.__name__: e
+    for e in (
+        AbortedExecutionException,
+        BadInputMetadataException,
+        ExecutionAlreadyHarvestedException,
+        ExecutionNotFoundException,
+        IncorrectInputIDException,
+        InstanceNotRunningException,
+        InstanceStillRunningException,
+        ProviderKillingInstancesException,
+        WorkerUnreachableException,
+    )
+}

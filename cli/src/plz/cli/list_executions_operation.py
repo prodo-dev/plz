@@ -1,10 +1,8 @@
-import json
 from datetime import datetime
 
-import requests
 from prettytable import PrettyTable
 
-from plz.cli.operation import Operation, check_status
+from plz.cli.operation import Operation
 
 
 class ListExecutionsOperation(Operation):
@@ -19,11 +17,10 @@ class ListExecutionsOperation(Operation):
         pass
 
     def run(self):
-        response = self.server.get('executions', 'list')
-        check_status(response, requests.codes.ok)
         table = PrettyTable(['Execution Id', 'Instance Id', 'Running',
                              'Status', 'Type', 'Idle since', 'Disposal time'])
-        for execution in json.loads(response.content)['executions']:
+        executions = self.controller.list_executions()
+        for execution in executions:
             execution_id = execution['execution_id']
             instance_id = execution['instance_id']
             running = execution['running']
