@@ -22,6 +22,10 @@ RUN pipenv install --system --deploy
 COPY src ./src/
 COPY run ./
 
+ARG BUILD_TIMESTAMP=0
+
+RUN echo $BUILD_TIMESTAMP > ./src/plz/controller/BUILD_TIMESTAMP
+
 HEALTHCHECK --interval=5s CMD curl -f http://localhost/
 
 ENTRYPOINT ["/tini", "--", "./run"]
