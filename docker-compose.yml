@@ -2,6 +2,8 @@ version: '2.3'
 
 services:
   controller_localhost:
+    image: plztest/controller
+    build: services/controller
     extends:
       file: ./docker-compose.base.yml
       service: controller
@@ -15,7 +17,9 @@ services:
       redis:
         condition: service_started
 
-  controller_aws:
+  controller_aws_no_dependencies:
+    image: plztest/controller
+    build: services/controller
     extends:
       file: ./docker-compose.base.yml
       service: controller
@@ -25,9 +29,27 @@ services:
       - ./services/controller/config/_aws.conf:/root/server.conf:ro
       - ./cache/controller:/data
       - ./cache/results:/data/results
+
+  controller_aws:
+    extends:
+      service: controller_aws_no_dependencies
     depends_on:
       redis:
         condition: service_started
+
+  prebuilt_local_controller_aws:
+    image: prodoai/plz_controller:timestamp_${BUILD_TIMESTAMP}
+    # image: plztest/controller
+    # build: services/controller
+    extends:
+      service: controller_aws_no_dependencies
+    volumes:
+      - ./services/controller/config/localserver.conf:/root/server.conf:ro
+      - ${HOME}/.aws:/root/.aws
+    depends_on:
+      redis:
+        condition: service_started
+
   redis:
     extends:
       file: ./docker-compose.base.yml
