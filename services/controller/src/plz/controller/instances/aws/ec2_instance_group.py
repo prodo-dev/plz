@@ -13,7 +13,7 @@ from plz.controller.instances.instance_base import Instance, \
 from plz.controller.results.results_base import ResultsStorage
 from plz.controller.volumes import Volumes
 from .ec2_instance import EC2Instance, InstanceAssignedException, \
-    get_aws_instances, get_tag
+    get_aws_instances, get_tag, describe_instances
 
 
 class EC2InstanceGroup(InstanceProvider):
@@ -28,7 +28,9 @@ class EC2InstanceGroup(InstanceProvider):
                  results_storage: ResultsStorage,
                  images: Images,
                  acquisition_delay_in_seconds: int,
-                 max_acquisition_tries: int):
+                 max_acquisition_tries: int,
+                 worker_security_group_names: [str],
+                 use_public_dns: bool):
         super().__init__(results_storage)
         self.name = name
         self.redis = redis
@@ -40,6 +42,8 @@ class EC2InstanceGroup(InstanceProvider):
         self.acquisition_delay_in_seconds = acquisition_delay_in_seconds
         self.max_acquisition_tries = max_acquisition_tries
         self.instances: Dict[str, EC2Instance] = {}
+        self.worker_security_group_names = worker_security_group_names
+        self.use_public_dns = use_public_dns
         # Lazily initialized by ami_id
         self._ami_id = None
         # Lazily initialized by _instance_initialization_code
@@ -103,15 +107,25 @@ class EC2InstanceGroup(InstanceProvider):
             is_instance_newly_created = True
             instance_data = self._ask_aws_for_new_instance(
                 instance_type, instance_market_spec)
-        instance = self._ec2_instance_from_instance_data(
-            instance_data, container_execution_id=execution_id)
-        dns_name = _get_dns_name(instance_data)
         yield _msg(
-            f'waiting for the instance to be ready. DNS name is: {dns_name}')
-
+            f'waiting for the instance to be ready')
+        dns_name = ''
+        instance = None
         while tries_remaining > 0:
             tries_remaining -= 1
-            if instance.is_up(is_instance_newly_created):
+            # When the dns name is public, it takes some time to show up. Make
+            # sure there's a dns name before building the instance object
+            if dns_name == '':
+                instance_data = describe_instances(
+                    self.client,
+                    filters=[('instance-id', instance_data['InstanceId'])])[0]
+                dns_name = self._get_dns_name(instance_data)
+                if dns_name != '':
+                    yield _msg(f'DNS name is: {dns_name}')
+                    instance = self._ec2_instance_from_instance_data(
+                        instance_data, container_execution_id=execution_id)
+            if instance is not None and instance.is_up(
+                    is_instance_newly_created):
                 yield _msg('starting container')
                 try:
                     instance.run(
@@ -176,7 +190,7 @@ class EC2InstanceGroup(InstanceProvider):
         if container_execution_id is None:
             container_execution_id = get_tag(
                 instance_data, EC2Instance.EXECUTION_ID_TAG)
-        dns_name = _get_dns_name(instance_data)
+        dns_name = self._get_dns_name(instance_data)
         docker_url = f'tcp://{dns_name}:{self.DOCKER_PORT}'
         images = self.images.for_host(docker_url)
         containers = Containers.for_host(docker_url)
@@ -238,16 +252,20 @@ class EC2InstanceGroup(InstanceProvider):
                             'max_bid_price_in_dollars_per_hour']),
                 }
             }
+        if len(self.worker_security_group_names) != 0:
+            spec['SecurityGroups'] = self.worker_security_group_names
         return spec
+
+    def _get_dns_name(self, instance_data: dict) -> str:
+        if self.use_public_dns:
+            return instance_data['PublicDnsName']
+        else:
+            return instance_data['PrivateDnsName']
 
 
 def _is_socket_open(host: str, port: int) -> bool:
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
         return sock.connect_ex((host, port)) == 0
-
-
-def _get_dns_name(instance_data: dict) -> str:
-    return instance_data['PrivateDnsName']
 
 
 def _msg(s) -> Dict:
