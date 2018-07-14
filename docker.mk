@@ -10,7 +10,7 @@ AWS_REGION = $(shell jq -r '.aws_region' $(CONFIG_FILE))
 
 .PHONY: build
 build:
-	docker build --tag=$(TAG) .
+	docker build --tag=$(TAG) --build-arg BUILD_TIMESTAMP=$(BUILD_TIMESTAMP) .
 
 .PHONY: push
 push: build
