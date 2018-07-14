@@ -47,9 +47,15 @@ class ControllerImpl(Controller):
         self.log = log
 
     # noinspection PyMethodMayBeStatic
-    def ping(self, ping_timeout: int) -> dict:
+    def ping(self,
+             ping_timeout: int,
+             build_timestamp: Optional[int] = None) -> dict:
         # This is plz, and we're up and running
-        return {'plz': 'pong'}
+        return {
+            # This is plz, and we're up and running
+            'plz': 'pong',
+            'build_timestamp': build_timestamp
+        }
 
     def run_execution(
             self, command: [str], snapshot_id: str, parameters: dict,
