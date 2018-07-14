@@ -65,8 +65,4 @@ setup(
     project_urls={
         'Bug Reports': 'https://github.com/prodo-ai/plz/issues',
     },
-    package_data={
-        'plz.cli': ['BUILD_TIMESTAMP'],
-    },
-    include_package_data=True,
 )
