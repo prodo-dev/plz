@@ -23,9 +23,9 @@ deploy: push vars-file maybe-deploy-public
 	rm $(VARS_FILE)
 
 .PHONY: maybe-deploy-public
-maybe-deploy-public:
+maybe-deploy-public: build
 ifneq ($(PUBLIC_REPOSITORY), null)
-	docker build . --tag="$(PUBLIC_REPOSITORY):timestamp_$(BUILD_TIMESTAMP)"
+	docker tag $(TAG) "$(PUBLIC_REPOSITORY):timestamp_$(BUILD_TIMESTAMP)"
 	docker push "$(PUBLIC_REPOSITORY):timestamp_$(BUILD_TIMESTAMP)"
 endif
 
