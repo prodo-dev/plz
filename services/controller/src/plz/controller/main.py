@@ -7,23 +7,15 @@ from typing import Any, Callable, Iterator, Optional, TypeVar, Union
 
 import requests
 from flask import Flask, Response, abort, jsonify, request, stream_with_context
-from redis import StrictRedis
 
 from plz.controller import configuration
-from plz.controller.arbitrary_object_json_encoder import \
-    ArbitraryObjectJSONEncoder
-from plz.controller.configuration import Dependencies
-from plz.controller.controller_impl import ControllerImpl
-from plz.controller.db_storage import DBStorage
 from plz.controller.api.exceptions import AbortedExecutionException, \
     InstanceNotRunningException, JSONResponseException, \
     ResponseHandledException, WorkerUnreachableException
-from plz.controller.execution import Executions
-from plz.controller.images import Images
-from plz.controller.input_data import InputDataConfiguration
-from plz.controller.instances.instance_base import InstanceProvider
-from plz.controller.results import ResultsStorage
 from plz.controller.api.types import InputMetadata, JSONString
+from plz.controller.arbitrary_object_json_encoder import \
+    ArbitraryObjectJSONEncoder
+from plz.controller.controller_impl import ControllerImpl
 
 T = TypeVar('T')
 ResponseGenerator = Iterator[Union[bytes, str]]
@@ -31,21 +23,6 @@ ResponseGeneratorFunction = Callable[[], ResponseGenerator]
 
 config = configuration.load()
 port = config.get_int('port', 8080)
-data_dir = config['data_dir']
-dependencies: Dependencies = configuration.dependencies_from_config(config)
-images: Images = dependencies.images
-instance_provider: InstanceProvider = dependencies.instance_provider
-results_storage: ResultsStorage = dependencies.results_storage
-db_storage: DBStorage = dependencies.db_storage
-redis: StrictRedis = dependencies.redis
-executions: Executions = Executions(results_storage, instance_provider)
-
-input_dir = os.path.join(data_dir, 'input')
-temp_data_dir = os.path.join(data_dir, 'tmp')
-os.makedirs(input_dir, exist_ok=True)
-os.makedirs(temp_data_dir, exist_ok=True)
-input_data_configuration = InputDataConfiguration(
-    redis, input_dir=input_dir, temp_data_dir=temp_data_dir)
 
 
 def _setup_logging():
@@ -117,7 +94,8 @@ def handle_exception(exception: ResponseHandledException):
 
 def maybe_add_forensics(exception: WorkerUnreachableException) \
         -> ResponseHandledException:
-    forensics = instance_provider.get_forensics(exception.execution_id)
+    forensics = controller.instance_provider.get_forensics(
+        exception.execution_id)
     spot_state = forensics.get(
         'SpotInstanceRequest', {}).get('State', None)
     # We know better now
