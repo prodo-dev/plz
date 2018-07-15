@@ -20,7 +20,8 @@ class ControllerProxy(Controller):
     def handle_exception(cls, exception: ResponseHandledException):
         pass
 
-    def ping(self, ping_timeout: int) -> dict:
+    def ping(self, ping_timeout: int,
+             build_timestamp: Optional[int] = None) -> dict:
         response = self.server.get('ping', timeout=ping_timeout)
         is_ok = response.status_code == requests.codes.ok
         if is_ok:
