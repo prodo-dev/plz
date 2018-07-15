@@ -52,9 +52,10 @@ def create_ecr_builds_repository():
     ecr_client = boto3.client(
         service_name='ecr',
         region_name=config['instances.region'])
+    repository_name = config['images.repository']
     try:
         repository_exists = len(ecr_client.describe_repositories(
-            repositoryNames=[repository_name])['images.repositories']) > 0
+            repositoryNames=[repository_name])['repositories']) > 0
     except Exception as e:
         if type(e).__name__ == 'RepositoryNotFoundException':
             repository_exists = False
