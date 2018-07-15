@@ -140,8 +140,7 @@ class EC2InstanceGroup(InstanceProvider):
                     yield _msg('taken while waiting')
                     instance_data = self._ask_aws_for_new_instance(
                         instance_type, instance_market_spec)
-                    instance = self._ec2_instance_from_instance_data(
-                        instance_data, container_execution_id=execution_id)
+                    instance = None
                     continue
                 yield _msg('running')
                 yield {'instance': instance}
