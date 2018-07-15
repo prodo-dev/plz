@@ -2,8 +2,6 @@ version: '2.3'
 
 services:
   controller_localhost:
-    image: plztest/controller
-    build: services/controller
     extends:
       file: ./docker-compose.base.yml
       service: controller
@@ -18,8 +16,6 @@ services:
         condition: service_started
 
   controller_aws_no_dependencies:
-    image: plztest/controller
-    build: services/controller
     extends:
       file: ./docker-compose.base.yml
       service: controller
@@ -39,13 +35,17 @@ services:
 
   prebuilt_local_controller_aws:
     image: prodoai/plz_controller:timestamp_${BUILD_TIMESTAMP}
+    # It doesn't make sense to build this, but can't override the base
+    # with null. And don't want to leave the default image unspecified in the
+    # base and repeat it everywhere
+    build: nope-wont-build
     extends:
       service: controller_aws_no_dependencies
     volumes:
       - ./services/controller/config/localserver.conf:/root/server.conf:ro
       - ${HOME}/.aws:/root/.aws
     depends_on:
-      redis:
+      redis_local:
         condition: service_started
 
   redis:
@@ -54,6 +54,12 @@ services:
       service: redis
     ports:
       - 6379:6379
+
+  redis_local:
+    extends:
+      service: redis
+    # Dump the DB every two seconds
+    entrypoint: redis-server --save 2 1
 
 volumes:
   redis_data: {}
