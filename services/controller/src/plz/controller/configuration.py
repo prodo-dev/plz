@@ -112,11 +112,11 @@ def _images_from(config, docker_host):
         def ecr_client_creator():
             return boto3.client(service_name='ecr',
                                 region_name=config['images.region'])
-        registry = config['images.registry']
-        repository = f'{registry}/{config["images.repository"]}'
+        repository_without_registry = config['images.repository']
         images = ECRImages(
-            docker_api_client_creator, ecr_client_creator, registry,
-            repository, config['assumptions.ecr_login_validity_in_minutes'])
+            docker_api_client_creator, ecr_client_creator,
+            repository_without_registry,
+            config['assumptions.ecr_login_validity_in_minutes'])
     else:
         raise ValueError('Invalid image provider.')
     return images

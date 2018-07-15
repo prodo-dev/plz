@@ -16,13 +16,15 @@ class ECRImages(Images):
     def __init__(self,
                  docker_api_client_creator: Callable[[], docker.APIClient],
                  ecr_client_creator: Callable[[], Any],
-                 registry: str,
-                 repository: str,
+                 repository_without_registry: str,
                  login_validity_in_minutes: int):
-        super().__init__(docker_api_client_creator, repository)
-        self.registry = registry
         self.ecr_client_creator = ecr_client_creator
         self.ecr_client = self.ecr_client_creator()
+        self.repository_without_registry = repository_without_registry
+        self.registry = self._get_registry(
+            self.ecr_client, repository_without_registry)
+        repository = f'{self.registry}/{repository_without_registry}'
+        super().__init__(docker_api_client_creator, repository)
         self.last_login_time = None
         self.login_validity_in_minutes = login_validity_in_minutes
 
@@ -32,8 +34,7 @@ class ECRImages(Images):
         return ECRImages(
             new_docker_api_client_creator,
             self.ecr_client_creator,
-            self.registry,
-            self.repository,
+            self.repository_without_registry,
             self.login_validity_in_minutes)
 
     def build(self, fileobj: BinaryIO, tag: str) -> Iterator[bytes]:
@@ -84,6 +85,12 @@ class ECRImages(Images):
             password=password,
             registry=self.registry)
         self.last_login_time = time.time()
+
+    @staticmethod
+    def _get_registry(ecr_client, repository_without_uri) -> str:
+        repository = ecr_client.describe_repositories(
+            repositoryNames=[repository_without_uri])['repositories'][0]
+        return repository['repositoryUri'][:-(len(repository_without_uri)+1)]
 
     @staticmethod
     def _log_output(label: str, stream: Iterator[bytes]):
