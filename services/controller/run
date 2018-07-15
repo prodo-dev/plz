@@ -13,6 +13,10 @@ PORT="${PORT:-8080}"
 
 export PYTHONPATH='./src'
 
+if [[ "${CREATE_AWS_RESOURCES:-}" ]]; then
+  python src/plz/controller/utils/create_aws_resources.py
+fi
+
 exec gunicorn \
   --bind="0.0.0.0:${PORT}" \
   --workers=16 \

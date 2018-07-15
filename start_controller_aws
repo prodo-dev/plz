@@ -1,5 +1,7 @@
 #!/bin/sh
 
+docker build -q harvester/
+
 BUILD_TIMESTAMP=`cat BUILD_TIMESTAMP` \
   SECRETS_DIR=$PWD/aws_config \
   REDIS_DUMP_EVERY_SECONDS=2 \
