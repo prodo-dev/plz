@@ -67,8 +67,25 @@ def _setup_logging():
         controller_logger.setLevel(log_level)
 
 
+def _get_build_timestamp() -> int:
+    dir_of_this_script = os.path.dirname(os.path.abspath(__file__))
+    build_timestamp_filename = f'{dir_of_this_script}/BUILD_TIMESTAMP'
+    if not os.path.exists(build_timestamp_filename):
+        # Not present in development
+        return 0
+    with open(f'{dir_of_this_script}/BUILD_TIMESTAMP', 'r') as f:
+        build_timestamp = f.read()
+    if build_timestamp == '':
+        # Non-deployment build
+        return 0
+    return int(build_timestamp)
+
+
 _setup_logging()
 log = logging.getLogger(__name__)
+
+_build_timestamp = _get_build_timestamp()
+log.info(f'Build timestamp: {_build_timestamp}')
 
 app = Flask(__name__)
 app.json_encoder = ArbitraryObjectJSONEncoder
@@ -116,7 +133,10 @@ def maybe_add_forensics(exception: WorkerUnreachableException) \
 @app.route('/ping', methods=['GET'])
 def ping_entrypoint():
     # We are not calling a server, so the timeout is not used
-    return jsonify(controller.ping(ping_timeout=0))
+    return jsonify(
+        controller.ping(
+            ping_timeout=0,
+            build_timestamp=_build_timestamp))
 
 
 @app.route('/', methods=['GET'])

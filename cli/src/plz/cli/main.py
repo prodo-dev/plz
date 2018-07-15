@@ -3,6 +3,8 @@ import os
 import sys
 from typing import Type
 
+import pkg_resources
+
 from plz.cli.configuration import Configuration, ValidationException
 from plz.cli.describe_execution_operation import DescribeExecutionOperation
 from plz.cli.exceptions import CLIException, ExitWithStatusCodeException
@@ -40,6 +42,17 @@ OPERATIONS: [Type[Operation]] = [
 ]
 
 
+def _get_version():
+    try:
+        return pkg_resources.require('plz-cli')[0].version
+    except pkg_resources.DistributionNotFound:
+        # Not present in development
+        return '0.x.0'
+
+
+_build_timestamp = int(_get_version().split('.')[-1])
+
+
 def main(args=sys.argv[1:]):
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--ping-timeout', type=int, default=5)
@@ -72,6 +85,8 @@ def main(args=sys.argv[1:]):
     ping_timeout = options.ping_timeout
     if operation_name != 'ping-backend':
         del option_dict['ping_timeout']
+    else:
+        option_dict['build_timestamp'] = _build_timestamp
 
     del option_dict['configuration_path']
 
@@ -93,7 +108,8 @@ def main(args=sys.argv[1:]):
             PingBackendOperation(
                 configuration,
                 silent_on_success=True,
-                ping_timeout=ping_timeout).run()
+                ping_timeout=ping_timeout,
+                build_timestamp=_build_timestamp).run()
 
         operation.run()
     except KeyboardInterrupt:
