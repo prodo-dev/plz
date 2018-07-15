@@ -39,8 +39,6 @@ services:
 
   prebuilt_local_controller_aws:
     image: prodoai/plz_controller:timestamp_${BUILD_TIMESTAMP}
-    # image: plztest/controller
-    # build: services/controller
     extends:
       service: controller_aws_no_dependencies
     volumes:
