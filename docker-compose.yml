@@ -35,17 +35,15 @@ services:
 
   prebuilt_local_controller_aws:
     image: prodoai/plz_controller:timestamp_${BUILD_TIMESTAMP}
-    # It doesn't make sense to build this, but can't override the base
-    # with null. And don't want to leave the default image unspecified in the
-    # base and repeat it everywhere
-    build: nope-wont-build
     extends:
       service: controller_aws_no_dependencies
     volumes:
       - ./services/controller/config/localserver.conf:/root/server.conf:ro
       - ${HOME}/.aws:/root/.aws
     depends_on:
-      redis_local:
+      redis:
+        condition: service_started
+      harvester:
         condition: service_started
 
   redis:
@@ -55,11 +53,14 @@ services:
     ports:
       - 6379:6379
 
-  redis_local:
-    extends:
-      service: redis
-    # Dump the DB every two seconds
-    entrypoint: redis-server --save 2 1
+  harvester:
+    environment:
+      - HOST=localhost
+      - PORT=${PORT:-6000}
+      - WAIT_FOR_SECONDS=60
+    network_mode:
+      host
+    build: harvester
 
 volumes:
   redis_data: {}
