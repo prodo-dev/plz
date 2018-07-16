@@ -2,25 +2,24 @@
 
 *Say the magic word.*
 
-`plz` is a job runner targetted at training machine learning models as cheaply as possible.
-It is, however, fairly general, so can be used for practically anything that requires running a job in a repeatable fashion on a dedicated cloud VM.
+`plz` is a job runner targetted at training machine learning models as cheaply as possible. At the moment is optimised for pytorch, in the sense that you can run pytorch programs without preparing a pytorch environment. With proper configuration and preparation it is fairly general, and can be used for practically anything that requires running a job in a repeatable fashion on a dedicated cloud VM.
 
-`plz run` performs a number of operations:
+`plz run` performs a number of operations. Some of them are the operations you always do when running things in the cloud or an experimenting environment. It just automates those for you. It also keeps history in a structure fashion and allows to rerun jobs.
 
-1. It starts a "worker" (typically on AWS EC2, as a spot instance) to run your job.
-2. It packages your code and data and ships them to the worker.
-3. It runs your code.
-4. It aggregates the results.
-5. It takes down the worker to make sure you're paying as little as possible.
+1. Starts a "worker" (typically on AWS EC2, but also locally) to run your job.
+2. Packages your code, parameters and data and ships them to the worker.
+3. Runs your code.
+4. Saves the results (like losses) and outcomes (like models) so that you can back to them in the future.
+5. Takes down the worker.
+6. Reruns previous jobs as to make sure the results are repeatable.
+7. Provides a history including the result and parameters, so that you have experiment data in a structured format. 
 
-We have tried to strike a balance between speed and price, so the `plz` controller keeps instances around for a little while before terminating them.
 
 ## Future work
 
 In the future, `plz` is intended to:
 
-* gather and plot metrics over multiple runs, to understand how training is progressing,
-* search over hyperparameters in parallel to optimise models,
+* add support for visualisations, like tensorboard,
 * manage epochs to capture intermediate metrics and results, and terminate runs early,
 * and whatever else sounds like fun. ([Please, tell us!](https://github.com/prodo-ai/plz/issues))
 
