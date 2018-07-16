@@ -158,6 +158,8 @@ def rerun_execution_entrypoint():
     #    -H 'Content-Type: application/json' localhost:5000/executions
     user = request.json['user']
     project = request.json['project']
+    instance_max_uptime_in_minutes = \
+        request.json['instance_max_uptime_in_minutes']
     previous_execution_id = request.json['execution_id']
     # Using market spec from the request. Results should be independent of
     # the market and bid price. If a user is trying to run cheaper at the
@@ -169,7 +171,9 @@ def rerun_execution_entrypoint():
     @stream_with_context
     def act() -> Iterator[dict]:
         yield from controller.rerun_execution(
-            user, project, previous_execution_id, instance_market_spec)
+            user, project,
+            instance_max_uptime_in_minutes,
+            previous_execution_id, instance_market_spec)
     return Response(
         act(), mimetype='text/plain', status=requests.codes.accepted)
 

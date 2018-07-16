@@ -46,7 +46,9 @@ class ControllerProxy(Controller):
         return (json.loads(line) for line in response.iter_lines())
 
     def rerun_execution(
-            self, user: str, project: str, previous_execution_id: str,
+            self, user: str, project: str,
+            instance_max_uptime_in_minutes: Optional[int],
+            previous_execution_id: str,
             instance_market_spec: dict) -> Iterator[dict]:
         response = self.server.post(
             'executions/rerun', stream=True,

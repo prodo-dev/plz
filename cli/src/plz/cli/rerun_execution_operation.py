@@ -31,6 +31,8 @@ class RerunExecutionOperation(Operation):
         response_dicts = self.controller.rerun_execution(
             user=self.configuration.user,
             project=self.configuration.project,
+            instance_max_uptime_in_minutes=
+            self.configuration.instance_max_uptime_in_minutes,
             previous_execution_id=self.get_execution_id(),
             instance_market_spec=run_operation.get_instance_market_spec())
 

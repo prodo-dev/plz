@@ -218,7 +218,9 @@ class RunExecutionOperation(Operation):
             'user': configuration.user,
             'project': configuration.project,
             'input_id': input_id,
-            'docker_run_args': configuration.docker_run_args
+            'docker_run_args': configuration.docker_run_args,
+            'instance_max_uptime_in_minutes':
+                configuration.instance_max_uptime_in_minutes,
         }
         instance_market_spec = self.get_instance_market_spec()
         commit = get_head_commit_or_none(context_path)
