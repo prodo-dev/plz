@@ -109,13 +109,12 @@ class EC2InstanceGroup(InstanceProvider):
                 instance_type, instance_market_spec)
         yield _msg(
             f'waiting for the instance to be ready')
-        dns_name = ''
         instance = None
         while tries_remaining > 0:
             tries_remaining -= 1
             # When the dns name is public, it takes some time to show up. Make
             # sure there's a dns name before building the instance object
-            if dns_name == '':
+            if instance is None:
                 instance_data = describe_instances(
                     self.client,
                     filters=[('instance-id', instance_data['InstanceId'])])[0]
