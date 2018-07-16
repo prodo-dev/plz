@@ -11,6 +11,9 @@ fi
 PORT="${PORT:-$(python -c 'import os; import pyhocon; print(pyhocon.ConfigFactory.parse_string(os.environ.get("CONFIGURATION", "")).get("port", ""))')}"
 PORT="${PORT:-8080}"
 
+LOG_LEVEL="${LOG_LEVEL:-$(python -c 'import os; import pyhocon; print(pyhocon.ConfigFactory.parse_string(os.environ.get("CONFIGURATION", "")).get("log_level", ""))')}"
+LOG_LEVEL="${LOG_LEVEL:-debug}"
+
 export PYTHONPATH='./src'
 
 if [[ "${CREATE_AWS_RESOURCES:-}" ]]; then
@@ -23,6 +26,6 @@ exec gunicorn \
   --timeout=2000 \
   --pythonpath="${PYTHONPATH}" \
   --capture-output \
-  --log-level=debug \
+  --log-level="${LOG_LEVEL}" \
   plz.controller.main:app \
   -- $@

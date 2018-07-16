@@ -48,22 +48,22 @@ def load_from_file(path) -> pyhocon.ConfigTree:
 
 
 def dependencies_from_config(config) -> Dependencies:
-    docker_host = config.get('images.docker_host', None)
     redis = StrictRedis(host=config.get('redis_host', 'localhost'))
     # DB storage can only be redis for now, but in case we want to drop redis
     # for something else, or allow other DBs to be specified in the info,
     # the dependence on redis is nicely encapsulated here
     db_storage = _db_storage_from(redis)
-    images = _images_from(config, docker_host)
+    images = _images_from(config)
     results_storage = _results_storage_from(config, redis, db_storage)
     instance_provider = _instance_provider_from(
-        config, docker_host, images, redis, results_storage)
+        config, images, redis, results_storage)
     return Dependencies(
         redis, instance_provider, images, results_storage, db_storage)
 
 
 def _instance_provider_from(
-        config, docker_host, images, redis, results_storage):
+        config, images, redis, results_storage):
+    docker_host = get_docker_host_from_config(config)
     instance_provider_type = config.get('instances.provider', 'localhost')
     if instance_provider_type == 'localhost':
         containers = Containers.for_host(docker_host)
@@ -94,17 +94,12 @@ def _instance_provider_from(
     return instance_provider
 
 
-def _images_from(config, docker_host):
+def _images_from(config):
     images_type = config.get('images.provider', 'local')
-    docker_api_client_timeout = config.get(
-        'assumptions.docker_api_client_timeout_in_minutes', None)
-    if docker_api_client_timeout is not None:
-        client_extra_args = {'timeout': docker_api_client_timeout * 60}
-    else:
-        client_extra_args = {}
 
     def docker_api_client_creator():
-        return docker.APIClient(base_url=docker_host, **client_extra_args)
+        return docker_client_from_config(config)
+
     if images_type == 'local':
         repository = config.get('images.repository', 'plz/builds')
         images = LocalImages(docker_api_client_creator, repository)
@@ -120,6 +115,21 @@ def _images_from(config, docker_host):
     else:
         raise ValueError('Invalid image provider.')
     return images
+
+
+def get_docker_host_from_config(config):
+    return config.get('images.docker_host', None)
+
+
+def docker_client_from_config(config):
+    docker_host = get_docker_host_from_config(config)
+    docker_api_client_timeout = config.get(
+        'assumptions.docker_api_client_timeout_in_minutes', None)
+    if docker_api_client_timeout is not None:
+        client_extra_args = {'timeout': docker_api_client_timeout * 60}
+    else:
+        client_extra_args = {}
+    return docker.APIClient(base_url=docker_host, **client_extra_args)
 
 
 def _results_storage_from(config, redis, db_storage):

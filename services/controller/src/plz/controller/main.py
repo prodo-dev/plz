@@ -34,7 +34,7 @@ def _setup_logging():
     root_logger_handler.setFormatter(logging.Formatter(
         '%(asctime)s ' + logging.BASIC_FORMAT))
     root_logger.addHandler(root_logger_handler)
-    # Set logger level for the controller
+    # Set log level for the controller
     if 'log_level' in config:
         log_level = config['log_level']
         print(f'Setting log level to: {log_level}',
@@ -58,14 +58,14 @@ def _get_build_timestamp() -> int:
     return int(build_timestamp)
 
 
-_setup_logging()
+app = Flask(__name__)
+app.json_encoder = ArbitraryObjectJSONEncoder
+
+_setup_logging(app)
 log = logging.getLogger(__name__)
 
 _build_timestamp = _get_build_timestamp()
 log.info(f'Build timestamp: {_build_timestamp}')
-
-app = Flask(__name__)
-app.json_encoder = ArbitraryObjectJSONEncoder
 
 controller = ControllerImpl(config, log)
 
