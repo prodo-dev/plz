@@ -61,7 +61,7 @@ def _get_build_timestamp() -> int:
 app = Flask(__name__)
 app.json_encoder = ArbitraryObjectJSONEncoder
 
-_setup_logging(app)
+_setup_logging()
 log = logging.getLogger(__name__)
 
 _build_timestamp = _get_build_timestamp()
