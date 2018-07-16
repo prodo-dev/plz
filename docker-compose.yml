@@ -15,7 +15,7 @@ services:
       redis:
         condition: service_started
 
-  controller_aws:
+  controller_aws_no_dependencies:
     extends:
       file: ./docker-compose.base.yml
       service: controller
@@ -25,15 +25,42 @@ services:
       - ./services/controller/config/_aws.conf:/root/server.conf:ro
       - ./cache/controller:/data
       - ./cache/results:/data/results
+
+  controller_aws:
+    extends:
+      service: controller_aws_no_dependencies
     depends_on:
       redis:
         condition: service_started
+
+  prebuilt_local_controller_aws:
+    image: prodoai/plz_controller:timestamp_${BUILD_TIMESTAMP}
+    extends:
+      service: controller_aws_no_dependencies
+    volumes:
+      - ./services/controller/config/localserver.conf:/root/server.conf:ro
+      - ${HOME}/.aws:/root/.aws
+    depends_on:
+      redis:
+        condition: service_started
+      harvester:
+        condition: service_started
+
   redis:
     extends:
       file: ./docker-compose.base.yml
       service: redis
     ports:
       - 6379:6379
+
+  harvester:
+    environment:
+      - HOST=localhost
+      - PORT=${PORT:-6000}
+      - WAIT_FOR_SECONDS=60
+    network_mode:
+      host
+    build: harvester
 
 volumes:
   redis_data: {}

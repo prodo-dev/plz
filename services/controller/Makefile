@@ -5,8 +5,7 @@ check: lint
 include ../../vars.mk
 
 AWS_PROJECT = $(shell jq -r '.aws_project' $(CONFIG_FILE))
-# If not present, is the string "null". Which is great, right? Right?
-PUBLIC_REPOSITORY = $(shell jq -r '.public_repository' $(CONFIG_FILE))
+PUBLIC_REPOSITORY = $(shell jq -r 'if .public_repository then .public_repository else "" end' $(CONFIG_FILE))
 TAG = $(AWS_PROJECT)/plz-controller
 
 include ../../docker.mk
@@ -23,9 +22,9 @@ deploy: push vars-file maybe-deploy-public
 	rm $(VARS_FILE)
 
 .PHONY: maybe-deploy-public
-maybe-deploy-public:
-ifneq ($(PUBLIC_REPOSITORY), null)
-	docker build . --tag="$(PUBLIC_REPOSITORY):timestamp_$(BUILD_TIMESTAMP)"
+maybe-deploy-public: build
+ifneq ($(PUBLIC_REPOSITORY),)
+	docker tag $(TAG) "$(PUBLIC_REPOSITORY):timestamp_$(BUILD_TIMESTAMP)"
 	docker push "$(PUBLIC_REPOSITORY):timestamp_$(BUILD_TIMESTAMP)"
 endif
 

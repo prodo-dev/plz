@@ -77,14 +77,18 @@ def _instance_provider_from(
                 service_name='ec2',
                 region_name=config['instances.region']),
             aws_worker_ami=WORKER_AMI,
-            aws_key_name=config['instances.key_name'],
+            aws_key_name=config.get('instances.key_name', None),
             results_storage=results_storage,
             images=images,
             acquisition_delay_in_seconds=config.get_int(
                 'instances.acquisition_delay', 10),
             max_acquisition_tries=config.get_int(
                 'instances.max_acquisition_tries', 5),
-            name=config['instances.group_name'])
+            name=config['instances.group_name'],
+            worker_security_group_names=config.get(
+                'instances.worker_security_group_names', []),
+            use_public_dns=config.get('instances.use_public_dns', False),
+        )
     else:
         raise ValueError('Invalid instance provider.')
     return instance_provider

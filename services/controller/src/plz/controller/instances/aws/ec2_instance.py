@@ -92,7 +92,7 @@ class EC2Instance(Instance):
     def _set_tags(self, tags):
         instance_id = self.instance_id
         self.client.create_tags(Resources=[instance_id], Tags=tags)
-        self.data = _describe_instances(
+        self.data = describe_instances(
             self.client, [('instance-id', instance_id)])[0]
 
     def get_max_idle_seconds(self) -> int:
@@ -176,7 +176,7 @@ class EC2Instance(Instance):
         return len(instances) > 0
 
     def get_resource_state(self) -> str:
-        instance = _describe_instances(
+        instance = describe_instances(
             self.client,
             filters=[('instance-id', self.instance_id)])[0]
         return instance['State']['Name']
@@ -232,10 +232,10 @@ def get_aws_instances(
         client, filters: [(str, str)], only_running: bool) -> [dict]:
     if only_running:
         filters += [('instance-state-name', 'running')]
-    return _describe_instances(client, filters)
+    return describe_instances(client, filters)
 
 
-def _describe_instances(client, filters) -> [dict]:
+def describe_instances(client, filters) -> [dict]:
     new_filters = [{'Name': n, 'Values': [v]} for (n, v) in filters]
     response = client.describe_instances(Filters=new_filters)
     return [instance

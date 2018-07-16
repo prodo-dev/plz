@@ -33,6 +33,6 @@ services:
     image: redis:4
     # We assume that 5 minutes it's a reasonable
     # time as to dump the redis DB
-    entrypoint: redis-server --save 300 1
+    entrypoint: redis-server --save ${REDIS_DUMP_EVERY_SECONDS:-300} 1
     volumes:
       - /cache/redis_data:/data
