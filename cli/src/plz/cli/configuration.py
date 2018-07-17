@@ -101,7 +101,6 @@ def _validate_market_spec(configuration, errors, operation: Optional[str]):
 
 def _warn_about_instance_max_uptime(
         configuration, _, operation: Optional[str]):
-    print('Operation is: ', operation)
     if operation not in {'run', 'rerun'}:
         return
     if configuration.instance_max_uptime_in_minutes:
