@@ -2,19 +2,20 @@
 
 *Say the magic word.*
 
-`plz` is a job runner targetted at training machine learning models as simply, tidely and cheaply as possible. You can run jobs locally or in the cloud. At the moment `plz` is optimised for `pytorch`, in the sense that you can run pytorch programs without preparing a `pytorch` environment. With proper configuration and preparation it is fairly general, and can be used for practically anything that requires running a job in a repeatable fashion on a dedicated cloud VM.
+`plz` is a job runner targeted at training machine learning models as simply, tidily and cheaply as possible. You can run jobs locally or in the cloud. At the moment `plz` is optimised for `pytorch`, in the sense that you can run pytorch programs without preparing a `pytorch` environment. With proper configuration and preparation it is fairly general, and can be used for practically anything that requires running a job in a repeatable fashion on a dedicated cloud VM.
 
-*We are in beta stage. We don't expect API stability or consistence with forthcoming versions*
+*We are in beta stage. We don't expect API stability or consistence with
+next versions.*
 
 ## Usage overview
 
 We offer more details below on how to setup `plz` and run your jobs, but we can
-start by giving you a glipse of what `plz` does.
+start by giving you an overview of what `plz` does.
 
 `plz` offers a command-line interface. You can add a `plz.config.json` file
-to the directory where you have your source. This file contains, among other
-things, the command you run to put your problem to work (for instance,
-`python main.py`). Then, you can run commands like:
+to the directory where you have your source code. This file contains, among
+other things, the command you run to put your program to work (for instance,
+`python main.py`). Then, you can run commands like `plz run`:
 
 ```
 sergio-prodo@sergio:~/plz/examples/python$ plz run
@@ -34,8 +35,9 @@ Instance status: querying availability
 Instance status: requesting new instance
 Instance status: waiting for the instance to be ready
 Instance status: pending
+[...]
 👌 Execution ID is: 58a80ffa-89e5-11e8-a1ca-2554f21c13fe
-👌Streaming logs...
+👌 Streaming logs...
 Running with plz!
 We are in the quest of finding a mysterious value for k.
 The value happens to be 1/3, but don't tell anyone.
@@ -44,20 +46,21 @@ k: 0.0
 k: 0.54
 Best model so far! Saving
 k: 0.5344
+[...]
 ```
 
 You can see that the command:
 
 - captures the files in your current directory. A snapshot of your code is built
-and stored in your infrastructure, so you can retrieve the code used to run
+and stored in your infrastructure, so that you can retrieve the code used to run
 your job in the future (yes, you can specify files to be ignored, and you do
 so in the `plz.config.json`)
-- captures input data and uploads it. If you run another execution with the same
-input data, it will avoid uploading the data for a second time
+- captures input data (as specified in the config) and uploads it. If you run
+another execution with the same input data, it will avoid uploading the data
+for a second time (based on timestamps and hashes)
 - starts an AWS instance, and waits until it's ready (or just runs the
 execution locally depending on the configuration)
-- streams the logs the same as if you were running the program (for instance,
-`python main.py`) directly
+- streams the logs the same as if you were running your program directly
 
 You can be patient and wait until it works, but you can also hit `Ctrl-C` and
 stop the program early:
@@ -74,7 +77,9 @@ k: 0.5209
 infrastructure or in your local machine, so what you do in the terminal
 doesn't really matter. If you are running this execution only, you can just
 type `plz logs` and logs will be streamed, not from the beginning
-but since the current time (unless you specify `--since start`). The big
+but since the current time (unless you specify `--since start`).
+
+The big
 hexadecimal number you see in the output, next to `plz logs`, is the execution
 ID you can use to refer to this execution. `plz` remembers the last execution
 that was *started* and if you want to refer to that one you don't need to
