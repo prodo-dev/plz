@@ -17,8 +17,8 @@ things, the command you run to put your problem to work (for instance,
 `python main.py`). Then, you can run commands like:
 
 ```
-sergio-prodo@sergio:~/plz/examples/just_python$ plz run
-👌 Capturing the files in /home/sergio-prodo/plz/examples/just_python
+sergio-prodo@sergio:~/plz/examples/python$ plz run
+👌 Capturing the files in /home/sergio-prodo/plz/examplespython
 👌 Building the program snapshot
 Step 1/4 : FROM python:3-slim
  ---> 7bf3b26249fa
@@ -303,7 +303,7 @@ aws ec2 describe-instances --region eu-west-1
 
 ## Example
 
-In the directory `plz/examples/just_python` there is a minimal example showing
+In the directory `plz/examples/python` there is a minimal example showing
 how to do input and output with `plz`. You can also see the directory
 `plz/tests/end-to-end` for examples on how to use parameters and measures,
 which this documentation doesn't cover yet.
