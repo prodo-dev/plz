@@ -82,7 +82,7 @@ but since the current time (unless you specify `--since start`).
 The big
 hexadecimal number you see in the output, next to `plz logs`, is the execution
 ID you can use to refer to this execution. `plz` remembers the last execution
-that was *started* and if you want to refer to that one you don't need to
+that was *started*, and if you want to refer to that one you don't need to
 include it in our command. But if you need to specify the execution id,
 you can do `plz logs <execution_id>`.
 
@@ -110,9 +110,12 @@ The instance will be kept there for some time (specified in `plz.config.json`)
 in case you're running things interactively (so that you don't need to wait
 while the instance goes through the startup process again).
 
-Use `plz describe` to print metadata about executions.
+Use `plz describe` to print metadata about an execution in json format.
+It's useful to tell one execution from another if you have several running
+at the same time.
 
-You can use `plz run --parameters a_json_file.json` to pass parameters.
+You can use `plz run --parameters a_json_file.json` to pass parameters
+(such as learning rate, layer size, etc.) to your program.
 See `test/end-to-end/parameters/simple` as to see how to access those
 parameters from your program. Passing parameters this way has the advantage
 that the parameters are stored in the metadata and can be queried.
@@ -122,13 +125,14 @@ to metadata. If you write json files in a specific directory (see
 `test/end-to-end/measures/simple`) they will be available in the metadata.
 You can store there things you've measured during your experiment (for
 instance, training loss). Parameters will be in the metadata as well, so
-you can query that json using, for instance, `jq` and get to see how
+you can query the json output using, for instance, `jq` and get to see how
 your training loss changed as you changed your parameters.
 
-You can do `plz list` to list the running executions. It also shows the instance
-ids. You can kill instances with `plz kill -i <instance-id>`.
+You can do `plz list` to list the running executions and the instances that
+are up in AWS. It also shows the instance ids. You can kill instances with
+`plz kill -i <instance-id>`.
 
-Finally, `plz rerun` allows you to rerun a previous job.
+Finally, `plz rerun` allows you to rerun a job you started.
 
 ### Functionality summary
 
@@ -166,7 +170,7 @@ price.
 ## How does it work?
 
 There is a service called controller, and a command-line interface (CLI) that
-perform requests to the controller. The CLI is an executable `plz` accepting
+performs requests to the controller. The CLI is an executable `plz` accepting
 operation arguments, so that you type `plz run`, `plz stop`, `plz list`, etc.
 
 There are two configurations of the controller that are ready for you to use:
@@ -316,8 +320,9 @@ which this documentation doesn't cover yet.
 *Note: if you want to run the example using the AWS instances, be aware that
 this has a cost. You can change the value of
 `"max_bid_price_in_dollars_per_hour": N` in `plz.config.json` to any value
-you like. The value in the provided file is 0.5 dollars/hour. See the
-following note as well. The example takes around 5 minutes to run.*
+you like. The example takes around 5 minutes to run.
+The value in the provided file is 0.5 dollars/hour. See the following note as
+well.*
 
 *Note: unless you add `"instance_max_uptime_in_minutes": null,` to your
 `plz.config.json`, the instance terminates after 60 minutes.  That's on
