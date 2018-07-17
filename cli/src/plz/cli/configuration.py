@@ -231,7 +231,7 @@ class Configuration:
     def _typed_value_from_string(string_value, typ):
         try:
             return typ(string_value)
-        except ValueError or TypeError:
+        except (ValueError, TypeError):
             return None
 
     def __init__(self, properties: Dict[str, Property], data: Dict[str, Any]):
