@@ -41,9 +41,9 @@ class Property:
         float: 'a float number'
     }
 
-    SUBTYPES = defaultdict(lambda: set())
-    SUBTYPES[float] = {int}
-    SUBTYPES[Optional[int]] = {None, int}
+    SUBTYPES = defaultdict(lambda: [])
+    SUBTYPES[float] = [int]
+    SUBTYPES[Optional[int]] = [int, None]
 
     # noinspection PyShadowingBuiltins
     def __init__(
