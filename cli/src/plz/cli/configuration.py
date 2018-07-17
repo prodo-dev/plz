@@ -220,15 +220,18 @@ class Configuration:
                 prop = properties.get(name)
                 if prop:
                     for t in [prop.type, *Property.SUBTYPES[prop.type]]:
-                        # noinspection PyCallingNonCallable
                         data[name] = Configuration._typed_value_from_string(
                             value, t)
+                        if data[name] is not None:
+                            break
                     if data[name] is None:
                         data[name] = value
         return Configuration(properties, data)
 
     @staticmethod
     def _typed_value_from_string(string_value, typ):
+        if string_value == '0.5':
+            print('Trying with: ', typ)
         try:
             return typ(string_value)
         except (ValueError, TypeError):
