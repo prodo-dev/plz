@@ -1,7 +1,11 @@
 #!/bin/sh
 
+docker pull prodoai/plz_ml-pytorch
+docker pull python:3-slim
+
 BUILD_TIMESTAMP=$(cat BUILD_TIMESTAMP) \
-    LOG_LEVEL=WARNING \
-    docker-compose up -d controller_localhost 
+    REDIS_DUMP_EVERY_SECONDS=2 \
+    LOG_LEVEL=${LOG_LEVEL:-WARNING} \
+    docker-compose up -d prebuilt_controller_localhost
 
 docker-compose logs -f &

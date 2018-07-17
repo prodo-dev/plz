@@ -1,7 +1,7 @@
 version: '2.3'
 
 services:
-  controller_localhost:
+  controller_localhost_no_dependencies:
     extends:
       file: ./docker-compose.base.yml
       service: controller
@@ -11,6 +11,18 @@ services:
       - ./services/controller/config/localhost.conf:/root/server.conf:ro
       - ./cache/controller:/data
       - ./cache/results:/data/results
+
+  controller_localhost:
+    extends:
+      controller_localhost_no_dependencies
+    depends_on:
+      redis:
+        condition: service_started
+
+  prebuilt_controller_localhost:
+    image: prodoai/plz_controller:timestamp_${BUILD_TIMESTAMP}
+    extends:
+      controller_localhost_no_dependencies
     depends_on:
       redis:
         condition: service_started
