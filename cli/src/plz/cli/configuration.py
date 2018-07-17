@@ -230,8 +230,6 @@ class Configuration:
 
     @staticmethod
     def _typed_value_from_string(string_value, typ):
-        if string_value == '0.5':
-            print('Trying with: ', typ)
         try:
             return typ(string_value)
         except (ValueError, TypeError):
