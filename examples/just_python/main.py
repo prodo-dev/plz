@@ -14,13 +14,13 @@ num_iterations = int(sys.argv[1])
 
 data = [900, 15, 27, 10, 1, 0.0003, -270, 33]
 
-k = 0
+k = 0.0
 for i in range(0, num_iterations):
-    print('k: ', k)
+    print(f'k: {k:.4}')
     x = data[i % len(data)]
     loss = pow(x - 3 * k * x, 2)
     update = -6 * pow(x, 2) + 18 * k * pow(x, 2)
+    # Weight the learning rate by x
     k = k - 0.0001/x * update
-    print('loss: ', loss)
-    print('update: ', update)
+    # Simulate that this took some time
     time.sleep(0.5)
