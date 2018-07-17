@@ -1,0 +1,12 @@
+{
+    "host": "localhost",
+    "port": 5123,
+    "image": "prodoai/plz_ml-pytorch",
+    "user": "some-person-trying",
+    "project": "trying-a-project",
+    "command": ["python", "main.py", "600"],
+    "input": "file://../data",
+    "instance_type": "p2.xlarge",
+    "instance_max_idle_time_in_minutes": 2,
+    "max_bid_price_in_dollars_per_hour": 2
+}
