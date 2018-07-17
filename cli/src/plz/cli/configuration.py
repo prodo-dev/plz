@@ -219,12 +219,20 @@ class Configuration:
                 name = key[len('PLZ_'):].lower()
                 prop = properties.get(name)
                 if prop:
-                    try:
+                    for t in [prop.type, *Property.SUBTYPES[prop.type]]:
                         # noinspection PyCallingNonCallable
-                        data[name] = prop.type(value)
-                    except ValueError:
+                        data[name] = Configuration._typed_value_from_string(
+                            value, t)
+                    if data[name] is None:
                         data[name] = value
         return Configuration(properties, data)
+
+    @staticmethod
+    def _typed_value_from_string(string_value, typ):
+        try:
+            return typ(string_value)
+        except ValueError or TypeError:
+            return None
 
     def __init__(self, properties: Dict[str, Property], data: Dict[str, Any]):
         self.properties = properties
