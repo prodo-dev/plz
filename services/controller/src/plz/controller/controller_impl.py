@@ -107,7 +107,9 @@ class ControllerImpl(Controller):
             yield {'error': str(e)}
 
     def rerun_execution(
-            self, user: str, project: str, previous_execution_id: str,
+            self, user: str, project: str,
+            instance_max_uptime_in_minutes: Optional[int],
+            previous_execution_id: str,
             instance_market_spec: dict) -> Iterator[dict]:
         start_metadata = self.db_storage.retrieve_start_metadata(
             previous_execution_id)
@@ -118,6 +120,8 @@ class ControllerImpl(Controller):
         execution_spec = start_metadata['execution_spec']
         execution_spec['user'] = user
         execution_spec['project'] = project
+        execution_spec['instance_max_uptime_in_minutes'] = \
+            instance_max_uptime_in_minutes
         return self._do_run_execution(
             command, snapshot_id, parameters, instance_market_spec,
             execution_spec, start_metadata, previous_execution_id)

@@ -94,6 +94,8 @@ class EC2InstanceGroup(InstanceProvider):
         tries_remaining = max_tries
         yield _msg('querying availability')
         instance_type = execution_spec.get('instance_type')
+        instance_max_uptime_in_minutes = execution_spec.get(
+            'instance_max_uptime_in_minutes')
         instances_not_assigned = self._get_group_aws_instances(
             only_running=True,
             filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
@@ -106,7 +108,9 @@ class EC2InstanceGroup(InstanceProvider):
             yield _msg('requesting new instance')
             is_instance_newly_created = True
             instance_data = self._ask_aws_for_new_instance(
-                instance_type, instance_market_spec)
+                instance_type,
+                instance_max_uptime_in_minutes,
+                instance_market_spec)
         yield _msg(
             f'waiting for the instance to be ready')
         instance = None
@@ -138,7 +142,9 @@ class EC2InstanceGroup(InstanceProvider):
                 except InstanceAssignedException:
                     yield _msg('taken while waiting')
                     instance_data = self._ask_aws_for_new_instance(
-                        instance_type, instance_market_spec)
+                        instance_type,
+                        instance_max_uptime_in_minutes,
+                        instance_market_spec)
                     instance = None
                     continue
                 yield _msg('running')
@@ -177,9 +183,14 @@ class EC2InstanceGroup(InstanceProvider):
             self.client, filters, only_running=only_running)
 
     def _ask_aws_for_new_instance(
-            self, instance_type: str, instance_market_spec: dict) -> dict:
+            self, instance_type: str,
+            instance_max_uptime_in_minutes: Optional[int],
+            instance_market_spec: dict) -> dict:
         response = self.client.run_instances(
-            **self._get_instance_spec(instance_type, instance_market_spec),
+            **self._get_instance_spec(
+                instance_type,
+                instance_max_uptime_in_minutes,
+                instance_market_spec),
             MinCount=1, MaxCount=1)
         return response['Instances'][0]
 
@@ -203,7 +214,10 @@ class EC2InstanceGroup(InstanceProvider):
             self.redis)
 
     def _get_instance_spec(
-            self, instance_type: str, instance_market_spec: dict) -> dict:
+            self,
+            instance_type: str,
+            instance_max_uptime_in_minutes: Optional[int],
+            instance_market_spec: dict) -> dict:
         spec = {'ImageId': self.ami_id}
         if self.aws_key_name:
             spec['KeyName'] = self.aws_key_name
@@ -236,10 +250,16 @@ class EC2InstanceGroup(InstanceProvider):
                 },
             ]
         }]
-        # Script to execute at the beginning. We only need to start the nvidia
-        # persistence daemon. This is needed because containers might take too
-        # long to start and docker might timeout when starting them
-        spec['UserData'] = '\n'.join(['#!/bin/sh', 'nvidia-persistenced', ''])
+        shutdown_line = f'shutdown +{instance_max_uptime_in_minutes}' \
+            if instance_max_uptime_in_minutes else ''
+        # Script to execute at the beginning. We need to start the nvidia
+        # persistence daemon. This is needed because otherwise containers might
+        # take too long to start and docker might timeout when starting them
+        spec['UserData'] = '\n'.join([
+            '#!/bin/sh',
+            shutdown_line,
+            'nvidia-persistenced',
+            ''])
         spec['InstanceType'] = instance_type
         if instance_market_spec['instance_market_type'] == 'spot':
             spec['InstanceMarketOptions'] = {

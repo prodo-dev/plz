@@ -41,8 +41,9 @@ class Property:
         float: 'a float number'
     }
 
-    SUBTYPES = defaultdict(lambda: set())
-    SUBTYPES[float] = {int}
+    SUBTYPES = defaultdict(lambda: [])
+    SUBTYPES[float] = [int]
+    SUBTYPES[Optional[int]] = [int, None]
 
     # noinspection PyShadowingBuiltins
     def __init__(
@@ -70,7 +71,9 @@ class Property:
             f'Invalid value: {repr(value)}')
 
 
-def _validate_market_spec(configuration, errors):
+def _validate_market_spec(configuration, errors, operation: Optional[str]):
+    if operation not in {'run', 'rerun'}:
+        return
     if configuration.instance_market_type not in {'spot', 'on_demand'}:
         errors.append(['Possible values for `instance_market_type` are '
                        '`spot` or `on_demand`'])
@@ -93,6 +96,21 @@ def _validate_market_spec(configuration, errors):
                 f'{configuration.instance_market_type}), yet you\'re '
                 'specifying a bid price (`max_bid_price_in_dollars_per_hour`).'
                 ' Ignoring the bid price',
+                use_emojis=False))
+
+
+def _warn_about_instance_max_uptime(
+        configuration, _, operation: Optional[str]):
+    if operation not in {'run', 'rerun'}:
+        return
+    if configuration.instance_max_uptime_in_minutes:
+        print(
+            format_warning(
+                f'Your instance is going to shutdown after '
+                f'{configuration.instance_max_uptime_in_minutes} minutes '
+                'since started. You can set: `\n'
+                '"instance_max_uptime_in_minutes": null,\n'
+                '` in your plz.config.json if you don\'t want this limit',
                 use_emojis=False))
 
 
@@ -131,6 +149,10 @@ class Configuration:
                      default={'docker_build_retries': 3}),
             Property('instance_market_type', type=str, default='spot',
                      validations=[_validate_market_spec]),
+            Property('instance_max_uptime_in_minutes',
+                     type=Optional[int],
+                     default=60,
+                     validations=[_warn_about_instance_max_uptime]),
             Property('instance_max_idle_time_in_minutes', type=int,
                      default=0),
             Property('max_bid_price_in_dollars_per_hour', type=float,
@@ -144,7 +166,8 @@ class Configuration:
         f'or specify a path to it with -c')
 
     @staticmethod
-    def load(configuration_path: Optional[str] = None) -> 'Configuration':
+    def load(configuration_path: Optional[str] = None,
+             operation: Optional[str] = None) -> 'Configuration':
         config_file_name = Configuration._configuration_file_from_path(
             configuration_path)
 
@@ -165,7 +188,7 @@ class Configuration:
         configuration = Configuration.defaults(Configuration.PROPERTIES)
         for c in configurations:
             configuration = configuration.override_with(c)
-        return configuration.validate()
+        return configuration.validate(operation)
 
     @staticmethod
     def defaults(properties: Dict[str, Property]) -> 'Configuration':
@@ -195,12 +218,21 @@ class Configuration:
                 name = key[len('PLZ_'):].lower()
                 prop = properties.get(name)
                 if prop:
-                    try:
-                        # noinspection PyCallingNonCallable
-                        data[name] = prop.type(value)
-                    except ValueError:
+                    for t in [prop.type, *Property.SUBTYPES[prop.type]]:
+                        data[name] = Configuration._typed_value_from_string(
+                            value, t)
+                        if data[name] is not None:
+                            break
+                    if data[name] is None:
                         data[name] = value
         return Configuration(properties, data)
+
+    @staticmethod
+    def _typed_value_from_string(string_value, typ):
+        try:
+            return typ(string_value)
+        except (ValueError, TypeError):
+            return None
 
     def __init__(self, properties: Dict[str, Property], data: Dict[str, Any]):
         self.properties = properties
@@ -209,18 +241,19 @@ class Configuration:
     def override_with(self, other: 'Configuration') -> 'Configuration':
         return Configuration(self.properties, {**self.data, **other.data})
 
-    def validate(self) -> 'Configuration':
+    def validate(self, operation: Optional[str] = None) -> 'Configuration':
         errors = []
         for prop in self.properties.values():
             value = self.data.get(prop.name)
             if value is None and prop.required:
                 errors.append(prop.required_error())
-            elif value is not None and not isinstance(value, prop.type) and \
-                    not type(value) in Property.SUBTYPES[prop.type]:
+            elif value is not None and \
+                    not type(value) in Property.SUBTYPES[prop.type] and \
+                    not isinstance(value, prop.type):
                 errors.append(Property.type_error(prop, value))
         for prop in self.properties.values():
             for validation in prop.validations:
-                validation(self, errors)
+                validation(self, errors, operation)
         if errors:
             raise ValidationException(errors)
         return self

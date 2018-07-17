@@ -26,7 +26,9 @@ class Controller(ABC):
 
     @abstractmethod
     def rerun_execution(
-            self, user: str, project: str, previous_execution_id: str,
+            self, user: str, project: str,
+            instance_max_uptime_in_minutes: Optional[int],
+            previous_execution_id: str,
             instance_market_spec: dict) -> Iterator[dict]:
         pass
 

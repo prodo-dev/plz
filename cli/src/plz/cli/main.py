@@ -65,20 +65,21 @@ def main(args=sys.argv[1:]):
         operation.prepare_argument_parser(subparser, args)
     options = parser.parse_args(args)
 
+    operation_name = options.operation_name
+    if operation_name is None:
+        parser.print_help()
+        sys.exit(2)
+
     try:
         configuration_path = options.configuration_path \
                              or os.environ.get('PLZ_CONFIGURATION_PATH', None)
-        configuration = Configuration.load(configuration_path)
+        configuration = Configuration.load(configuration_path, operation_name)
     except ValidationException as e:
         e.print()
         sys.exit(2)
 
     setup_logger(configuration)
 
-    operation_name = options.operation_name
-    if operation_name is None:
-        parser.print_help()
-        sys.exit(2)
     option_dict = options.__dict__
     del option_dict['operation_name']
 
