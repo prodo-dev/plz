@@ -91,37 +91,50 @@ including anaconda and a lot of bells and whistles*
 
 ```
 # Install basic packages we need
+
 sudo apt update
 sudo apt install -y curl git python-pip python3-pip awscli
 
 # Install docker
+
 curl -fsSL get.docker.com -o get-docker.sh
 chmod u+x get-docker.sh
 ./get-docker.sh
 sudo usermod -aG docker $USER
 
 # Install docker compose
+
 sudo curl -L https://github.com/docker/compose/releases/download/1.21.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
 
 # Clone plz
+
 git clone https://github.com/prodo-ai/plz.git
-
-# Start a new terminal so that the current user is in the docker group,
-# and the plz executable is in the path (pip3 will put it in $HOME/.local/bin)
-sudo su - $USER
-
-# Check that docker works (you should see a possibly empty list of images,
-# and not a permission or connection error)
-docker ps
 
 cd plz
 
+# Install the cli
+
 ./install_cli
+
+# Start a new terminal so that the current user is in the docker group,
+# and the plz executable is in the path (pip3 will put it in $HOME/.local/bin)
+
+sudo su - $USER
+
+# If you executed the previous command, you're not inside plz/ anymore
+
+cd plz
+
+# Check that docker works (you should see a possibly empty list of images,
+# and not a permission or connection error)
+
+docker ps
 
 # Start the local controller. Instructions for the controller that uses AWS are
 # detailed below. This runs detached and spits the output to the terminal.
 # You might want to run it in a different terminal (remember `cd plz/`).
+
 ./start_local_controller
 
 ```
@@ -143,21 +156,29 @@ downloads a whole pytorch environment to be used in docker (unless you've run
 the local configuration before) and also uploads that your AWS infrastructure
 so that it's ready for your instances to use*
 
+*Note: if you usually use AWS in a particular region, please edit
+aws_config/config.json and set your region there. The default file sets the
+region to eu-west-1, Ireland.*
+
+
 ```
 # Configure access to AWS.
 # You'll need your access key. You can get it from the AWS console.
 # In the top bar, click on your name, then `My security credentials`, then
 # create one in `Access keys`
+# You only need to set the access key ID and the secret access key
 
 aws configure
 
-# Check that AWS works (only required if using AWS). You should see a possibly
-# empty list of instances
+# Check that AWS works. You should see a possibly empty list of instances
+
 aws ec2 describe-instances --region eu-west-1
 
 # Start the AWS controller. This runs detached and spits the output to the
 # terminal. You might want to run it in a different terminal (remember
-# `cd plz/`).
+# `cd plz/`). Remember to edit `aws_config/config.json` to set your region,
+# unless you want eu-west-1.
+
 ./start_aws_controller
 ```
 
