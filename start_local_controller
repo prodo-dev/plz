@@ -1,5 +1,8 @@
 #!/bin/sh
 
+docker pull prodoai/plz_ml-pytorch
+docker pull python:3-slim
+
 BUILD_TIMESTAMP=$(cat BUILD_TIMESTAMP) \
     REDIS_DUMP_EVERY_SECONDS=2 \
     LOG_LEVEL=${LOG_LEVEL:-WARNING} \
