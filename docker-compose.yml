@@ -40,6 +40,8 @@ services:
     volumes:
       - ./services/controller/config/localserver.conf:/root/server.conf:ro
       - ${HOME}/.aws:/root/.aws
+    environment:
+      - CREATE_AWS_RESOURCES=yes
     depends_on:
       redis:
         condition: service_started
@@ -54,13 +56,13 @@ services:
       - 6379:6379
 
   harvester:
+    image: plz/harvester
     environment:
       - HOST=localhost
       - PORT=${PORT:-6000}
       - WAIT_FOR_SECONDS=60
     network_mode:
       host
-    build: harvester
 
 volumes:
   redis_data: {}

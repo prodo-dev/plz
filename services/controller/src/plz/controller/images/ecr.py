@@ -16,13 +16,15 @@ class ECRImages(Images):
     def __init__(self,
                  docker_api_client_creator: Callable[[], docker.APIClient],
                  ecr_client_creator: Callable[[], Any],
-                 registry: str,
-                 repository: str,
+                 repository_without_registry: str,
                  login_validity_in_minutes: int):
-        super().__init__(docker_api_client_creator, repository)
-        self.registry = registry
         self.ecr_client_creator = ecr_client_creator
         self.ecr_client = self.ecr_client_creator()
+        self.repository_without_registry = repository_without_registry
+        self.registry = self._get_registry(
+            self.ecr_client, repository_without_registry)
+        repository = f'{self.registry}/{repository_without_registry}'
+        super().__init__(docker_api_client_creator, repository)
         self.last_login_time = None
         self.login_validity_in_minutes = login_validity_in_minutes
 
@@ -32,18 +34,21 @@ class ECRImages(Images):
         return ECRImages(
             new_docker_api_client_creator,
             self.ecr_client_creator,
-            self.registry,
-            self.repository,
+            self.repository_without_registry,
             self.login_validity_in_minutes)
 
     def build(self, fileobj: BinaryIO, tag: str) -> Iterator[bytes]:
         self._login()
         return self._build(fileobj, tag)
 
-    def push(self, tag: str):
+    def push(self, tag: str,
+             log_level: int = logging.DEBUG, log_progress: bool = False):
         self._login()
-        self._log_output('Push', self.docker_api_client.push(
-            repository=self.repository, tag=tag, stream=True))
+        self._log_output(
+            'Push',
+            self.docker_api_client.push(
+                repository=self.repository, tag=tag, stream=True),
+            log_level, log_progress)
 
     def pull(self, tag: str):
         self._login()
@@ -86,13 +91,23 @@ class ECRImages(Images):
         self.last_login_time = time.time()
 
     @staticmethod
-    def _log_output(label: str, stream: Iterator[bytes]):
+    def _get_registry(ecr_client, repository_without_uri) -> str:
+        repository = ecr_client.describe_repositories(
+            repositoryNames=[repository_without_uri])['repositories'][0]
+        return repository['repositoryUri'][:-(len(repository_without_uri)+1)]
+
+    @staticmethod
+    def _log_output(label: str,
+                    stream: Iterator[bytes],
+                    log_level: int = logging.DEBUG,
+                    log_progress: bool = False):
         for message_bytes in stream:
             message_str = message_bytes.decode('utf-8').strip()
             try:
                 message_json = json.loads(message_str)
-                # Ignore progress indicators because they're too noisy
-                if 'progress' not in message_json:
-                    log.debug(f'{label}: {message_str}')
+                # Unless requested, ignore progress indicators because they're,
+                # too noisy
+                if 'progress' not in message_json or log_progress:
+                    log.log(log_level, f'{label}: {message_str}')
             except json.JSONDecodeError:
                 log.debug(f'{label}: {message_str}')
