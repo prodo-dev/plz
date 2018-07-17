@@ -25,8 +25,6 @@ services:
         }
 
     volumes:
-      - ${SECRETS_DIR}/config.json:/root/config.json:ro
-      - ${SECRETS_DIR}/keys/id_rsa:/root/.ssh/id_rsa:ro
       - /var/run/docker.sock:/var/run/docker.sock
 
   redis:

@@ -29,6 +29,9 @@ services:
   controller_aws:
     extends:
       service: controller_aws_no_dependencies
+    volumes:
+      - ${SECRETS_DIR}/config.json:/root/config.json:ro
+      - ${SECRETS_DIR}/keys/id_rsa:/root/.ssh/id_rsa:ro
     depends_on:
       redis:
         condition: service_started
@@ -38,6 +41,7 @@ services:
     extends:
       service: controller_aws_no_dependencies
     volumes:
+      - ${SECRETS_DIR}/config.json:/root/config.json:ro
       - ./services/controller/config/localserver.conf:/root/server.conf:ro
       - ${HOME}/.aws:/root/.aws
     environment:
