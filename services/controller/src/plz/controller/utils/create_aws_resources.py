@@ -24,10 +24,11 @@ def create_workers_security_group():
             Filters=[{'Name': 'group-name',
                       'Values': ['plz-workers']}])['SecurityGroups']) > 0
     if group_exists:
-        print('Security group for workers already exists')
+        print('Security group for workers already exists', file=sys.stderr,
+              flush=True)
         return
 
-    print('Creating security group for workers')
+    print('Creating security group for workers', file=sys.stderr, flush=True)
 
     response = ec2_client.create_security_group(
         Description='Plz group for workers',
@@ -72,19 +73,20 @@ def create_ecr_builds_repository():
             raise e
 
     if repository_exists:
-        print('Repository for builds already exists')
+        print('Repository for builds already exists',
+              file=sys.stderr, flush=True)
         return
 
-    print('Creating repository for builds')
+    print('Creating repository for builds', file=sys.stderr, flush=True)
     ecr_client.create_repository(repositoryName=repository_name)
 
 
 def _print_bytes_from_docker(json_bytes):
     json_from_docker = json.loads(str(json_bytes, 'utf-8'))
     if 'status' in json_from_docker:
-        print(json_from_docker['status'])
+        print(json_from_docker['status'], file=sys.stderr, flush=True)
     if 'progress' in json_from_docker:
-        print(json_from_docker['progress'])
+        print(json_from_docker['progress'], file=sys.stderr, flush=True)
 
 
 def pull_common_images():
