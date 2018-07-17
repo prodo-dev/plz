@@ -9,6 +9,7 @@ services:
         config = { include "/root/config.json" }
         include "/root/server.conf"
 
+        log_level = ${LOG_LEVEL:-DEBUG}
         port = 80
         redis_host = redis
         data_dir = /data

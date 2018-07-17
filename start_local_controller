@@ -1,0 +1,7 @@
+#!/bin/sh
+
+BUILD_TIMESTAMP=$(cat BUILD_TIMESTAMP) \
+    LOG_LEVEL=WARNING \
+    docker-compose up -d controller_localhost 
+
+docker-compose logs -f &
