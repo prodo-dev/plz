@@ -6,7 +6,126 @@
 
 *We are in beta stage. We don't expect API stability or consistence with forthcoming versions*
 
-### Functionality
+## Usage overview
+
+We offer more details below on how to setup `plz` and run your jobs, but we can
+start by giving you a glipse of what `plz` does.
+
+`plz` offers a command-line interface. You can add a `plz.config.json` file
+to the directory where you have your source. This file contains, among other
+things, the command you run to put your problem to work (for instance,
+`python main.py`). Then, you can run commands like:
+
+```
+sergio-prodo@sergio:~/plz/examples/just_python$ plz run
+👌 Capturing the files in /home/sergio-prodo/plz/examples/just_python
+👌 Building the program snapshot
+Step 1/4 : FROM python:3-slim
+ ---> 7bf3b26249fa
+[...]
+Removing intermediate container 08951133db14
+ ---> 8c7fceb87231
+Successfully built 8c7fceb87231
+Successfully tagged plz/builds:some-person-trying-trying-a-project-1531847873426
+👌 Capturing the input
+👌 147 input bytes to upload
+👌 Sending request to start executio
+Instance status: querying availability
+Instance status: requesting new instance
+Instance status: waiting for the instance to be ready
+Instance status: pending
+👌 Execution ID is: 58a80ffa-89e5-11e8-a1ca-2554f21c13fe
+👌Streaming logs...
+Running with plz!
+We are in the quest of finding a mysterious value for k.
+The value happens to be 1/3, but don't tell anyone.
+Running with plz!
+k: 0.0
+k: 0.54
+Best model so far! Saving
+k: 0.5344
+```
+
+You can see that the command:
+
+- captures the files in your current directory. A snapshot of your code is built
+and stored in your infrastructure, so you can retrieve the code used to run
+your job in the future (yes, you can specify files to be ignored, and you do
+so in the `plz.config.json`)
+- captures input data and uploads it. If you run another execution with the same
+input data, it will avoid uploading the data for a second time
+- starts an AWS instance, and waits until it's ready (or just runs the
+execution locally depending on the configuration)
+- streams the logs the same as if you were running the program (for instance,
+`python main.py`) directly
+
+You can be patient and wait until it works, but you can also hit `Ctrl-C` and
+stop the program early:
+
+```
+k: 0.5209
+^C
+👌 Your program is still running. To stream the logs, type:
+
+        plz logs ad96b586-89e5-11e8-a7c5-8142e2563487
+```
+
+`plz` runs your commands in a Docker container, either in your AWS
+infrastructure or in your local machine, so what you do in the terminal
+doesn't really matter. If you are running this execution only, you can just
+type `plz logs` and logs will be streamed, not from the beginning
+but since the current time (unless you specify `--since start`). The big
+hexadecimal number you see in the output, next to `plz logs`, is the execution
+ID you can use to refer to this execution. `plz` remembers the last execution
+that was *started* and if you want to refer to that one you don't need to
+include it in our command. But if you need to specify the execution id,
+you can do `plz logs <execution_id>`.
+
+Once your program has finished (or once you have stopped with `plz stop`) you
+can do `plz output`, and it will download the files that your program has
+written (you need to tell your program to write in a specific directory. `plz`
+sets an environment variable that you can use as to know where to write).
+The files are saved under `output/<execution_id>`.
+
+`plz output` is also executed if the program finishes:
+```
+k: 0.3333
+Best model so far! Saving
+k: 0.3333
+k: 0.3333
+👌 Harvesting the output...
+👌 Retrieving summary of measures (if present)...
+👌 Execution succeeded.
+👌 Retrieving the output...
+model.json
+👌 Done and dusted.
+```
+
+The instance will be kept there for some time (specified in `plz.config.json`)
+in case you're running things interactively (so that you don't need to wait
+while the instance goes through the startup process again).
+
+Use `plz describe` to print metadata about executions.
+
+You can use `plz run --parameters a_json_file.json` to pass parameters.
+See `test/end-to-end/parameters/simple` as to see how to access those
+parameters from your program. Passing parameters this way has the advantage
+that the parameters are stored in the metadata and can be queried.
+
+There's also `plz history`, returning a json mapping from execution ids to
+to metadata. If you write json files in a specific directory (see
+`test/end-to-end/measures/simple`) they will be available in the metadata.
+You can store there things you've measured during your experiment (for
+instance, training loss). Parameters will be in the metadata as well, so
+you can query that json using, for instance, `jq` and get to see how
+your training loss changed as you changed your parameters.
+
+You can do `plz list` to list the running executions. It also shows the instance
+ids. You can kill instances with `plz kill -i <instance-id>`.
+
+Finally, `plz rerun` allows you to rerun a previous job.
+
+### Functionality summary
 
 This tool helps with a lot of tasks. Some of them are the ones you're used to do when running things in the cloud, or an experimentation environment:
 
@@ -181,6 +300,35 @@ aws ec2 describe-instances --region eu-west-1
 
 ./start_aws_controller
 ```
+
+## Example
+
+In the directory `plz/examples/just_python` there is a minimal example showing
+how to do input and output with `plz`. You can also see the directory
+`plz/tests/end-to-end` for examples on how to use parameters and measures,
+which this documentation doesn't cover yet.
+
+*Note: if you want to run the example using the AWS instances, be aware that
+this has a cost. You can change the value of
+`"max_bid_price_in_dollars_per_hour": N` in `plz.config.json` to any value
+you like. The value in the provided file is 0.5 dollars/hour. See the
+following note as well. The example takes around 5 minutes to run.*
+
+*Note: unless you add `"instance_max_uptime_in_minutes": null,` to your
+`plz.config.json`, the instance terminates after 60 minutes.  That's on
+purpose, in case you're just trying the tool and something doesn't go well
+(like, there's a power cut). You can always use `plz list` and `plz kill`
+before leaving your computer, as to make sure that there no instances remaining.
+For maximum assurance, you can check your instances in the AWS console.*
+
+If you've followed the installation instructions, doing just
+`plz run` should start the work.
+
+In case you want to use pytorch, you can run an alternative configuration
+file with `plz -c plz.pytorch.config.json`. This file uses a different
+base image (`prodoai/plz_ml-pytorch`), uses an instance type with a gpu
+(`p2.xlarge`) and increases the bid price to 2 dollars/hour.
+
 
 ## Future work
 
