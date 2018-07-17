@@ -1,3 +1,7 @@
+import json
+import os
+from typing import Tuple
+
 import sys
 import time
 
@@ -12,15 +16,60 @@ import time
 
 num_iterations = int(sys.argv[1])
 
-data = [900, 15, 27, 10, 1, 0.0003, -270, 33]
+OutputDirectory = str
+InputDirectory = str
 
-k = 0.0
-for i in range(0, num_iterations):
-    print(f'k: {k:.4}')
-    x = data[i % len(data)]
-    loss = pow(x - 3 * k * x, 2)
-    update = -6 * pow(x, 2) + 18 * k * pow(x, 2)
-    # Weight the learning rate by x
-    k = k - 0.0001/x * update
-    # Simulate that this took some time
-    time.sleep(0.5)
+# You need to read the input from where plz left it, and write to places where
+# plz will pick it up.
+
+
+def get_configuration() -> Tuple[InputDirectory, OutputDirectory]:
+    """Return the configuration to use
+
+       Where we read the input from, and where we write, depend on whether we
+       use plz or not. Once this is obtained, we can abstract about whether
+       we are running with plz or not."""
+
+    configuration_file = os.environ.get('CONFIGURATION_FILE', None)
+    if configuration_file is not None:
+        print('Running with plz!', flush=True)
+        with open(configuration_file) as c:
+            config = json.load(c)
+        input_directory = config['input_directory']
+        output_directory = config['output_directory']
+        return input_directory, output_directory
+    else:
+        return 'input', 'output'
+
+
+def get_values_for_x(input_directory: InputDirectory) -> list:
+    data_file_name = os.path.join(input_directory, 'values_for_x.json')
+    with open(data_file_name) as f:
+        return json.load(f)
+
+
+def main():
+    input_directory, output_directory = get_configuration()
+
+    print('We are in the quest of finding a mysterious value for k.',
+          flush=True)
+    time.sleep(5)
+    print('The value happens to be 1/3, but don\'t tell anyone.',
+          flush=True)
+    k = 0.0
+
+    values_for_x = get_values_for_x(input_directory)
+
+    for i in range(0, num_iterations):
+        print(f'k: {k:.4}', flush=True)
+        x = values_for_x[i % len(values_for_x)]
+        loss = pow(x - 3 * k * x, 2)
+        update = -6 * pow(x, 2) + 18 * k * pow(x, 2)
+        # Weigh the learning rate by x
+        k = k - 0.0001/x * update
+        # Simulate that this took some time
+        time.sleep(0.5)
+
+
+if __name__ == '__main__':
+    main()

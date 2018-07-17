@@ -1,0 +1,9 @@
+{
+    "host": "localhost",
+    "port": 5123,
+    "image": "python:3-slim",
+    "user": "some-person-trying",
+    "project": "trying-a-project",
+    "command": ["python", "main.py", "600"],
+    "input": "file://../data"
+}
