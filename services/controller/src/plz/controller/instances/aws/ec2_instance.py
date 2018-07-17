@@ -71,14 +71,13 @@ class EC2Instance(Instance):
             5 if is_instance_newly_created else 1)
 
     def kill(self, force_if_not_idle: bool):
-        with self._lock:
-            if not force_if_not_idle and not self._is_idle(
-                    self.container_state()):
-                raise KillingInstanceException('Instance is not idle')
-            try:
-                self.client.terminate_instances(InstanceIds=[self.instance_id])
-            except Exception as e:
-                raise KillingInstanceException(str(e)) from e
+        if not force_if_not_idle and not self._is_idle(
+                self.container_state()):
+            raise KillingInstanceException('Instance is not idle')
+        try:
+            self.client.terminate_instances(InstanceIds=[self.instance_id])
+        except Exception as e:
+            raise KillingInstanceException(str(e)) from e
 
     def _set_execution_id(
             self, execution_id: str, max_idle_seconds: int):
