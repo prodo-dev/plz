@@ -7,6 +7,7 @@ docker pull "prodoai/plz_controller:timestamp_$(cat BUILD_TIMESTAMP)"
 BUILD_TIMESTAMP=`cat BUILD_TIMESTAMP` \
   SECRETS_DIR=$PWD/aws_config \
   REDIS_DUMP_EVERY_SECONDS=2 \
+  LOG_LEVEL=${LOG_LEVEL:-WARNING} \
   docker-compose up -d --no-build prebuilt_local_controller_aws
 
 docker-compose logs -f &
