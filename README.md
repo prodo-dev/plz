@@ -2,7 +2,7 @@
 
 *Say the magic word.*
 
-`plz` is a job runner targeted at training machine learning models as simply, tidily and cheaply as possible. You can run jobs locally or in the cloud. At the moment `plz` is optimised for `pytorch`, in the sense that you can run pytorch programs without preparing a `pytorch` environment. With proper configuration and preparation it is fairly general, and can be used for practically anything that requires running a job in a repeatable fashion on a dedicated cloud VM.
+`plz` is a job runner targeted at training machine learning models as simply, tidily and cheaply as possible. You can run jobs locally or in the cloud. It includes functionality to reproduce your experiments, and to save your history of parameters and results, so that history can be queried with any program handling json. At the moment `plz` is optimised for `pytorch`, in the sense that you can run pytorch programs without preparing a `pytorch` environment. With proper configuration and preparation it is fairly general, and can be used for practically anything that requires running a job in a repeatable fashion on a dedicated cloud VM.
 
 *We are in beta stage. We don't expect API stability or consistence with
 next versions.*
@@ -19,7 +19,7 @@ other things, the command you run to put your program to work (for instance,
 
 ```
 sergio-prodo@sergio:~/plz/examples/python$ plz run
-👌 Capturing the files in /home/sergio-prodo/plz/examplespython
+👌 Capturing the files in /home/sergio-prodo/plz/examples/python
 👌 Building the program snapshot
 Step 1/4 : FROM python:3-slim
  ---> 7bf3b26249fa
@@ -30,7 +30,7 @@ Successfully built 8c7fceb87231
 Successfully tagged plz/builds:some-person-trying-trying-a-project-1531847873426
 👌 Capturing the input
 👌 147 input bytes to upload
-👌 Sending request to start executio
+👌 Sending request to start execution
 Instance status: querying availability
 Instance status: requesting new instance
 Instance status: waiting for the instance to be ready
