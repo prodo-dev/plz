@@ -3,11 +3,13 @@ url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
-[requires]
-python_version = "3.6"
-
 [packages]
-"e1839a8" = {path = ".", editable = true}
+docker = "*"
+glob2 = "*"
+paramiko = "*"
+prettytable = "*"
+python-dateutil = "*"
+requests = "*"
 
 [dev-packages]
 flake8 = "*"
