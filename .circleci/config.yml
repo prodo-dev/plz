@@ -1,11 +1,12 @@
 version: 2
+
 jobs:
   build:
     docker:
       - image: circleci/python:3.6-stretch-browsers
     steps:
       - run:
-          name: 'Install zsh'
+          name: "Install zsh"
           command: |
             set -e
             sudo apt-get update -qq
@@ -16,13 +17,13 @@ jobs:
       - setup_remote_docker
 
       - run:
-          name: 'Create the environments for each project and install their dependencies'
+          name: "Create the environments for each project and install their dependencies"
           command: make environment
           environment:
             SECRETS_DIR: ./secrets
 
       - run:
-          name: 'Run the tests'
+          name: "Run the tests"
           command: make check
           environment:
             SECRETS_DIR: ./secrets

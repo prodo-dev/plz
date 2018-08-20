@@ -1,11 +1,11 @@
-version: '2.3'
+version: "2.3"
 
 services:
   all:
     image: docker:stable-git
     command:
       - echo
-      - 'Started.'
+      - "Started."
     depends_on:
       controller:
         condition: service_healthy
