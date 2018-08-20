@@ -24,6 +24,8 @@ services:
     extends:
       file: ../docker-compose.base.yml
       service: redis
+    volumes:
+      - ../cache/redis_data:/data
 
 volumes:
   redis_data: {}
