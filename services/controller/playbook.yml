@@ -1,4 +1,3 @@
----
 - hosts: all
   remote_user: root
   become: yes
@@ -20,20 +19,20 @@
         project_name: controller
         pull: yes
         definition:
-          version: '2.3'
+          version: "2.3"
 
           services:
             all:
               image: docker:stable-git
               command:
                 - echo
-                - 'Started.'
+                - "Started."
               depends_on:
                 controller:
                   condition: service_healthy
 
             controller:
-              image: '{{ image }}'
+              image: "{{ image }}"
               environment:
                 CONFIGURATION: |
                   port = 80

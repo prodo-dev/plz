@@ -1,4 +1,4 @@
-version: '2.3'
+version: "2.3"
 
 services:
   controller_localhost_no_dependencies:
@@ -13,16 +13,14 @@ services:
       - ./cache/results:/data/results
 
   controller_localhost:
-    extends:
-      controller_localhost_no_dependencies
+    extends: controller_localhost_no_dependencies
     depends_on:
       redis:
         condition: service_started
 
   prebuilt_controller_localhost:
     image: prodoai/plz_controller:timestamp_${BUILD_TIMESTAMP}
-    extends:
-      controller_localhost_no_dependencies
+    extends: controller_localhost_no_dependencies
     depends_on:
       redis:
         condition: service_started
@@ -79,8 +77,7 @@ services:
       - HOST=localhost
       - PORT=${PORT:-5123}
       - WAIT_FOR_SECONDS=60
-    network_mode:
-      host
+    network_mode: host
 
 volumes:
   redis_data: {}
