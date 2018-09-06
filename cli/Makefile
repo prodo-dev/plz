@@ -1,6 +1,7 @@
-check: test lint
-
+include ../vars.mk
 include ../python.mk
+
+check: test lint
 
 .PHONY: test
 test: environment
