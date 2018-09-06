@@ -22,7 +22,7 @@ RUN pipenv install --system --deploy
 COPY src ./src/
 COPY run ./
 
-ARG BUILD_TIMESTAMP=
+ARG BUILD_TIMESTAMP=0
 
 RUN echo -n $BUILD_TIMESTAMP > ./src/plz/controller/BUILD_TIMESTAMP
 
