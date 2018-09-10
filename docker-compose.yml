@@ -14,6 +14,8 @@ services:
 
   controller_localhost:
     extends: controller_localhost_no_dependencies
+    links:
+      - "redis_localhost:redis"
     depends_on:
       redis_localhost:
         condition: service_started
@@ -21,8 +23,10 @@ services:
   prebuilt_controller_localhost:
     image: prodoai/plz_controller:timestamp_${BUILD_TIMESTAMP}
     extends: controller_localhost_no_dependencies
+    links:
+      - "redis_localhost:redis"
     depends_on:
-      redis:
+      redis_localhost:
         condition: service_started
 
   controller_aws_no_dependencies:
@@ -58,8 +62,10 @@ services:
       - ${HOME}/.aws:/root/.aws
     environment:
       - CREATE_AWS_RESOURCES=yes
+    links:
+      - "redis_localhost:redis"
     depends_on:
-      redis:
+      redis_localhost:
         condition: service_started
       harvester:
         condition: service_started
@@ -75,7 +81,7 @@ services:
     extends:
       service: redis
     volumes: 
-      - ../cache/redis_data:/data
+      - ./cache/redis_data:/data
 
   harvester:
     image: plz/harvester
