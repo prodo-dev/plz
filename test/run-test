@@ -62,9 +62,9 @@ function run_test {
       return 1
     else
       info 'Comparing output...'
-      if git diff --no-index $expected_logs $actual_logs && \
+      if git diff --no-pager --no-index $expected_logs $actual_logs && \
          ( ! [[ -e $expected_output_directory ]] || \
-           git diff --no-index $expected_output_directory $actual_output_directory ); then
+           git diff --no-pager --no-index $expected_output_directory $actual_output_directory ); then
         info 'Test passed.'
       else
         error 'Test failed.'
