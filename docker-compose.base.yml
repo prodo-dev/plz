@@ -3,7 +3,10 @@ version: "2.3"
 services:
   controller:
     image: plztest/controller
-    build: services/controller
+    build:
+      context: services/controller
+      args:
+        BUILD_TIMESTAMP: ${BUILD_TIMESTAMP}
     environment:
       CONFIGURATION: |
         config = { include "/root/config.json" }
