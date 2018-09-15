@@ -6,8 +6,11 @@ lint: environment
 
 .PHONY: dist
 dist: environment
+ifeq ($(BUILD_TIMESTAMP),)
+	$(error "BUILD_TIMESTAMP is unset")
+endif
 	rm -rf build dist
-	pipenv run python setup.py bdist_wheel
+	BUILD_TIMESTAMP=$(BUILD_TIMESTAMP) pipenv run python setup.py bdist_wheel
 
 .PHONY: environment
 environment: .environment

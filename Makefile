@@ -6,7 +6,7 @@ include vars.mk
 check:
 	$(MAKE) -C cli check
 	$(MAKE) -C services/controller check
-	./test/run
+	BUILD_TIMESTAMP=$(BUILD_TIMESTAMP) ./test/run
 
 .PHONY: environment
 environment:

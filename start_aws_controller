@@ -2,9 +2,9 @@
 
 docker build harvester -t plz/harvester
 
-docker pull "prodoai/plz_controller:timestamp_$(cat BUILD_TIMESTAMP)"
+docker pull "prodoai/plz_controller:timestamp_$(cat STABLE_BUILD_TIMESTAMP)"
 
-BUILD_TIMESTAMP=`cat BUILD_TIMESTAMP` \
+BUILD_TIMESTAMP=`cat STABLE_BUILD_TIMESTAMP` \
   SECRETS_DIR=$PWD/aws_config \
   REDIS_DUMP_EVERY_SECONDS=2 \
   LOG_LEVEL=${LOG_LEVEL:-WARNING} \
