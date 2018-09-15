@@ -43,6 +43,8 @@ OPERATIONS: [Type[Operation]] = [
 
 
 def _get_version():
+    if 'PLZ_OVERRIDE_VERSION' in os.environ:
+        return os.environ['PLZ_OVERRIDE_VERSION']
     try:
         return pkg_resources.require('plz-cli')[0].version
     except pkg_resources.DistributionNotFound:

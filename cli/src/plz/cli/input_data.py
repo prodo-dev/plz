@@ -28,6 +28,13 @@ class InputData(contextlib.AbstractContextManager):
                 user=configuration.user,
                 project=configuration.project,
                 path=path)
+        elif configuration.input.startswith('input_id://'):
+            input_id = configuration.input[len('input_id://'):]
+            return LocalInputData(
+                controller=controller,
+                user=configuration.user,
+                project=configuration.project,
+                input_id=input_id)
         raise CLIException('Could not parse the configured input.')
 
     @abstractmethod
@@ -48,16 +55,26 @@ class LocalInputData(InputData):
                  controller: Controller,
                  user: str,
                  project: str,
-                 path: str):
+                 path: Optional[str] = None,
+                 input_id: Optional[str] = None):
         self.controller = controller
         self.user = user
         self.project = project
-        self.path = os.path.normpath(path)
+        self.path = os.path.normpath(path) if path is not None else None
         self.tarball = None
-        self.input_id = None
+        self.input_id = input_id
         self._timestamp_millis = None
 
     def __enter__(self):
+        # Nothing to save in the context, we have an input id in the controller
+        # and just refer to it
+        if self.input_id:
+            return self
+
+        if self.path is None:
+            raise ValueError('For input data, neither path nor input id were '
+                             'given')
+
         input_metadata = InputMetadata.of(
             user=self.user,
             project=self.project,
@@ -93,8 +110,8 @@ class LocalInputData(InputData):
             self.tarball.close()
 
     def publish(self) -> Optional[str]:
-        # We asked the controller previously and found the data is there
-        # with this input ID
+        # Either the user provided an input id, or we asked the controller
+        # previously and found the data is there with this input Id
         if self.input_id is not None:
             return self.input_id
 
