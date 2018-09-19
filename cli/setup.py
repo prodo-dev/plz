@@ -45,16 +45,14 @@ setup(
         'paramiko >= 2.4.1',
         'prettytable >= 0.7.2',
         'python-dateutil >= 2.7.3',
-        'requests >= 2.18.4',
-        # If we specify >= 1.22, pip installs urllib3 version 1.23, which
-        # is not compatible with the version of requests it installs.
-        # Fixing to 1.22 for now.
-        'urllib3 == 1.22',
+        'requests >= 2.19',
+        'urllib3 >= 1.23',
     ],
     extras_require={
         'test': [
             'flake8==3.5.0',
             'nose==1.3.7',
+            'flask >= 1.0.2',
         ],
     },
     entry_points={
