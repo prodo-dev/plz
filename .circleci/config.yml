@@ -12,6 +12,13 @@ jobs:
             sudo apt-get update -qq
             sudo apt-get install -qqy zsh
 
+      - run:
+          name: "Install Terraform"
+          command: |
+            set -e
+            curl -fsSL -o /tmp/terraform.zip https://releases.hashicorp.com/terraform/0.11.8/terraform_0.11.8_linux_amd64.zip
+            sudo unzip -d /usr/local/bin -o /tmp/terraform.zip
+
       - checkout
 
       - setup_remote_docker
