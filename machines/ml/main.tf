@@ -103,7 +103,7 @@ resource "aws_security_group" "plz_controller_ssh" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
   tags {
     Name        = "Plz ${var.environment_name} SSH Security Group"
     Environment = "${var.environment_name}"
@@ -118,8 +118,11 @@ resource "aws_instance" "controller" {
   key_name                    = "${aws_key_pair.plz.key_name}"
   associate_public_ip_address = true
   iam_instance_profile        = "${aws_iam_instance_profile.controller.name}"
-  vpc_security_group_ids      = ["${aws_security_group.plz_controller_ssh.id}",
-                                 "${data.aws_security_group.default.id}"]
+
+  vpc_security_group_ids = ["${aws_security_group.plz_controller_ssh.id}",
+    "${data.aws_security_group.default.id}",
+  ]
+
   tags {
     Name        = "Plz ${var.environment_name} Controller"
     Environment = "${var.environment_name}"

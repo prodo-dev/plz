@@ -7,6 +7,7 @@ check:
 	$(MAKE) -C cli check
 	$(MAKE) -C services/controller check
 	BUILD_TIMESTAMP=$(BUILD_TIMESTAMP) ./test/run
+	terraform fmt -check
 
 .PHONY: environment
 environment:
