@@ -351,10 +351,14 @@ class _InstanceContextManager(ContextManager):
 
     def acquire(self, blocking=None):
         if self.instance_lock.local.token is None:
-            self.instance_lock.acquire(blocking=blocking)
-            self.lock = self.instance_lock
+            if self.instance_lock.acquire(blocking=blocking):
+                self.lock = self.instance_lock
+                return True
+            else:
+                return False
         else:
             self.lock = None
+            return True
 
     def release(self):
         if self.lock is not None:

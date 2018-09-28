@@ -209,7 +209,8 @@ def get_logs_entrypoint(execution_id):
 
 @app.route(f'/executions/<execution_id>/output/files')
 def get_output_files_entrypoint(execution_id):
-    return Response(controller.get_output_files(execution_id),
+    path: Optional[str] = request.args.get('path', default=None, type=str)
+    return Response(controller.get_output_files(execution_id, path),
                     mimetype='application/octet-stream')
 
 

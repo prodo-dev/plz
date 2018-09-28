@@ -164,9 +164,11 @@ class DockerInstance(Instance):
                                     stdout=stdout,
                                     stderr=stderr)
 
-    def get_output_files_tarball(self) -> Iterator[bytes]:
+    def get_output_files_tarball(self, path: Optional[str]) -> Iterator[bytes]:
         return self.containers.get_files(
-            self.execution_id, Volumes.OUTPUT_DIRECTORY_PATH)
+            self.execution_id,
+            os.path.join(Volumes.OUTPUT_DIRECTORY_PATH,
+                         [p for p in path if p is not None]))
 
     def get_measures_files_tarball(self) -> Iterator[bytes]:
         return self.containers.get_files(

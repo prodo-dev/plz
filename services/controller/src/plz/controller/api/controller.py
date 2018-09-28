@@ -46,7 +46,8 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def get_output_files(self, execution_id: str) -> Iterator[bytes]:
+    def get_output_files(
+            self, execution_id: str, path: Optional[str]) -> Iterator[bytes]:
         pass
 
     @abstractmethod

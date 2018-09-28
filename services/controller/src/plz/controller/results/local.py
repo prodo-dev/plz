@@ -119,7 +119,7 @@ class LocalResults(Results):
                  stderr: bool = True) -> Iterator[bytes]:
         return read_bytes(self.paths.logs)
 
-    def get_output_files_tarball(self) -> Iterator[bytes]:
+    def get_output_files_tarball(self, path: Optional[str]) -> Iterator[bytes]:
         return read_bytes(self.paths.output)
 
     def get_measures_files_tarball(self) -> Iterator[bytes]:
@@ -148,7 +148,7 @@ class LocalTombstone(Results):
         # workers. For now, a tombstone just raises exceptions
         return self._raise_aborted()
 
-    def get_output_files_tarball(self) -> Iterator[bytes]:
+    def get_output_files_tarball(self, path: Optional[str]) -> Iterator[bytes]:
         return self._raise_aborted()
 
     def get_measures_files_tarball(self) -> Iterator[bytes]:

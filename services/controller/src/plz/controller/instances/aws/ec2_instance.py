@@ -52,17 +52,23 @@ class EC2Instance(Instance):
             input_stream: Optional[io.BytesIO],
             docker_run_args: Dict[str, str],
             max_idle_seconds: int = 60 * 30) -> None:
-        with self._lock:
-            if not self._is_running_and_free():
-                raise InstanceAssignedException(
-                    f'Instance {self.instance_id} cannot execute '
-                    f'{self.delegate.execution_id} as it\'s not '
-                    f'free (executing [{self.get_execution_id()}])')
-            self.images.pull(snapshot_id)
-            self.delegate.run(command, snapshot_id, parameters, input_stream,
-                              docker_run_args)
-            self._set_execution_id(
-                self.delegate.execution_id, max_idle_seconds)
+        # If the instance is locked then it's not free to run. The situation
+        # of being asked to run and being already locked can happen if there's
+        # a container starting. No execution id has been associated to this
+        # instance (so it's idle), yet it's locked as the container is started.
+        # In this case the exception will be caught and handled properly
+        acquired = self._lock.acquire(blocking=False)
+        if not acquired or not self._is_running_and_free():
+            raise InstanceAssignedException(
+                f'Instance {self.instance_id} cannot execute '
+                f'{self.delegate.execution_id} as it\'s not '
+                f'free (executing [{self.get_execution_id()}] or locked)')
+        self.images.pull(snapshot_id)
+        self.delegate.run(command, snapshot_id, parameters, input_stream,
+                          docker_run_args)
+        self._set_execution_id(
+            self.delegate.execution_id, max_idle_seconds)
+        self._lock.release()
 
     def is_up(self, is_instance_newly_created: bool):
         if not self._is_running():
@@ -210,8 +216,9 @@ class EC2Instance(Instance):
         return self.delegate.get_logs(
             since=since, stdout=stdout, stderr=stderr)
 
-    def get_output_files_tarball(self) -> Iterator[bytes]:
-        return self.delegate.get_output_files_tarball()
+    def get_output_files_tarball(
+            self, path: Optional[str]) -> Iterator[bytes]:
+        return self.delegate.get_output_files_tarball(path)
 
     def get_measures_files_tarball(self) -> Iterator[bytes]:
         return self.delegate.get_measures_files_tarball()

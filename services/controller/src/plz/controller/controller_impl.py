@@ -143,8 +143,9 @@ class ControllerImpl(Controller):
             -> Iterator[bytes]:
         return self.executions.get(execution_id).get_logs(since=since)
 
-    def get_output_files(self, execution_id: str) -> Iterator[bytes]:
-        return self.executions.get(execution_id).get_output_files_tarball()
+    def get_output_files(
+            self, execution_id: str, path: Optional[str]) -> Iterator[bytes]:
+        return self.executions.get(execution_id).get_output_files_tarball(path)
 
     def get_measures(self, execution_id: str, summary: bool) \
             -> Iterator[JSONString]:
