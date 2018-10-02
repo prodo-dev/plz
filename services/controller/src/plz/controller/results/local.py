@@ -120,6 +120,10 @@ class LocalResults(Results):
         return read_bytes(self.paths.logs)
 
     def get_output_files_tarball(self, path: Optional[str]) -> Iterator[bytes]:
+        if path is not None:
+            raise NotImplemented(
+                'Getting paths of already finished executions is not '
+                'implemented yet. Sorry about that')
         return read_bytes(self.paths.output)
 
     def get_measures_files_tarball(self) -> Iterator[bytes]:

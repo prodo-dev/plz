@@ -79,9 +79,11 @@ class ControllerProxy(Controller):
         _check_status(response, requests.codes.ok)
         return response.raw
 
-    def get_output_files(self, execution_id: str) -> Iterator[bytes]:
+    def get_output_files(self, execution_id: str, path: Optional[str]) \
+            -> Iterator[bytes]:
         response = self.server.get(
             'executions', execution_id, 'output', 'files',
+            params={'path': path},
             stream=True)
         _check_status(response, requests.codes.ok)
         return response.raw
