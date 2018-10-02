@@ -132,7 +132,8 @@ class DockerInstance(Instance):
         with self._lock:
             self.stop_execution()
             self._publish_results(results_storage,
-                                  finish_timestamp=idle_since_timestamp)
+                                  finish_timestamp=idle_since_timestamp,
+                                  path=None)
             # Check that we could collect the logs before destroying the
             # container
             if not results_storage.is_finished(self.execution_id):
@@ -144,12 +145,12 @@ class DockerInstance(Instance):
         return {}
 
     def _publish_results(self, results_storage: ResultsStorage,
-                         finish_timestamp: int):
+                         finish_timestamp: int, path: Optional[str]):
         results_storage.publish(
             self.get_execution_id(),
             exit_status=self.get_status().exit_status,
             logs=self.get_logs(since=None),
-            output_tarball=self.get_output_files_tarball(),
+            output_tarball=self.get_output_files_tarball(path),
             measures_tarball=self.get_measures_files_tarball(),
             finish_timestamp=finish_timestamp)
 
@@ -164,9 +165,11 @@ class DockerInstance(Instance):
                                     stdout=stdout,
                                     stderr=stderr)
 
-    def get_output_files_tarball(self) -> Iterator[bytes]:
+    def get_output_files_tarball(self, path: Optional[str]) -> Iterator[bytes]:
         return self.containers.get_files(
-            self.execution_id, Volumes.OUTPUT_DIRECTORY_PATH)
+            self.execution_id,
+            os.path.join(Volumes.OUTPUT_DIRECTORY_PATH,
+                         path if path is not None else ''))
 
     def get_measures_files_tarball(self) -> Iterator[bytes]:
         return self.containers.get_files(

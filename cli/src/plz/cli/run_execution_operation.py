@@ -118,7 +118,8 @@ class RunExecutionOperation(Operation):
             self.configuration,
             output_dir=self.output_dir,
             execution_id=self.execution_id,
-            force_if_running=False)
+            force_if_running=False,
+            path=None)
 
         cancelled = False
         try:

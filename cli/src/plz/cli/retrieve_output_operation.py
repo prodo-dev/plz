@@ -29,14 +29,19 @@ class RetrieveOutputOperation(Operation):
                  'Discouraged as the output might be in an inconsistent '
                  'state. If the output directory is present it\'ll be '
                  'overwritten')
+        parser.add_argument(
+            '--path', '-p', type=str, default=None,
+            help='Download only the path specified')
 
     def __init__(self, configuration: Configuration,
                  output_dir: str,
                  force_if_running: bool,
+                 path: Optional[str],
                  execution_id: Optional[str] = None):
         super().__init__(configuration)
         self.output_dir = output_dir
         self.force_if_running = force_if_running
+        self.path = path
         self.execution_id = execution_id
 
     def harvest(self):
@@ -58,8 +63,11 @@ class RetrieveOutputOperation(Operation):
     def retrieve_output(self):
         execution_id = self.get_execution_id()
         output_tarball_bytes = self.controller.get_output_files(
-            self.get_execution_id())
+            self.get_execution_id(), path=self.path)
         formatted_output_dir = self.output_dir.replace('%e', execution_id)
+        formatted_output_dir = os.path.join(
+            formatted_output_dir,
+            self.path if self.path is not None else '')
         try:
             os.makedirs(formatted_output_dir)
         except FileExistsError:

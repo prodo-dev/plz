@@ -8,7 +8,8 @@ from redis.lock import Lock
 
 from plz.controller.arbitrary_object_json_encoder import dumps_arbitrary_json
 from plz.controller.db_storage import DBStorage
-from plz.controller.api.exceptions import AbortedExecutionException
+from plz.controller.api.exceptions import AbortedExecutionException, \
+    NotImplementedControllerException
 from plz.controller.execution_metadata import compile_metadata_for_storage
 from plz.controller.results.results_base import InstanceStatus, \
     InstanceStatusFailure, InstanceStatusSuccess, Results, ResultsContext, \
@@ -119,7 +120,11 @@ class LocalResults(Results):
                  stderr: bool = True) -> Iterator[bytes]:
         return read_bytes(self.paths.logs)
 
-    def get_output_files_tarball(self) -> Iterator[bytes]:
+    def get_output_files_tarball(self, path: Optional[str]) -> Iterator[bytes]:
+        if path is not None:
+            raise NotImplementedControllerException(
+                'Getting paths of already finished executions is not '
+                'implemented yet. Sorry about that')
         return read_bytes(self.paths.output)
 
     def get_measures_files_tarball(self) -> Iterator[bytes]:
@@ -148,7 +153,7 @@ class LocalTombstone(Results):
         # workers. For now, a tombstone just raises exceptions
         return self._raise_aborted()
 
-    def get_output_files_tarball(self) -> Iterator[bytes]:
+    def get_output_files_tarball(self, path: Optional[str]) -> Iterator[bytes]:
         return self._raise_aborted()
 
     def get_measures_files_tarball(self) -> Iterator[bytes]:
