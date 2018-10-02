@@ -83,6 +83,7 @@ class ControllerProxy(Controller):
             -> Iterator[bytes]:
         response = self.server.get(
             'executions', execution_id, 'output', 'files',
+            codes_with_exceptions={requests.codes.not_implemented},
             params={'path': path},
             stream=True)
         _check_status(response, requests.codes.ok)

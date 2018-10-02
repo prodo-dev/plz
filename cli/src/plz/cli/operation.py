@@ -60,8 +60,9 @@ def on_exception_reraise(message: str):
             try:
                 return f(*args, **kwargs)
             except Exception as cause:
-                raise CLIException(message) from cause
-
+                cause_message = getattr(cause, 'message', '')
+                cause_message = f': {cause_message}' if cause_message else ''
+                raise CLIException(message + cause_message) from cause
         return wrapped
 
     return wrapper

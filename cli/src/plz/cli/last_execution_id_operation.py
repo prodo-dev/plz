@@ -23,4 +23,4 @@ class LastExecutionIDOperation(Operation):
         execution_id = self.get_execution_id()
         if execution_id is None or execution_id == '':
             raise CLIException('No execution ID for this user!')
-        print(self.get_execution_id(), end='\n' if sys.stdout.isatty() else '')
+        print(execution_id, end='\n' if sys.stdout.isatty() else '')

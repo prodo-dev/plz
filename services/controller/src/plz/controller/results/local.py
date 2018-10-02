@@ -8,7 +8,8 @@ from redis.lock import Lock
 
 from plz.controller.arbitrary_object_json_encoder import dumps_arbitrary_json
 from plz.controller.db_storage import DBStorage
-from plz.controller.api.exceptions import AbortedExecutionException
+from plz.controller.api.exceptions import AbortedExecutionException, \
+    NotImplementedControllerException
 from plz.controller.execution_metadata import compile_metadata_for_storage
 from plz.controller.results.results_base import InstanceStatus, \
     InstanceStatusFailure, InstanceStatusSuccess, Results, ResultsContext, \
@@ -121,7 +122,7 @@ class LocalResults(Results):
 
     def get_output_files_tarball(self, path: Optional[str]) -> Iterator[bytes]:
         if path is not None:
-            raise NotImplemented(
+            raise NotImplementedControllerException(
                 'Getting paths of already finished executions is not '
                 'implemented yet. Sorry about that')
         return read_bytes(self.paths.output)

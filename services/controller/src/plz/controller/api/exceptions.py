@@ -58,6 +58,13 @@ class InstanceStillRunningException(ResponseHandledException):
         self.execution_id = execution_id
 
 
+class NotImplementedControllerException(ResponseHandledException):
+    def __init__(self, message: str, **kwargs):
+        super().__init__(
+            response_code=requests.codes.not_implemented, **kwargs)
+        self.message = message
+
+
 class ProviderKillingInstancesException(ResponseHandledException):
     def __init__(
             self, failed_instance_ids_to_messages: Dict[str, str], **kwargs):
@@ -82,6 +89,7 @@ EXCEPTION_NAMES_TO_CLASSES = {
         IncorrectInputIDException,
         InstanceNotRunningException,
         InstanceStillRunningException,
+        NotImplementedControllerException,
         ProviderKillingInstancesException,
         WorkerUnreachableException,
     )
