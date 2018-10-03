@@ -21,8 +21,9 @@ class Localhost(InstanceProvider):
                  images: Images,
                  containers: Containers,
                  volumes: Volumes,
-                 redis: StrictRedis):
-        super().__init__(results_storage)
+                 redis: StrictRedis,
+                 instance_lock_timeout: int):
+        super().__init__(results_storage, instance_lock_timeout)
         self.images = images
         self.containers = containers
         self.volumes = volumes
@@ -45,7 +46,8 @@ class Localhost(InstanceProvider):
             self.containers,
             self.volumes,
             execution_id,
-            self.redis)
+            self.redis,
+            self.instance_lock_timeout)
         instance.run(command=command, snapshot_id=snapshot_id,
                      parameters=parameters, input_stream=input_stream,
                      docker_run_args=execution_spec['docker_run_args'])
@@ -67,7 +69,8 @@ class Localhost(InstanceProvider):
             self.containers,
             self.volumes,
             execution_id,
-            self.redis)
+            self.redis,
+            self.instance_lock_timeout)
 
     def push(self, image_tag: str):
         pass

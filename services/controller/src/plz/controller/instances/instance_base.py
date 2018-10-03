@@ -24,8 +24,9 @@ ExecutionInfo = namedtuple(
 
 
 class Instance(Results):
-    def __init__(self, redis: StrictRedis):
+    def __init__(self, redis: StrictRedis, lock_timeout: int):
         self.redis = redis
+        self.lock_timeout = lock_timeout
         # Need to create and memoised the lock afterwards, as we need the
         # AWS instance id and it's not available at this point. Use
         # _redis_lock to access it
@@ -131,14 +132,20 @@ class Instance(Results):
         pass
 
     def harvest(self, results_storage: ResultsStorage):
-        with self._lock:
+        lock = self._lock
+        have_lock = lock.acquire(blocking=False)
+        if not have_lock:
+            # Do not block waiting for an instance. If the lock is held for
+            # too long the provider will kill the instance
+            return
+        try:
             resource_state = self.get_resource_state()
             execution_id = self.get_execution_id()
             if resource_state == 'terminated':
                 try:
                     # Ensure that terminated instances with an execution ID
                     # have results (or a tombstone)
-                    if self.get_execution_id() == '':
+                    if execution_id == '':
                         log.warning(
                             'There\'s a terminated instance without an '
                             'execution ID associated.')
@@ -183,9 +190,29 @@ class Instance(Results):
                     log.error(f'Harvesting: Instance {self.instance_id} for '
                               f'execution ID: {self.get_execution_id()}: '
                               f'{result}')
+        finally:
+            lock.release()
 
     def is_terminated(self) -> bool:
         return self.get_resource_state() == 'terminated'
+
+    def is_locked_for_too_long(self):
+        if self._redis_lock.local.token is None:
+            return False
+        else:
+            lock_timestamp_seconds_bytes = self.redis.hget(
+                self._lock_timestamp_seconds_key_name,
+                self.instance_id)
+            if lock_timestamp_seconds_bytes is None:
+                log.warning(
+                    f'Instance {self.instance_id} does not have a timestamp '
+                    f'for its lock, creating it now')
+                self.redis.hset(self._lock_timestamp_seconds_key_name,
+                                self.instance_id,
+                                _get_current_seconds())
+                return False
+            secs = _get_current_seconds() - int(lock_timestamp_seconds_bytes)
+            return secs > self.lock_timeout
 
     @abstractmethod
     def kill(self, force_if_not_idle: bool) -> Optional[str]:
@@ -208,21 +235,34 @@ class Instance(Results):
         pass
 
     @property
+    def _lock_name(self) -> str:
+        return f'lock:{__name__}.{self.__class__.__name__}' + \
+               f'#_lock:{self.instance_id}'
+
+    @property
+    def _lock_timestamp_seconds_key_name(self) -> str:
+        return f'lock:{__name__}.{self.__class__.__name__}:timestamp'
+
+    @property
     def _redis_lock(self) -> Lock:
         if self._memoised_lock is None:
-            lock_name = f'lock:{__name__}.{self.__class__.__name__}' + \
-                        f'#_lock:{self.instance_id}'
-            self._memoised_lock = Lock(self.redis, lock_name)
+            self._memoised_lock = Lock(self.redis, self._lock_name)
         return self._memoised_lock
 
     @property
     def _lock(self):
-        return _InstanceContextManager(self._redis_lock)
+        return _InstanceContextManager(
+            self._redis_lock,
+            self.redis,
+            self._lock_timestamp_seconds_key_name,
+            self.instance_id)
 
 
 class InstanceProvider(ABC):
-    def __init__(self, results_storage: ResultsStorage):
+    def __init__(self, results_storage: ResultsStorage,
+                 instance_lock_timeout: int):
         self.results_storage = results_storage
+        self.instance_lock_timeout = instance_lock_timeout
 
     @abstractmethod
     def run_in_instance(self,
@@ -308,7 +348,14 @@ class InstanceProvider(ABC):
         for instance in self.instance_iterator(only_running=False):
             # noinspection PyBroadException
             try:
-                instance.harvest(self.results_storage)
+                if instance.is_locked_for_too_long():
+                    log.warning(
+                        f'Killing instance {instance.instance_id} for '
+                        f'execution \'{instance.get_execution_id()}\' as it '
+                        'was locked for too long')
+                    instance.kill(force_if_not_idle=True)
+                else:
+                    instance.harvest(self.results_storage)
             except Exception:
                 # Make sure that an exception thrown while harvesting an
                 # instance doesn't stop the whole harvesting process
@@ -345,14 +392,22 @@ class _InstanceContextManager(ContextManager):
     Allow for the lock to be acquired in several stack frames of the same
     thread
     """
-    def __init__(self, instance_lock: Lock):
+    def __init__(self, instance_lock: Lock, redis: StrictRedis,
+                 lock_timestamp_seconds_key_name: str,
+                 instance_id: str):
         self.instance_lock = instance_lock
+        self.redis = redis
+        self.lock_timestamp_seconds_key_name = lock_timestamp_seconds_key_name
+        self.instance_id = instance_id
         self.lock = None
 
-    def acquire(self, blocking=None):
+    def acquire(self, blocking=None) -> bool:
         if self.instance_lock.local.token is None:
             if self.instance_lock.acquire(blocking=blocking):
                 self.lock = self.instance_lock
+                self.redis.hset(self.lock_timestamp_seconds_key_name,
+                                self.instance_id,
+                                _get_current_seconds())
                 return True
             else:
                 return False
@@ -362,6 +417,8 @@ class _InstanceContextManager(ContextManager):
 
     def release(self):
         if self.lock is not None:
+            self.redis.hdel(
+                self.lock_timestamp_seconds_key_name, self.instance_id)
             self.lock.release()
 
     def __enter__(self):
@@ -369,3 +426,7 @@ class _InstanceContextManager(ContextManager):
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.release()
+
+
+def _get_current_seconds() -> int:
+    return int(round(time.time()))

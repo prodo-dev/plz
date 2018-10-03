@@ -26,6 +26,10 @@ services:
           # We assume that the auth tokens from ECR last for
           # at least 5 minutes
           ecr_login_validity_in_minutes = 5
+          # We assume that if an instance is locked for more
+          # than one hour, something is wrong with it and should be
+          # killed
+          instance_lock_timeout = 3600
         }
 
     volumes:
