@@ -59,7 +59,8 @@ class EC2Instance(Instance):
         # a container starting. No execution id has been associated to this
         # instance (so it's idle), yet it's locked as the container is started.
         # In this case the exception will be caught and handled properly
-        acquired = self._lock.acquire(blocking=False)
+        lock = self._lock
+        acquired = lock.acquire(blocking=False)
         try:
             if not acquired or not self._is_running_and_free():
                 raise InstanceAssignedException(
@@ -73,7 +74,7 @@ class EC2Instance(Instance):
                 self.delegate.execution_id, max_idle_seconds)
         finally:
             if acquired:
-                self._lock.release()
+                lock.release()
 
     def is_up(self, is_instance_newly_created: bool):
         if not self._is_running():

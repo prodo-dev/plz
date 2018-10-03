@@ -132,7 +132,8 @@ class Instance(Results):
         pass
 
     def harvest(self, results_storage: ResultsStorage):
-        have_lock = self._lock.acquire(blocking=False)
+        lock = self._lock
+        have_lock = lock.acquire(blocking=False)
         if not have_lock:
             # Do not block waiting for an instance. If the lock is held for
             # too long the provider will kill the instance
@@ -190,7 +191,7 @@ class Instance(Results):
                               f'execution ID: {self.get_execution_id()}: '
                               f'{result}')
         finally:
-            self._lock.release()
+            lock.release()
 
     def is_terminated(self) -> bool:
         return self.get_resource_state() == 'terminated'
@@ -400,7 +401,7 @@ class _InstanceContextManager(ContextManager):
         self.instance_id = instance_id
         self.lock = None
 
-    def acquire(self, blocking=None):
+    def acquire(self, blocking=None) -> bool:
         if self.instance_lock.local.token is None:
             if self.instance_lock.acquire(blocking=blocking):
                 self.lock = self.instance_lock
