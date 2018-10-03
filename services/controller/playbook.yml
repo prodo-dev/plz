@@ -9,11 +9,13 @@
         owner: ubuntu
         group: ubuntu
         mode: 0600
-
     - name: Log in to AWS ECR
       shell: |
         eval "$(aws ecr get-login --no-include-email --region {{ aws_region }})"
-
+    - name: Pull ml-pytorch image
+      docker_image:
+        name: prodoai/plz_ml-pytorch
+        pull: yes
     - name: Start the services
       docker_service:
         project_name: controller
@@ -63,6 +65,10 @@
                     # We assume that the auth tokens from ECR last for
                     # at least 5 minutes
                     ecr_login_validity_in_minutes = 5
+                    # We assume that if an instance is locked for more
+                    # than one hour, something is wrong with it and should be
+                    # killed
+                    instance_lock_timeout = 3600
                   }
               ports:
                 - "{{ service_port }}:80"

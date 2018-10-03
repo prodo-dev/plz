@@ -26,8 +26,9 @@ class DockerInstance(Instance):
                  containers: Containers,
                  volumes: Volumes,
                  execution_id: str,
-                 redis: StrictRedis):
-        super().__init__(redis)
+                 redis: StrictRedis,
+                 lock_timeout: int):
+        super().__init__(redis, lock_timeout)
         self.images = images
         self.containers = containers
         self.volumes = volumes

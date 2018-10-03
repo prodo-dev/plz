@@ -30,8 +30,9 @@ class EC2InstanceGroup(InstanceProvider):
                  acquisition_delay_in_seconds: int,
                  max_acquisition_tries: int,
                  worker_security_group_names: [str],
-                 use_public_dns: bool):
-        super().__init__(results_storage)
+                 use_public_dns: bool,
+                 instance_lock_timeout: int):
+        super().__init__(results_storage, instance_lock_timeout)
         self.name = name
         self.redis = redis
         self.client = client
@@ -211,7 +212,8 @@ class EC2InstanceGroup(InstanceProvider):
             volumes,
             container_execution_id,
             instance_data,
-            self.redis)
+            self.redis,
+            self.instance_lock_timeout)
 
     def _get_instance_spec(
             self,

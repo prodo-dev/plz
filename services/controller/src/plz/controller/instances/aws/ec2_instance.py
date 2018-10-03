@@ -37,12 +37,14 @@ class EC2Instance(Instance):
                  volumes: Volumes,
                  container_execution_id: str,
                  data: dict,
-                 redis: StrictRedis):
-        super().__init__(redis)
+                 redis: StrictRedis,
+                 lock_timeout: int):
+        super().__init__(redis, lock_timeout)
         self.client = client
         self.images = images
         self.delegate = DockerInstance(
-            images, containers, volumes, container_execution_id, redis)
+            images, containers, volumes, container_execution_id, redis,
+            lock_timeout)
         self.data = data
 
     def run(self,
@@ -58,17 +60,20 @@ class EC2Instance(Instance):
         # instance (so it's idle), yet it's locked as the container is started.
         # In this case the exception will be caught and handled properly
         acquired = self._lock.acquire(blocking=False)
-        if not acquired or not self._is_running_and_free():
-            raise InstanceAssignedException(
-                f'Instance {self.instance_id} cannot execute '
-                f'{self.delegate.execution_id} as it\'s not '
-                f'free (executing [{self.get_execution_id()}] or locked)')
-        self.images.pull(snapshot_id)
-        self.delegate.run(command, snapshot_id, parameters, input_stream,
-                          docker_run_args)
-        self._set_execution_id(
-            self.delegate.execution_id, max_idle_seconds)
-        self._lock.release()
+        try:
+            if not acquired or not self._is_running_and_free():
+                raise InstanceAssignedException(
+                    f'Instance {self.instance_id} cannot execute '
+                    f'{self.delegate.execution_id} as it\'s not '
+                    f'free (executing [{self.get_execution_id()}] or locked)')
+            self.images.pull(snapshot_id)
+            self.delegate.run(command, snapshot_id, parameters, input_stream,
+                              docker_run_args)
+            self._set_execution_id(
+                self.delegate.execution_id, max_idle_seconds)
+        finally:
+            if acquired:
+                self._lock.release()
 
     def is_up(self, is_instance_newly_created: bool):
         if not self._is_running():

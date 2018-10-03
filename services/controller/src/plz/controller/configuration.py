@@ -69,7 +69,8 @@ def _instance_provider_from(
         containers = Containers.for_host(docker_host)
         volumes = Volumes.for_host(docker_host)
         instance_provider = Localhost(
-            results_storage, images, containers, volumes, redis)
+            results_storage, images, containers, volumes, redis,
+            config['assumptions.instance_lock_timeout'])
     elif instance_provider_type == 'aws-ec2':
         instance_provider = EC2InstanceGroup(
             redis=redis,
@@ -88,7 +89,7 @@ def _instance_provider_from(
             worker_security_group_names=config.get(
                 'instances.worker_security_group_names', []),
             use_public_dns=config.get('instances.use_public_dns', False),
-        )
+            instance_lock_timeout=config['assumptions.instance_lock_timeout'])
     else:
         raise ValueError('Invalid instance provider.')
     return instance_provider
