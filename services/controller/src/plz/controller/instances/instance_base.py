@@ -136,7 +136,8 @@ class Instance(Results):
         have_lock = lock.acquire(blocking=False)
         if not have_lock:
             log.debug(f'Not harvesting instance [{self.instance_id}] for '
-                      f'execution id [{self.get_execution_id()}]')
+                      f'execution id [{self.get_execution_id()}] as it is '
+                      f'locked')
             # Do not block waiting for an instance. If the lock is held for
             # too long the provider will kill the instance
             return
@@ -236,6 +237,9 @@ class Instance(Results):
                                 _get_current_seconds())
                 return False
             secs = _get_current_seconds() - int(lock_timestamp_seconds_bytes)
+            log.debug(f'Instance {self.instance_id} for execution id '
+                      f'{self.get_execution_id()} has been locked for '
+                      f'{secs} seconds. Timeout is {self.lock_timeout}')
             return secs > self.lock_timeout
 
     @abstractmethod
@@ -381,8 +385,9 @@ class InstanceProvider(ABC):
                         'was locked for too long')
                     instance.kill(force_if_not_idle=True)
                 else:
-                    log.debug(f'Harvest polling for [{instance.instance_id}], '
-                              f'[{instance.get_execution_id()}]')
+                    log.debug(
+                        f'Calling harvesting on [{instance.instance_id}], '
+                        f'[{instance.get_execution_id()}]')
                     instance.harvest(self.results_storage)
             except Exception:
                 # Make sure that an exception thrown while harvesting an
