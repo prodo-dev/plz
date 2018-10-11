@@ -50,7 +50,8 @@ dependencies:
   - six=1.11.0=py36h372c433_1
   - cuda90=1.0=h6433d27_0
   - cuda91=1.0=h4c16780_0
-  - pytorch=0.4.0=py36_cuda9.1.85_cudnn7.1.2_1
+  - cuda92=1.0
+  - pytorch=0.4.1=py36_cuda9.2.148_cudnn7.1.4_1
   - torchvision=0.2.1=py36_1
   - pip:
       - absl-py==0.2.0
@@ -89,7 +90,6 @@ dependencies:
       - tensorboardx==1.1
       - tensorflow==1.6.0
       - termcolor==1.1.0
-      - torch==0.4.0
       - tqdm==4.19.5
       - traitlets==4.3.2
       - ujson==1.35
