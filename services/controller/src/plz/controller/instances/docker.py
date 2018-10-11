@@ -127,10 +127,13 @@ class DockerInstance(Instance):
                 results_storage: ResultsStorage,
                 idle_since_timestamp: int,
                 release_container: bool = True):
+        log.debug(f'Releasing container of {self.execution_id}')
         if not release_container:
             # Everything to release here is about the container
             return
         with self._lock:
+            log.debug(f'Stopping execution while releasing '
+                      f'{self.execution_id}')
             self.stop_execution()
             self._publish_results(results_storage,
                                   finish_timestamp=idle_since_timestamp,
@@ -147,6 +150,7 @@ class DockerInstance(Instance):
 
     def _publish_results(self, results_storage: ResultsStorage,
                          finish_timestamp: int, path: Optional[str]):
+        log.debug(f'Publishing results of {self.execution_id}')
         results_storage.publish(
             self.get_execution_id(),
             exit_status=self.get_status().exit_status,

@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import shutil
 from typing import Any, ContextManager, Iterator, Optional
@@ -14,6 +15,8 @@ from plz.controller.execution_metadata import compile_metadata_for_storage
 from plz.controller.results.results_base import InstanceStatus, \
     InstanceStatusFailure, InstanceStatusSuccess, Results, ResultsContext, \
     ResultsStorage
+
+log = logging.getLogger(__name__)
 
 LOCK_TIMEOUT = 60  # 1 minute
 CHUNK_SIZE = 1024 * 1024  # 1 MB
@@ -38,14 +41,17 @@ class LocalResultsStorage(ResultsStorage):
                 finish_timestamp: int):
         paths = Paths(self.directory, execution_id)
         with self._lock(execution_id):
+            log.debug(f'Checking if results exist for {execution_id}')
             if os.path.exists(paths.finished_file):
                 return
 
+            log.debug(f'Creating dir for results of {execution_id}')
             _force_mk_empty_dir(paths.directory)
 
             with open(paths.exit_status, 'w') as f:
                 print(exit_status, file=f)
 
+            log.debug(f'Writing logs and output for {execution_id}')
             write_bytes(paths.logs, logs)
             write_bytes(paths.output, output_tarball)
             write_bytes(paths.measures, measures_tarball)
@@ -55,6 +61,7 @@ class LocalResultsStorage(ResultsStorage):
                 json.dump(metadata, metadata_file)
             with open(paths.finished_file, 'w') as _:  # noqa: F841 (unused)
                 pass
+            log.debug(f'Storing the execution id {execution_id} as finished')
             self.db_storage.add_finished_execution_id(
                 user=metadata['user'], project=metadata['project'],
                 execution_id=execution_id)
