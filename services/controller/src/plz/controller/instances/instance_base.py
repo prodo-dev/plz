@@ -222,7 +222,15 @@ class Instance(Results):
         return self.get_resource_state() == 'terminated'
 
     def is_locked_for_too_long(self):
-        if self._redis_lock.local.token is None:
+        lock = self._lock
+        got_lock = False
+        try:
+            got_lock = lock.acquire(blocking=False)
+        finally:
+            if got_lock:
+                lock.release()
+
+        if not got_lock:
             return False
         else:
             lock_timestamp_seconds_bytes = self.redis.hget(
