@@ -135,6 +135,9 @@ class Instance(Results):
         lock = self._lock
         have_lock = lock.acquire(blocking=False)
         if not have_lock:
+            log.debug(f'Not harvesting instance [{self.instance_id}] for '
+                      f'execution id [{self.get_execution_id()}] as it is '
+                      f'locked')
             # Do not block waiting for an instance. If the lock is held for
             # too long the provider will kill the instance
             return
@@ -142,6 +145,9 @@ class Instance(Results):
             resource_state = self.get_resource_state()
             execution_id = self.get_execution_id()
             if resource_state == 'terminated':
+                log.debug(f'Instance [{self.instance_id}] for '
+                          f'execution id [{execution_id}] is '
+                          f'terminated')
                 try:
                     # Ensure that terminated instances with an execution ID
                     # have results (or a tombstone)
@@ -152,11 +158,21 @@ class Instance(Results):
                         return
                     with results_storage.get(execution_id) as results:
                         if results is not None:
+                            log.debug(
+                                f'Instance [{self.instance_id}] for '
+                                f'execution id [{execution_id}] is '
+                                f'terminated and has results')
                             return
+                    log.debug('Writing tombstone for instance '
+                              f'[{self.instance_id}] for execution id '
+                              f'[{execution_id}]')
                     results_storage.write_tombstone(
                         execution_id,
                         tombstone={'forensics': self.get_forensics()})
                 finally:
+                    log.debug(
+                        f'Deleting instance [{self.instance_id}] for '
+                        f'execution id [{execution_id}]')
                     self.delete_resource()
 
             # We only care about harvesting running and terminated instances
@@ -165,8 +181,15 @@ class Instance(Results):
                          f'[{resource_state}]')
                 return
 
+            log.debug(f'Instance [{self.instance_id}] for [{execution_id}] '
+                      'is running')
+
             try:
                 info = self.get_execution_info()
+                log.debug(
+                    f'Could get execution info for instance '
+                    f'[{self.instance_id}], execution id '
+                    f'[{self.get_execution_id()}]')
             except ContainerMissingException:
                 # The container for an execution can't be found although
                 # we have an instance for it. Release the instance without
@@ -182,6 +205,8 @@ class Instance(Results):
                     release_container=False)
                 return
             if info.status == 'exited':
+                log.debug(f'Instance {self.instance_id} for execution ID: '
+                          f'{execution_id} is exited')
                 self.release(results_storage, info.idle_since_timestamp)
 
             if info.status in {'exited', 'idle'}:
@@ -212,6 +237,9 @@ class Instance(Results):
                                 _get_current_seconds())
                 return False
             secs = _get_current_seconds() - int(lock_timestamp_seconds_bytes)
+            log.debug(f'Instance {self.instance_id} for execution id '
+                      f'{self.get_execution_id()} has been locked for '
+                      f'{secs} seconds. Timeout is {self.lock_timeout}')
             return secs > self.lock_timeout
 
     @abstractmethod
@@ -346,6 +374,8 @@ class InstanceProvider(ABC):
 
     def harvest(self):
         for instance in self.instance_iterator(only_running=False):
+            log.debug(f'Harvest polling for [{instance.instance_id}], '
+                      f'[{instance.get_execution_id()}]')
             # noinspection PyBroadException
             try:
                 if instance.is_locked_for_too_long():
@@ -355,6 +385,9 @@ class InstanceProvider(ABC):
                         'was locked for too long')
                     instance.kill(force_if_not_idle=True)
                 else:
+                    log.debug(
+                        f'Calling harvesting on [{instance.instance_id}], '
+                        f'[{instance.get_execution_id()}]')
                     instance.harvest(self.results_storage)
             except Exception:
                 # Make sure that an exception thrown while harvesting an
