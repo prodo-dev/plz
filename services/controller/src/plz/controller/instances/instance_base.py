@@ -230,7 +230,7 @@ class Instance(Results):
             if got_lock:
                 lock.release()
 
-        if not got_lock:
+        if got_lock:
             return False
         else:
             lock_timestamp_seconds_bytes = self.redis.hget(
