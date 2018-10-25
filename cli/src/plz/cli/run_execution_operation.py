@@ -35,8 +35,8 @@ class RunExecutionOperation(Operation):
                             type=str)
         parser.add_argument('--detach', '-d', action='store_true',
                             default=False,
-                            help='Make CLI exit as soon as the job is \n'
-                                 'running (does not print logs, or download \n'
+                            help='Make CLI exit as soon as the job is '
+                                 'running (does not print logs, or download '
                                  'outputs, etc.)')
 
     def __init__(self,
