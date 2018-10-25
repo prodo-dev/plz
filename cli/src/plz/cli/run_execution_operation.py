@@ -33,16 +33,23 @@ class RunExecutionOperation(Operation):
         parser.add_argument('-p', '--parameters', dest='parameters_file',
                             help='Json file where parameters are stored',
                             type=str)
+        parser.add_argument('--detach', '-d', action='store_true',
+                            default=False,
+                            help='Make CLI exit as soon as the job is \n'
+                                 'running (does not print logs, or download \n'
+                                 'outputs, etc.)')
 
     def __init__(self,
                  configuration: Configuration,
                  command: Optional[str],
                  output_dir: str,
-                 parameters_file: Optional[str]):
+                 parameters_file: Optional[str],
+                 detach: bool):
         super().__init__(configuration)
         self.configuration = configuration
         self.output_dir = output_dir
         self.parameters_file = parameters_file
+        self.detach = detach
         if command:
             self.command = ['sh', '-c', command, '-s']
         else:
@@ -114,6 +121,8 @@ class RunExecutionOperation(Operation):
     def follow_execution(self, was_start_ok: bool):
         log_info(f'Execution ID is: {self.execution_id}')
 
+        if self.detach:
+            return
         retrieve_output_operation = RetrieveOutputOperation(
             self.configuration,
             output_dir=self.output_dir,
