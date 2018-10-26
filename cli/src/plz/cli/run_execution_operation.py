@@ -33,11 +33,7 @@ class RunExecutionOperation(Operation):
         parser.add_argument('-p', '--parameters', dest='parameters_file',
                             help='Json file where parameters are stored',
                             type=str)
-        parser.add_argument('--detach', '-d', action='store_true',
-                            default=False,
-                            help='Make CLI exit as soon as the job is '
-                                 'running (does not print logs, or download '
-                                 'outputs, etc.)')
+        add_detach_command_line_argument(parser)
 
     def __init__(self,
                  configuration: Configuration,
@@ -296,6 +292,14 @@ class RunExecutionOperation(Operation):
         if self.configuration.debug:
             log_debug('Time taken: %.2fs' % time_taken)
         return result
+
+
+def add_detach_command_line_argument(parser):
+    parser.add_argument('--detach', '-d', action='store_true',
+                        default=False,
+                        help='Make CLI exit as soon as the job is '
+                             'running (does not print logs, or download '
+                             'outputs, etc.)')
 
 
 class PullAccessDeniedException(Exception):
