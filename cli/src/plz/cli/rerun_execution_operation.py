@@ -2,7 +2,8 @@ from typing import Optional
 
 from plz.cli.configuration import Configuration
 from plz.cli.operation import Operation, add_output_dir_arg
-from plz.cli.run_execution_operation import RunExecutionOperation
+from plz.cli.run_execution_operation import RunExecutionOperation, \
+    add_detach_command_line_argument
 
 
 class RerunExecutionOperation(Operation):
@@ -15,19 +16,22 @@ class RerunExecutionOperation(Operation):
     @classmethod
     def prepare_argument_parser(cls, parser, args):
         cls.maybe_add_execution_id_arg(parser, args)
+        add_detach_command_line_argument(parser)
         add_output_dir_arg(parser)
 
     def __init__(self, configuration: Configuration,
                  output_dir: str,
+                 detach: bool,
                  execution_id: Optional[str] = None):
         super().__init__(configuration)
+        self.detach = detach
         self.execution_id = execution_id
         self.output_dir = output_dir
 
     def run(self):
         run_operation = RunExecutionOperation(
             self.configuration, command=None, output_dir=self.output_dir,
-            parameters_file=None)
+            parameters_file=None, detach=self.detach)
         instance_max_uptime_in_minutes = \
             self.configuration.instance_max_uptime_in_minutes
         response_dicts = self.controller.rerun_execution(
