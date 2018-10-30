@@ -15,8 +15,7 @@ COPY cli/LICENSE cli/MANIFEST.in cli/README.rst cli/setup.py cli/Pipfile cli/Pip
 COPY cli/src /cli/src/
 COPY services/controller/src /services/controller/src/
 RUN python setup.py bdist_wheel
-RUN pipenv install
-RUN pipenv install nose
+RUN pipenv install --dev
 
 # Run
 FROM python:3.6
