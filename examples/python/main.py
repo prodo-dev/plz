@@ -5,14 +5,6 @@ from typing import Tuple
 import sys
 import time
 
-import torch
-
-q = torch.zeros([3,3]).cuda()
-
-print(q)
-
-print('Is it enabled?: ', torch.backends.cudnn.enabled)
-
 #######################################
 # Minimal plz example using only python
 #######################################
