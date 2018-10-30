@@ -45,7 +45,7 @@ function run_controller_tests {
     --env=PLZ_PORT=$PLZ_PORT \
     --env=PLZ_USER='plz-test' \
     --env=PLZ_PROJECT='controller-tests' \
-    --entrypoint pipenv $CLI_BUILDER_IMAGE run nosetests --nocapture -v /controller_tests
+    --entrypoint pipenv $CLI_BUILDER_IMAGE run nosetests /controller_tests
 }
 
 function cleanup {
@@ -184,13 +184,13 @@ function run_end_to_end_tests() {
   fi
 }
 
+if $controller || $all_tests; then
+  run_controller_tests || rm -f $success_file
+fi
+
 if $end_to_end || $all_tests; then
   get_end_to_end_tests
   run_end_to_end_tests
-fi
-
-if $controller || $all_tests; then
-  run_controller_tests || rm -f $success_file
 fi
 
 echo
