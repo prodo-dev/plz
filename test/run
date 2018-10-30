@@ -38,8 +38,8 @@ function build_cli {
 function run_controller_tests {
   info Running controller tests
   docker run \
-    -v $TEST_DIRECTORY/controller:/controller_tests \
     -v $TEST_DIRECTORY/end-to-end:/end-to-end \
+    -v $TEST_DIRECTORY/controller:/controller_tests \
     --network=$NETWORK \
     --env=PLZ_HOST=$PLZ_HOST \
     --env=PLZ_PORT=$PLZ_PORT \
