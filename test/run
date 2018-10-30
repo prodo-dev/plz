@@ -35,6 +35,18 @@ function build_cli {
   docker image build --quiet --tag=$CLI_IMAGE --file=cli/Dockerfile .
 }
 
+function run_controller_tests {
+  docker run \
+    -v $TEST_DIRECTORY/controller:/controller_tests \
+    -v $TEST_DIRECTORY/end-to-end:/end-to-end \
+    --network=$NETWORK \
+    --env=PLZ_HOST=$PLZ_HOST \
+    --env=PLZ_PORT=$PLZ_PORT \
+    --env=PLZ_USER='plz-test' \
+    --env=PLZ_PROJECT='controller-tests' \
+    --entrypoint pipenv $CLI_BUILDER_IMAGE run nosetests --nocapture -v /controller_tests
+}
+
 function cleanup {
   exit_status=$?
   stop_all_clis
@@ -71,11 +83,36 @@ function docker_compose {
   $@
 }
 
+function get_end_to_end_tests {
+  if [[ $# -eq 0 ]]; then
+    # Run all tests, except in directories named "*.ignored".
+    end_to_end_tests=($((cd $TEST_DIRECTORY && echo -n end-to-end/*/*/plz.config.json~*/*.ignored/*) \
+               | xargs -n1 dirname))
+  else
+    # Run selected tests.
+    # But first, verify all arguments are actually test directories.
+    for dir in $@; do
+      if [[ ! ( $dir =~ '^[A-Za-z0-9\-]+/[A-Za-z0-9\-]+$' ) \
+	     || ! -f "${TEST_DIRECTORY}/end-to-end/${dir}/plz.config.json" ]]; then
+        echo "\"${dir}\" is not a test directory."
+        exit 2
+      fi
+      end_to_end_tests=($@)
+    done
+  fi
+}
+
 # In "bless mode", instead of comparing the actual output against expected
 # output, we save the output.
 bless=false
 # In "parallel mode", tests run in parallel.
 parallel=false
+# Whether to run all tests
+all_tests=true
+# Whether to run only end-to-end tests
+end_to_end=false
+# Whether to run only controller tests
+controller=false
 while [[ $# -gt 0 ]]; do
   case $1 in
     --bless)
@@ -84,27 +121,18 @@ while [[ $# -gt 0 ]]; do
     --parallel)
       parallel=true
       shift ;;
+    --end-to-end)
+      all_tests=false
+      end_to_end=true
+      shift ;;
+    --controller)
+      all_tests=false
+      controller=true
+      shift ;;
     *)
       break
   esac
 done
-
-if [[ $# -eq 0 ]]; then
-  # Run all tests, except in directories named "*.ignored".
-  tests=($((cd $TEST_DIRECTORY && echo end-to-end/*/*/plz.config.json~*/*.ignored/*) \
-             | xargs -n1 dirname))
-else
-  # Run selected end-to-end tests.
-  # But first, verify all arguments are actually test directories.
-  for dir in $@; do
-    if [[ ! ( $dir =~ '^[A-Za-z0-9\-]+/[A-Za-z0-9\-]+$' ) \
-          || ! -f "${TEST_DIRECTORY}/${dir}/plz.config.json" ]]; then
-      echo "\"${dir}\" is not a test directory."
-      exit 2
-    fi
-  done
-  tests=($@)
-fi
 
 exit_early=false
 trap 'exit_early=true; cleanup' EXIT INT TERM
@@ -125,30 +153,43 @@ export NETWORK
 
 success_file=$(mktemp "${DATA_DIRECTORY}/plz-test-success.XXXXX")
 pids=()
-for test in $tests; do
-  if $parallel; then
-    (
-      test_output=$("${TEST_DIRECTORY}/run-test" $test 2>&1) || rm -f $success_file
-      echo $test_output
-    ) &
-    pids+=($!)
-  else
-    "${TEST_DIRECTORY}/run-test" $test || rm -f $success_file
-    if $exit_early; then
-      rm -f $success_file
-      break
-    fi
-  fi
-done
 
-if $parallel; then
-  for pid in $pids; do
-    wait $pid
-    if $exit_early; then
-      rm -f $success_file
-      break
+function run_end_to_end_tests() {
+  for test in $end_to_end_tests; do
+    if $parallel; then
+      (
+        test_output=$("${TEST_DIRECTORY}/run-end-to-end-test" $test 2>&1) || rm -f $success_file
+        echo $test_output
+      ) &
+      pids+=($!)
+    else
+      echo Running $test
+      "${TEST_DIRECTORY}/run-end-to-end-test" $test || rm -f $success_file
+      if $exit_early; then
+        rm -f $success_file
+        break
+      fi
     fi
   done
+
+  if $parallel; then
+    for pid in $pids; do
+      wait $pid
+      if $exit_early; then
+        rm -f $success_file
+        break
+      fi
+    done
+  fi
+}
+
+if $end_to_end || $all_tests; then
+  get_end_to_end_tests
+  run_end_to_end_tests
+fi
+
+if $controller || $all_tests; then
+  run_controller_tests || rm -f $success_file
 fi
 
 echo

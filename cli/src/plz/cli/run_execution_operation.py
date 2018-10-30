@@ -1,6 +1,5 @@
-import json
 import os
-from typing import Any, BinaryIO, Callable, Iterator, Optional, Tuple
+from typing import Any, Callable, Iterator, Optional, Tuple
 
 import time
 
@@ -16,7 +15,8 @@ from plz.cli.parameters import Parameters
 from plz.cli.retrieve_measures_operation import RetrieveMeasuresOperation
 from plz.cli.retrieve_output_operation import RetrieveOutputOperation
 from plz.cli.show_status_operation import ShowStatusOperation
-from plz.cli.snapshot import capture_build_context
+from plz.cli.snapshot import capture_build_context, \
+    submit_context_for_building, PullAccessDeniedException
 
 
 class RunExecutionOperation(Operation):
@@ -89,8 +89,12 @@ class RunExecutionOperation(Operation):
                 try:
                     snapshot_id = self.suboperation(
                         'Building the program snapshot',
-                        lambda: self.submit_context_for_building(
-                            build_context))
+                        lambda: submit_context_for_building(
+                            user=self.configuration.user,
+                            project=self.configuration.project,
+                            controller=self.controller,
+                            build_context=build_context,
+                            quiet_build=self.configuration.quiet_build))
                     break
                 except CLIException as e:
                     if type(e.__cause__) == PullAccessDeniedException \
@@ -173,39 +177,6 @@ class RunExecutionOperation(Operation):
                 f'Execution failed with an exit status of {status.code}.',
                 exit_code=status.code)
 
-    def submit_context_for_building(self, build_context: BinaryIO) -> str:
-        metadata = {
-            'user': self.configuration.user,
-            'project': self.configuration.project,
-        }
-        status_json_strings = self.controller.create_snapshot(
-            metadata, build_context)
-        errors = []
-        snapshot_id: str = None
-        for json_str in status_json_strings:
-            data = json.loads(json_str)
-            if 'stream' in data:
-                if not self.configuration.quiet_build:
-                    print(data['stream'], end='', flush=True)
-            if 'error' in data:
-                errors.append(data['error'].rstrip())
-            if 'id' in data:
-                snapshot_id = data['id']
-        if errors or not snapshot_id:
-            log_error('The snapshot was not successfully created.')
-            pull_access_denied = False
-            for error in errors:
-                if error.startswith('pull access denied'):
-                    pull_access_denied = True
-                print(error)
-            exc_message = 'We did not receive a snapshot ID.'
-            if pull_access_denied:
-                raise CLIException(exc_message) \
-                    from PullAccessDeniedException()
-            else:
-                raise CLIException(exc_message)
-        return snapshot_id
-
     def capture_input(self) -> Optional[str]:
         with InputData.from_configuration(
                 self.configuration, self.controller) as input_data:
@@ -219,15 +190,8 @@ class RunExecutionOperation(Operation):
             context_path: str) \
             -> Tuple[Optional[str], bool]:
         configuration = self.configuration
-        execution_spec = {
-            'instance_type': configuration.instance_type,
-            'user': configuration.user,
-            'project': configuration.project,
-            'input_id': input_id,
-            'docker_run_args': configuration.docker_run_args,
-            'instance_max_uptime_in_minutes':
-                configuration.instance_max_uptime_in_minutes,
-        }
+        execution_spec = RunExecutionOperation.create_execution_spec(
+            configuration, input_id)
         instance_market_spec = self.get_instance_market_spec()
         commit = get_head_commit_or_none(context_path)
         response_dicts = self.controller.run_execution(
@@ -265,6 +229,19 @@ class RunExecutionOperation(Operation):
             raise CLIException('We did not receive an execution ID.')
         return execution_id, ok
 
+    @staticmethod
+    def create_execution_spec(
+            configuration: Configuration, input_id: Optional[str]) -> dict:
+        return {
+            'instance_type': configuration.instance_type,
+            'user': configuration.user,
+            'project': configuration.project,
+            'input_id': input_id,
+            'docker_run_args': configuration.docker_run_args,
+            'instance_max_uptime_in_minutes':
+                configuration.instance_max_uptime_in_minutes,
+        }
+
     def get_instance_market_spec(self) -> dict:
         return {
             k: getattr(self.configuration, k)
@@ -300,7 +277,3 @@ def add_detach_command_line_argument(parser):
                         help='Make CLI exit as soon as the job is '
                              'running (does not print logs, or download '
                              'outputs, etc.)')
-
-
-class PullAccessDeniedException(Exception):
-    pass

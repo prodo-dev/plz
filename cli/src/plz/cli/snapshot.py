@@ -1,19 +1,22 @@
-import io
 import itertools
+import json
 import os
+from typing import BinaryIO
 
 import docker.utils
 import glob2
 
 from plz.cli.exceptions import CLIException
 from plz.cli.git import get_ignored_git_files, is_git_present
+from plz.cli.log import log_error
+from plz.controller.api import Controller
 
 
 def capture_build_context(
         image: str, image_extensions: [str], command: str,
         context_path: [str],
         excluded_paths: [str], included_paths: [str],
-        exclude_gitignored_files) -> io.FileIO:
+        exclude_gitignored_files) -> BinaryIO:
     dockerfile_path = os.path.join(context_path, 'plz.Dockerfile')
     dockerfile_created = False
     try:
@@ -114,3 +117,46 @@ def get_context_files(context_path: str, matching_excluded_paths: [str]):
     return docker.utils.build.exclude_paths(
         os.path.abspath(context_path),
         matching_excluded_paths)
+
+
+def submit_context_for_building(
+        user: str,
+        project: str,
+        controller: Controller,
+        build_context: BinaryIO,
+        quiet_build: bool) -> str:
+    metadata = {
+        'user': user,
+        'project': project,
+    }
+    status_json_strings = controller.create_snapshot(
+        metadata, build_context)
+    errors = []
+    snapshot_id: str = None
+    for json_str in status_json_strings:
+        data = json.loads(json_str)
+        if 'stream' in data:
+            if not quiet_build:
+                print(data['stream'], end='', flush=True)
+        if 'error' in data:
+            errors.append(data['error'].rstrip())
+        if 'id' in data:
+            snapshot_id = data['id']
+    if errors or not snapshot_id:
+        log_error('The snapshot was not successfully created.')
+        pull_access_denied = False
+        for error in errors:
+            if error.startswith('pull access denied'):
+                pull_access_denied = True
+            print(error)
+        exc_message = 'We did not receive a snapshot ID.'
+        if pull_access_denied:
+            raise CLIException(exc_message) \
+                from PullAccessDeniedException()
+        else:
+            raise CLIException(exc_message)
+    return snapshot_id
+
+
+class PullAccessDeniedException(Exception):
+    pass
