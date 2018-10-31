@@ -163,7 +163,6 @@ function run_end_to_end_tests() {
       ) &
       pids+=($!)
     else
-      echo Running $test
       "${TEST_DIRECTORY}/run-end-to-end-test" $test || rm -f $success_file
       if $exit_early; then
         rm -f $success_file
