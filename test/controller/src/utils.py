@@ -26,7 +26,9 @@ def create_context_for_example(
         example_type: str,
         example_name: str) -> TestingContext:
     example_dir = os.path.join(
-        dir_of_this_script, '..', 'end-to-end', example_type, example_name)
+        dir_of_this_script, '..', '..', 'end-to-end',
+        example_type,
+        example_name)
     configuration = Configuration.load(example_dir)
     configuration.context_path = example_dir
     server = Server.from_configuration(configuration)
@@ -45,7 +47,7 @@ def create_context_for_example(
             project=configuration.project,
             controller=controller,
             build_context=build_context,
-            quiet_build=False)
+            quiet_build=True)
         return TestingContext(
             configuration=configuration,
             controller=ControllerProxy(server),

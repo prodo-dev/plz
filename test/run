@@ -14,10 +14,7 @@ function start_controller {
   info "Building the controller..."
   docker image build --quiet --tag=$CONTROLLER_IMAGE services/controller
 
-  if container_exists $CONTROLLER_CONTAINER; then
-    warning "Controller already exists. Stopping..."
-    stop_controller
-  fi
+  stop_container $CONTROLLER_CONTAINER
 
   info "Starting the controller..."
   docker_compose up --quiet-pull --detach
@@ -36,39 +33,41 @@ function build_cli {
 }
 
 function run_controller_tests {
+  stop_container $CONTROLLER_TESTS_CONTAINER
+  docker image build --quiet --tag=$CONTROLLER_TESTS_IMAGE --file=$TEST_DIRECTORY/controller/Dockerfile .
   info Running controller tests
   docker run \
-    -v $TEST_DIRECTORY/end-to-end:/end-to-end \
-    -v $TEST_DIRECTORY/controller:/controller_tests \
-    --network=$NETWORK \
-    --env=PLZ_HOST=$PLZ_HOST \
-    --env=PLZ_PORT=$PLZ_PORT \
-    --env=PLZ_USER='plz-test' \
-    --env=PLZ_PROJECT='controller-tests' \
-    --entrypoint pipenv $CLI_BUILDER_IMAGE run nosetests /controller_tests
+      --name $CONTROLLER_TESTS_CONTAINER \
+      -v $TEST_DIRECTORY/end-to-end:/end-to-end \
+      -v $TEST_DIRECTORY/controller:/controller_tests \
+      --network=$NETWORK \
+      --env=PLZ_HOST=$PLZ_HOST \
+      --env=PLZ_PORT=$PLZ_PORT \
+      --env=PLZ_USER='plz-test' \
+      --env=PLZ_PROJECT='controller-tests' \
+      $CONTROLLER_TESTS_IMAGE
 }
 
 function cleanup {
   exit_status=$?
   stop_all_clis
   stop_controller
+  stop_container $CONTROLLER_TESTS_CONTAINER
   remove_all_volumes
   return $exit_status
 }
 
 function stop_all_clis {
   for container in $(docker container ls --quiet --all --filter=name="${CLI_CONTAINER_PREFIX}"); do
-    stop_cli $container
+    stop_container $container
   done
 }
 
-function stop_cli {
-  if ! container_exists $1; then
-    return
-  fi
+function stop_container {
+  ! container_exists $1 && return
   docker container stop $1 > /dev/null || :
   docker container rm $1 > /dev/null || :
-  info "CLI stopped."
+  info "$1 stopped."
 }
 
 function remove_all_volumes {
