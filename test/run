@@ -38,8 +38,6 @@ function run_controller_tests {
   info Running controller tests
   docker run \
       --name $CONTROLLER_TESTS_CONTAINER \
-      -v $TEST_DIRECTORY/end-to-end:/end-to-end \
-      -v $TEST_DIRECTORY/controller:/controller_tests \
       --network=$NETWORK \
       --env=PLZ_HOST=$PLZ_HOST \
       --env=PLZ_PORT=$PLZ_PORT \
