@@ -16,9 +16,8 @@ function start_controller {
 
   stop_container $CONTROLLER_CONTAINER
 
-  export $CONTROLLER_CONTAINER
   info "Starting the controller..."
-  docker_compose up --quiet-pull --detach
+  CONTROLLER_CONTAINER=$CONTROLLER_CONTAINER docker_compose up --quiet-pull --detach
 }
 
 function stop_controller {
