@@ -14,6 +14,7 @@ services:
     extends:
       file: ../docker-compose.base.yml
       service: controller
+    container_name: $CONTROLLER_CONTAINER
     volumes:
       - ./services/controller/config/localhost.conf:/root/server.conf:ro
     depends_on:
