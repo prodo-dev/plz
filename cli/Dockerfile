@@ -6,7 +6,6 @@ RUN mkdir -p /cli/src
 WORKDIR /cli
 
 COPY cli/LICENSE cli/MANIFEST.in cli/README.rst cli/setup.py ./
-
 COPY cli/src /cli/src/
 COPY services/controller/src /services/controller/src/
 RUN python setup.py bdist_wheel
