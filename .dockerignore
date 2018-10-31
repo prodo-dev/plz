@@ -2,6 +2,7 @@
 !cli
 !services/controller
 !test/controller
+!test/end-to-end
 **/*.egg-info
 **/__pycache__
 **/build

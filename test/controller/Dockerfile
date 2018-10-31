@@ -13,6 +13,7 @@ COPY cli/README.rst cli/setup.py cli/Pipfile cli/Pipfile.lock ./
 COPY cli/src /cli/src/
 COPY services/controller/src /services/controller/src/
 COPY test/controller/src /controller_tests/src/
+COPY test/end-to-end /end-to-end/
 
 RUN pipenv sync --dev
 
