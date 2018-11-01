@@ -1,5 +1,5 @@
 # Build
-FROM python:3-slim as builder
+FROM python:3.6-slim as builder
 
 RUN mkdir -p /services/controller/src
 RUN mkdir -p /cli/src

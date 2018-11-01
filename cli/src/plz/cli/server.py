@@ -9,23 +9,24 @@ from plz.cli import ssh_session
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException, RequestException
 from plz.cli.ssh_session import add_ssh_channel_adapter
+from plz.controller.api.exceptions import EXCEPTION_NAMES_TO_CLASSES
 
 
 class Server:
     @staticmethod
     def from_configuration(
-            configuration: Configuration, exception_names_to_classes: dict):
+            configuration: Configuration):
         connection_info = configuration.connection_info
         return Server(
             host=configuration.host,
             port=configuration.port,
-            connection_info=connection_info,
-            exception_names_to_classes=exception_names_to_classes)
+            connection_info=connection_info)
 
     def __init__(self, host: str, port: int,
                  exception_names_to_classes: Optional[dict] = None,
                  connection_info: Optional[dict] = None):
-        self.exceptions_names_to_classes = exception_names_to_classes or {}
+        self.exceptions_names_to_classes = exception_names_to_classes or \
+            EXCEPTION_NAMES_TO_CLASSES
         connection_info = connection_info or {}
         self.schema = connection_info.get('schema', 'http')
         self.connection_info = connection_info

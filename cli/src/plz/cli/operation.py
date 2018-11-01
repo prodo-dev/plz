@@ -6,7 +6,6 @@ from plz.cli.controller_proxy import ControllerProxy
 from plz.cli.exceptions import CLIException
 from plz.cli.server import Server
 from plz.controller.api import Controller
-from plz.controller.api.exceptions import EXCEPTION_NAMES_TO_CLASSES
 
 
 class Operation(ABC):
@@ -17,8 +16,7 @@ class Operation(ABC):
 
     def __init__(self, configuration: Configuration):
         self.configuration = configuration
-        server = Server.from_configuration(
-            configuration, EXCEPTION_NAMES_TO_CLASSES)
+        server = Server.from_configuration(configuration)
         self.controller: Controller = ControllerProxy(server)
         self.user = configuration.user
         self.execution_id = None
