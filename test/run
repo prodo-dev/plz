@@ -17,6 +17,8 @@ function start_controller {
   stop_container $CONTROLLER_CONTAINER
 
   info "Starting the controller..."
+  # Specify the container name, as to avoid the random suffix added
+  # by docker compose
   CONTROLLER_CONTAINER=$CONTROLLER_CONTAINER docker_compose up --quiet-pull --detach
 }
 
@@ -35,7 +37,7 @@ function build_cli {
 function run_controller_tests {
   stop_container $CONTROLLER_TESTS_CONTAINER
   docker image build --quiet --tag=$CONTROLLER_TESTS_IMAGE --file=$TEST_DIRECTORY/controller/Dockerfile .
-  info Running controller tests
+  info "Running controller tests"
   docker run \
       --name $CONTROLLER_TESTS_CONTAINER \
       --network=$NETWORK \
@@ -142,7 +144,7 @@ if (( ${+PLZ_HOST} )) && (( ${+PLZ_PORT} )); then
   NETWORK=host
 else
   start_controller
-  PLZ_HOST=$CONTROLLER_CONTAINER
+  PLZ_HOST=$CONTROLLER_HOSTNAME
   PLZ_PORT=$CONTROLLER_PORT
 fi
 export PLZ_HOST

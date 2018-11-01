@@ -8,6 +8,13 @@ CLI_IMAGE="${PROJECT_NAME}/cli"
 CLI_CONTAINER_PREFIX="${PROJECT_NAME}_cli_"
 CONTROLLER_IMAGE="${PROJECT_NAME}/controller"
 CONTROLLER_CONTAINER="${PROJECT_NAME}_controller_1"
+# Controller hostname as set by docker compose. For each a host, the
+# network includes the service name as well as the container name.
+# It's useful to remember that we can also use the service name, as
+# the container name, by default, includes a random string. The
+# controller just uses "redis" (instead of the redis container name)
+# when referring to the redis host for the same reason
+CONTROLLER_HOSTNAME="controller"
 CONTROLLER_TESTS_IMAGE="${PROJECT_NAME}/controller-tests"
 CONTROLLER_TESTS_CONTAINER="${PROJECT_NAME}_controller-tests_1"
 CONTROLLER_PORT=80
