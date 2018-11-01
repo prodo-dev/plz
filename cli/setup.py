@@ -45,7 +45,7 @@ setup(
         'paramiko >= 2.4.1',
         'prettytable >= 0.7.2',
         'python-dateutil >= 2.7.3',
-        'requests >= 2.19',
+        'requests >= 2.20.0',
         'urllib3 >= 1.23',
     ],
     extras_require={

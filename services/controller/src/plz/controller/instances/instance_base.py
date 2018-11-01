@@ -317,8 +317,8 @@ class InstanceProvider(ABC):
 
     def release_instance(
             self, execution_id: str,
-            fail_if_not_found: bool=True,
-            idle_since_timestamp: Optional[int]=None):
+            fail_if_not_found: bool = True,
+            idle_since_timestamp: Optional[int] = None):
         instance = self.instance_for(execution_id)
         if instance is None:
             if fail_if_not_found:

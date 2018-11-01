@@ -10,7 +10,7 @@ flask = "*"
 gunicorn = "*"
 pyhocon = "*"
 redis = "*"
-requests = "*"
+requests = ">=2.20.0"
 
 [dev-packages]
 "flake8" = "*"

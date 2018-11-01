@@ -167,7 +167,7 @@ class EC2InstanceGroup(InstanceProvider):
         return self._ec2_instance_from_instance_data(instance_data_list[0])
 
     def release_instance(self, execution_id: str,
-                         fail_if_not_found: bool=True,
+                         fail_if_not_found: bool = True,
                          idle_since_timestamp: Optional[int] = None):
         if idle_since_timestamp is None:
             idle_since_timestamp = int(time.time())
