@@ -55,7 +55,9 @@ class ControllerProxy(Controller):
             json={'user': user,
                   'project': project,
                   'execution_id': previous_execution_id,
-                  'instance_market_spec': instance_market_spec})
+                  'instance_market_spec': instance_market_spec,
+                  'instance_max_uptime_in_minutes':
+                      instance_max_uptime_in_minutes})
         _check_status(response, requests.codes.accepted)
         return (json.loads(line) for line in response.iter_lines())
 
