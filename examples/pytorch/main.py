@@ -1,5 +1,6 @@
 import json
 import os
+import time
 
 import argparse
 import torch
@@ -31,9 +32,9 @@ def get_from_plz_config(key: str, non_plz_value: T) -> T:
         return non_plz_value
 
 
-# Parameters when not running via plz (here we just hardcode them, one could
-# read them from the command line instead, or whatever other way)
-NON_PLZ_PARAMETERS = {
+# Default parameters. We use those parameters also when not running via plz
+# (one could read them from the command line instead, etc.)
+DEFAULT_PARAMETERS = {
     'epochs': 30,
     'batch_size': 32,
     'eval_batch_size': 32,
@@ -61,7 +62,8 @@ def is_verbose_from_cl_args() -> bool:
 def write_measures(
         measures_directory: str, epoch: int, training_loss: float,
         accuracy: float):
-    measures_directory
+    with open(os.path.join(measures_directory, f'epoch_{epoch:2d}'), 'w') as f:
+        json.dump({'training_loss': training_loss, 'accuracy': accuracy}, f)
 
 
 def main():
@@ -69,9 +71,18 @@ def main():
 
     is_cuda_available = torch.cuda.is_available()
 
-    input_directory = get_from_plz_config('input_directory', '../data')
+    input_directory = get_from_plz_config(
+        'input_directory', os.path.join('..', 'data'))
     output_directory = get_from_plz_config('output_directory', 'models')
-    parameters = get_from_plz_config('parameters', NON_PLZ_PARAMETERS)
+    parameters = get_from_plz_config('parameters', DEFAULT_PARAMETERS)
+    # If some parameters weren't passed, use default values for them
+    for p in DEFAULT_PARAMETERS:
+        if p not in parameters:
+            parameters[p] = DEFAULT_PARAMETERS[p]
+    measures_directory = get_from_plz_config('measures_directory', 'measures')
+    summary_measures_path = get_from_plz_config(
+        'summary_measures_path',
+        os.path.join('measures', 'summary'))
 
     device = torch.device('cuda' if is_cuda_available else 'cpu')
 
@@ -92,7 +103,11 @@ def main():
         learning_rate=parameters['learning_rate'],
         momentum=parameters['momentum']).to(device)
 
+    training_time_start = time.time()
+
     max_accuracy = 0
+    training_loss_at_max = 0
+    epoch_at_max = 0
     for epoch in range(1, parameters['epochs'] + 1):
         loss = model.epoch(training_loader)
 
@@ -102,12 +117,25 @@ def main():
             print(
                 f'Evaluation accuracy: {accuracy:.2f} '
                 f'(max {max_accuracy:.2f})')
+
+        write_measures(measures_directory, epoch=epoch, training_loss=loss,
+                       accuracy=accuracy)
+
         if accuracy > max_accuracy:
             max_accuracy = accuracy
+            training_loss_at_max = loss
+            epoch_at_max = epoch
             print(f'Best model found at epoch {epoch}, '
                   f'with accurary {accuracy:.2f}')
             torch.save(model.state_dict(),
                        os.path.join(output_directory, 'le_net.pth'))
+
+    with open(summary_measures_path, 'w') as f:
+        json.dump({'max_accuracy': max_accuracy,
+                   'training_loss_at_max': training_loss_at_max,
+                   'epoch_at_max': epoch_at_max,
+                   'training_time': time.time() - training_time_start},
+                  f)
 
 
 if __name__ == '__main__':
