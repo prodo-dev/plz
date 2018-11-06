@@ -366,7 +366,7 @@ instances remaining. For maximum assurance, you can check your instances in
 the AWS console.*
 
 
-# Pytorch
+### Pytorch
 
 In the directory `plz/examples/pytorch` there's a full-fledged example that
 shows how to do the classical training for character recognition using
@@ -442,7 +442,7 @@ If you're running the controller that run jobs locally (as opposed to
 AWS) to might need to install the NVIDIA docker runtime (see
 `https://github.com/NVIDIA/nvidia-docker`).
 
-# Python
+### Python
 
 In the directory `plz/examples/python` there is a minimal example showing
 how to do input and output with `plz`. Doing just `plz run` should start the
