@@ -6,7 +6,8 @@
     "project": "pytorch-mnist-example",
     "command": ["python", "main.py", "--verbose"],
     "input": "file://../data/mnist",
-    "instance_type": "t2.medium",
+    "instance_type": "p2.xlarge",
     "instance_max_idle_time_in_minutes": 5,
-    "max_bid_price_in_dollars_per_hour": 1
+    "max_bid_price_in_dollars_per_hour": 2,
+    "docker_run_args": {"runtime": "nvidia"}
 }
