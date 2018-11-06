@@ -1,7 +1,6 @@
 {
     "host": "localhost",
     "port": 5123,
-    "connection_info": {},
     "image": "python:3-slim",
     "user": "some-person-trying",
     "project": "trying-a-project",
