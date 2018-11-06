@@ -22,7 +22,7 @@ as shown for this example (that is provided in this repository as well):
 sergio@sergio:~/plz/examples/pytorch$ plz run
 👌 Capturing the files in /home/sergio/plz/examples/pytorch
 👌 Building the program snapshot
-Step 1/4 : FROM prodoai/plz\_ml-pytorch
+Step 1/4 : FROM prodoai/plz_ml-pytorch
 # Executing 3 build triggers
  ---> Using cache
 [...]
@@ -56,14 +56,14 @@ Evaluation accuracy: 97.50 (max 98.10)
 👌 Harvesting the output...
 👌 Retrieving summary of measures (if present)...
 {
-  "max\_accuracy": 98.1,
-  "training\_loss\_at\_max": 0.008485347032546997,
-  "epoch\_at\_max": 25,
-  "training\_time": 43.3006055355072
+  "max_accuracy": 98.1,
+  "training_loss_at_max": 0.008485347032546997,
+  "epoch_at_max": 25,
+  "training_time": 43.3006055355072
 }
 👌 Execution succeeded.
 👌 Retrieving the output...
-le\_net.pth
+le_net.pth
 👌 Done and dusted.
 ```
 
@@ -105,13 +105,13 @@ hexadecimal number you see in the output, next to `plz logs`, is the execution
 ID you can use to refer to this execution. `plz` remembers the last execution
 that was *started*, and if you want to refer to that one you don't need to
 include it in our command. But if you need to specify the execution id,
-you can do `plz logs <execution\_id>`.
+you can do `plz logs <execution_id>`.
 
 Once your program has finished (or once you have stopped with `plz stop`) you
 can do `plz output`, and it will download the files that your program has
 written (you need to tell your program to write in a specific directory. `plz`
 sets an environment variable that you can use as to know where to write).
-The files are saved under `output/<execution\_id>`.
+The files are saved under `output/<execution_id>`.
 
 The instance will be kept there for some time (specified in `plz.config.json`)
 in case you're running things interactively (so that you don't need to wait
@@ -121,7 +121,7 @@ You can use `plz describe` to print metadata about an execution in json format.
 It's useful to tell one execution from another if you have several running
 at the same time.
 
-You can use `plz run --parameters a\_json\_file.json` to pass parameters
+You can use `plz run --parameters a_json_file.json` to pass parameters
 to your program. Passing parameters this way has the advantage
 that the parameters are stored in the metadata and can be queried.
 
@@ -478,7 +478,7 @@ See the CLI's [*README.rst*](https://github.com/prodo-ai/plz/blob/master/cli/REA
 2. Install [direnv](https://direnv.net/).
 3. Create a *.envrc* file in the root of this repository:
    ```
-   export SECRETS\_DIR="${PWD}/secrets"
+   export SECRETS_DIR="${PWD}/secrets"
    ```
 4. Create a configuration file named *secrets/config.json* based on *example.config.json*.
 5. Run `make deploy`.
