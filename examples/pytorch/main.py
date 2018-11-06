@@ -24,7 +24,6 @@ def get_from_plz_config(key: str, non_plz_value: T) -> T:
     """
     configuration_file = os.environ.get('CONFIGURATION_FILE', None)
     if configuration_file is not None:
-        print('Running with plz!', flush=True)
         with open(configuration_file) as c:
             config = json.load(c)
         return config[key]
