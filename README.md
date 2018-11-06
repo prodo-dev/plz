@@ -12,41 +12,59 @@ next versions.*
 We offer more details below on how to setup `plz` and run your jobs, but we can
 start by giving you an overview of what `plz` does.
 
-`plz` offers a command-line interface. You can add a `plz.config.json` file
-to the directory where you have your source code. This file contains, among
-other things, the command you run to put your program to work (for instance,
-`python main.py`). Then, you can run commands like `plz run`:
+`plz` offers a command-line interface. You start by adding a `plz.config.json`
+file to the directory where you have your source code. This file contains,
+among other things, the command you run to put your program to work (for
+instance, `python main.py`). Then, you can run commands like `plz run`,
+as shown for this example (that is provided in this repository as well):
 
 ```
-sergio-prodo@sergio:~/plz/examples/python$ plz run
-👌 Capturing the files in /home/sergio-prodo/plz/examples/python
+sergio@sergio:~/plz/examples/pytorch$ plz run
+👌 Capturing the files in /home/sergio/plz/examples/pytorch
 👌 Building the program snapshot
-Step 1/4 : FROM python:3-slim
- ---> 7bf3b26249fa
+Step 1/4 : FROM prodoai/plz\_ml-pytorch
+# Executing 3 build triggers
+ ---> Using cache
 [...]
-Removing intermediate container 08951133db14
- ---> 8c7fceb87231
-Successfully built 8c7fceb87231
-Successfully tagged plz/builds:some-person-trying-trying-a-project-1531847873426
+---> 9c39e889659d
+Successfully built 9c39e889659d
+Successfully tagged 024444204267.dkr.ecr.eu-west-1.amazonaws.com/plz/builds:some-person-trying-pytorch-mnist-example-1541436382135
 👌 Capturing the input
-👌 147 input bytes to upload
+👌 983663 input bytes to upload
 👌 Sending request to start execution
 Instance status: querying availability
 Instance status: requesting new instance
-Instance status: waiting for the instance to be ready
 Instance status: pending
 [...]
-👌 Execution ID is: 58a80ffa-89e5-11e8-a1ca-2554f21c13fe
+Instance status: starting container
+Instance status: running
+👌 Execution ID is: 55b66652-e11a-11e8-a36a-233ad251f4c1
 👌 Streaming logs...
-Running with plz!
-We are in the quest of finding a mysterious value for k.
-The value happens to be 1/3, but don't tell anyone.
-Running with plz!
-k: 0.0
-k: 0.54
-Best model so far! Saving
-k: 0.5344
+Using device: cuda
+Epoch: 1 Traning loss: 2.146302
+Evaluation accuracy: 47.90 (max 0.00)
+Best model found at epoch 1, with accurary 47.90
+Epoch: 2 Traning loss: 0.660179
+Evaluation accuracy: 83.30 (max 47.90)
+Best model found at epoch 2, with accurary 83.30
+Epoch: 3 Traning loss: 0.251717
+Evaluation accuracy: 87.80 (max 83.30)
+Best model found at epoch 3, with accurary 87.80
 [...]
+Epoch: 30 Traning loss: 0.010750
+Evaluation accuracy: 97.50 (max 98.10)
+👌 Harvesting the output...
+👌 Retrieving summary of measures (if present)...
+{
+  "max\_accuracy": 98.1,
+  "training\_loss\_at\_max": 0.008485347032546997,
+  "epoch\_at\_max": 25,
+  "training\_time": 43.3006055355072
+}
+👌 Execution succeeded.
+👌 Retrieving the output...
+le\_net.pth
+👌 Done and dusted.
 ```
 
 You can see that the command:
@@ -61,12 +79,15 @@ for a second time (based on timestamps and hashes)
 - starts an AWS instance, and waits until it's ready (or just runs the
 execution locally depending on the configuration)
 - streams the logs the same as if you were running your program directly
+- shows metrics you collected during the run, such as accuracy and loss (you
+can query those later)
+- downloads output files you might have created.
 
-You can be patient and wait until it works, but you can also hit `Ctrl-C` and
-stop the program early:
+You can be patient and wait until it finishes, but you can also hit `Ctrl-C`
+and stop the program early:
 
 ```
-k: 0.5209
+Epoch: 9 Traning loss: 0.330538
 ^C
 👌 Your program is still running. To stream the logs, type:
 
@@ -84,40 +105,24 @@ hexadecimal number you see in the output, next to `plz logs`, is the execution
 ID you can use to refer to this execution. `plz` remembers the last execution
 that was *started*, and if you want to refer to that one you don't need to
 include it in our command. But if you need to specify the execution id,
-you can do `plz logs <execution_id>`.
+you can do `plz logs <execution\_id>`.
 
 Once your program has finished (or once you have stopped with `plz stop`) you
 can do `plz output`, and it will download the files that your program has
 written (you need to tell your program to write in a specific directory. `plz`
 sets an environment variable that you can use as to know where to write).
-The files are saved under `output/<execution_id>`.
-
-`plz output` is also executed if the program finishes:
-```
-k: 0.3333
-Best model so far! Saving
-k: 0.3333
-k: 0.3333
-👌 Harvesting the output...
-👌 Retrieving summary of measures (if present)...
-👌 Execution succeeded.
-👌 Retrieving the output...
-model.json
-👌 Done and dusted.
-```
+The files are saved under `output/<execution\_id>`.
 
 The instance will be kept there for some time (specified in `plz.config.json`)
 in case you're running things interactively (so that you don't need to wait
 while the instance goes through the startup process again).
 
-Use `plz describe` to print metadata about an execution in json format.
+You can use `plz describe` to print metadata about an execution in json format.
 It's useful to tell one execution from another if you have several running
 at the same time.
 
-You can use `plz run --parameters a_json_file.json` to pass parameters
-(such as learning rate, layer size, etc.) to your program.
-See `test/end-to-end/parameters/simple` as to see how to access those
-parameters from your program. Passing parameters this way has the advantage
+You can use `plz run --parameters a\_json\_file.json` to pass parameters
+to your program. Passing parameters this way has the advantage
 that the parameters are stored in the metadata and can be queried.
 
 There's also `plz history`, returning a json mapping from execution ids to
@@ -127,6 +132,31 @@ You can store there things you've measured during your experiment (for
 instance, training loss). Parameters will be in the metadata as well, so
 you can query the json output using, for instance, `jq` and get to see how
 your training loss changed as you changed your parameters.
+
+```
+{
+  "execution_id": "dafcb478-e11e-11e8-9f2c-87dc520968d5",
+  "learning_rate": 0.01,
+  "accuracy": 98
+}
+{
+  "execution_id": "9cfd3f1a-e1cf-11e8-9449-b1cc03bcdb5f",
+  "learning_rate": 0.1,
+  "accuracy": 98.5
+}
+{
+  "execution_id": "c0d65d66-e1cf-11e8-8ed8-0d6f99ec4bc3",
+  "learning_rate": 0.5,
+  "accuracy": 13
+}
+```
+
+In this example, you can see that increasing the learning rate from
+`0.01` to `0.1` gives you an improvement in accuracy from `98` to `98.5`,
+but further increasing the learning rate leads to a disastrous decrease
+to `13` (by the way, this is the classic digit recognition example using
+LeNets, using a subset of the MNIST set. So this means only 13% of characters
+recognised correctly).
 
 You can do `plz list` to list the running executions and the instances that
 are up in AWS. It also shows the instance ids. You can kill instances with
@@ -200,7 +230,7 @@ A full list of instructions for Ubuntu is listed below (we use the tool in both
 Ubuntu and Mac), but in summary you need to: install docker; install
 docker-compose; install the aws CLI, and configure it with your Access key;
 `git clone https://github.com/prodo-ai/plz.git`; install the cli by running 
-`./install_cli` inside the `plz/` directory; run the controller with a script
+`./install\_cli` inside the `plz/` directory; run the controller with a script
 we provide.
 
 ### Local configuration
@@ -212,7 +242,7 @@ the local configuration first.
 The following instructions suffice as to get the local controller working on a
 fresh Ubuntu 18.04 installation.
 
-*Note: the command `./start_local_controller` will take some time the first
+*Note: the command `./start\_local\_controller` will take some time the first
 time it's run, as it downloads a whole pytorch environment to be used by docker,
 including anaconda and a lot of bells and whistles*
 
@@ -243,7 +273,7 @@ cd plz
 
 # Install the cli
 
-./install_cli
+./install\_cli
 
 # Start a new terminal so that the current user is in the docker group,
 # and the plz executable is in the path (pip3 will put it in $HOME/.local/bin)
@@ -263,13 +293,13 @@ docker ps
 # detailed below. This runs detached and spits the output to the terminal.
 # You might want to run it in a different terminal (remember `cd plz/`).
 
-./start_local_controller
+./start\_local\_controller
 
 ```
 
 The controller can be stopped at any time with:
 ```
-./stop_controller
+./stop\_controller
 ```
 
 
@@ -279,13 +309,13 @@ You need to do all the steps above, except for starting the controller. The
 additional steps for using AWS are below.
 
 *Note: the command
-`./start_aws_controller` will take some time the first time it's run, as it
+`./start\_aws\_controller` will take some time the first time it's run, as it
 downloads a whole pytorch environment to be used in docker (unless you've run
 the local configuration before) and also uploads that your AWS infrastructure
 so that it's ready for your instances to use*
 
 *Note: if you usually use AWS in a particular region, please edit
-aws_config/config.json and set your region there. The default file sets the
+aws\_config/config.json and set your region there. The default file sets the
 region to eu-west-1, Ireland.*
 
 
@@ -304,10 +334,10 @@ aws ec2 describe-instances --region eu-west-1
 
 # Start the AWS controller. This runs detached and spits the output to the
 # terminal. You might want to run it in a different terminal (remember
-# `cd plz/`). Remember to edit `aws_config/config.json` to set your region,
+# `cd plz/`). Remember to edit `aws\_config/config.json` to set your region,
 # unless you want eu-west-1.
 
-./start_aws_controller
+./start\_aws\_controller
 ```
 
 ## Example
@@ -319,12 +349,12 @@ which this documentation doesn't cover yet.
 
 *Note: if you want to run the example using the AWS instances, be aware that
 this has a cost. You can change the value of
-`"max_bid_price_in_dollars_per_hour": N` in `plz.config.json` to any value
+`"max\_bid\_price\_in\_dollars\_per\_hour": N` in `plz.config.json` to any value
 you like. The example takes around 5 minutes to run.
 The value in the provided file is 0.5 dollars/hour. See the following note as
 well.*
 
-*Note: unless you add `"instance_max_uptime_in_minutes": null,` to your
+*Note: unless you add `"instance\_max\_uptime\_in\_minutes": null,` to your
 `plz.config.json`, the instance terminates after 60 minutes.  That's on
 purpose, in case you're just trying the tool and something doesn't go well
 (like, there's a power cut). You can always use `plz list` and `plz kill`
@@ -336,7 +366,7 @@ If you've followed the installation instructions, doing just
 
 In case you want to use pytorch, you can run an alternative configuration
 file with `plz -c plz.pytorch.config.json`. This file uses a different
-base image (`prodoai/plz_ml-pytorch`), uses an instance type with a gpu
+base image (`prodoai/plz\_ml-pytorch`), uses an instance type with a gpu
 (`p2.xlarge`) and increases the bid price to 2 dollars/hour.
 
 
@@ -367,7 +397,7 @@ See the CLI's [*README.rst*](https://github.com/prodo-ai/plz/blob/master/cli/REA
 2. Install [direnv](https://direnv.net/).
 3. Create a *.envrc* file in the root of this repository:
    ```
-   export SERCRETS_DIR="${PWD}/secrets"
+   export SECRETS\_DIR="${PWD}/secrets"
    ```
 4. Create a configuration file named *secrets/config.json* based on *example.config.json*.
 5. Run `make deploy`.
