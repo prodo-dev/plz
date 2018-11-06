@@ -230,7 +230,7 @@ A full list of instructions for Ubuntu is listed below (we use the tool in both
 Ubuntu and Mac), but in summary you need to: install docker; install
 docker-compose; install the aws CLI, and configure it with your Access key;
 `git clone https://github.com/prodo-ai/plz.git`; install the cli by running 
-`./install\_cli` inside the `plz/` directory; run the controller with a script
+`./install_cli` inside the `plz/` directory; run the controller with a script
 we provide.
 
 ### Local configuration
@@ -242,7 +242,7 @@ the local configuration first.
 The following instructions suffice as to get the local controller working on a
 fresh Ubuntu 18.04 installation.
 
-*Note: the command `./start\_local\_controller` will take some time the first
+*Note: the command `./start_local_controller` will take some time the first
 time it's run, as it downloads a whole pytorch environment to be used by docker,
 including anaconda and a lot of bells and whistles*
 
@@ -273,7 +273,7 @@ cd plz
 
 # Install the cli
 
-./install\_cli
+./install_cli
 
 # Start a new terminal so that the current user is in the docker group,
 # and the plz executable is in the path (pip3 will put it in $HOME/.local/bin)
@@ -293,13 +293,13 @@ docker ps
 # detailed below. This runs detached and spits the output to the terminal.
 # You might want to run it in a different terminal (remember `cd plz/`).
 
-./start\_local\_controller
+./start_local_controller
 
 ```
 
 The controller can be stopped at any time with:
 ```
-./stop\_controller
+./stop_controller
 ```
 
 
@@ -309,13 +309,13 @@ You need to do all the steps above, except for starting the controller. The
 additional steps for using AWS are below.
 
 *Note: the command
-`./start\_aws\_controller` will take some time the first time it's run, as it
+`./start_aws_controller` will take some time the first time it's run, as it
 downloads a whole pytorch environment to be used in docker (unless you've run
 the local configuration before) and also uploads that your AWS infrastructure
 so that it's ready for your instances to use*
 
 *Note: if you usually use AWS in a particular region, please edit
-aws\_config/config.json and set your region there. The default file sets the
+aws_config/config.json and set your region there. The default file sets the
 region to eu-west-1, Ireland.*
 
 
@@ -334,10 +334,10 @@ aws ec2 describe-instances --region eu-west-1
 
 # Start the AWS controller. This runs detached and spits the output to the
 # terminal. You might want to run it in a different terminal (remember
-# `cd plz/`). Remember to edit `aws\_config/config.json` to set your region,
+# `cd plz/`). Remember to edit `aws_config/config.json` to set your region,
 # unless you want eu-west-1.
 
-./start\_aws\_controller
+./start_aws_controller
 ```
 
 ## Example
@@ -349,12 +349,12 @@ which this documentation doesn't cover yet.
 
 *Note: if you want to run the example using the AWS instances, be aware that
 this has a cost. You can change the value of
-`"max\_bid\_price\_in\_dollars\_per\_hour": N` in `plz.config.json` to any value
+`"max_bid_price_in_dollars_per_hour": N` in `plz.config.json` to any value
 you like. The example takes around 5 minutes to run.
 The value in the provided file is 0.5 dollars/hour. See the following note as
 well.*
 
-*Note: unless you add `"instance\_max\_uptime\_in\_minutes": null,` to your
+*Note: unless you add `"instance_max_uptime_in_minutes": null,` to your
 `plz.config.json`, the instance terminates after 60 minutes.  That's on
 purpose, in case you're just trying the tool and something doesn't go well
 (like, there's a power cut). You can always use `plz list` and `plz kill`
@@ -366,7 +366,7 @@ If you've followed the installation instructions, doing just
 
 In case you want to use pytorch, you can run an alternative configuration
 file with `plz -c plz.pytorch.config.json`. This file uses a different
-base image (`prodoai/plz\_ml-pytorch`), uses an instance type with a gpu
+base image (`prodoai/plz_ml-pytorch`), uses an instance type with a gpu
 (`p2.xlarge`) and increases the bid price to 2 dollars/hour.
 
 
