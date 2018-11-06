@@ -1,4 +1,6 @@
 {
+    "host": "localhost",
+    "port": 5123,
     "image": "prodoai/plz_ml-pytorch",
     "user": "some-person-trying",
     "project": "pytorch-mnist-example",
