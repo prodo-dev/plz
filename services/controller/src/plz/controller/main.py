@@ -166,6 +166,7 @@ def rerun_execution_entrypoint():
     # moment, there'll be surprises if we do not honor the current
     # configuration
     instance_market_spec = request.json['instance_market_spec']
+    override_parameters = request.json['override_parameters']
 
     @_json_stream
     @stream_with_context
@@ -173,6 +174,7 @@ def rerun_execution_entrypoint():
         yield from controller.rerun_execution(
             user, project,
             instance_max_uptime_in_minutes,
+            override_parameters,
             previous_execution_id, instance_market_spec)
     return Response(
         act(), mimetype='text/plain', status=requests.codes.accepted)
