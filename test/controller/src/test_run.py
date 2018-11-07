@@ -1,6 +1,6 @@
 import unittest
 
-from utils import run_example
+from .utils import run_example
 
 
 class TestRun(unittest.TestCase):
