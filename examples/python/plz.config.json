@@ -5,7 +5,7 @@
     "user": "some-person-trying",
     "project": "trying-a-project",
     "command": ["python", "main.py", "600"],
-    "input": "file://../data",
+    "input": "file://../data/python_example",
     "instance_type": "t2.micro",
     "instance_max_idle_time_in_minutes": 2,
     "max_bid_price_in_dollars_per_hour": 0.5
