@@ -138,7 +138,7 @@ exit_early=false
 trap 'exit_early=true; cleanup' EXIT INT TERM
 
 mkdir -p $DATA_DIRECTORY
-if $all_test || $end_to_end; then
+if $all_tests || $end_to_end; then
   build_cli
 fi
 
