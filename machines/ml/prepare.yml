@@ -87,9 +87,10 @@
     - name: Configure the Docker daemon to open itself over TCP
       copy:
         dest: /etc/systemd/system/docker.service.d/override.conf
-        # Note we aren't using -H fd:// anymore. That is needed for socket
-        # activation. At some point (from ami 2018-10-03 to 2018-11-08),
-        # docker.socket is not present anymore, so socket activation doesn't
+        # Note we aren't using -H fd:// , which is kind of standard. That
+        # flag is needed in order to use socket activation from systemd. At
+        # some point (from ami 2018-10-03 to 2018-11-08), the docker.socket
+        # file is not present anymore, so socket activation doesn't
         # work out of the box. It seems we don't care about socket activation
         # anyway
         content: |
