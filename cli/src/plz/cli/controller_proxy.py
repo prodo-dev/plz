@@ -48,6 +48,7 @@ class ControllerProxy(Controller):
     def rerun_execution(
             self, user: str, project: str,
             instance_max_uptime_in_minutes: Optional[int],
+            override_parameters: Optional[dict],
             previous_execution_id: str,
             instance_market_spec: dict) -> Iterator[dict]:
         response = self.server.post(
@@ -56,6 +57,7 @@ class ControllerProxy(Controller):
                   'project': project,
                   'execution_id': previous_execution_id,
                   'instance_market_spec': instance_market_spec,
+                  'override_parameters': override_parameters,
                   'instance_max_uptime_in_minutes':
                       instance_max_uptime_in_minutes})
         _check_status(response, requests.codes.accepted)

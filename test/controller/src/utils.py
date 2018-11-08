@@ -82,3 +82,27 @@ def run_example(
         RunExecutionOperation.get_execution_id_from_start_response(
             response_dicts)
     return context, execution_id
+
+
+def rerun_execution(
+        controller: Controller,
+        user: str,
+        project: str,
+        previous_execution_id: str,
+        override_parameters: Optional[dict] = None,
+        instance_max_uptime_in_minutes: Optional[int] = None,
+        instance_market_spec: dict = None) -> Tuple[Controller, str]:
+    instance_market_spec = instance_market_spec \
+        if instance_market_spec is not None else {}
+    response_dicts = controller.rerun_execution(
+        user=user,
+        project=project,
+        instance_max_uptime_in_minutes=instance_max_uptime_in_minutes,
+        override_parameters=override_parameters,
+        previous_execution_id=previous_execution_id,
+        instance_market_spec=instance_market_spec)
+
+    execution_id, _ = \
+        RunExecutionOperation.get_execution_id_from_start_response(
+            response_dicts)
+    return controller, execution_id

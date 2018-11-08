@@ -138,7 +138,9 @@ exit_early=false
 trap 'exit_early=true; cleanup' EXIT INT TERM
 
 mkdir -p $DATA_DIRECTORY
-build_cli
+if $all_tests || $end_to_end; then
+  build_cli
+fi
 
 if (( ${+PLZ_HOST} )) && (( ${+PLZ_PORT} )); then
   NETWORK=host

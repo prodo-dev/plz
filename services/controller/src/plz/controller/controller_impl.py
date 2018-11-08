@@ -109,6 +109,7 @@ class ControllerImpl(Controller):
     def rerun_execution(
             self, user: str, project: str,
             instance_max_uptime_in_minutes: Optional[int],
+            override_parameters: Optional[dict],
             previous_execution_id: str,
             instance_market_spec: dict) -> Iterator[dict]:
         start_metadata = self.db_storage.retrieve_start_metadata(
@@ -116,7 +117,11 @@ class ControllerImpl(Controller):
 
         command = start_metadata['command']
         snapshot_id = start_metadata['snapshot_id']
-        parameters = start_metadata['parameters']
+        if override_parameters is not None:
+            parameters = override_parameters
+            start_metadata['parameters'] = override_parameters
+        else:
+            parameters = start_metadata['parameters']
         execution_spec = start_metadata['execution_spec']
         execution_spec['user'] = user
         execution_spec['project'] = project
