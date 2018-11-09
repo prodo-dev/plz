@@ -41,17 +41,17 @@ Instance status: running
 👌 Execution ID is: 55b66652-e11a-11e8-a36a-233ad251f4c1
 👌 Streaming logs...
 Using device: cuda
-Epoch: 1 Traning loss: 2.146302
+Epoch: 1. Training loss: 2.146302
 Evaluation accuracy: 47.90 (max 0.00)
 Best model found at epoch 1, with accurary 47.90
-Epoch: 2 Traning loss: 0.660179
+Epoch: 2. Training loss: 0.660179
 Evaluation accuracy: 83.30 (max 47.90)
 Best model found at epoch 2, with accurary 83.30
-Epoch: 3 Traning loss: 0.251717
+Epoch: 3. Training loss: 0.251717
 Evaluation accuracy: 87.80 (max 83.30)
 Best model found at epoch 3, with accurary 87.80
 [...]
-Epoch: 30 Traning loss: 0.010750
+Epoch: 30. Traning loss: 0.010750
 Evaluation accuracy: 97.50 (max 98.10)
 👌 Harvesting the output...
 👌 Retrieving summary of measures (if present)...
@@ -79,8 +79,8 @@ for a second time (based on timestamps and hashes)
 - starts an AWS instance, and waits until it's ready (or just runs the
 execution locally depending on the configuration)
 - streams the logs the same as if you were running your program directly
-- shows metrics you collected during the run, such as accuracy and loss (you
-can query those later)
+- shows metrics you collected during the run, such as _accuracy_ and _loss_
+(you can query those later)
 - downloads output files you might have created.
 
 You can be patient and wait until it finishes, but you can also hit `Ctrl-C`
@@ -173,9 +173,17 @@ are up in AWS. It also shows the instance ids. You can kill instances with
 `plz kill -i <instance-id>`.
 
 The command `plz last` is useful, particularly when writing shell commands,
-to refer to the last execution _started_.
+to get the last execution _started_.
 
-Finally, `plz rerun` allows you to rerun a job given an execution id.
+We also make it easy to manage dependencies for projects using conda.
+Projects using the image `prodoai/plz_ml-pytorch` need to have
+an `environment.yml` file, as the one produced by `conda env export`
+(see
+[the one in the Pytorch example](examples/pytorch/environment.yml)).
+This file will be applied on top of
+[the environment in the image](base-images/ml-pytorch/environment.yml).
+Installation of dependencies is cached, so the process of dependency
+installation occurs only the first time after you change the environment file.
 
 ### Functionality summary
 
@@ -377,9 +385,9 @@ the AWS console.*
 
 ### Pytorch
 
-In the directory `plz/examples/pytorch` there's a full-fledged example that
-shows how to do the classical training for character recognition using
-LeNets, using a subset of the well-known MNIST dataset. There's a simple
+In the directory `plz/examples/pytorch` there's a full-fledged example
+for the task of digit recognition using the classic approach of
+LeNets and a subset of the well-known MNIST dataset. There's also a simple
 example using only python, described in the section below.
 
 Anything related to `plz` is in `main.py`. In fact the most relevant lines
