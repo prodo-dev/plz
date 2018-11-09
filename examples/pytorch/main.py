@@ -112,7 +112,7 @@ def main():
 
         accuracy = model.evaluation(eval_loader)
         if is_verbose:
-            print(f'Epoch: {epoch} Traning loss: {loss:.6f}')
+            print(f'Epoch: {epoch}. Training loss: {loss:.6f}')
             print(
                 f'Evaluation accuracy: {accuracy:.2f} '
                 f'(max {max_accuracy:.2f})')

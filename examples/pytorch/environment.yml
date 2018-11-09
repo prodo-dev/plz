@@ -1,1 +1,5 @@
 name: default
+channels:
+  - defaults
+dependencies:
+  - numpy=1.14.2=py36_blas_openblas_200

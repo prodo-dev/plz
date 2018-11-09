@@ -173,9 +173,17 @@ are up in AWS. It also shows the instance ids. You can kill instances with
 `plz kill -i <instance-id>`.
 
 The command `plz last` is useful, particularly when writing shell commands,
-to refer to the last execution _started_.
+to get the last execution _started_.
 
-Finally, `plz rerun` allows you to rerun a job given an execution id.
+We also make it easy to manage dependencies for projects using conda.
+Projects using the image `prodoai/plz_ml-pytorch` need to have
+an `environment.yml` file, as the one produced by `conda env export`
+(see
+[a link](the one in the Pytorch example)(examples/pytorch/environment.yml)).
+This file will be applied on top of
+[a link](the environment in the image)(base-images/ml-pytorch/environment.yml).
+Installation of dependencies is cached, so the process of dependency
+installation occurs only the first time after you change the environment file.
 
 ### Functionality summary
 
