@@ -1,6 +1,7 @@
 version: "2.3"
 
 services:
+  # Service to be extended, not meant to be used directly
   controller_localhost_no_dependencies:
     extends:
       file: ./docker-compose.base.yml
@@ -12,14 +13,21 @@ services:
       - ./cache/controller:/data
       - ./cache/results:/data/results
 
+  # Runs a controller locally, that launches jobs in local docker containers,
+  # from a prebuilt image
   controller_localhost:
     extends: controller_localhost_no_dependencies
     links:
       - "redis_localhost:redis"
+    volumes:
+      - ${SECRETS_DIR}/config.json:/root/config.json:ro
+      - ${HOME}/.aws:/root/.aws
     depends_on:
       redis_localhost:
         condition: service_started
 
+  # Runs a controller locally, that launches jobs in local docker containers,
+  # from a prebuilt image
   prebuilt_controller_localhost:
     image: prodoai/plz_controller:timestamp_${BUILD_TIMESTAMP}
     extends: controller_localhost_no_dependencies
@@ -29,6 +37,7 @@ services:
       redis_localhost:
         condition: service_started
 
+  # Service to be extended, not meant to be used directly
   controller_aws_no_dependencies:
     extends:
       file: ./docker-compose.base.yml
@@ -40,6 +49,8 @@ services:
       - ./cache/controller:/data
       - ./cache/results:/data/results
 
+  # Runs a controller hosted in an aws instance, that launches instances in
+  # aws
   controller_aws:
     extends:
       service: controller_aws_no_dependencies
@@ -52,6 +63,27 @@ services:
       redis:
         condition: service_started
 
+  # Runs a local controller that launches instances in aws, built with the
+  # present code (as opposed to a prebuilt controller)
+  local_controller_aws:
+    extends:
+      service: controller_aws_no_dependencies
+    ports:
+      - ${PORT:-6000}:80
+    volumes:
+      - ${SECRETS_DIR}/config.json:/root/config.json:ro
+      - ./services/controller/config/localserver.conf:/root/server.conf:ro
+      - ${HOME}/.aws:/root/.aws
+    links:
+      - "redis_localhost:redis"
+    depends_on:
+      redis_localhost:
+        condition: service_started
+      harvester:
+        condition: service_started
+
+  # Runs a local controller that launches instances in aws, from a prebuilt
+  # image
   prebuilt_local_controller_aws:
     image: prodoai/plz_controller:timestamp_${BUILD_TIMESTAMP}
     extends:
@@ -83,6 +115,7 @@ services:
     volumes: 
       - ./cache/redis_data:/data
 
+  # Language of the mad
   harvester:
     image: plz/harvester
     environment:
