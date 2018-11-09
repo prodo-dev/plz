@@ -179,9 +179,9 @@ We also make it easy to manage dependencies for projects using conda.
 Projects using the image `prodoai/plz_ml-pytorch` need to have
 an `environment.yml` file, as the one produced by `conda env export`
 (see
-[a link](the one in the Pytorch example)(examples/pytorch/environment.yml)).
+[a relative link](the one in the Pytorch example)(examples/pytorch/environment.yml)).
 This file will be applied on top of
-[a link](the environment in the image)(base-images/ml-pytorch/environment.yml).
+[a relative link](the environment in the image)(base-images/ml-pytorch/environment.yml).
 Installation of dependencies is cached, so the process of dependency
 installation occurs only the first time after you change the environment file.
 
