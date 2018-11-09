@@ -87,10 +87,16 @@
     - name: Configure the Docker daemon to open itself over TCP
       copy:
         dest: /etc/systemd/system/docker.service.d/override.conf
+        # Note we aren't using -H fd:// , which is kind of standard. That
+        # flag is needed in order to use socket activation from systemd. At
+        # some point (from ami 2018-10-03 to 2018-11-08), the docker.socket
+        # file is not present anymore, so socket activation doesn't
+        # work out of the box. It seems we don't care about socket activation
+        # anyway
         content: |
           [Service]
           ExecStart=
-          ExecStart=/usr/bin/dockerd -H fd:// -H unix:///var/run/docker.sock -H tcp://0.0.0.0:2375
+          ExecStart=/usr/bin/dockerd -H unix:///var/run/docker.sock -H tcp://0.0.0.0:2375
     - name: Grab the Docker GPG keys
       shell: |
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
@@ -137,8 +143,8 @@
         name: nvidia-docker2
     - name: Download cuda driver
       get_url:
-        url: http://us.download.nvidia.com/XFree86/Linux-x86_64/396.54/NVIDIA-Linux-x86_64-396.54.run
-        checksum: "sha256:7c3e3c9ca6aea31ad2613ef9cb6a4510d95d61b698f084e55adcc0611ee9eec3"
+        url: http://us.download.nvidia.com/XFree86/Linux-x86_64/410.73/NVIDIA-Linux-x86_64-410.73.run
+        checksum: "sha256:bebc9cf781201beb5ec1a1dde7672db68609b8af0aa5ff32daa3ebb533c2ff1e"
         dest: /nvidia_driver.sh
     - name: Set the nvidia driver to be executable
       file:
