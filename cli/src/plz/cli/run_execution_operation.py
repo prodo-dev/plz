@@ -130,7 +130,6 @@ class RunExecutionOperation(Operation):
             force_if_running=False,
             path=None)
 
-        cancelled = False
         try:
             if not was_start_ok:
                 raise CLIException('The command failed.')
@@ -142,15 +141,10 @@ class RunExecutionOperation(Operation):
             e.print(self.configuration)
             raise ExitWithStatusCodeException(e.exit_code)
         except KeyboardInterrupt:
-            cancelled = True
-        finally:
-            if not cancelled:
-                self.suboperation(
-                        'Harvesting the output...',
-                        retrieve_output_operation.harvest)
-
-        if cancelled:
             return
+
+        self.suboperation('Harvesting the output...',
+                          retrieve_output_operation.harvest)
 
         retrieve_measures_operation = RetrieveMeasuresOperation(
             self.configuration, execution_id=self.execution_id, summary=True)
