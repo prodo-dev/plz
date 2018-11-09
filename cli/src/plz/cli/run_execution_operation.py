@@ -133,6 +133,7 @@ class RunExecutionOperation(Operation):
         cancelled = False
         try:
             if not was_start_ok:
+                cancelled = True
                 raise CLIException('The command failed.')
             logs = LogsOperation(self.configuration,
                                  execution_id=self.execution_id,
