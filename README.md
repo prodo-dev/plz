@@ -95,9 +95,9 @@ Epoch: 9 Traning loss: 0.330538
 ```
 
 `plz` runs your commands in a Docker container, either in your AWS
-infrastructure or in your local machine, so what you do in the terminal
-doesn't really matter. If you are running this execution only, you can just
-type `plz logs` and logs will be streamed, not from the beginning
+infrastructure or in your local machine, and so your actions in the terminal
+don't affect the execution. If you are running this execution only, you can
+just type `plz logs` and logs will be streamed, not from the beginning
 but since the current time (unless you specify `--since start`).
 
 The big
@@ -109,9 +109,11 @@ you can do `plz logs <execution_id>`.
 
 Once your program has finished (or once you have stopped with `plz stop`) you
 can do `plz output`, and it will download the files that your program has
-written (you need to tell your program to write in a specific directory. `plz`
-sets an environment variable that you can use as to know where to write).
-The files are saved under `output/<execution_id>`.
+written. In order to use this functionality, you need to tell your program to
+write in a specific directory: `plz` sets an environment variable that your
+program can use as to know where to
+write). The files are saved under `output/<execution_id>` by default, or
+you can specify where with the `-p` option.
 
 The instance will be kept there for some time (specified in `plz.config.json`)
 in case you're running things interactively (so that you don't need to wait
@@ -122,8 +124,12 @@ It's useful to tell one execution from another if you have several running
 at the same time.
 
 You can use `plz run --parameters a_json_file.json` to pass parameters
-to your program. Passing parameters this way has the advantage
-that the parameters are stored in the metadata and can be queried.
+to your program. Passing parameters this way has two advantages:
+- the parameters are stored in the metadata and can be queried (see the
+description of `plz history` below)
+- you can use `plz rerun --override-parameters some_json_file.json` and run
+exactly the same execution but with different parameters, which helps
+running experiments in a systematic fashion.
 
 There's also `plz history`, returning a json mapping from execution ids to
 to metadata. If you write json files in a specific directory (see
@@ -193,6 +199,9 @@ We build `plz` following these principles:
 - Code and data must be stored for future reference.
 - Whatever part of the running environment can be captured by `plz`, we capture
 it as to make jobs repeatable.
+- plz functionality is based on standard mechanisms like files and environment
+variables. You don't need to add extra dependencies to your code or learn
+how to read/write your data in specific ways.
 - The tool must be flexible enough so that no unnecessary restrictions are
 imposed by the architecture. You should be able to do with `plz` whatever you
 can do by running a container manually. It was surprising to find out how
