@@ -51,7 +51,7 @@ Epoch: 3. Training loss: 0.251717
 Evaluation accuracy: 87.80 (max 83.30)
 Best model found at epoch 3, with accurary 87.80
 [...]
-Epoch: 30. Traning loss: 0.010750
+Epoch: 30. Training loss: 0.010750
 Evaluation accuracy: 97.50 (max 98.10)
 👌 Harvesting the output...
 👌 Retrieving summary of measures (if present)...
@@ -87,7 +87,7 @@ You can be patient and wait until it finishes, but you can also hit `Ctrl-C`
 and stop the program early:
 
 ```
-Epoch: 9 Traning loss: 0.330538
+Epoch: 9 Training loss: 0.330538
 ^C
 👌 Your program is still running. To stream the logs, type:
 
