@@ -7,6 +7,23 @@
 *We are in beta stage. We don't expect API stability or consistence with
 next versions.*
 
+## Highlights
+
+- run jobs on the bare-metal or in the cloud (support for AWS, plz follows a cloud-agnostic architecture)
+- an easy to build, install and configure command-line tool written in python
+- easy to remember commands
+- run experiments on on-demand or spot instances
+- run experiments via secure Docker containers
+- configure runs on various instance and resource types
+- AMI: using baked images for consistency, repeatability and performance
+- supports pytorch
+- Docker image: support for Nvidia GPUs + latest version of anaconda, Nvidia drivers, CUDA
+- uses a Redis data store
+- bash, make, terraform and Dockerfile scripts provided
+- useful examples provided see [Examples](#Examples) section
+- MIT-license allowing modification, distribution, private or commercial use, see [License](LICENSE) for more details
+- open for contributions, plz [Watch](https://github.com/login?return_to=%2Fprodo-ai%2Fplz), [Star](https://github.com/login?return_to=%2Fprodo-ai%2Fplz) and [Fork](https://github.com/login?return_to=%2Fprodo-ai%2Fplz) the repo 
+
 ## Usage overview
 
 We offer more details below on how to setup `plz` and run your jobs, but we can
