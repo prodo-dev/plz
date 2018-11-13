@@ -2,27 +2,26 @@
 
 *Say the magic word.*
 
-`plz` is a job runner targeted at training machine learning models as simply, tidily and cheaply as possible. You can run jobs locally or in the cloud. It includes functionality to reproduce your experiments, and to save your history of parameters and results, so that history can be queried with any program handling json. At the moment `plz` is optimised for `pytorch`, in the sense that you can run pytorch programs without preparing a `pytorch` environment. With proper configuration and preparation it is fairly general, and can be used for practically anything that requires running a job in a repeatable fashion on a dedicated cloud VM.
+`plz` is a job runner targeted at training machine learning models as simply, systematically,
+tidily and cheaply as possible.
 
 *We are in beta stage. We don't expect API stability or consistence with
 next versions.*
 
 ## Highlights
 
-- run jobs on the bare-metal or in the cloud (support for AWS, plz follows a cloud-agnostic architecture)
-- an easy to build, install and configure command-line tool written in python
-- easy to remember commands
-- run experiments on on-demand or spot instances
-- run experiments via secure Docker containers
-- configure runs on various instance and resource types
-- AMI: using baked images for consistency, repeatability and performance
-- supports pytorch
-- Docker image: support for Nvidia GPUs + latest version of anaconda, Nvidia drivers, CUDA
-- uses a Redis data store
-- bash, make, terraform and Dockerfile scripts provided
+- structured inputs/outputs as to allow programmatic queries, so that you can analyse the history of your experiments
+- flexibility to run jobs on the bare-metal or in the cloud (support for AWS, plz follows a cloud-agnostic architecture)
+- simple command line interface
+- runs experiments on on-demand or spot instances, using isolated Docker containers
+- tracks parameters for experiments, and allows exact repetitions with tweaked parameters, making experimentation more systematic
+- provides flexibility to use various instances and resource types
+- AMI: use baked images for consistency, repeatability and performance
+- ready to run pytorch in an environment supporting Nvidia GPUs, CUDA and anaconda
+- built on top of broadly used tools like python, bash, make, terraform, ansible and docker
 - useful examples provided see [Examples](#Examples) section
 - MIT-license allowing modification, distribution, private or commercial use, see [License](LICENSE) for more details
-- open for contributions, plz [Watch](https://github.com/login?return_to=%2Fprodo-ai%2Fplz), [Star](https://github.com/login?return_to=%2Fprodo-ai%2Fplz) and [Fork](https://github.com/login?return_to=%2Fprodo-ai%2Fplz) the repo 
+- open for contributions, plz
 
 ## Usage overview
 
