@@ -21,14 +21,22 @@ class EC2Instance(Instance):
     ROOT = os.path.join(os.path.dirname(__file__), '..', '..', '..')
 
     # We find available instances by looking at those in which
-    # the Execution-Id tag is the empty string. Instances are
-    # started with an empty value for this tag, the tag is set
+    # the Execution-Id tag is the empty string and they are not earmarked (they
+    # haven't been started for a particular execution ID). Instances are
+    # started with an empty value for the execution ID, the tag is set
     # when the instance starts executing, and it's emptied again
-    # when the execution finishes
+    # when the execution finishes. Also, at start the Earmark-Execution-Id
+    # is set to the execution ID that the instance is being started for, so
+    # that it's not picked up when starting other executions. The
+    # earmark is set to empty when the Execution-Id tag is set. When an
+    # execution finishes, both the Execution-Id and the
+    # Earmark-Execution-Id tags are empty, and instances can be reused by
+    # other executions (or be disposed of by harvesting if the time has come)
     EXECUTION_ID_TAG = 'Plz:Execution-Id'
     GROUP_NAME_TAG = 'Plz:Group-Id'
     MAX_IDLE_SECONDS_TAG = 'Plz:Max-Idle-Seconds'
     IDLE_SINCE_TIMESTAMP_TAG = 'Plz:Idle-Since-Timestamp'
+    EARMARK_EXECUTION_ID_TAG = 'Plz:Earmark-Execution-Id'
 
     def __init__(self,
                  client,

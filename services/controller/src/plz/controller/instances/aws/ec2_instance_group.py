@@ -111,7 +111,8 @@ class EC2InstanceGroup(InstanceProvider):
             instance_data = self._ask_aws_for_new_instance(
                 instance_type,
                 instance_max_uptime_in_minutes,
-                instance_market_spec)
+                instance_market_spec,
+                execution_id)
         yield _msg(
             f'waiting for the instance to be ready')
         instance = None
@@ -145,7 +146,8 @@ class EC2InstanceGroup(InstanceProvider):
                     instance_data = self._ask_aws_for_new_instance(
                         instance_type,
                         instance_max_uptime_in_minutes,
-                        instance_market_spec)
+                        instance_market_spec,
+                        execution_id)
                     instance = None
                     continue
                 yield _msg('running')
@@ -186,12 +188,12 @@ class EC2InstanceGroup(InstanceProvider):
     def _ask_aws_for_new_instance(
             self, instance_type: str,
             instance_max_uptime_in_minutes: Optional[int],
-            instance_market_spec: dict) -> dict:
+            instance_market_spec: dict,
+            execution_id: str) -> dict:
         response = self.client.run_instances(
-            **self._get_instance_spec(
-                instance_type,
-                instance_max_uptime_in_minutes,
-                instance_market_spec),
+            **self._get_instance_spec(instance_type,
+                                      instance_max_uptime_in_minutes,
+                                      instance_market_spec, execution_id),
             MinCount=1, MaxCount=1)
         return response['Instances'][0]
 
@@ -215,11 +217,10 @@ class EC2InstanceGroup(InstanceProvider):
             self.redis,
             self.instance_lock_timeout)
 
-    def _get_instance_spec(
-            self,
-            instance_type: str,
-            instance_max_uptime_in_minutes: Optional[int],
-            instance_market_spec: dict) -> dict:
+    def _get_instance_spec(self, instance_type: str,
+                           instance_max_uptime_in_minutes: Optional[int],
+                           instance_market_spec: dict,
+                           execution_id: str) -> dict:
         spec = {'ImageId': self.ami_id}
         if self.aws_key_name:
             spec['KeyName'] = self.aws_key_name
@@ -243,6 +244,10 @@ class EC2InstanceGroup(InstanceProvider):
                     # Give it 20 minutes as to be claimed before being
                     # terminated by staying idle for too long
                     'Value': str(20 * 60)
+                },
+                {
+                    'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,
+                    'Value': execution_id
                 },
                 {
                     'Key': 'Name',
