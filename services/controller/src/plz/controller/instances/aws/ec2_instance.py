@@ -105,7 +105,12 @@ class EC2Instance(Instance):
             {'Key': EC2Instance.EXECUTION_ID_TAG,
              'Value': execution_id},
             {'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
-             'Value': str(max_idle_seconds)}
+             'Value': str(max_idle_seconds)},
+            # If we are setting the execution id, either we are freeing the
+            # instance or assigning to an execution. In both case we don't
+            # want the instance to be earmarked
+            {'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,
+             'Value': ''}
         ])
 
     def _set_tags(self, tags):
