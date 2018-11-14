@@ -77,7 +77,8 @@ class EC2Instance(Instance):
                     f'{self.delegate.execution_id} as it\'s not '
                     f'free (executing [{self.get_execution_id()}] or '
                     f'locked ({not acquired}) '
-                    f'or earmarked for [{self._get_earmark()}])')
+                    f'or earmarked for [{self._get_earmark()}] or '
+                    f'not running)')
             self.images.pull(snapshot_id)
             self.delegate.run(command, snapshot_id, parameters, input_stream,
                               docker_run_args)
