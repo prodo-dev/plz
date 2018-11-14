@@ -6,7 +6,7 @@ from .utils import run_example, rerun_execution, harvest
 
 
 class TestReRun(unittest.TestCase):
-    def tearDown(self):
+    def setUp(self):
         harvest()
 
     def test_rerun(self):

@@ -4,7 +4,7 @@ from .utils import run_example, harvest
 
 
 class TestRun(unittest.TestCase):
-    def tearDown(self):
+    def setUp(self):
         harvest()
 
     def test_run(self):
