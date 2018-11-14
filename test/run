@@ -50,6 +50,7 @@ function run_controller_tests {
 
 function cleanup {
   exit_status=$?
+  rm -r $DATA_DIRECTORY
   stop_all_clis
   stop_controller
   stop_container $CONTROLLER_TESTS_CONTAINER
