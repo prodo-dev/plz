@@ -35,7 +35,8 @@ class EC2InstanceGroup(InstanceProvider):
                  max_acquisition_tries: int,
                  worker_security_group_names: [str],
                  use_public_dns: bool,
-                 instance_lock_timeout: int):
+                 instance_lock_timeout: int,
+                 instance_max_startup_time_in_minutes: int):
         super().__init__(results_storage, instance_lock_timeout)
         self.name = name
         self.redis = redis
@@ -49,6 +50,8 @@ class EC2InstanceGroup(InstanceProvider):
         self.instances: Dict[str, EC2Instance] = {}
         self.worker_security_group_names = worker_security_group_names
         self.use_public_dns = use_public_dns
+        self.instance_max_startup_time_in_minutes = \
+            instance_max_startup_time_in_minutes
         # Lazily initialized by ami_id
         self._ami_id = None
         # Lazily initialized by _instance_initialization_code
@@ -141,7 +144,9 @@ class EC2InstanceGroup(InstanceProvider):
                     instance = self._ec2_instance_from_instance_data(
                         instance_data, container_execution_id=execution_id)
                     try:
-                        instance.earmark_for(execution_id)
+                        instance.earmark_for(
+                            execution_id,
+                            self.instance_max_startup_time_in_minutes)
                     except InstanceUnavailableException as e:
                         log.info(e)
                         yield _msg('taken while waiting')
@@ -272,9 +277,8 @@ class EC2InstanceGroup(InstanceProvider):
                 },
                 {
                     'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
-                    # Give it 20 minutes as to be claimed before being
-                    # terminated by staying idle for too long
-                    'Value': str(20 * 60)
+                    'Value': str(self.instance_max_startup_time_in_minutes
+                                 * 60)
                 },
                 {
                     'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,

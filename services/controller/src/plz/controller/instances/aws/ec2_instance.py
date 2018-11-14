@@ -102,7 +102,9 @@ class EC2Instance(Instance):
         except Exception as e:
             raise KillingInstanceException(str(e)) from e
 
-    def earmark_for(self, execution_id: str):
+    def earmark_for(
+            self, execution_id: str,
+            instance_max_startup_time_in_minutes: int) -> None:
         if self._get_earmark() == execution_id:
             return
         lock = self._lock
@@ -118,12 +120,14 @@ class EC2Instance(Instance):
                     f'[{self._get_earmark()}]')
             self._set_tags([
                 {'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,
-                 'Value': execution_id}])
+                 'Value': execution_id},
+                {'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
+                 'Value': str(60 * instance_max_startup_time_in_minutes)}])
         finally:
             if acquired:
                 lock.release()
 
-    def unearmark_for(self, execution_id: str):
+    def unearmark_for(self, execution_id: str) -> None:
         """
         If the instance is earmarked for this execution ID, remove the earmark
         """
