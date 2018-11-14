@@ -3,7 +3,8 @@ from typing import Tuple, Optional
 
 from plz.cli.configuration import Configuration
 from plz.cli.controller_proxy import ControllerProxy
-from plz.cli.run_execution_operation import RunExecutionOperation
+from plz.cli.run_execution_operation import RunExecutionOperation, \
+    create_instance_market_spec
 from plz.cli.server import Server
 from plz.controller.api import Controller
 
@@ -60,11 +61,9 @@ def run_example(
         context: Optional[TestingContext] = None,
         input_id: Optional[str] = None,
         parameters: Optional[dict] = None,
-        instance_market_spec: Optional[dict] = None,
         start_metadata: Optional[dict] = None) -> Tuple[TestingContext, str]:
     parameters = parameters if parameters is not None else {}
-    instance_market_spec = instance_market_spec \
-        if instance_market_spec is not None else {}
+    instance_market_spec = create_instance_market_spec(context.configuration)
     start_metadata = start_metadata if start_metadata is not None else {}
     if context is None:
         context = create_context_for_example(example_type, example_name)

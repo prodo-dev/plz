@@ -186,7 +186,7 @@ class RunExecutionOperation(Operation):
         configuration = self.configuration
         execution_spec = RunExecutionOperation.create_execution_spec(
             configuration, input_id)
-        instance_market_spec = self.get_instance_market_spec()
+        instance_market_spec = create_instance_market_spec(configuration)
         commit = get_head_commit_or_none(context_path)
         response_dicts = self.controller.run_execution(
             command=self.command,
@@ -236,14 +236,6 @@ class RunExecutionOperation(Operation):
                 configuration.instance_max_uptime_in_minutes,
         }
 
-    def get_instance_market_spec(self) -> dict:
-        return {
-            k: getattr(self.configuration, k)
-            for k in ('instance_market_type',
-                      'instance_max_idle_time_in_minutes',
-                      'max_bid_price_in_dollars_per_hour')
-        }
-
     def get_execution_id(self):
         # Override this method, in this operation we shouldn't call the server
         # asking for the previous one
@@ -271,3 +263,12 @@ def add_detach_command_line_argument(parser):
                         help='Make CLI exit as soon as the job is '
                              'running (does not print logs, or download '
                              'outputs, etc.)')
+
+
+def create_instance_market_spec(configuration: Configuration) -> dict:
+    return {
+        k: getattr(configuration, k)
+        for k in ('instance_market_type',
+                  'instance_max_idle_time_in_minutes',
+                  'max_bid_price_in_dollars_per_hour')
+        }

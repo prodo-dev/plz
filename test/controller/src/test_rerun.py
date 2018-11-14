@@ -1,5 +1,7 @@
 import unittest
 
+from plz.cli.run_execution_operation import create_instance_market_spec
+
 from .utils import run_example, rerun_execution
 
 
@@ -24,7 +26,9 @@ class TestReRun(unittest.TestCase):
             user='rerunner_user',
             project='rerunner_project',
             previous_execution_id=execution_id,
-            override_parameters=None)
+            override_parameters=None,
+            instance_market_spec=create_instance_market_spec(
+                context.configuration))
 
         output = b''.join(context.controller.get_logs(
             rerun_execution_id, since=None))
@@ -56,7 +60,9 @@ class TestReRun(unittest.TestCase):
             override_parameters={
                 "foo": 66,
                 "bar": "zeppelin"
-            })
+            },
+            instance_market_spec=create_instance_market_spec(
+                context.configuration))
 
         # Make sure we get the overridden the parameters
         output = b''.join(context.controller.get_logs(
