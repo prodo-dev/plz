@@ -32,6 +32,13 @@ def create_context_for_example(
         example_name)
     configuration = Configuration.load(example_dir)
     configuration.context_path = example_dir
+    # The default is None (by design, so that the user needs to specify it),
+    # and it will break when running tests against a controller starting
+    # AWS instances
+    configuration.max_bid_price_in_dollars_per_hour = 0.1
+    # The default in a configuration is 0. With that value, tests take ages to
+    # run as instances are stopped and started again
+    configuration.instance_max_idle_time_in_minutes = 1
     server = Server.from_configuration(configuration)
     controller = ControllerProxy(server)
     with capture_build_context(
