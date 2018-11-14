@@ -90,8 +90,8 @@ def _instance_provider_from(
                 'instances.worker_security_group_names', []),
             use_public_dns=config.get('instances.use_public_dns', False),
             instance_lock_timeout=config['assumptions.instance_lock_timeout'],
-            instance_max_startup_time_in_minutes=
-            config['assumptions.instance_max_startup_time_in_minutes'])
+            instance_max_startup_time_in_minutes=config[
+                'assumptions.instance_max_startup_time_in_minutes'])
     else:
         raise ValueError('Invalid instance provider.')
     return instance_provider
