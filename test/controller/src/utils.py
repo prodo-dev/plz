@@ -111,3 +111,11 @@ def rerun_execution(
         RunExecutionOperation.get_execution_id_from_start_response(
             response_dicts)
     return controller, execution_id
+
+def harvest():
+    # The environment should have everything we need to create a controller
+    # during a testing run: host and port for the controller
+    configuration = Configuration.from_env(Configuration.PROPERTIES)
+    server = Server.from_configuration(configuration)
+    controller = ControllerProxy(server)
+    controller.harvest()

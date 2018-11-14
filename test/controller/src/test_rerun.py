@@ -2,10 +2,13 @@ import unittest
 
 from plz.cli.run_execution_operation import create_instance_market_spec
 
-from .utils import run_example, rerun_execution
+from .utils import run_example, rerun_execution, harvest
 
 
 class TestReRun(unittest.TestCase):
+    def tearDown(self):
+        harvest()
+
     def test_rerun(self):
         context, execution_id = run_example(
             'parameters', 'simple',
