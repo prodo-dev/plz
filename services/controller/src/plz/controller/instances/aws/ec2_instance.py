@@ -70,11 +70,14 @@ class EC2Instance(Instance):
         lock = self._lock
         acquired = lock.acquire(blocking=False)
         try:
-            if not acquired or not self._is_running_and_free():
-                raise InstanceAssignedException(
+            if not acquired or not self._is_running_and_free(
+                    earmark=self.delegate.execution_id):
+                raise InstanceUnavailableException(
                     f'Instance {self.instance_id} cannot execute '
                     f'{self.delegate.execution_id} as it\'s not '
-                    f'free (executing [{self.get_execution_id()}] or locked)')
+                    f'free (executing [{self.get_execution_id()}] or '
+                    f'locked ({not acquired}) '
+                    f'or earmarked for [{self._get_earmark()}])')
             self.images.pull(snapshot_id)
             self.delegate.run(command, snapshot_id, parameters, input_stream,
                               docker_run_args)
@@ -99,6 +102,42 @@ class EC2Instance(Instance):
         except Exception as e:
             raise KillingInstanceException(str(e)) from e
 
+    def earmark_for(self, execution_id: str):
+        if self._get_earmark() == execution_id:
+            return
+        lock = self._lock
+        acquired = lock.acquire(blocking=False)
+        try:
+            if not acquired or not self._is_running_and_free(
+                    earmark=execution_id, check_running=False):
+                raise InstanceUnavailableException(
+                    f'Cannot earmark {self.instance_id} for '
+                    f'{execution_id} as it\'s not '
+                    f'free (executing [{self.get_execution_id()}] or locked '
+                    f'({not acquired}) or earmarked for '
+                    f'[{self._get_earmark()}]')
+            self._set_tags([
+                {'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,
+                 'Value': execution_id}])
+        finally:
+            if acquired:
+                lock.release()
+
+    def unearmark_for(self, execution_id: str):
+        """
+        If the instance is earmarked for this execution ID, remove the earmark
+        """
+        # Do not hold the lock if we aren't doing anything
+        if self._get_earmark() != execution_id:
+            return
+        with self._lock:
+            # Check the earmark is still the same after waiting for the lock
+            if self._get_earmark() != execution_id:
+                return
+            self._set_tags([
+                {'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,
+                 'Value': ''}])
+
     def _set_execution_id(
             self, execution_id: str, max_idle_seconds: int):
         self._set_tags([
@@ -112,6 +151,9 @@ class EC2Instance(Instance):
             {'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,
              'Value': ''}
         ])
+
+    def _get_earmark(self):
+        return get_tag(self.data, EC2Instance.EARMARK_EXECUTION_ID_TAG)
 
     def _set_tags(self, tags):
         instance_id = self.instance_id
@@ -182,14 +224,27 @@ class EC2Instance(Instance):
                 {'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
                  'Value': str(idle_since_timestamp)}])
 
-    def _is_running_and_free(self):
-        if not self._is_running():
+    def _is_running_and_free(self, earmark: Optional[str] = None,
+                             check_running: Optional[bool] = True):
+        if check_running and not self._is_running():
             return False
         instances = get_aws_instances(
             self.client,
-            only_running=True,
+            only_running=check_running,
             filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
+                     (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}', ''),
                      ('instance-id', self.instance_id)])
+        if len(instances) > 0:
+            return True
+        # If an earmark is present, try with and without the earmark
+        if earmark is not None:
+            instances = get_aws_instances(
+                self.client,
+                only_running=check_running,
+                filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
+                         (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}',
+                          earmark),
+                         ('instance-id', self.instance_id)])
         return len(instances) > 0
 
     def _is_running(self):
@@ -268,5 +323,5 @@ def describe_instances(client, filters) -> [dict]:
             for instance in reservation['Instances']]
 
 
-class InstanceAssignedException(Exception):
+class InstanceUnavailableException(Exception):
     pass

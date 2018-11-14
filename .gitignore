@@ -1,4 +1,5 @@
 /cache
+/test_cache
 /secrets
 .envrc
 output

@@ -1,4 +1,5 @@
 import io
+import logging
 import socket
 import time
 from contextlib import closing
@@ -12,8 +13,11 @@ from plz.controller.instances.instance_base import Instance, \
     InstanceProvider, Parameters
 from plz.controller.results.results_base import ResultsStorage
 from plz.controller.volumes import Volumes
-from .ec2_instance import EC2Instance, InstanceAssignedException, \
+from .ec2_instance import EC2Instance, InstanceUnavailableException, \
     get_aws_instances, get_tag, describe_instances
+
+
+log = logging.getLogger(__name__)
 
 
 class EC2InstanceGroup(InstanceProvider):
@@ -97,38 +101,55 @@ class EC2InstanceGroup(InstanceProvider):
         instance_type = execution_spec.get('instance_type')
         instance_max_uptime_in_minutes = execution_spec.get(
             'instance_max_uptime_in_minutes')
-        instances_not_assigned = self._get_group_aws_instances(
-            only_running=True,
-            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
-                     ('instance-type', instance_type)])
-        if len(instances_not_assigned) > 0:
-            yield _msg('reusing existing instance')
-            is_instance_newly_created = False
-            instance_data = instances_not_assigned[0]
-        else:
-            yield _msg('requesting new instance')
-            is_instance_newly_created = True
-            instance_data = self._ask_aws_for_new_instance(
-                instance_type,
-                instance_max_uptime_in_minutes,
-                instance_market_spec,
-                execution_id)
-        yield _msg(
-            f'waiting for the instance to be ready')
-        instance = None
+        instance_data = None
+        instance: EC2Instance = None
+        # Just to make the IDE happy, it's initialised in all execution paths
+        is_instance_newly_created = False
         while tries_remaining > 0:
             tries_remaining -= 1
+            if instance_data is None:
+                instances_not_assigned = self._get_group_aws_instances(
+                    only_running=True,
+                    filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
+                             (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}',
+                              ''),
+                             ('instance-type', instance_type)])
+                if len(instances_not_assigned) > 0:
+                    yield _msg('reusing existing instance')
+                    is_instance_newly_created = False
+                    instance_data = instances_not_assigned[0]
+                else:
+                    yield _msg('requesting new instance')
+                    is_instance_newly_created = True
+                    instance_data = self._ask_aws_for_new_instance(
+                        instance_type,
+                        instance_max_uptime_in_minutes,
+                        instance_market_spec,
+                        execution_id)
+                yield _msg(
+                    f'waiting for the instance to be ready')
+
             # When the dns name is public, it takes some time to show up. Make
             # sure there's a dns name before building the instance object
             if instance is None:
+                # Get a fresh view of the instance data
                 instance_data = describe_instances(
                     self.client,
                     filters=[('instance-id', instance_data['InstanceId'])])[0]
                 dns_name = self._get_dns_name(instance_data)
                 if dns_name != '':
-                    yield _msg(f'DNS name is: {dns_name}')
                     instance = self._ec2_instance_from_instance_data(
                         instance_data, container_execution_id=execution_id)
+                    try:
+                        instance.earmark_for(execution_id)
+                    except InstanceUnavailableException as e:
+                        log.info(e)
+                        yield _msg('taken while waiting')
+                        instance_data = None
+                        instance = None
+                        continue
+                    yield _msg(f'DNS name is: {dns_name}')
+
             if instance is not None and instance.is_up(
                     is_instance_newly_created):
                 yield _msg('starting container')
@@ -141,8 +162,18 @@ class EC2InstanceGroup(InstanceProvider):
                         docker_run_args=execution_spec['docker_run_args'],
                         max_idle_seconds=instance_market_spec[
                             'instance_max_idle_time_in_minutes']*60)
-                except InstanceAssignedException:
-                    yield _msg('taken while waiting')
+                except InstanceUnavailableException as e:
+                    log.info(e)
+                    yield _msg('gone while waiting')
+                    # noinspection PyBroadException
+                    try:
+                        instance.unearmark_for(execution_id)
+                    # Because the instance was earmarked (if things had gone
+                    # the normal way), it it's unavailable then something
+                    # undesirable happened (like, it's not running any more).
+                    # Try to unearmark but catch any exceptions
+                    except Exception:
+                        log.exception('Exception unearmarking instance')
                     instance_data = self._ask_aws_for_new_instance(
                         instance_type,
                         instance_max_uptime_in_minutes,
