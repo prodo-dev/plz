@@ -64,21 +64,21 @@ class EC2Instance(Instance):
             input_stream: Optional[io.BytesIO],
             docker_run_args: Dict[str, str],
             max_idle_seconds: int = 60 * 30) -> None:
-        # If the instance is locked then it's not free to run. The situation
-        # of being asked to run and being already locked can happen if there's
-        # a container starting. No execution id has been associated to this
-        # instance (so it's idle), yet it's locked as the container is started.
-        # In this case the exception will be caught and handled properly
-        lock = self._lock
-        acquired = lock.acquire(blocking=False)
-        try:
-            if not acquired or not self._is_running_and_free(
-                    earmark=self.delegate.execution_id):
+        # Sanity check before we get the lock
+        if self._get_earmark() != self.delegate.execution_id:
+            raise InstanceUnavailableException(
+                'Trying to run in an instance that is not earmarked for this '
+                'execution!')
+        with self._lock:
+            # Must be earmarked for this run
+            if not self._is_running_and_free(
+                    earmark=self.delegate.execution_id,
+                    earmark_optional=False,
+                    check_running=True):
                 raise InstanceUnavailableException(
                     f'Instance {self.instance_id} cannot execute '
                     f'{self.delegate.execution_id} as it\'s not '
-                    f'free (executing [{self.get_execution_id()}] or '
-                    f'locked ({not acquired}) '
+                    f'free (executing [{self.get_execution_id()}] '
                     f'or earmarked for [{self._get_earmark()}] or '
                     f'not running)')
             self.images.pull(snapshot_id)
@@ -86,9 +86,6 @@ class EC2Instance(Instance):
                               docker_run_args)
             self._set_execution_id(
                 self.delegate.execution_id, max_idle_seconds)
-        finally:
-            if acquired:
-                lock.release()
 
     def is_up(self, is_instance_newly_created: bool):
         if not self._is_running():
@@ -110,11 +107,15 @@ class EC2Instance(Instance):
             instance_max_startup_time_in_minutes: int) -> None:
         if self._get_earmark() == execution_id:
             return
+        # To be on the safe side, we assume that if the instance is locked
+        # then it's not free as to be earmarked for an instance (someone is
+        # doing something to it)
         lock = self._lock
         acquired = lock.acquire(blocking=False)
         try:
             if not acquired or not self._is_running_and_free(
-                    earmark=execution_id, check_running=False):
+                    earmark=execution_id, check_running=False,
+                    earmark_optional=True):
                 raise InstanceUnavailableException(
                     f'Cannot earmark {self.instance_id} for '
                     f'{execution_id} as it\'s not '
@@ -243,19 +244,21 @@ class EC2Instance(Instance):
                 {'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
                  'Value': str(idle_since_timestamp)}])
 
-    def _is_running_and_free(self, earmark: Optional[str] = None,
-                             check_running: Optional[bool] = True):
+    def _is_running_and_free(self, earmark: Optional[str],
+                             check_running: Optional[bool],
+                             earmark_optional: bool):
         if check_running and not self._is_running():
             return False
-        instances = get_aws_instances(
-            self.client,
-            only_running=check_running,
-            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
-                     (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}', ''),
-                     ('instance-id', self.instance_id)])
-        if len(instances) > 0:
-            return True
-        # If an earmark is present, try with and without the earmark
+        if earmark_optional:
+            instances = get_aws_instances(
+                self.client,
+                only_running=check_running,
+                filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
+                         (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}', ''),
+                         ('instance-id', self.instance_id)])
+            if len(instances) > 0:
+                return True
+        # Try with and without the earmark
         if earmark is not None:
             instances = get_aws_instances(
                 self.client,
