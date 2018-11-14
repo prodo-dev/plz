@@ -63,10 +63,10 @@ def run_example(
         parameters: Optional[dict] = None,
         start_metadata: Optional[dict] = None) -> Tuple[TestingContext, str]:
     parameters = parameters if parameters is not None else {}
-    instance_market_spec = create_instance_market_spec(context.configuration)
     start_metadata = start_metadata if start_metadata is not None else {}
     if context is None:
         context = create_context_for_example(example_type, example_name)
+    instance_market_spec = create_instance_market_spec(context.configuration)
     execution_spec = RunExecutionOperation.create_execution_spec(
         context.configuration, input_id)
     response_dicts = context.controller.run_execution(
@@ -88,11 +88,10 @@ def rerun_execution(
         user: str,
         project: str,
         previous_execution_id: str,
+        instance_market_spec: dict,
         override_parameters: Optional[dict] = None,
-        instance_max_uptime_in_minutes: Optional[int] = None,
-        instance_market_spec: dict = None) -> Tuple[Controller, str]:
-    instance_market_spec = instance_market_spec \
-        if instance_market_spec is not None else {}
+        instance_max_uptime_in_minutes: Optional[int] = None) \
+        -> Tuple[Controller, str]:
     response_dicts = controller.rerun_execution(
         user=user,
         project=project,
