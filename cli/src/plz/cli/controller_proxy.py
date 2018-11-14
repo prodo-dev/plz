@@ -218,7 +218,7 @@ class ControllerProxy(Controller):
         return response.json()
 
     def harvest(self) -> None:
-        response = self.server.get('executions', 'harvest')
+        response = self.server.post('executions', 'harvest')
         _check_status(response, requests.codes.no_content)
 
 
