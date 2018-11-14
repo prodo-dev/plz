@@ -36,8 +36,9 @@ services:
           instance_max_startup_time_in_minutes = 20
           # Docker sometimes tells us that a container has finished at
           # some point in the future. We assume that differences
-          # smaller than this value are just due to this Docker glitch
-          container_idle_timestamp_grace = 30
+          # smaller than this value, in seconds, are just due to this
+          # Docker glitch
+          container_idle_timestamp_grace = 60
         }
 
     volumes:
