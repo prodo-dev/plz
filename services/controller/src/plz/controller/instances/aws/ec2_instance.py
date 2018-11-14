@@ -46,7 +46,8 @@ class EC2Instance(Instance):
                  container_execution_id: str,
                  data: dict,
                  redis: StrictRedis,
-                 lock_timeout: int):
+                 lock_timeout: int,
+                 container_idle_timestamp_grace: int):
         super().__init__(redis, lock_timeout)
         self.client = client
         self.images = images
@@ -54,6 +55,7 @@ class EC2Instance(Instance):
             images, containers, volumes, container_execution_id, redis,
             lock_timeout)
         self.data = data
+        self.container_idle_timestamp_grace = container_idle_timestamp_grace
 
     def run(self,
             command: List[str],
@@ -193,12 +195,24 @@ class EC2Instance(Instance):
             ei = self.get_execution_info()
 
         now = int(time.time())
+
+        if ei.idle_since_timestamp > now:
+            log.warning('Instance has been idle since a '
+                        f'time {ei.idle_since_timestamp} later than the'
+                        f'current one {now}. If this gap is bigger than '
+                        f'{self.container_idle_timestamp_grace} the instance '
+                        f'will be disposed of')
+
+        graced_timestamp = ei.idle_since_timestamp - \
+            self.container_idle_timestamp_grace
         # In weird cases just dispose as well
         if now - ei.idle_since_timestamp > ei.max_idle_seconds or \
-                ei.idle_since_timestamp > now or \
+                graced_timestamp > now or \
                 ei.max_idle_seconds <= 0:
-            log.info(f'Disposing of instance {self.instance_id}')
-            # We check that it's idle. That shouldn't happen as the lock is
+            log.info(f'Disposing of instance {self.instance_id}. Now: {now}.'
+                     f'Idle since: {ei.idle_since_timestamp}. '
+                     f'Max idle seconds: {ei.max_idle_seconds}')
+            # We check that it's idle. That should be the case as the lock is
             # held and this method is called after the execution ID for the
             # instance was set to the empty string. But, y'know, computers...
             result = self.kill(force_if_not_idle=False)

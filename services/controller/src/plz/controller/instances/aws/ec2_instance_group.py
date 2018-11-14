@@ -36,7 +36,8 @@ class EC2InstanceGroup(InstanceProvider):
                  worker_security_group_names: [str],
                  use_public_dns: bool,
                  instance_lock_timeout: int,
-                 instance_max_startup_time_in_minutes: int):
+                 instance_max_startup_time_in_minutes: int,
+                 container_idle_timestamp_grace: int):
         super().__init__(results_storage, instance_lock_timeout)
         self.name = name
         self.redis = redis
@@ -52,6 +53,7 @@ class EC2InstanceGroup(InstanceProvider):
         self.use_public_dns = use_public_dns
         self.instance_max_startup_time_in_minutes = \
             instance_max_startup_time_in_minutes
+        self.container_idle_timestamp_grace = container_idle_timestamp_grace
         # Lazily initialized by ami_id
         self._ami_id = None
         # Lazily initialized by _instance_initialization_code
@@ -251,7 +253,8 @@ class EC2InstanceGroup(InstanceProvider):
             container_execution_id,
             instance_data,
             self.redis,
-            self.instance_lock_timeout)
+            self.instance_lock_timeout,
+            self.container_idle_timestamp_grace)
 
     def _get_instance_spec(self, instance_type: str,
                            instance_max_uptime_in_minutes: Optional[int],

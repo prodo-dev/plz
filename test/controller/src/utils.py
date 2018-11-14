@@ -38,7 +38,7 @@ def create_context_for_example(
     configuration.max_bid_price_in_dollars_per_hour = 0.1
     # The default in a configuration is 0. With that value, tests take ages to
     # run as instances are stopped and started again
-    configuration.instance_max_idle_time_in_minutes = 1
+    configuration.instance_max_idle_time_in_minutes = 3
     server = Server.from_configuration(configuration)
     controller = ControllerProxy(server)
     with capture_build_context(
@@ -111,6 +111,7 @@ def rerun_execution(
         RunExecutionOperation.get_execution_id_from_start_response(
             response_dicts)
     return controller, execution_id
+
 
 def harvest():
     # The environment should have everything we need to create a controller
