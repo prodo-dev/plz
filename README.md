@@ -2,35 +2,49 @@
 
 _Say the magic word._
 
-_Plz_ is a job runner targeted at running highly intensive data processing jobs as simply, systematically, tidily and cheaply as possible.
+_Plz_ is a job runner targeted at running highly intensive data processing jobs
+as simply, systematically, tidily and cheaply as possible.
 
 At Prodo.AI, we use Plz to train our PyTorch-based machine learning models.
 
-_Plz is an experimental product and is not guaranteed to be stable across versions._
+_Plz is an experimental product and is not guaranteed to be stable across
+versions._
 
 ## Highlights
 
 - simple command line interface
-- cloud-agnostic architecture (on top of Docker), allowing you to run jobs locally, on bare metal, or on the cloud
-  - Plz currently supports Amazon Web Services (AWS), but will most likely support other cloud providers in the future
-  - full control of the type of cloud instance, allowing you to use whatever machine fits your job (and budget)
+- cloud-agnostic architecture (on top of Docker), allowing you to run jobs
+  locally, on bare metal, or on the cloud
+  - Plz currently supports Amazon Web Services (AWS), but will most likely
+    support other cloud providers in the future
+  - full control of the type of cloud instance, allowing you to use whatever
+    machine fits your job (and budget)
   - full support for NVIDIA GPUs, allowing you to run deep learning experiments
 - common tooling support, with the following straight out of the box:
   - Python
   - Anaconda
   - PyTorch
-- data-based workflow, so that you can ensure you're always working with the correct inputs and outputs
-- parameter awareness, so that you can run the same experiment with multiple sets of parameters
+- data-based workflow, so that you can ensure you're always working with the
+  correct inputs and outputs
+- parameter awareness, so that you can run the same experiment with multiple
+  sets of parameters
 - full history, so that you can review your experiments over time
 - useful examples provided (see the [Examples](#Examples) section)
-- MIT-license allowing modification, distribution, private or commercial use (see [LICENSE](LICENSE) for more details)
+- MIT-license allowing modification, distribution, private or commercial use
+  (see [LICENSE](LICENSE) for more details)
 - open for contributions, plz
 
 ## Usage overview
 
-We offer more details below on how to setup Plz and run your jobs, but we can start by giving you an overview of what Plz does.
+We offer more details below on how to setup Plz and run your jobs, but we can
+start by giving you an overview of what Plz does.
 
-Plz offers a command-line interface. You start by adding a `plz.config.json` file to the directory where you have your source code. This file contains, among other things, the command you run to put your program to work (for instance, `python3 main.py`). Then you can run the program with `plz run`. This runs the program in the Plz environment. The following example (provided in this repository) demonstrates this:
+Plz offers a command-line interface. You start by adding a `plz.config.json`
+file to the directory where you have your source code. This file contains, among
+other things, the command you run to put your program to work (for instance,
+`python3 main.py`). Then you can run the program with `plz run`. This runs the
+program in the Plz environment. The following example (provided in this
+repository) demonstrates this:
 
 ```
 sergio@spaceship:~/plz/examples/pytorch$ plz run
@@ -83,14 +97,22 @@ le_net.pth
 
 You can see that the following:
 
-- Plz captures the files in your current directory. A snapshot of your code is built and stored in your infrastructure, so that you can retrieve the code used to run your job in the future (yes, you can specify files to be ignored, and you do so in the `plz.config.json`).
-- It captures input data (as specified in the config) and uploads it. If you run another execution with the same input data, it will avoid uploading the data for a second time (based on timestamps and hashes).
-- It starts an AWS instance, and waits until it's ready (or just runs the execution locally depending on the configuration).
+- Plz captures the files in your current directory. A snapshot of your code is
+  built and stored in your infrastructure, so that you can retrieve the code
+  used to run your job in the future (yes, you can specify files to be ignored,
+  and you do so in the `plz.config.json`).
+- It captures input data (as specified in the config) and uploads it. If you run
+  another execution with the same input data, it will avoid uploading the data
+  for a second time (based on timestamps and hashes).
+- It starts an AWS instance, and waits until it's ready (or just runs the
+  execution locally depending on the configuration).
 - It streams the logs, just as if you were running your program directly.
-- It shows metrics you collected during the run, such as _accuracy_ and _loss_ (you can query those later).
+- It shows metrics you collected during the run, such as _accuracy_ and _loss_
+  (you can query those later).
 - Finally, it downloads output files you might have created.
 
-You can be patient and wait until it finishes, or you can hit `Ctrl+C` and stop the program early:
+You can be patient and wait until it finishes, or you can hit `Ctrl+C` and stop
+the program early:
 
 ```
 Epoch: 9 Training loss: 0.330538
@@ -100,22 +122,50 @@ Epoch: 9 Training loss: 0.330538
         plz logs ad96b586-89e5-11e8-a7c5-8142e2563487
 ```
 
-`plz` runs your commands in a Docker container, either in your AWS infrastructure or in your local machine, and so your actions in the terminal don't affect the execution. If you are running this execution only, you can just type `plz logs` and logs will be streamed from the current moment (unless you specify `--since=start`, which will tell it to stream from the start of execution).
+`plz` runs your commands in a Docker container, either in your AWS
+infrastructure or in your local machine, and so your actions in the terminal
+don't affect the execution. If you are running this execution only, you can just
+type `plz logs` and logs will be streamed from the current moment (unless you
+specify `--since=start`, which will tell it to stream from the start of
+execution).
 
-The big hexadecimal number you see in the output, next to `plz logs`, is the execution ID you can use to refer to this execution. `plz` remembers the last execution that was _started_, and if you want to refer to that one you don't need to include it in your command (you can just type `plz logs`). But if you need to specify the execution ID, you can do `plz logs <execution-id>`.
+The big hexadecimal number you see in the output, next to `plz logs`, is the
+execution ID you can use to refer to this execution. `plz` remembers the last
+execution that was _started_, and if you want to refer to that one you don't
+need to include it in your command (you can just type `plz logs`). But if you
+need to specify the execution ID, you can do `plz logs <execution-id>`.
 
-Once your program has finished (or you've stopped it with `plz stop`) you can run `plz output`, and it will download the files that your program has written. In order to use this functionality, you need to tell your program to write to a specific directory, which is provided to your program as an environment variable. The files are saved under `output/<execution-id>` by default, but you can specify the location with the `-p` option.
+Once your program has finished (or you've stopped it with `plz stop`) you can
+run `plz output`, and it will download the files that your program has written.
+In order to use this functionality, you need to tell your program to write to a
+specific directory, which is provided to your program as an environment
+variable. The files are saved under `output/<execution-id>` by default, but you
+can specify the location with the `-p` option.
 
-The instance will be kept there for some time (specified in `plz.config.json`) in case you're running things interactively (so that you don't need to wait while the instance goes through the startup process again).
+The instance will be kept there for some time (specified in `plz.config.json`)
+in case you're running things interactively (so that you don't need to wait
+while the instance goes through the startup process again).
 
-You can use `plz describe` to print metadata about an execution in JSON format. It's useful to tell one execution from another if you have several running at the same time.
+You can use `plz describe` to print metadata about an execution in JSON format.
+It's useful to tell one execution from another if you have several running at
+the same time.
 
-You can use `plz run --parameters a_json_file.json` to pass parameters to your program. Passing parameters this way has two advantages:
+You can use `plz run --parameters a_json_file.json` to pass parameters to your
+program. Passing parameters this way has two advantages:
 
-- the parameters are stored in the metadata and can be queried (see the description of `plz history` below)
-- you can use `plz rerun --override-parameters some_json_file.json` and run exactly the same execution but with different parameters, which helps running experiments in a systematic fashion.
+- the parameters are stored in the metadata and can be queried (see the
+  description of `plz history` below)
+- you can use `plz rerun --override-parameters some_json_file.json` and run
+  exactly the same execution but with different parameters, which helps running
+  experiments in a systematic fashion.
 
-There's also `plz history`, returning a JSON mapping from execution IDs to metadata. If you write JSON files to a specific directory (see `test/end-to-end/measures/simple`) they will be available in the metadata. You can store things you've measured during your experiment (for instance, training loss). Parameters will be in the metadata as well, so you can transform the metadata using, for instance, [`jq`](https://stedolan.github.io/jq/), and find out how your training loss changed as you changed your parameters.
+There's also `plz history`, returning a JSON mapping from execution IDs to
+metadata. If you write JSON files to a specific directory (see
+`test/end-to-end/measures/simple`) they will be available in the metadata. You
+can store things you've measured during your experiment (for instance, training
+loss). Parameters will be in the metadata as well, so you can transform the
+metadata using, for instance, [`jq`](https://stedolan.github.io/jq/), and find
+out how your training loss changed as you changed your parameters.
 
 ```
 sergio@spaceship:~/plz/examples/pytorch$ plz history | \
@@ -139,13 +189,25 @@ sergio@spaceship:~/plz/examples/pytorch$ plz history | \
 }
 ```
 
-In this example, you can see that increasing the learning rate from `0.01` to `0.1` gives you an improvement in accuracy from 98% to 98.5%, but further increasing the learning rate leads to a disastrous decrease to 13%.
+In this example, you can see that increasing the learning rate from `0.01` to
+`0.1` gives you an improvement in accuracy from 98% to 98.5%, but further
+increasing the learning rate leads to a disastrous decrease to 13%.
 
-You can run `plz list` to list the running executions, as well as any running instances on AWS. It also shows the instance IDs. You can kill instances with `plz kill -i <instance-id>`.
+You can run `plz list` to list the running executions, as well as any running
+instances on AWS. It also shows the instance IDs. You can kill instances with
+`plz kill -i <instance-id>`.
 
-The command `plz last` is useful, particularly when writing shell commands, to get the last execution _started_.
+The command `plz last` is useful, particularly when writing shell commands, to
+get the last execution _started_.
 
-We also make it easy to manage dependencies for projects using Anaconda. Projects using the image `prodoai/plz_ml-pytorch` need to have an `environment.yml` file, as the one produced by `conda env export` (see [the one in the Pytorch example](examples/pytorch/environment.yml)). This file will be applied on top of [the environment in the image](base-images/ml-pytorch/environment.yml). Installation of dependencies is cached, so the process of dependency installation occurs only the first time after you change the environment file.
+We also make it easy to manage dependencies for projects using Anaconda.
+Projects using the image `prodoai/plz_ml-pytorch` need to have an
+`environment.yml` file, as the one produced by `conda env export` (see [the one
+in the Pytorch example](examples/pytorch/environment.yml)). This file will be
+applied on top of [the environment in the
+image](base-images/ml-pytorch/environment.yml). Installation of dependencies is
+cached, so the process of dependency installation occurs only the first time
+after you change the environment file.
 
 ### Functionality summary
 
@@ -154,7 +216,8 @@ Much of what Plz helps automate are cloud-related tasks. It:
 1. starts a "worker" (typically on AWS EC2, but also locally) to run your job,
 2. packages your code, parameters and data and ships them to the worker,
 3. runs your code,
-4. saves the results (like losses) and outcomes (like models) so that you can back to them in the future, and
+4. saves the results (like losses) and outcomes (like models) so that you can
+   back to them in the future, and
 5. takes down the worker.
 
 It also:
@@ -166,46 +229,71 @@ It also:
 We build `plz` following these principles:
 
 - Code and data must be stored for future reference.
-- Whatever part of the running environment can be captured by `plz`, we capture it as to make jobs repeatable.
-- plz functionality is based on standard mechanisms like files and environment variables. You don't need to add extra dependencies to your code or learn how to read/write your data in specific ways.
-- The tool must be flexible enough so that no unnecessary restrictions are imposed by the architecture. You should be able to do with `plz` whatever you can do by running a program manually. It was surprising to find out how many issues, mostly around running jobs in the cloud, could be solved only by tweaking the configuration, without requiring any changes to the code.
+- Whatever part of the running environment can be captured by `plz`, we capture
+  it as to make jobs repeatable.
+- plz functionality is based on standard mechanisms like files and environment
+  variables. You don't need to add extra dependencies to your code or learn how
+  to read/write your data in specific ways.
+- The tool must be flexible enough so that no unnecessary restrictions are
+  imposed by the architecture. You should be able to do with `plz` whatever you
+  can do by running a program manually. It was surprising to find out how many
+  issues, mostly around running jobs in the cloud, could be solved only by
+  tweaking the configuration, without requiring any changes to the code.
 
-`plz` is routinely used at `prodo.ai` to train ML models on AWS, some of them taking days to run in the most powerful instances available. We trust it to start and terminate these instances as needed, and to manage our spot instances, allowing us to get a much better price than if we were using on-demand instances all the time.
+`plz` is routinely used at `prodo.ai` to train ML models on AWS, some of them
+taking days to run in the most powerful instances available. We trust it to
+start and terminate these instances as needed, and to manage our spot instances,
+allowing us to get a much better price than if we were using on-demand instances
+all the time.
 
 ## How does it work?
 
-Plz consists of a _controller_ service and a _command-line interface_ (CLI) that issues requests to the controller. The CLI is a Python executable, `plz`, which takes instructions (such as `plz run ...`) as described above.
+Plz consists of a _controller_ service and a _command-line interface_ (CLI) that
+issues requests to the controller. The CLI is a Python executable, `plz`, which
+takes instructions (such as `plz run ...`) as described above.
 
-There are two configurations of the controller that are ready for you to use: in one of them your jobs are run locally, while in the other one an AWS instance is started for each job. (Note: the controller itself can be deployed to the cloud, and if you're in a production environment that's the recommended way to use it, but we suggest you try the examples with a controller that runs locally first.)
+There are two configurations of the controller that are ready for you to use: in
+one of them your jobs are run locally, while in the other one an AWS instance is
+started for each job. (Note: the controller itself can be deployed to the cloud,
+and if you're in a production environment that's the recommended way to use it,
+but we suggest you try the examples with a controller that runs locally first.)
 
-When you have a directory with source code, you can just add a `plz.config.json` file including information such as:
+When you have a directory with source code, you can just add a `plz.config.json`
+file including information such as:
 
 - the location of your Plz server,
 - the command you want to run,
 - the location of your input data,
-- whether you want to request an on-demand instance at a fixed price, or bid for spot instances with a ceiling,
+- whether you want to request an on-demand instance at a fixed price, or bid for
+  spot instances with a ceiling,
 - and much more.
 
-Then, just typing `plz run` will run the job for you, either locally or on AWS, depending on the controller you've started.
+Then, just typing `plz run` will run the job for you, either locally or on AWS,
+depending on the controller you've started.
 
 ## Installation instructions
 
-Chances are you that you have most of the supporting tools already installed, as these are broadly used tools.
+Chances are you that you have most of the supporting tools already installed, as
+these are broadly used tools.
 
-1. Install Git, and Python 3.
-   a. On Ubuntu, you can run `sudo apt install git python3 python3-pip`.
-   b. On macOS, install [Homebrew](https://brew.sh/), then run `brew install git python`.
-   c. For all other operating systems, you're going to have to Google it.
-2. Install [Docker](https://docs.docker.com/install/), then restart your terminal.
+1. Install Git, and Python 3. a. On Ubuntu, you can run `sudo apt install git python3 python3-pip`. b. On macOS, install [Homebrew](https://brew.sh/), then
+   run `brew install git python`. c. For all other operating systems, you're
+   going to have to Google it.
+2. Install [Docker](https://docs.docker.com/install/), then restart your
+   terminal.
 3. Install Docker Compose (`pip install docker-compose`).
-4. If you're planning on running code with CUDA, install the [NVIDIA Container Runtime for Docker](https://github.com/NVIDIA/nvidia-docker).
+4. If you're planning on running code with CUDA, install the [NVIDIA Container
+   Runtime for Docker](https://github.com/NVIDIA/nvidia-docker).
 5. `git clone https://github.com/prodo-ai/plz`, then `cd plz`.
 6. Install the CLI by running `./install_cli`.
 7. Run the controller (see below).
 
-The first time you run the controller, it will take some time, as it downloads a "standard" environment which includes Anaconda and PyTorch.
+The first time you run the controller, it will take some time, as it downloads a
+"standard" environment which includes Anaconda and PyTorch.
 
-The controller runs in "detached" mode, which means it will carry on running if you close the terminal, but logs its output to that terminal. We suggest opening another terminal window to run executions.
+The controller runs in "detached" mode, which means it will carry on running if
+you close the terminal, but logs its output to that terminal. We suggest opening
+another terminal window to run executions.
 
 ### Running executions locally
 
@@ -223,12 +311,15 @@ The controller can be stopped at any time with:
 
 ### AWS configuration
 
-To start a controller that talks to AWS, you'll need to first set up the AWS CLI:
+To start a controller that talks to AWS, you'll need to first set up the AWS
+CLI:
 
 1. Install the AWS CLI: `pip install awscli`
 2. Configure it with your access key: `aws configure`
 
-If you usually use AWS in a particular region, please edit `aws_config/config.json` and set your region there. The default file sets the region to _eu-west-1_ (Ireland).
+If you usually use AWS in a particular region, please edit
+`aws_config/config.json` and set your region there. The default file sets the
+region to _eu-west-1_ (Ireland).
 
 Then run:
 
@@ -236,21 +327,35 @@ Then run:
 ./start_aws_controller
 ```
 
-Unless you add `"instance_max_uptime_in_minutes": null,` to your `plz.config.json`, all AWS instances you start terminate after 60 minutes. That's on purpose, in case you're just trying the tool and something doesn't go well (for example, there's a power cut). You can always use `plz list` and `plz kill` before leaving your computer, as to make sure that there no instances remaining. For maximum assurance, we recommend checking the state of your instances in the AWS console.
+Unless you add `"instance_max_uptime_in_minutes": null,` to your
+`plz.config.json`, all AWS instances you start terminate after 60 minutes.
+That's on purpose, in case you're just trying the tool and something doesn't go
+well (for example, there's a power cut). You can always use `plz list` and `plz kill` before leaving your computer, as to make sure that there no instances
+remaining. For maximum assurance, we recommend checking the state of your
+instances in the AWS console.
 
-If you want to run the examples using the AWS instances, be aware that this has a cost. You can change the value of `"max_bid_price_in_dollars_per_hour": N` in `plz.config.json` to any value you like. Examples takes around 5 minutes to run. The value in the provided configs range from \$0.5/hour to \$2/hour (for GPU-powered machines).
+If you want to run the examples using the AWS instances, be aware that this has
+a cost. You can change the value of `"max_bid_price_in_dollars_per_hour": N` in
+`plz.config.json` to any value you like. Examples takes around 5 minutes to run.
+The value in the provided configs range from \$0.5/hour to \$2/hour (for
+GPU-powered machines).
 
 ## Examples
 
 ### Python
 
-In the directory `examples/python`, there is a minimal example showing how to run a program with `plz` that handles input and output. Once you have a working controller, running `plz run` should start the job.
+In the directory `examples/python`, there is a minimal example showing how to
+run a program with `plz` that handles input and output. Once you have a working
+controller, running `plz run` should start the job.
 
 ### PyTorch
 
-In the directory `examples/pytorch`, there's a full-fledged example for the task of digit recognition using the classic approach of LeNets and a subset of the well-known MNIST dataset.
+In the directory `examples/pytorch`, there's a full-fledged example for the task
+of digit recognition using the classic approach of LeNets and a subset of the
+well-known MNIST dataset.
 
-Anything related to `plz` is in `main.py`. In fact the most relevant lines are the following ones:
+Anything related to `plz` is in `main.py`. In fact the most relevant lines are
+the following ones:
 
 ```python
 def get_from_plz_config(key: str, non_plz_value: T) -> T:
@@ -272,12 +377,24 @@ def get_from_plz_config(key: str, non_plz_value: T) -> T:
         os.path.join('measures', 'summary'))
 ```
 
-This shows how to get the input data and parameters that `plz` uploads for you. There's a configuration file whose name comes in the environment variable `CONFIGURATION_FILE`. If that variable is present, you're running with `plz`, and you can read and parse the file as a JSON object. The object has the following keys:
+This shows how to get the input data and parameters that `plz` uploads for you.
+There's a configuration file whose name comes in the environment variable
+`CONFIGURATION_FILE`. If that variable is present, you're running with `plz`,
+and you can read and parse the file as a JSON object. The object has the
+following keys:
 
-- `input_directory` is a directory where you'll find your input data. If you have `"input": "file://../data/mnist",` in your `plz.config.json` file, the directory `config['input_directory']` will have the same contents that `../data/mnist` has locally.
-- `output_directory` is directory where you can write files. These are retrieved via `plz output`, or downloaded if you keep the CLI running until the end of the job.
+- `input_directory` is a directory where you'll find your input data. If you
+  have `"input": "file://../data/mnist",` in your `plz.config.json` file, the
+  directory `config['input_directory']` will have the same contents that
+  `../data/mnist` has locally.
+- `output_directory` is directory where you can write files. These are retrieved
+  via `plz output`, or downloaded if you keep the CLI running until the end of
+  the job.
 - `parameters` is the JSON object that you passed with `plz run --parameters a_json_file.json`, if you so did. Otherwise it's an empty object.
-- `measures_directory` is a directory in which you can write measures. You can query these with `plz measures`. Each file is interpreted as a property in a JSON object, using the file name as the key, and the file contents as the value, interpreted as JSON. By writing the code:
+- `measures_directory` is a directory in which you can write measures. You can
+  query these with `plz measures`. Each file is interpreted as a property in a
+  JSON object, using the file name as the key, and the file contents as the
+  value, interpreted as JSON. By writing the code:
 
   ```python
       with open(os.path.join(measures_directory, f'epoch_{epoch}'), 'w') as f:
@@ -299,38 +416,50 @@ This shows how to get the input data and parameters that `plz` uploads for you. 
   }
   ```
 
-- `summary_measures_path` is a path to a file in which you can write a JSON object with a summary of the results you obtained in your run (best accuracy, total training time, etc.). The summary is available via `plz measures -s`, and also printed by the CLI if you wait until the job finishes.
+- `summary_measures_path` is a path to a file in which you can write a JSON
+  object with a summary of the results you obtained in your run (best accuracy,
+  total training time, etc.). The summary is available via `plz measures -s`,
+  and also printed by the CLI if you wait until the job finishes.
 
-If you want to use CUDA for this example, we have provided an example configuration file for this purpose:
+If you want to use CUDA for this example, we have provided an example
+configuration file for this purpose:
 
 ```
 plz -c plz.cuda.config.json run
 ```
 
-This tells Docker to use the [CUDA runtime](https://github.com/NVIDIA/nvidia-docker).
+This tells Docker to use the [CUDA
+runtime](https://github.com/NVIDIA/nvidia-docker).
 
 ## Future work
 
 In the future, `plz` is intended to:
 
-- add support for named inputs and outputs, and function as a sort of "build system" in the cloud, particulary suitable for build pipelines,
-- add support for visualisations, such as [Tensorboard](https://www.tensorflow.org/guide/summaries_and_tensorboard),
-- manage epochs to capture intermediate metrics and results, and terminate runs early,
-- and whatever else sounds like fun. ([Please, tell us!](https://github.com/prodo-ai/plz/issues))
+- add support for named inputs and outputs, and function as a sort of "build
+  system" in the cloud, particulary suitable for build pipelines,
+- add support for visualisations, such as
+  [Tensorboard](https://www.tensorflow.org/guide/summaries_and_tensorboard),
+- manage epochs to capture intermediate metrics and results, and terminate runs
+  early,
+- and whatever else sounds like fun. ([Please, tell
+  us!](https://github.com/prodo-ai/plz/issues))
 
 ## Instructions for developers
 
 ### Installing dependencies
 
 1. Run `pip install pipenv` to install [`pipenv`](https://docs.pipenv.org/).
-2. Run `make environment` to create the virtual environments and install the dependencies.
+2. Run `make environment` to create the virtual environments and install the
+   dependencies.
 3. Run `make check` to run the tests.
 
-For more information, take a look at [the `pipenv` documentation](https://docs.pipenv.org/).
+For more information, take a look at [the `pipenv`
+documentation](https://docs.pipenv.org/).
 
 ### Using the CLI
 
-See the CLI's [_README.rst_](https://github.com/prodo-ai/plz/blob/master/cli/README.rst).
+See the CLI's
+[_README.rst_](https://github.com/prodo-ai/plz/blob/master/cli/README.rst).
 
 ### Deploying a test environment
 
@@ -340,9 +469,11 @@ See the CLI's [_README.rst_](https://github.com/prodo-ai/plz/blob/master/cli/REA
    ```
    export SECRETS_DIR="${PWD}/secrets"
    ```
-4. Create a configuration file named _secrets/config.json_ based on _example.config.json_.
+4. Create a configuration file named _secrets/config.json_ based on
+   _example.config.json_.
 5. Run `make deploy`.
 
 ### Deploying a production environment
 
-Do just as above, but put your secrets directory somewhere else (for example, another repository, this one private and encrypted).
+Do just as above, but put your secrets directory somewhere else (for example,
+another repository, this one private and encrypted).
