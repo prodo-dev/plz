@@ -271,4 +271,4 @@ def create_instance_market_spec(configuration: Configuration) -> dict:
         for k in ('instance_market_type',
                   'instance_max_idle_time_in_minutes',
                   'max_bid_price_in_dollars_per_hour')
-        }
+    }
