@@ -1,9 +1,12 @@
 import unittest
 
-from .utils import run_example
+from .utils import run_example, harvest
 
 
 class TestRun(unittest.TestCase):
+    def setUp(self):
+        harvest()
+
     def test_run(self):
         context, execution_id = run_example('logs', 'simple')
         output = b''.join(context.controller.get_logs(

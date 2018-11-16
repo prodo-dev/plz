@@ -3,7 +3,8 @@ from typing import Tuple, Optional
 
 from plz.cli.configuration import Configuration
 from plz.cli.controller_proxy import ControllerProxy
-from plz.cli.run_execution_operation import RunExecutionOperation
+from plz.cli.run_execution_operation import RunExecutionOperation, \
+    create_instance_market_spec
 from plz.cli.server import Server
 from plz.controller.api import Controller
 
@@ -31,6 +32,13 @@ def create_context_for_example(
         example_name)
     configuration = Configuration.load(example_dir)
     configuration.context_path = example_dir
+    # The default is None (by design, so that the user needs to specify it),
+    # and it will break when running tests against a controller starting
+    # AWS instances
+    configuration.max_bid_price_in_dollars_per_hour = 0.1
+    # The default in a configuration is 0. With that value, tests take ages to
+    # run as instances are stopped and started again
+    configuration.instance_max_idle_time_in_minutes = 3
     server = Server.from_configuration(configuration)
     controller = ControllerProxy(server)
     with capture_build_context(
@@ -60,14 +68,12 @@ def run_example(
         context: Optional[TestingContext] = None,
         input_id: Optional[str] = None,
         parameters: Optional[dict] = None,
-        instance_market_spec: Optional[dict] = None,
         start_metadata: Optional[dict] = None) -> Tuple[TestingContext, str]:
     parameters = parameters if parameters is not None else {}
-    instance_market_spec = instance_market_spec \
-        if instance_market_spec is not None else {}
     start_metadata = start_metadata if start_metadata is not None else {}
     if context is None:
         context = create_context_for_example(example_type, example_name)
+    instance_market_spec = create_instance_market_spec(context.configuration)
     execution_spec = RunExecutionOperation.create_execution_spec(
         context.configuration, input_id)
     response_dicts = context.controller.run_execution(
@@ -89,11 +95,10 @@ def rerun_execution(
         user: str,
         project: str,
         previous_execution_id: str,
+        instance_market_spec: dict,
         override_parameters: Optional[dict] = None,
-        instance_max_uptime_in_minutes: Optional[int] = None,
-        instance_market_spec: dict = None) -> Tuple[Controller, str]:
-    instance_market_spec = instance_market_spec \
-        if instance_market_spec is not None else {}
+        instance_max_uptime_in_minutes: Optional[int] = None) \
+        -> Tuple[Controller, str]:
     response_dicts = controller.rerun_execution(
         user=user,
         project=project,
@@ -106,3 +111,12 @@ def rerun_execution(
         RunExecutionOperation.get_execution_id_from_start_response(
             response_dicts)
     return controller, execution_id
+
+
+def harvest():
+    # The environment should have everything we need to create a controller
+    # during a testing run: host and port for the controller
+    configuration = Configuration.from_env(Configuration.PROPERTIES)
+    server = Server.from_configuration(configuration)
+    controller = ControllerProxy(server)
+    controller.harvest()

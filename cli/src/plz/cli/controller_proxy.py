@@ -217,6 +217,10 @@ class ControllerProxy(Controller):
         _check_status(response, requests.codes.ok)
         return response.json()
 
+    def harvest(self) -> None:
+        response = self.server.post('executions', 'harvest')
+        _check_status(response, requests.codes.no_content)
+
 
 def _check_status(response: requests.Response, expected_status: int):
     if response.status_code != expected_status:

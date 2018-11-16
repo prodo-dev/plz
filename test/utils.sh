@@ -20,7 +20,7 @@ CONTROLLER_TESTS_CONTAINER="${PROJECT_NAME}_controller-tests_1"
 CONTROLLER_PORT=80
 
 TEST_DIRECTORY=${0:a:h}
-DATA_DIRECTORY="${PWD}/cache/test"
+DATA_DIRECTORY="${PWD}/test_cache/"
 
 autoload -U colors && colors
 

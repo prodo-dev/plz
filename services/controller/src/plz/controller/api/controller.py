@@ -107,3 +107,7 @@ class Controller(ABC):
     @abstractmethod
     def describe_execution_entrypoint(self, execution_id: str) -> dict:
         pass
+
+    @abstractmethod
+    def harvest(self) -> None:
+        pass

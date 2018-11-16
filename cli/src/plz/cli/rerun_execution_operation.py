@@ -5,7 +5,7 @@ from plz.cli import parameters
 from plz.cli.configuration import Configuration
 from plz.cli.operation import Operation, add_output_dir_arg
 from plz.cli.run_execution_operation import RunExecutionOperation, \
-    add_detach_command_line_argument
+    add_detach_command_line_argument, create_instance_market_spec
 
 
 class RerunExecutionOperation(Operation):
@@ -54,7 +54,8 @@ class RerunExecutionOperation(Operation):
             project=self.configuration.project,
             instance_max_uptime_in_minutes=instance_max_uptime_in_minutes,
             previous_execution_id=self.get_execution_id(),
-            instance_market_spec=run_operation.get_instance_market_spec(),
+            instance_market_spec=create_instance_market_spec(
+                self.configuration),
             override_parameters=override_parameters)
 
         new_execution_id, was_start_ok = \

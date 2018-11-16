@@ -83,6 +83,8 @@ class ControllerImpl(Controller):
         start_metadata['previous_execution_id'] = previous_execution_id
         self.db_storage.store_start_metadata(execution_id, start_metadata)
 
+        self._set_user_last_execution_id(
+            execution_spec['user'], execution_id)
         yield {'id': execution_id}
 
         try:
@@ -100,8 +102,6 @@ class ControllerImpl(Controller):
             if instance is None:
                 yield {'error': 'Couldn\'t get an instance.'}
                 return
-            self._set_user_last_execution_id(
-                execution_spec['user'], execution_id)
         except Exception as e:
             self.log.exception('Exception running command.')
             yield {'error': str(e)}
