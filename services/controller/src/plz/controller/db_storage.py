@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Set, Optional
 
-from plz.controller.execution import Composition
+from plz.controller.execution_composition import ExecutionComposition
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +28,8 @@ class DBStorage(ABC):
         pass
 
     @abstractmethod
-    def retrieve_execution_composition(self, execution_id: str) -> Composition:
+    def retrieve_execution_composition(self, execution_id: str) \
+            -> ExecutionComposition:
         pass
 
     @abstractmethod
@@ -37,5 +38,5 @@ class DBStorage(ABC):
         pass
 
     @abstractmethod
-    def retrieve_tombstone_sub_execution_ids(self, execution_id: str):
+    def retrieve_tombstone_sub_execution_ids(self, execution_id: str) -> [str]:
         pass

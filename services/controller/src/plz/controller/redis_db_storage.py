@@ -4,8 +4,8 @@ from typing import Set, Optional
 from redis import StrictRedis
 
 from plz.controller.db_storage import DBStorage
-from plz.controller.execution import Composition, AtomicComposition, \
-    IndicesComposition
+from plz.controller.execution_composition import ExecutionComposition, \
+    AtomicComposition, IndicesComposition
 
 
 class RedisDBStorage(DBStorage):
@@ -39,7 +39,8 @@ class RedisDBStorage(DBStorage):
                     f'finished_execution_ids_for_user#{user}',
                     f'finished_execution_ids_for_project#{project}'])}
 
-    def retrieve_execution_composition(self, execution_id: str) -> Composition:
+    def retrieve_execution_composition(self, execution_id: str) \
+            -> ExecutionComposition:
         composition_bytes = self.redis.hget(
             'execution_composition', execution_id)
         # If there's nothing, assume it's a plain old atomic
