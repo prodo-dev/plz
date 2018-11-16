@@ -30,7 +30,8 @@ class ControllerProxy(Controller):
 
     def run_execution(self, command: [str], snapshot_id: str, parameters: dict,
                       instance_market_spec: dict, execution_spec: dict,
-                      start_metadata: dict) -> Iterator[dict]:
+                      start_metadata: dict, parallel_indices: Optional[int]) \
+            -> Iterator[dict]:
         response = self.server.post(
             'executions',
             stream=True,

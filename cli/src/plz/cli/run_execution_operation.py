@@ -201,7 +201,8 @@ class RunExecutionOperation(Operation):
                     # User and project are present in the execution spec
                     if k not in {'user', 'project'}
                 }
-            }
+            },
+            parallel_indices=None
         )
         return RunExecutionOperation.get_execution_id_from_start_response(
             response_dicts)

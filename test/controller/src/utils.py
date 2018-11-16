@@ -68,7 +68,8 @@ def run_example(
         context: Optional[TestingContext] = None,
         input_id: Optional[str] = None,
         parameters: Optional[dict] = None,
-        start_metadata: Optional[dict] = None) -> Tuple[TestingContext, str]:
+        start_metadata: Optional[dict] = None,
+        parallel_indices: Optional[int] = None) -> Tuple[TestingContext, str]:
     parameters = parameters if parameters is not None else {}
     start_metadata = start_metadata if start_metadata is not None else {}
     if context is None:
@@ -82,7 +83,8 @@ def run_example(
         parameters=parameters,
         instance_market_spec=instance_market_spec,
         execution_spec=execution_spec,
-        start_metadata=start_metadata)
+        start_metadata=start_metadata,
+        parallel_indices=parallel_indices)
 
     execution_id, _ = \
         RunExecutionOperation.get_execution_id_from_start_response(

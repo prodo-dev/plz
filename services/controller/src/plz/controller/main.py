@@ -140,13 +140,14 @@ def run_execution_entrypoint():
             'max_bid_price_in_dollars_per_hour': 3,
             'instance_max_idle_time_in_minutes': 30
         })
+    parallel_indices = request.json.get('parallel_indices')
 
     @_json_stream
     @stream_with_context
     def act() -> Iterator[dict]:
         yield from controller.run_execution(
             command, snapshot_id, parameters, instance_market_spec,
-            execution_spec, start_metadata)
+            execution_spec, start_metadata, parallel_indices)
     return Response(
         act(), mimetype='text/plain', status=requests.codes.accepted)
 

@@ -176,7 +176,7 @@ class EC2InstanceGroup(InstanceProvider):
                     try:
                         instance.unearmark_for(execution_id)
                     # Because the instance was earmarked (if things had gone
-                    # the normal way), it it's unavailable then something
+                    # the normal way), if it's unavailable then something
                     # undesirable happened (like, it's not running any more).
                     # Try to unearmark but catch any exceptions
                     except Exception:
@@ -193,6 +193,8 @@ class EC2InstanceGroup(InstanceProvider):
                 return
             else:
                 yield _msg('pending')
+                # TODO: discount the time elapsed since before the yield
+                # while sleeping
                 time.sleep(delay_in_seconds)
 
     def instance_for(self, execution_id: str) -> Optional[EC2Instance]:
