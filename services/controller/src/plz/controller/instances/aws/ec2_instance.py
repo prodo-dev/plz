@@ -244,8 +244,8 @@ class EC2Instance(Instance):
                 {'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
                  'Value': str(idle_since_timestamp)}])
 
-    def _is_running_and_free(self, earmark: Optional[str],
-                             check_running: Optional[bool],
+    def _is_running_and_free(self, earmark: str,
+                             check_running: bool,
                              earmark_optional: bool):
         if check_running and not self._is_running():
             return False
@@ -258,15 +258,13 @@ class EC2Instance(Instance):
                          ('instance-id', self.instance_id)])
             if len(instances) > 0:
                 return True
-        # Try with and without the earmark
-        if earmark is not None:
-            instances = get_aws_instances(
-                self.client,
-                only_running=check_running,
-                filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
-                         (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}',
-                          earmark),
-                         ('instance-id', self.instance_id)])
+        instances = get_aws_instances(
+            self.client,
+            only_running=check_running,
+            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
+                     (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}',
+                      earmark),
+                     ('instance-id', self.instance_id)])
         return len(instances) > 0
 
     def _is_running(self):
