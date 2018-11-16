@@ -4,7 +4,7 @@ import os
 import random
 import uuid
 from copy import deepcopy
-from typing import BinaryIO, Iterator, List, Optional, Tuple, Generator
+from typing import BinaryIO, Iterator, List, Optional, Tuple
 
 import requests
 from flask import jsonify, request
@@ -88,7 +88,7 @@ class ControllerImpl(Controller):
             input_stream = self.input_data_configuration.prepare_input_stream(
                 execution_spec)
 
-            def status_generator(ex_id: str):
+            def status_generator(ex_id: str) -> Iterator[dict]:
                 return self.instance_provider.run_in_instance(
                     ex_id, command, snapshot_id, parameters,
                     input_stream, instance_market_spec, execution_spec)
@@ -341,7 +341,7 @@ def _enrich_start_metadata(
 def _assign_instances(
         instances: [Optional[Instance]],
         parallel_indices: Optional[int],
-        statuses_generators: [Generator[dict]]) -> Generator[dict]:
+        statuses_generators: [Iterator[dict]]) -> Iterator[dict]:
     # Whether was there a status update
     was_there_status = True
     while was_there_status:
