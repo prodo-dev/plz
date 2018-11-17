@@ -24,8 +24,8 @@ versions._
   - Python
   - Anaconda
   - PyTorch
-- data-based workflow, so that you can ensure you're always working with the
-  correct inputs and outputs
+- data-based workflow, so that you don't accidentally compute your model with
+  the wrong input
 - parameter awareness, so that you can run the same experiment with multiple
   sets of parameters
 - full history, so that you can review your experiments over time
@@ -42,9 +42,8 @@ start by giving you an overview of what Plz does.
 Plz offers a command-line interface. You start by adding a `plz.config.json`
 file to the directory where you have your source code. This file contains, among
 other things, the command you run to put your program to work (for instance,
-`python3 main.py`). Then you can run the program with `plz run`. This runs the
-program in the Plz environment. The following example (provided in this
-repository) demonstrates this:
+`python3 main.py`). Then you can use Plz to run your program with `plz run`. The
+following example (provided in this repository) demonstrates this:
 
 ```
 sergio@spaceship:~/plz/examples/pytorch$ plz run
@@ -95,7 +94,7 @@ le_net.pth
 👌 Done and dusted.
 ```
 
-You can see that the following:
+From the above output, you'll see Plz do the following:
 
 - Plz captures the files in your current directory. A snapshot of your code is
   built and stored in your infrastructure, so that you can retrieve the code
@@ -210,20 +209,21 @@ installation occurs only the first time after you change the environment file.
 
 ### Functionality summary
 
-Much of what Plz helps automate are cloud-related tasks. It:
+Plz helps with the gruntwork around managing long-running tasks. It:
 
-1. starts a "worker" (typically on AWS EC2, but also locally) to run your job,
-2. packages your code, parameters and data and ships them to the worker,
-3. runs your code,
-4. saves the results (like losses) and outcomes (like models) so that you can
-   back to them in the future, and
-5. takes down the worker.
-
-It also:
-
-6. reruns previous jobs as to make sure the results are repeatable, and
-7. provides a history including the result and parameters, so that you have
+1. reruns previous jobs as to make sure the results are repeatable,
+2. lets you customise parameters while keeping the work the same, and
+3. provides a history including the result and parameters, so that you have
    experiment data in a structured format.
+
+Plz also helps automate cloud-related tasks. It:
+
+4. starts a "worker" (typically on AWS EC2, but also locally) to run your job,
+5. packages your code, parameters and data and ships them to the worker,
+6. runs your code,
+7. saves the results (like losses) and outcomes (like models, but also the
+   console output) so that you can back to them in the future, and
+8. takes down the worker.
 
 We build Plz following these principles:
 
