@@ -2,8 +2,8 @@
 
 _Say the magic word._
 
-_Plz_ is a job runner targeted at running highly intensive data processing jobs
-as simply, systematically, tidily and cheaply as possible.
+_Plz_ (pronounced "please") is a job runner targeted at running highly intensive
+data processing jobs as simply, systematically, tidily and cheaply as possible.
 
 At Prodo.AI, we use Plz to train our PyTorch-based machine learning models.
 
@@ -122,15 +122,14 @@ Epoch: 9 Training loss: 0.330538
         plz logs ad96b586-89e5-11e8-a7c5-8142e2563487
 ```
 
-`plz` runs your commands in a Docker container, either in your AWS
-infrastructure or in your local machine, and so your actions in the terminal
-don't affect the execution. If you are running this execution only, you can just
-type `plz logs` and logs will be streamed from the current moment (unless you
-specify `--since=start`, which will tell it to stream from the start of
-execution).
+Plz runs your commands in a Docker container, either in your AWS infrastructure
+or in your local machine, and so your actions in the terminal don't affect the
+execution. If you are running this execution only, you can just type `plz logs`
+and logs will be streamed from the current moment (unless you specify
+`--since=start`, which will tell it to stream from the start of execution).
 
 The big hexadecimal number you see in the output, next to `plz logs`, is the
-execution ID you can use to refer to this execution. `plz` remembers the last
+execution ID you can use to refer to this execution. Plz remembers the last
 execution that was _started_, and if you want to refer to that one you don't
 need to include it in your command (you can just type `plz logs`). But if you
 need to specify the execution ID, you can do `plz logs <execution-id>`.
@@ -226,21 +225,21 @@ It also:
 7. provides a history including the result and parameters, so that you have
    experiment data in a structured format.
 
-We build `plz` following these principles:
+We build Plz following these principles:
 
 - Code and data must be stored for future reference.
-- Whatever part of the running environment can be captured by `plz`, we capture
-  it as to make jobs repeatable.
-- plz functionality is based on standard mechanisms like files and environment
+- Whatever part of the running environment can be captured by Plz, we capture it
+  as to make jobs repeatable.
+- Functionality is based on standard mechanisms like files and environment
   variables. You don't need to add extra dependencies to your code or learn how
   to read/write your data in specific ways.
 - The tool must be flexible enough so that no unnecessary restrictions are
-  imposed by the architecture. You should be able to do with `plz` whatever you
+  imposed by the architecture. You should be able to do with Plz whatever you
   can do by running a program manually. It was surprising to find out how many
   issues, mostly around running jobs in the cloud, could be solved only by
   tweaking the configuration, without requiring any changes to the code.
 
-`plz` is routinely used at `prodo.ai` to train ML models on AWS, some of them
+Plz is routinely used at `prodo.ai` to train ML models on AWS, some of them
 taking days to run in the most powerful instances available. We trust it to
 start and terminate these instances as needed, and to manage our spot instances,
 allowing us to get a much better price than if we were using on-demand instances
@@ -348,7 +347,7 @@ GPU-powered machines).
 ### Python
 
 In the directory `examples/python`, there is a minimal example showing how to
-run a program with `plz` that handles input and output. Once you have a working
+run a program with Plz that handles input and output. Once you have a working
 controller, running `plz run` should start the job.
 
 ### PyTorch
@@ -357,8 +356,8 @@ In the directory `examples/pytorch`, there's a full-fledged example for the task
 of digit recognition using the classic approach of LeNets and a subset of the
 well-known MNIST dataset.
 
-Anything related to `plz` is in `main.py`. In fact the most relevant lines are
-the following ones:
+Anything related to Plz is in `main.py`. In fact the most relevant lines are the
+following ones:
 
 ```python
 def get_from_plz_config(key: str, non_plz_value: T) -> T:
@@ -380,11 +379,11 @@ def get_from_plz_config(key: str, non_plz_value: T) -> T:
         os.path.join('measures', 'summary'))
 ```
 
-This shows how to get the input data and parameters that `plz` uploads for you.
+This shows how to get the input data and parameters that Plz uploads for you.
 There's a configuration file whose name comes in the environment variable
-`CONFIGURATION_FILE`. If that variable is present, you're running with `plz`,
-and you can read and parse the file as a JSON object. The object has the
-following keys:
+`CONFIGURATION_FILE`. If that variable is present, you're running with Plz, and
+you can read and parse the file as a JSON object. The object has the following
+keys:
 
 - `input_directory` is a directory where you'll find your input data. If you
   have `"input": "file://../data/mnist",` in your `plz.config.json` file, the
@@ -438,7 +437,7 @@ This tells Docker to use the
 
 ## Future work
 
-In the future, `plz` is intended to:
+In the future, Plz is intended to:
 
 - add support for named inputs and outputs, and function as a sort of "build
   system" in the cloud, particulary suitable for build pipelines,
