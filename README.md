@@ -202,12 +202,12 @@ get the last execution _started_.
 
 We also make it easy to manage dependencies for projects using Anaconda.
 Projects using the image `prodoai/plz_ml-pytorch` need to have an
-`environment.yml` file, as the one produced by `conda env export` (see [the one
-in the Pytorch example](examples/pytorch/environment.yml)). This file will be
-applied on top of [the environment in the
-image](base-images/ml-pytorch/environment.yml). Installation of dependencies is
-cached, so the process of dependency installation occurs only the first time
-after you change the environment file.
+`environment.yml` file, as the one produced by `conda env export` (see
+[the one in the Pytorch example](examples/pytorch/environment.yml)). This file
+will be applied on top of
+[the environment in the image](base-images/ml-pytorch/environment.yml).
+Installation of dependencies is cached, so the process of dependency
+installation occurs only the first time after you change the environment file.
 
 ### Functionality summary
 
@@ -276,14 +276,16 @@ depending on the controller you've started.
 Chances are you that you have most of the supporting tools already installed, as
 these are broadly used tools.
 
-1. Install Git, and Python 3. a. On Ubuntu, you can run `sudo apt install git python3 python3-pip`. b. On macOS, install [Homebrew](https://brew.sh/), then
-   run `brew install git python`. c. For all other operating systems, you're
-   going to have to Google it.
+1. Install Git, and Python 3.
+   1. On Ubuntu, you can run `sudo apt install git python3 python3-pip`.
+   2. On macOS, install [Homebrew](https://brew.sh/), then run
+      `brew install git python`.
+   3. For all other operating systems, you're going to have to Google it.
 2. Install [Docker](https://docs.docker.com/install/), then restart your
    terminal.
 3. Install Docker Compose (`pip install docker-compose`).
-4. If you're planning on running code with CUDA, install the [NVIDIA Container
-   Runtime for Docker](https://github.com/NVIDIA/nvidia-docker).
+4. If you're planning on running code with CUDA, install the
+   [NVIDIA Container Runtime for Docker](https://github.com/NVIDIA/nvidia-docker).
 5. `git clone https://github.com/prodo-ai/plz`, then `cd plz`.
 6. Install the CLI by running `./install_cli`.
 7. Run the controller (see below).
@@ -330,7 +332,8 @@ Then run:
 Unless you add `"instance_max_uptime_in_minutes": null,` to your
 `plz.config.json`, all AWS instances you start terminate after 60 minutes.
 That's on purpose, in case you're just trying the tool and something doesn't go
-well (for example, there's a power cut). You can always use `plz list` and `plz kill` before leaving your computer, as to make sure that there no instances
+well (for example, there's a power cut). You can always use `plz list` and
+`plz kill` before leaving your computer, as to make sure that there no instances
 remaining. For maximum assurance, we recommend checking the state of your
 instances in the AWS console.
 
@@ -390,7 +393,9 @@ following keys:
 - `output_directory` is directory where you can write files. These are retrieved
   via `plz output`, or downloaded if you keep the CLI running until the end of
   the job.
-- `parameters` is the JSON object that you passed with `plz run --parameters a_json_file.json`, if you so did. Otherwise it's an empty object.
+- `parameters` is the JSON object that you passed with
+  `plz run --parameters a_json_file.json`, if you so did. Otherwise it's an
+  empty object.
 - `measures_directory` is a directory in which you can write measures. You can
   query these with `plz measures`. Each file is interpreted as a property in a
   JSON object, using the file name as the key, and the file contents as the
@@ -428,8 +433,8 @@ configuration file for this purpose:
 plz -c plz.cuda.config.json run
 ```
 
-This tells Docker to use the [CUDA
-runtime](https://github.com/NVIDIA/nvidia-docker).
+This tells Docker to use the
+[CUDA runtime](https://github.com/NVIDIA/nvidia-docker).
 
 ## Future work
 
@@ -441,8 +446,8 @@ In the future, `plz` is intended to:
   [Tensorboard](https://www.tensorflow.org/guide/summaries_and_tensorboard),
 - manage epochs to capture intermediate metrics and results, and terminate runs
   early,
-- and whatever else sounds like fun. ([Please, tell
-  us!](https://github.com/prodo-ai/plz/issues))
+- and whatever else sounds like fun.
+  ([Please, tell us!](https://github.com/prodo-ai/plz/issues))
 
 ## Instructions for developers
 
@@ -453,8 +458,8 @@ In the future, `plz` is intended to:
    dependencies.
 3. Run `make check` to run the tests.
 
-For more information, take a look at [the `pipenv`
-documentation](https://docs.pipenv.org/).
+For more information, take a look at
+[the `pipenv` documentation](https://docs.pipenv.org/).
 
 ### Using the CLI
 
