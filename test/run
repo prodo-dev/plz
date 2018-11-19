@@ -85,21 +85,21 @@ function docker_compose {
 }
 
 function get_end_to_end_tests {
-  if [[ $# -eq 0 ]]; then
+  if [[ ${#test_names_args[@]} -eq 0 ]]; then
     # Run all tests, except in directories named "*.ignored".
-    end_to_end_tests=($((cd $TEST_DIRECTORY && echo -n end-to-end/*/*/plz.config.json~*/*.ignored/*) \
+    end_to_end_tests=($((cd $TEST_DIRECTORY/end-to-end/ && echo -n */*/plz.config.json~*/*.ignored/*) \
                | xargs -n1 dirname))
   else
     # Run selected tests.
     # But first, verify all arguments are actually test directories.
-    for dir in $@; do
+    for dir in "${test_names_args[@]}"; do
       if [[ ! ( $dir =~ '^[A-Za-z0-9\-]+/[A-Za-z0-9\-]+$' ) \
 	     || ! -f "${TEST_DIRECTORY}/end-to-end/${dir}/plz.config.json" ]]; then
         echo "\"${dir}\" is not a test directory."
         exit 2
       fi
-      end_to_end_tests=($@)
     done
+    end_to_end_tests=${test_names_args[@]}
   fi
 }
 
@@ -135,6 +135,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+test_names_args=( "$@" )
+
 exit_early=false
 trap 'exit_early=true; cleanup' EXIT INT TERM
 
@@ -161,12 +163,12 @@ function run_end_to_end_tests() {
   for test in $end_to_end_tests; do
     if $parallel; then
       (
-        test_output=$("${TEST_DIRECTORY}/run-end-to-end-test" $test 2>&1) || rm -f $success_file
+        test_output=$("${TEST_DIRECTORY}/run-end-to-end-test" "end-to-end/$test" 2>&1) || rm -f $success_file
         echo $test_output
       ) &
       pids+=($!)
     else
-      "${TEST_DIRECTORY}/run-end-to-end-test" $test || rm -f $success_file
+      "${TEST_DIRECTORY}/run-end-to-end-test" "end-to-end/$test" || rm -f $success_file
       if $exit_early; then
         rm -f $success_file
         break
