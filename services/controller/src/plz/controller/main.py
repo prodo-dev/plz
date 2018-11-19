@@ -324,6 +324,11 @@ def describe_execution_entrypoint(execution_id: str):
     return jsonify(controller.describe_execution_entrypoint(execution_id))
 
 
+@app.route('/executions/composition/<execution_id>', methods=['GET'])
+def get_execution_composition_entrypoint(execution_id: str):
+    return jsonify(controller.get_execution_composition(execution_id))
+
+
 def _json_stream(f: Callable[[], Iterator[Any]]):
     def wrapped() -> Iterator[str]:
         return (json.dumps(message) + '\n' for message in f())

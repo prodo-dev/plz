@@ -28,6 +28,11 @@ class DBStorage(ABC):
         pass
 
     @abstractmethod
+    def store_execution_composition(
+            self, execution_composition: ExecutionComposition) -> None:
+        pass
+
+    @abstractmethod
     def retrieve_execution_composition(self, execution_id: str) \
             -> ExecutionComposition:
         pass

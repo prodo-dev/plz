@@ -110,5 +110,9 @@ class Controller(ABC):
         pass
 
     @abstractmethod
+    def get_execution_composition(self, execution_id: str) -> dict:
+        pass
+
+    @abstractmethod
     def harvest(self) -> None:
         pass

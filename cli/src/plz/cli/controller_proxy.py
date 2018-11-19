@@ -41,7 +41,8 @@ class ControllerProxy(Controller):
                 'parameters': parameters,
                 'execution_spec': execution_spec,
                 'instance_market_spec': instance_market_spec,
-                'start_metadata': start_metadata
+                'start_metadata': start_metadata,
+                'parallel_indices': parallel_indices
             })
         _check_status(response, requests.codes.accepted)
         return (json.loads(line) for line in response.iter_lines())
@@ -215,6 +216,12 @@ class ControllerProxy(Controller):
     def describe_execution_entrypoint(self, execution_id: str) -> dict:
         response = self.server.get(
             'executions', 'describe', execution_id, stream=True)
+        _check_status(response, requests.codes.ok)
+        return response.json()
+
+    def get_execution_composition(self, execution_id: str) -> dict:
+        response = self.server.get(
+            'executions', 'composition', execution_id)
         _check_status(response, requests.codes.ok)
         return response.json()
 
