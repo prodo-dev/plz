@@ -7,6 +7,11 @@ class TestRun(unittest.TestCase):
     def setUp(self):
         harvest()
 
+    @classmethod
+    def tearDownClass(cls):
+        harvest()
+        super().tearDownClass()
+
     def test_run(self):
         context, execution_id = run_example('logs', 'simple')
         output = b''.join(context.controller.get_logs(

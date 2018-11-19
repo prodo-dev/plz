@@ -9,6 +9,11 @@ class TestReRun(unittest.TestCase):
     def setUp(self):
         harvest()
 
+    @classmethod
+    def tearDownClass(cls):
+        harvest()
+        super().tearDownClass()
+
     def test_rerun(self):
         context, execution_id = run_example(
             'parameters', 'simple',

@@ -101,7 +101,6 @@ class ControllerImpl(Controller):
             yield from _assign_instances(instances, parallel_indices,
                                          statuses_generators)
 
-            self.log.debug(f'Instances: {instances}')
             if parallel_indices is None:
                 if instances[0] is None:
                     yield {'error': 'Couldn\'t get an instance.'}
