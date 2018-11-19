@@ -282,6 +282,15 @@ these are broadly used tools.
    3. For all other operating systems, you're going to have to Google it.
 2. Install [Docker](https://docs.docker.com/install/), then restart your
    terminal.
+   1. On Ubuntu, you can run:
+      ```
+      curl -fsSL https://get.docker.com -o get-docker.sh
+      sudo sh get-docker.sh
+      sudo usermod -aG docker your-user
+      ```
+      then restart your terminal.
+   2. On macOS, you can use Homebrew to install Docker with
+      `brew cask install docker`.
 3. Install Docker Compose (`pip install docker-compose`).
 4. If you're planning on running code with CUDA, install the
    [NVIDIA Container Runtime for Docker](https://github.com/NVIDIA/nvidia-docker).
