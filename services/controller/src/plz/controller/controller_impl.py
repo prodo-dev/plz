@@ -106,9 +106,9 @@ class ControllerImpl(Controller):
                 if instances[0] is None:
                     yield {'error': 'Couldn\'t get an instance.'}
                     return
-                else:
-                    indices_without_instance = [
-                        i for (i, instance) in enumerate(instances)
+            else:
+                indices_without_instance = [
+                    i for (i, instance) in enumerate(instances)
                     if instance is None]
 
                 if len(indices_without_instance) > 0:
