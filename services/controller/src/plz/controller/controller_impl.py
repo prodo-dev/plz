@@ -101,17 +101,20 @@ class ControllerImpl(Controller):
             yield from _assign_instances(instances, parallel_indices,
                                          statuses_generators)
 
-            if parallel_indices is None and instances[0] is None:
-                yield {'error': 'Couldn\'t get an instance.'}
-                return
+            self.log.debug(f'Instances: {instances}')
+            if parallel_indices is None:
+                if instances[0] is None:
+                    yield {'error': 'Couldn\'t get an instance.'}
+                    return
+                else:
+                    indices_without_instance = [
+                        i for (i, instance) in enumerate(instances)
+                    if instance is None]
 
-            indices_without_instance = [
-                i for (i, instance) in instances if instance is None]
-
-            if len(indices_without_instance) > 0:
-                yield {'error': f'Couldn\'t get instances for indices: '
-                       f'{indices_without_instance}'}
-                return
+                if len(indices_without_instance) > 0:
+                    yield {'error': f'Couldn\'t get instances for indices: '
+                           f'{indices_without_instance}'}
+                    return
         except Exception as e:
             self.log.exception('Exception running command.')
             yield {'error': str(e)}
