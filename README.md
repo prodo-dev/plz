@@ -326,6 +326,8 @@ CLI:
 
 1. Install the AWS CLI: `pip install awscli`
 2. Configure it with your access key: `aws configure`
+3. Verify you can connect to AWS by running `aws iam get-user` and checking your
+   username is correct.
 
 If you usually use AWS in a particular region, please edit
 `aws_config/config.json` and set your region there. The default file sets the
