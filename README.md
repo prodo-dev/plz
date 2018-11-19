@@ -280,15 +280,15 @@ these are broadly used tools.
    2. On macOS, install [Homebrew](https://brew.sh/), then run
       `brew install git python`.
    3. For all other operating systems, you're going to have to Google it.
-2. Install [Docker](https://docs.docker.com/install/), then restart your
-   terminal.
+2. Install [Docker](https://docs.docker.com/install/).
    1. On Ubuntu, you can run:
       ```
       curl -fsSL https://get.docker.com -o get-docker.sh
       sudo sh get-docker.sh
       sudo usermod -aG docker your-user
       ```
-      then restart your terminal.
+      then restart your shell so that it picks up the membership to the `docker`
+      group.
    2. On macOS, you can use Homebrew to install Docker with
       `brew cask install docker`.
 3. Install Docker Compose (`pip install docker-compose`).
