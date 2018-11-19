@@ -1,7 +1,7 @@
 import io
 import logging
 import os.path
-from typing import Dict, Iterator, List, Optional
+from typing import Dict, Iterator, List, Optional, Tuple
 
 import time
 from redis import StrictRedis
@@ -63,6 +63,7 @@ class EC2Instance(Instance):
             parameters: Parameters,
             input_stream: Optional[io.BytesIO],
             docker_run_args: Dict[str, str],
+            index_range_to_run: Optional[Tuple[int, int]],
             max_idle_seconds: int = 60 * 30) -> None:
         # Sanity check before we get the lock
         if self._get_earmark() != self.delegate.execution_id:
@@ -83,7 +84,7 @@ class EC2Instance(Instance):
                     f'not running)')
             self.images.pull(snapshot_id)
             self.delegate.run(command, snapshot_id, parameters, input_stream,
-                              docker_run_args)
+                              docker_run_args, index_range_to_run)
             self._set_execution_id(
                 self.delegate.execution_id, max_idle_seconds)
 

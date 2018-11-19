@@ -168,7 +168,9 @@ class EC2InstanceGroup(InstanceProvider):
                         input_stream=input_stream,
                         docker_run_args=execution_spec['docker_run_args'],
                         max_idle_seconds=instance_market_spec[
-                            'instance_max_idle_time_in_minutes']*60)
+                            'instance_max_idle_time_in_minutes']*60,
+                        index_range_to_run=execution_spec[
+                            'index_range_to_run'])
                 except InstanceUnavailableException as e:
                     log.info(e)
                     yield _msg('gone while waiting')
