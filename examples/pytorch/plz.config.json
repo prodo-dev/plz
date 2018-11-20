@@ -8,5 +8,6 @@
     "input": "file://../data/mnist",
     "instance_type": "t3.medium",
     "instance_max_idle_time_in_minutes": 5,
+    "instance_market_type": "spot",
     "max_bid_price_in_dollars_per_hour": 1
 }
