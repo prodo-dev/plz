@@ -83,7 +83,7 @@ def _validate_market_spec(configuration, errors, operation: Optional[str]):
             'In order to use spot instances, in your plz.config.json file '
             'please set `\n'
             '"max_bid_price_in_dollars_per_hour": N\n'
-            '` for some N (or set `"instance_market_type": "on-demand"`, '
+            '` for some N (or set `"instance_market_type": "on_demand"`, '
             'which will be more expensive than any bid price you use)')
     if configuration.instance_market_type == 'on_demand' and \
             configuration.max_bid_price_in_dollars_per_hour is not None:
