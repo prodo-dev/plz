@@ -116,8 +116,8 @@ class AtomicInstanceComposition(InstanceComposition):
                 Volumes.MEASURES_DIRECTORY_PATH, 'summary')
         }
         volumes = [
-            VolumeEmptyDirectory(Volumes.OUTPUT_DIRECTORY_PATH),
-            VolumeEmptyDirectory(Volumes.MEASURES_DIRECTORY_PATH)
+            VolumeEmptyDirectory(Volumes.OUTPUT_DIRECTORY),
+            VolumeEmptyDirectory(Volumes.MEASURES_DIRECTORY)
         ]
         return WorkerStartupConfig(
             config_keys=config_keys,
