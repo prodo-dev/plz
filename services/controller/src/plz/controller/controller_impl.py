@@ -3,7 +3,8 @@ import logging
 import os
 import random
 import uuid
-from typing import BinaryIO, Iterator, List, Optional
+from copy import deepcopy
+from typing import BinaryIO, Iterator, List, Optional, Tuple
 
 import requests
 from flask import jsonify, request
@@ -19,6 +20,8 @@ from plz.controller.api.types import InputMetadata, JSONString
 from plz.controller.configuration import Dependencies
 from plz.controller.db_storage import DBStorage
 from plz.controller.execution import Executions
+from plz.controller.execution_composition import AtomicComposition, \
+    IndicesComposition
 from plz.controller.images import Images
 from plz.controller.input_data import InputDataConfiguration
 from plz.controller.instances.instance_base import Instance, \
@@ -60,51 +63,13 @@ class ControllerImpl(Controller):
     def run_execution(
             self, command: [str], snapshot_id: str, parameters: dict,
             instance_market_spec: dict, execution_spec: dict,
-            start_metadata: dict) -> Iterator[dict]:
+            start_metadata: dict,
+            parallel_indices_range: Optional[Tuple[int, int]]) \
+            -> Iterator[dict]:
         return self._do_run_execution(
             command, snapshot_id, parameters, instance_market_spec,
-            execution_spec, start_metadata, previous_execution_id=None)
-
-    def _do_run_execution(
-            self, command: [str], snapshot_id: str, parameters: dict,
-            instance_market_spec: dict, execution_spec: dict,
-            start_metadata: dict,
-            previous_execution_id: Optional[str]) -> Iterator[dict]:
-        execution_id = str(_get_execution_uuid())
-        start_metadata['command'] = command
-        start_metadata['snapshot_id'] = snapshot_id
-        start_metadata['parameters'] = parameters
-        start_metadata['instance_market_spec'] = instance_market_spec
-        start_metadata['execution_spec'] = {
-            k: v for k, v in execution_spec.items()
-            if k not in {'user', 'project'}}
-        start_metadata['user'] = execution_spec['user']
-        start_metadata['project'] = execution_spec['project']
-        start_metadata['previous_execution_id'] = previous_execution_id
-        self.db_storage.store_start_metadata(execution_id, start_metadata)
-
-        self._set_user_last_execution_id(
-            execution_spec['user'], execution_id)
-        yield {'id': execution_id}
-
-        try:
-            input_stream = self.input_data_configuration.prepare_input_stream(
-                execution_spec)
-            startup_statuses = self.instance_provider.run_in_instance(
-                execution_id, command, snapshot_id, parameters,
-                input_stream, instance_market_spec, execution_spec)
-            instance: Optional[Instance] = None
-            for status in startup_statuses:
-                if 'message' in status:
-                    yield {'status': status['message']}
-                if 'instance' in status:
-                    instance = status['instance']
-            if instance is None:
-                yield {'error': 'Couldn\'t get an instance.'}
-                return
-        except Exception as e:
-            self.log.exception('Exception running command.')
-            yield {'error': str(e)}
+            execution_spec, start_metadata, parallel_indices_range,
+            previous_execution_id=None)
 
     def rerun_execution(
             self, user: str, project: str,
@@ -129,7 +94,10 @@ class ControllerImpl(Controller):
             instance_max_uptime_in_minutes
         return self._do_run_execution(
             command, snapshot_id, parameters, instance_market_spec,
-            execution_spec, start_metadata, previous_execution_id)
+            execution_spec, start_metadata,
+            parallel_indices_range=start_metadata.get(
+                'parallel_indices_range'),
+            previous_execution_id=previous_execution_id)
 
     def list_executions(self) -> [dict]:
         # It's not protected, it's preceded by underscore as to avoid
@@ -259,6 +227,11 @@ class ControllerImpl(Controller):
             raise ExecutionNotFoundException(execution_id)
         return {'start_metadata': start_metadata}
 
+    def get_execution_composition(self, execution_id: str) -> dict:
+        composition = self.db_storage.retrieve_execution_composition(
+            execution_id)
+        return composition.to_jsonable_dict()
+
     @classmethod
     def handle_exception(cls, exception: ResponseHandledException):
         pass
@@ -268,9 +241,155 @@ class ControllerImpl(Controller):
         self.redis.set(f'key:{__name__}#user_last_execution_id:{user}',
                        execution_id)
 
+    def _do_run_execution(
+            self, command: [str], snapshot_id: str, parameters: dict,
+            instance_market_spec: dict, execution_spec: dict,
+            start_metadata: dict,
+            parallel_indices_range: Optional[Tuple[int, int]],
+            previous_execution_id: Optional[str]) -> Iterator[dict]:
+        execution_id = str(_get_execution_uuid())
+
+        metadatas = self._store_metadata_for_all_executions(
+            command, snapshot_id, parameters, instance_market_spec,
+            execution_spec, start_metadata, parallel_indices_range,
+            previous_execution_id, execution_id)
+
+        self._set_user_last_execution_id(
+            execution_spec['user'], execution_id)
+        yield {'id': execution_id}
+
+        try:
+            input_stream = self.input_data_configuration.prepare_input_stream(
+                execution_spec)
+
+            def status_generator(ex_id: str, ex_spec: dict) -> Iterator[dict]:
+                return self.instance_provider.run_in_instance(
+                    ex_id, command, snapshot_id, parameters,
+                    input_stream, instance_market_spec, ex_spec)
+
+            statuses_generators = [
+                status_generator(m['execution_id'], m['execution_spec'])
+                for m in metadatas
+            ]
+
+            instances = [None for _ in statuses_generators]
+
+            yield from _assign_instances(instances, parallel_indices_range,
+                                         statuses_generators)
+
+            if parallel_indices_range is None:
+                if instances[0] is None:
+                    yield {'error': 'Couldn\'t get an instance.'}
+                    return
+                composition = AtomicComposition(execution_id)
+            else:
+                indices_without_instance = [
+                    i for (i, instance) in enumerate(instances)
+                    if instance is None]
+
+                if len(indices_without_instance) > 0:
+                    yield {'error': f'Couldn\'t get instances for indices: '
+                                    f'{indices_without_instance}'}
+                    return
+                indices_to_compositions = {
+                    i: AtomicComposition(m['execution_id'])
+                    for (i, m) in enumerate(metadatas)
+                }
+                self.log.debug(
+                    f'Idx to compositions {indices_to_compositions}')
+                composition = IndicesComposition(
+                    execution_id,
+                    indices_to_compositions=indices_to_compositions,
+                    tombstone_execution_ids=set())
+            self.db_storage.store_execution_composition(composition)
+        except Exception as e:
+            self.log.exception('Exception running command.')
+            yield {'error': str(e)}
+
+    def _store_metadata_for_all_executions(
+            self, command: [str], snapshot_id: str, parameters: dict,
+            instance_market_spec: dict, execution_spec: dict,
+            start_metadata: dict,
+            parallel_indices_range: Optional[Tuple[int, int]],
+            previous_execution_id: Optional[str],
+            execution_id: str) -> [dict]:
+        enriched_start_metadata = _enrich_start_metadata(
+            execution_id, start_metadata, command, snapshot_id, parameters,
+            instance_market_spec, execution_spec, parallel_indices_range,
+            index_range_to_run=None,
+            previous_execution_id=previous_execution_id)
+        self.db_storage.store_start_metadata(
+            execution_id, enriched_start_metadata)
+        if parallel_indices_range is not None:
+            metadatas = []
+            for i in range(parallel_indices_range[0],
+                           parallel_indices_range[1]):
+                enriched_start_metadata = _enrich_start_metadata(
+                    _get_execution_uuid(),
+                    start_metadata, command, snapshot_id, parameters,
+                    instance_market_spec, execution_spec,
+                    parallel_indices_range=None,
+                    index_range_to_run=(i, i + 1),
+                    previous_execution_id=previous_execution_id)
+                metadatas.append(enriched_start_metadata)
+                self.db_storage.store_start_metadata(
+                    enriched_start_metadata['execution_id'],
+                    enriched_start_metadata)
+        else:
+            metadatas = [enriched_start_metadata]
+        return metadatas
+
 
 def _get_execution_uuid() -> str:
     # Recommended method for the node if you don't want to disclose the
     # physical address (see Python uuid docs)
     random_node = random.getrandbits(48) | 0x010000000000
     return str(uuid.uuid1(node=random_node))
+
+
+def _enrich_start_metadata(
+        execution_id: str,
+        start_metadata: dict, command: [str], snapshot_id: str,
+        parameters: dict, instance_market_spec: dict, execution_spec: dict,
+        parallel_indices_range: Optional[Tuple[int, int]],
+        index_range_to_run: Optional[Tuple[int, int]],
+        previous_execution_id: Optional[str]) -> dict:
+    enriched_start_metadata = deepcopy(start_metadata)
+    enriched_start_metadata['execution_id'] = execution_id
+    enriched_start_metadata['command'] = command
+    enriched_start_metadata['snapshot_id'] = snapshot_id
+    enriched_start_metadata['parameters'] = parameters
+    enriched_start_metadata['instance_market_spec'] = instance_market_spec
+    enriched_start_metadata['execution_spec'] = {
+        k: v for k, v in execution_spec.items()
+        if k not in {'user', 'project'}}
+    enriched_start_metadata['execution_spec']['index_range_to_run'] = \
+        index_range_to_run
+    enriched_start_metadata['user'] = execution_spec['user']
+    enriched_start_metadata['project'] = execution_spec['project']
+    enriched_start_metadata['parallel_indices_range'] = parallel_indices_range
+    enriched_start_metadata['previous_execution_id'] = previous_execution_id
+    return enriched_start_metadata
+
+
+def _assign_instances(
+        instances: [Optional[Instance]],
+        parallel_indices_range: Optional[Tuple[int, int]],
+        statuses_generators: [Iterator[dict]]) -> Iterator[dict]:
+    # Whether was there a status update
+    was_there_status = True
+    while was_there_status:
+        was_there_status = False
+        for (i, statuses_generator) in enumerate(statuses_generators):
+            status = next(statuses_generator)
+            if status is None:
+                continue
+            was_there_status = True
+            if 'message' in status:
+                if parallel_indices_range is not None:
+                    prefix = f'{i}: '
+                else:
+                    prefix = ''
+                yield {'status': prefix + status['message']}
+            if 'instance' in status:
+                instances[i] = status['instance']

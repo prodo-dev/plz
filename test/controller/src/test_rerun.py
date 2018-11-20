@@ -9,9 +9,14 @@ class TestReRun(unittest.TestCase):
     def setUp(self):
         harvest()
 
+    @classmethod
+    def tearDownClass(cls):
+        harvest()
+        super().tearDownClass()
+
     def test_rerun(self):
         context, execution_id = run_example(
-            'parameters', 'simple',
+            'parameters', 'simple', is_end_to_end_path=True,
             parameters={
                 "foo": 55,
                 "bar": "zeppelin"
@@ -42,7 +47,7 @@ class TestReRun(unittest.TestCase):
 
     def test_rerun_override_parameters(self):
         context, execution_id = run_example(
-            'parameters', 'simple',
+            'parameters', 'simple', is_end_to_end_path=True,
             parameters={
                 "foo": 55,
                 "bar": "zeppelin"

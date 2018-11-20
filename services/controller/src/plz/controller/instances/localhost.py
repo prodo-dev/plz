@@ -50,7 +50,8 @@ class Localhost(InstanceProvider):
             self.instance_lock_timeout)
         instance.run(command=command, snapshot_id=snapshot_id,
                      parameters=parameters, input_stream=input_stream,
-                     docker_run_args=execution_spec['docker_run_args'])
+                     docker_run_args=execution_spec['docker_run_args'],
+                     index_range_to_run=execution_spec['index_range_to_run'])
         return iter([{'instance': instance}])
 
     def instance_for(self, execution_id: str) -> Optional[Instance]:

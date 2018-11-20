@@ -3,7 +3,7 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from collections import namedtuple
-from typing import Any, ContextManager, Dict, Iterator, List, Optional
+from typing import Any, ContextManager, Dict, Iterator, List, Optional, Tuple
 
 from redis import StrictRedis
 from redis.lock import Lock
@@ -38,7 +38,8 @@ class Instance(Results):
             snapshot_id: str,
             parameters: Parameters,
             input_stream: Optional[io.BytesIO],
-            docker_run_args: Dict[str, str]) -> None:
+            docker_run_args: Dict[str, str],
+            index_range_to_run: Optional[Tuple[int, int]]) -> None:
         pass
 
     def get_status(self) -> InstanceStatus:

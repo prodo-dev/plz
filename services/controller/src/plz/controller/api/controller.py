@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import BinaryIO, Iterator, List, Optional
+from typing import BinaryIO, Iterator, List, Optional, Tuple
 
 from plz.controller.api.exceptions import ResponseHandledException
 from plz.controller.api.types import InputMetadata, JSONString
@@ -20,7 +20,9 @@ class Controller(ABC):
     @abstractmethod
     def run_execution(self, command: [str], snapshot_id: str, parameters: dict,
                       instance_market_spec: dict, execution_spec: dict,
-                      start_metadata: dict) -> Iterator[dict]:
+                      start_metadata: dict,
+                      parallel_indices_range: Optional[Tuple[int, int]]) \
+            -> Iterator[dict]:
         """:raises IncorrectInputIDException:"""
         pass
 
@@ -106,6 +108,10 @@ class Controller(ABC):
 
     @abstractmethod
     def describe_execution_entrypoint(self, execution_id: str) -> dict:
+        pass
+
+    @abstractmethod
+    def get_execution_composition(self, execution_id: str) -> dict:
         pass
 
     @abstractmethod

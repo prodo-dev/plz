@@ -140,13 +140,14 @@ def run_execution_entrypoint():
             'max_bid_price_in_dollars_per_hour': 3,
             'instance_max_idle_time_in_minutes': 30
         })
+    parallel_indices_range = request.json.get('parallel_indices_range')
 
     @_json_stream
     @stream_with_context
     def act() -> Iterator[dict]:
         yield from controller.run_execution(
             command, snapshot_id, parameters, instance_market_spec,
-            execution_spec, start_metadata)
+            execution_spec, start_metadata, parallel_indices_range)
     return Response(
         act(), mimetype='text/plain', status=requests.codes.accepted)
 
@@ -321,6 +322,11 @@ def kill_instances_entrypoint():
 @app.route(f'/executions/describe/<execution_id>', methods=['GET'])
 def describe_execution_entrypoint(execution_id: str):
     return jsonify(controller.describe_execution_entrypoint(execution_id))
+
+
+@app.route('/executions/composition/<execution_id>', methods=['GET'])
+def get_execution_composition_entrypoint(execution_id: str):
+    return jsonify(controller.get_execution_composition(execution_id))
 
 
 def _json_stream(f: Callable[[], Iterator[Any]]):

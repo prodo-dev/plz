@@ -2,7 +2,7 @@ import io
 import json
 import logging
 import os
-from typing import Dict, Iterator, List, Optional
+from typing import Dict, Iterator, List, Optional, Tuple
 
 from docker.types import Mount
 from redis import StrictRedis
@@ -39,14 +39,20 @@ class DockerInstance(Instance):
             snapshot_id: str,
             parameters: Parameters,
             input_stream: Optional[io.RawIOBase],
-            docker_run_args: Dict[str, str]) -> None:
+            docker_run_args: Dict[str, str],
+            index_range_to_run: Optional[Tuple[int, int]]) -> None:
+        if index_range_to_run is not None:
+            indices = {'range': index_range_to_run}
+        else:
+            indices = None
         configuration = {
             'input_directory': Volumes.INPUT_DIRECTORY_PATH,
             'output_directory': Volumes.OUTPUT_DIRECTORY_PATH,
             'measures_directory': Volumes.MEASURES_DIRECTORY_PATH,
             'summary_measures_path': os.path.join(
                 Volumes.MEASURES_DIRECTORY_PATH, 'summary'),
-            'parameters': parameters
+            'parameters': parameters,
+            'indices': indices
         }
         environment = {
             'CONFIGURATION_FILE': Volumes.CONFIGURATION_FILE_PATH
