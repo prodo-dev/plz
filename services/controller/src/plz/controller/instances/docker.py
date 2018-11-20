@@ -137,8 +137,7 @@ class DockerInstance(Instance):
                       f'{self.execution_id}')
             self.stop_execution()
             self._publish_results(results_storage,
-                                  finish_timestamp=idle_since_timestamp,
-                                  path=None)
+                                  finish_timestamp=idle_since_timestamp)
             # Check that we could collect the logs before destroying the
             # container
             if not results_storage.is_finished(self.execution_id):
@@ -150,14 +149,14 @@ class DockerInstance(Instance):
         return {}
 
     def _publish_results(self, results_storage: ResultsStorage,
-                         finish_timestamp: int, path: Optional[str]):
+                         finish_timestamp: int):
         log.debug(f'Publishing results of {self.execution_id}')
+
         results_storage.publish(
             self.get_execution_id(),
             exit_status=self.get_status().exit_status,
             logs=self.get_logs(since=None),
-            output_tarball=self.get_output_files_tarball(path),
-            measures_tarball=self.get_measures_files_tarball(),
+            containers=self.containers,
             finish_timestamp=finish_timestamp)
 
     @property

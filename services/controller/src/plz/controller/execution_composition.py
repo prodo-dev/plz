@@ -1,8 +1,9 @@
 import os
 from abc import ABC, abstractmethod
 from collections import namedtuple
-from typing import Any, Dict, Optional, Set, Tuple
+from typing import Any, Dict, Iterator, Optional, Set, Tuple
 
+from plz.controller.containers import Containers
 from plz.controller.volumes import VolumeEmptyDirectory, Volumes
 
 
@@ -74,11 +75,28 @@ WorkerStartupConfig = namedtuple(
     ['config_keys', 'volumes'])
 
 
+def _dirname_for_index(original_dirname: str, index: int):
+    return os.path.join(original_dirname, str(index))
+
+
 class InstanceComposition(ABC):
     """Helpers for instances based on the composition they're running"""
 
     @abstractmethod
     def get_startup_config(self) -> WorkerStartupConfig:
+        pass
+
+    @abstractmethod
+    def get_output_dirs_and_tarballs(
+            self, execution_id: str, containers: Containers,
+            output_path: Optional[str] = None) \
+            -> [(Optional[str], Iterator[bytes])]:
+        pass
+
+    @abstractmethod
+    def get_measures_dirs_and_tarballs(
+            self, execution_id: str, containers: Containers) \
+            -> [(Optional[str], Iterator[bytes])]:
         pass
 
     @staticmethod
@@ -105,6 +123,27 @@ class AtomicInstanceComposition(InstanceComposition):
             config_keys=config_keys,
             volumes=volumes)
 
+    def get_output_dirs_and_tarballs(
+            self, execution_id: str, containers: Containers,
+            output_path: Optional[str] = None) \
+            -> [(Optional[str], Iterator[bytes])]:
+        tarball = containers.get_files(
+            execution_id,
+            os.path.join(
+                Volumes.OUTPUT_DIRECTORY_PATH,
+                output_path if output_path is not None else ''))
+        directory = None
+        return [(directory, tarball)]
+
+    def get_measures_dirs_and_tarballs(
+            self, execution_id: str, containers: Containers) \
+            -> [(Optional[str], Iterator[bytes])]:
+        tarball = containers.get_files(
+            execution_id,
+            Volumes.MEASURES_DIRECTORY_PATH)
+        directory = None
+        return [(directory, tarball)]
+
 
 class IndicesInstanceComposition(InstanceComposition):
     def __init__(self, range_index_to_run: Optional[Tuple[int, int]]):
@@ -118,14 +157,15 @@ class IndicesInstanceComposition(InstanceComposition):
         }
         config_keys = {
             f'index_to_{kind}_directory': {
-                i: os.path.join(name_map[kind], str(i))
+                i: _dirname_for_index(name_map[kind], i)
                 for i in indices_to_run
             }
             for kind in name_map
         }
         config_keys.update({
             'index_to_summary_measures_path': os.path.join(
-                Volumes.MEASURES_DIRECTORY_PATH, str(i), 'summary')
+                _dirname_for_index(Volumes.MEASURES_DIRECTORY_PATH, i),
+                'summary')
             for i in indices_to_run
         })
         config_keys.update({
@@ -133,13 +173,43 @@ class IndicesInstanceComposition(InstanceComposition):
         })
         volumes = [
             VolumeEmptyDirectory(
-                os.path.join(directory_path, str(i)))
+                _dirname_for_index(directory_path, i))
             for i in indices_to_run
             for directory_path in [
-                Volumes.OUTPUT_DIRECTORY_PATH,
-                Volumes.MEASURES_DIRECTORY_PATH
+                Volumes.OUTPUT_DIRECTORY,
+                Volumes.MEASURES_DIRECTORY
             ]
         ]
         return WorkerStartupConfig(
             config_keys=config_keys,
             volumes=volumes)
+
+    def get_output_dirs_and_tarballs(
+            self, execution_id: str, containers: Containers,
+            output_path: Optional[str] = None) \
+            -> [(Optional[str], Iterator[bytes])]:
+        output_dirs_and_tarballs = []
+        indices_to_run = range(*self.range_index_to_run)
+        for i in indices_to_run:
+            tarball = containers.get_files(
+                execution_id,
+                os.path.join(
+                    _dirname_for_index(Volumes.OUTPUT_DIRECTORY_PATH, i),
+                    output_path if output_path is not None else ''))
+            directory = str(i)
+            output_dirs_and_tarballs.append((directory, tarball))
+        return output_dirs_and_tarballs
+
+    def get_measures_dirs_and_tarballs(
+            self, execution_id: str, containers: Containers) \
+            -> [(Optional[str], Iterator[bytes])]:
+        measures_dirs_and_tarballs = []
+        indices_to_run = range(*self.range_index_to_run)
+        for i in indices_to_run:
+            tarball = containers.get_files(
+                execution_id,
+                _dirname_for_index(Volumes.MEASURES_DIRECTORY_PATH, i)
+            )
+            directory = str(i)
+            measures_dirs_and_tarballs.append((directory, tarball))
+        return measures_dirs_and_tarballs

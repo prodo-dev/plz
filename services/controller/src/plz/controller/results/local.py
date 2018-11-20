@@ -2,15 +2,17 @@ import json
 import logging
 import os
 import shutil
-from typing import Any, ContextManager, Iterator, Optional
+from typing import Any, ContextManager, Iterator, Optional, Tuple
 
 from redis import StrictRedis
 from redis.lock import Lock
 
 from plz.controller.arbitrary_object_json_encoder import dumps_arbitrary_json
+from plz.controller.containers import Containers
 from plz.controller.db_storage import DBStorage
 from plz.controller.api.exceptions import AbortedExecutionException, \
     NotImplementedControllerException
+from plz.controller.execution_composition import InstanceComposition
 from plz.controller.execution_metadata import compile_metadata_for_storage
 from plz.controller.results.results_base import InstanceStatus, \
     InstanceStatusFailure, InstanceStatusSuccess, Results, ResultsContext, \
@@ -36,8 +38,7 @@ class LocalResultsStorage(ResultsStorage):
                 execution_id: str,
                 exit_status: int,
                 logs: Iterator[bytes],
-                output_tarball: Iterator[bytes],
-                measures_tarball: Iterator[bytes],
+                containers: Containers,
                 finish_timestamp: int):
         paths = Paths(self.directory, execution_id)
         with self._lock(execution_id):
@@ -57,8 +58,11 @@ class LocalResultsStorage(ResultsStorage):
                 self.db_storage, execution_id, finish_timestamp)
             index_range_to_run = metadata['execution_spec'].get(
                 'index_range_to_run')
-            write_bytes(paths.output, output_tarball)
-            write_bytes(paths.measures, measures_tarball)
+            log.debug(f'Index range to run is: {index_range_to_run}')
+
+            _write_output_and_measures(paths, containers, execution_id,
+                                       index_range_to_run)
+
             with open(paths.metadata, 'w') as metadata_file:
                 json.dump(metadata, metadata_file)
             with open(paths.finished_file, 'w') as _:  # noqa: F841 (unused)
@@ -134,10 +138,10 @@ class LocalResults(Results):
             raise NotImplementedControllerException(
                 'Getting paths of already finished executions is not '
                 'implemented yet. Sorry about that')
-        return read_bytes(self.paths.output)
+        return read_bytes(self.paths.output())
 
     def get_measures_files_tarball(self) -> Iterator[bytes]:
-        return read_bytes(self.paths.measures)
+        return read_bytes(self.paths.measures())
 
     def get_stored_metadata(self) -> dict:
         with open(self.paths.metadata, 'r') as metadata_file:
@@ -182,9 +186,19 @@ class Paths:
         self.tombstone_file = os.path.join(self.directory, '.tombstone')
         self.exit_status = os.path.join(self.directory, 'status')
         self.logs = os.path.join(self.directory, 'logs')
-        self.output = os.path.join(self.directory, 'output.tar')
-        self.measures = os.path.join(self.directory, 'measures.tar')
         self.metadata = os.path.join(self.directory, 'metadata.json')
+
+    def output(self, subdir: Optional[str] = None) -> str:
+        return os.path.join(
+            self.directory,
+            subdir if subdir is not None else '',
+            'output.tar')
+
+    def measures(self, subdir: Optional[str] = None) -> str:
+        return os.path.join(
+            self.directory,
+            subdir if subdir is not None else '',
+            'measures.tar')
 
 
 def read_bytes(path: str) -> Iterator[bytes]:
@@ -208,3 +222,21 @@ def _force_mk_empty_dir(directory: str):
     except OSError:
         shutil.rmtree(directory)
         os.makedirs(directory)
+
+
+def _write_output_and_measures(paths: Paths, containers: Containers,
+                               execution_id: str,
+                               index_range_to_run: Optional[Tuple[int, int]]):
+    ic = InstanceComposition.create_for(index_range_to_run)
+    paths_and_getters = [
+        (paths.output, ic.get_output_dirs_and_tarballs),
+        (paths.measures, ic.get_measures_dirs_and_tarballs)
+    ]
+    for path_function, tarball_getter in paths_and_getters:
+        dirs_and_tarballs = tarball_getter(
+            execution_id=execution_id, containers=containers)
+        for d, tarball in dirs_and_tarballs:
+            dirname = os.path.dirname(path_function(d))
+            if not os.path.exists(dirname):
+                os.makedirs(dirname)
+            write_bytes(path_function(d), tarball)

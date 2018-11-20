@@ -2,6 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import ContextManager, Iterator, Optional
 
+from plz.controller.containers import Containers
 from plz.controller.db_storage import DBStorage
 
 log = logging.getLogger(__name__)
@@ -16,8 +17,7 @@ class ResultsStorage(ABC):
                 execution_id: str,
                 exit_status: int,
                 logs: Iterator[bytes],
-                output_tarball: Iterator[bytes],
-                measures_tarball: Iterator[bytes],
+                containers: Containers,
                 finish_timestamp: int):
         pass
 
