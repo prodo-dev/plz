@@ -1,7 +1,7 @@
 import io
 import itertools
 import json
-from typing import BinaryIO, Iterator, List, Optional
+from typing import BinaryIO, Iterator, List, Optional, Tuple
 
 import requests
 
@@ -30,7 +30,8 @@ class ControllerProxy(Controller):
 
     def run_execution(self, command: [str], snapshot_id: str, parameters: dict,
                       instance_market_spec: dict, execution_spec: dict,
-                      start_metadata: dict, parallel_indices: Optional[int]) \
+                      start_metadata: dict,
+                      parallel_indices_range: Optional[Tuple[int, int]]) \
             -> Iterator[dict]:
         response = self.server.post(
             'executions',
@@ -42,7 +43,7 @@ class ControllerProxy(Controller):
                 'execution_spec': execution_spec,
                 'instance_market_spec': instance_market_spec,
                 'start_metadata': start_metadata,
-                'parallel_indices': parallel_indices
+                'parallel_indices_range': parallel_indices_range
             })
         _check_status(response, requests.codes.accepted)
         return (json.loads(line) for line in response.iter_lines())

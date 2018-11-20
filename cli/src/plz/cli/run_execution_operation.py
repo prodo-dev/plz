@@ -202,7 +202,8 @@ class RunExecutionOperation(Operation):
                     if k not in {'user', 'project'}
                 }
             },
-            parallel_indices=None
+            # TODO: read from config
+            parallel_indices_range=None
         )
         return RunExecutionOperation.get_execution_id_from_start_response(
             response_dicts)

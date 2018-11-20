@@ -16,7 +16,7 @@ class TestParallelIndices(unittest.TestCase):
         context, execution_id = run_example(
             'parallel_indices', 'print_indices',
             is_end_to_end_path=False,
-            parallel_indices=5)
+            parallel_indices_range=(0, 5))
         composition = context.controller.get_execution_composition(
             execution_id)
         indices_to_compositions = composition['indices_to_compositions']
