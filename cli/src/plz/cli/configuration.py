@@ -147,7 +147,7 @@ class Configuration:
             Property('use_emojis', type=bool, default=True),
             Property('workarounds', type=dict,
                      default={'docker_build_retries': 3}),
-            Property('instance_market_type', type=str, default='spot',
+            Property('instance_market_type', type=str, default='on_demand',
                      validations=[_validate_market_spec]),
             Property('instance_max_uptime_in_minutes',
                      type=Optional[int],

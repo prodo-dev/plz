@@ -321,6 +321,11 @@ The controller can be stopped at any time with:
 
 ### AWS configuration
 
+If you want to run the examples using the AWS instances, be aware that this has
+a cost. By default, Plz uses _t2.micro_ on-demand instances. You can find out
+how much these cost on the
+[AWS EC2 Pricing](https://aws.amazon.com/ec2/pricing/on-demand/) page.
+
 To start a controller that talks to AWS, you'll need to first set up the AWS
 CLI:
 
@@ -347,11 +352,19 @@ well (for example, there's a power cut). You can always use `plz list` and
 remaining. For maximum assurance, we recommend checking the state of your
 instances in the AWS console.
 
-If you want to run the examples using the AWS instances, be aware that this has
-a cost. You can change the value of `"max_bid_price_in_dollars_per_hour": N` in
-`plz.config.json` to any value you like. Examples takes around 5 minutes to run.
-The value in the provided configs range from \$0.5/hour to \$2/hour (for
-GPU-powered machines).
+By default, Plz uses on-demand instances. In order to use spot instances,
+specify the following in your _plz.config.json_ file:
+
+```json
+{
+    ...
+    "instance_market_type": "spot",
+    "max_bid_price_in_dollars_per_hour": <price>
+}
+```
+
+The value in the example configuration files range from \$0.5/hour to \$2/hour
+(for GPU-powered machines).
 
 ## Examples
 
