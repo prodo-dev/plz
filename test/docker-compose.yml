@@ -13,7 +13,7 @@ services:
   controller:
     image: plz/controller
     build:
-      context: services/controller
+      context: ../services/controller
     container_name: $CONTROLLER_CONTAINER
     environment:
       CONFIGURATION: |
