@@ -7,15 +7,16 @@ from typing import Dict, Iterator, List, Optional, Tuple
 from docker.types import Mount
 from redis import StrictRedis
 
+from plz.controller.api.exceptions import InstanceStillRunningException
 from plz.controller.containers import ContainerState, Containers
+from plz.controller.execution_composition import InstanceComposition
 from plz.controller.images import Images
 from plz.controller.instances.instance_base import ExecutionInfo, Instance, \
     KillingInstanceException, Parameters
-from plz.controller.api.exceptions import InstanceStillRunningException
 from plz.controller.results import ResultsStorage
 from plz.controller.results.results_base import CouldNotGetOutputException
 from plz.controller.volumes import \
-    VolumeDirectory, VolumeEmptyDirectory, VolumeFile, Volumes
+    VolumeDirectory, VolumeFile, Volumes
 
 log = logging.getLogger(__name__)
 
@@ -41,18 +42,13 @@ class DockerInstance(Instance):
             input_stream: Optional[io.RawIOBase],
             docker_run_args: Dict[str, str],
             index_range_to_run: Optional[Tuple[int, int]]) -> None:
-        if index_range_to_run is not None:
-            indices = {'range': index_range_to_run}
-        else:
-            indices = None
+        startup_config = InstanceComposition.create_for(
+            index_range_to_run).get_startup_config()
+
         configuration = {
             'input_directory': Volumes.INPUT_DIRECTORY_PATH,
-            'output_directory': Volumes.OUTPUT_DIRECTORY_PATH,
-            'measures_directory': Volumes.MEASURES_DIRECTORY_PATH,
-            'summary_measures_path': os.path.join(
-                Volumes.MEASURES_DIRECTORY_PATH, 'summary'),
+            **startup_config.config_keys,
             'parameters': parameters,
-            'indices': indices
         }
         environment = {
             'CONFIGURATION_FILE': Volumes.CONFIGURATION_FILE_PATH
@@ -61,8 +57,7 @@ class DockerInstance(Instance):
             VolumeDirectory(
                 Volumes.INPUT_DIRECTORY,
                 contents_tarball=input_stream or io.BytesIO()),
-            VolumeEmptyDirectory(Volumes.OUTPUT_DIRECTORY),
-            VolumeEmptyDirectory(Volumes.MEASURES_DIRECTORY),
+            *startup_config.volumes,
             VolumeFile(Volumes.CONFIGURATION_FILE,
                        contents=json.dumps(configuration, indent=2)),
         ])

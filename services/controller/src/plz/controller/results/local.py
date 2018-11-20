@@ -53,10 +53,12 @@ class LocalResultsStorage(ResultsStorage):
 
             log.debug(f'Writing logs and output for {execution_id}')
             write_bytes(paths.logs, logs)
-            write_bytes(paths.output, output_tarball)
-            write_bytes(paths.measures, measures_tarball)
             metadata = compile_metadata_for_storage(
                 self.db_storage, execution_id, finish_timestamp)
+            index_range_to_run = metadata['execution_spec'].get(
+                'index_range_to_run')
+            write_bytes(paths.output, output_tarball)
+            write_bytes(paths.measures, measures_tarball)
             with open(paths.metadata, 'w') as metadata_file:
                 json.dump(metadata, metadata_file)
             with open(paths.finished_file, 'w') as _:  # noqa: F841 (unused)
