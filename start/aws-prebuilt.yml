@@ -1,0 +1,31 @@
+version: "2.3"
+
+services:
+  controller:
+    image: prodoai/plz_controller:timestamp_${BUILD_TIMESTAMP}
+    ports:
+      - ${PORT:-6000}:80
+    environment:
+      AWS_PROFILE: ${AWS_PROFILE}
+      CREATE_AWS_RESOURCES: "yes"
+      CONFIGURATION: |
+        config = { include "/root/config.json" }
+        include "/root/server.conf"
+        include "/root/docker.conf"
+    volumes:
+      - ${SECRETS_DIR}/config.json:/root/config.json:ro
+      - ./docker.conf:/root/docker.conf:ro
+      - ../services/controller/config/localserver.conf:/root/server.conf:ro
+      - ../cache/controller:/data
+      - ../cache/results:/data/results
+      - ${HOME}/.aws:/root/.aws
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      redis:
+        condition: service_started
+
+  redis:
+    image: redis:4
+    entrypoint: redis-server --save 2 1
+    volumes:
+      - ../cache/redis_data:/data
