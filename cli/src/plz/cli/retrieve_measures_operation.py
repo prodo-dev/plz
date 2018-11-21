@@ -28,7 +28,8 @@ class RetrieveMeasuresOperation(Operation):
     def retrieve_measures(self):
         json_strings = self.controller.get_measures(
             execution_id=self.get_execution_id(),
-            summary=self.summary)
+            summary=self.summary,
+            index=None)
         for line in json_strings:
             print(line, end='')
 

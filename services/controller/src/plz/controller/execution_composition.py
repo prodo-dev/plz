@@ -183,7 +183,8 @@ class AtomicInstanceComposition(InstanceComposition):
     def compose_measures(
             self, measures_from_index: Callable[[Optional[int]], dict]) \
             -> dict:
-        return measures_from_index(index=None)
+        # index is None
+        return measures_from_index(None)
 
 
 class IndicesInstanceComposition(InstanceComposition):
