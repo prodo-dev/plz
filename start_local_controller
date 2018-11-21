@@ -2,6 +2,7 @@
 
 docker pull prodoai/plz_ml-pytorch
 docker pull python:3-slim
+docker pull "prodoai/plz_controller:timestamp_$(cat STABLE_BUILD_TIMESTAMP)"
 
 BUILD_TIMESTAMP=$(cat STABLE_BUILD_TIMESTAMP) \
     REDIS_DUMP_EVERY_SECONDS=2 \
