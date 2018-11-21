@@ -50,12 +50,14 @@ class Controller(ABC):
 
     @abstractmethod
     def get_output_files(
-            self, execution_id: str, path: Optional[str]) -> Iterator[bytes]:
+            self, execution_id: str, path: Optional[str],
+            index: Optional[int]) -> Iterator[bytes]:
         pass
 
     @abstractmethod
     def get_measures(
-            self, execution_id: str, summary: bool) -> Iterator[JSONString]:
+            self, execution_id: str, summary: bool, index: Optional[int]) \
+            -> Iterator[JSONString]:
         pass
 
     @abstractmethod

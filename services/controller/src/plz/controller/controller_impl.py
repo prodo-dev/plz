@@ -117,12 +117,14 @@ class ControllerImpl(Controller):
         return self.executions.get(execution_id).get_logs(since=since)
 
     def get_output_files(
-            self, execution_id: str, path: Optional[str]) -> Iterator[bytes]:
-        return self.executions.get(execution_id).get_output_files_tarball(path)
+            self, execution_id: str, path: Optional[str],
+            index: Optional[str]) -> Iterator[bytes]:
+        return self.executions.get(execution_id).get_output_files_tarball(
+            path, index)
 
-    def get_measures(self, execution_id: str, summary: bool) \
-            -> Iterator[JSONString]:
-        measures = self.executions.get(execution_id).get_measures()
+    def get_measures(self, execution_id: str, summary: bool,
+                     index: Optional[int]) -> Iterator[JSONString]:
+        measures = self.executions.get(execution_id).get_measures(index)
         if summary:
             measures_to_return = measures.get('summary', {})
         else:

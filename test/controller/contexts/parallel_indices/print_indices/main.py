@@ -11,5 +11,12 @@ if 'range' in config['indices']:
 else:
     raise ValueError('Unknown range specification!: ' + config['indices'])
 
+index_to_output_directory = config['index_to_output_directory']
+index_to_measures_directory = config['index_to_measures_directory']
+
 for i in range(start, end):
+    file_name = os.path.join(
+        index_to_output_directory[str(i)], 'the_file')
+    with open(file_name, 'w') as f:
+        f.write(f'index is: {i}')
     print(i)
