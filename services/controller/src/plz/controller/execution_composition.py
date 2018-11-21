@@ -75,12 +75,15 @@ WorkerStartupConfig = namedtuple(
     ['config_keys', 'volumes'])
 
 
-def subdir_name_for_index(index: int):
+def subdir_name_for_index(index: int) -> Optional[str]:
+    if index is None:
+        return None
     return str(index)
 
 
 def _dirname_for_index(original_dirname: str, index: int):
-    return os.path.join(original_dirname, subdir_name_for_index(index))
+    subdir = subdir_name_for_index(index)
+    return os.path.join(original_dirname, subdir if subdir is not None else '')
 
 
 class InstanceComposition(ABC):
