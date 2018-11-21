@@ -1,6 +1,6 @@
 import unittest
 
-from .utils import run_example, harvest
+from .utils import run_example, harvest, create_file_map_from_tarball
 
 
 class TestParallelIndices(unittest.TestCase):
@@ -25,3 +25,9 @@ class TestParallelIndices(unittest.TestCase):
                 subcomp['execution_id'], since=None)
             logs_str = str(b''.join(logs_bytes), 'utf-8')
             self.assertEqual(logs_str, index + '\n')
+
+            file_map = create_file_map_from_tarball(
+                context.controller.get_output_files(
+                    subcomp['execution_id'], index=index, path=None))
+
+            self.assertDictEqual(file_map, {'the_file': f'index is: {index}'})

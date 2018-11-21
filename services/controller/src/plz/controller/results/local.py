@@ -12,7 +12,8 @@ from plz.controller.containers import Containers
 from plz.controller.db_storage import DBStorage
 from plz.controller.api.exceptions import AbortedExecutionException, \
     NotImplementedControllerException
-from plz.controller.execution_composition import InstanceComposition
+from plz.controller.execution_composition import InstanceComposition, \
+    subdir_name_for_index
 from plz.controller.execution_metadata import compile_metadata_for_storage
 from plz.controller.results.results_base import InstanceStatus, \
     InstanceStatusFailure, InstanceStatusSuccess, Results, ResultsContext, \
@@ -132,15 +133,17 @@ class LocalResults(Results):
                  stderr: bool = True) -> Iterator[bytes]:
         return read_bytes(self.paths.logs)
 
-    def get_output_files_tarball(self, path: Optional[str]) -> Iterator[bytes]:
+    def get_output_files_tarball(self, path: Optional[str],
+                                 index: Optional[int]) -> Iterator[bytes]:
         if path is not None:
             raise NotImplementedControllerException(
                 'Getting paths of already finished executions is not '
                 'implemented yet. Sorry about that')
-        return read_bytes(self.paths.output())
+        return read_bytes(self.paths.output(subdir_name_for_index(index)))
 
-    def get_measures_files_tarball(self) -> Iterator[bytes]:
-        return read_bytes(self.paths.measures())
+    def get_measures_files_tarball(self, index: Optional[int]) \
+            -> Iterator[bytes]:
+        return read_bytes(self.paths.measures(subdir_name_for_index(index)))
 
     def get_stored_metadata(self) -> dict:
         with open(self.paths.metadata, 'r') as metadata_file:
@@ -165,10 +168,13 @@ class LocalTombstone(Results):
         # workers. For now, a tombstone just raises exceptions
         return self._raise_aborted()
 
-    def get_output_files_tarball(self, path: Optional[str]) -> Iterator[bytes]:
+    def get_output_files_tarball(
+            self, path: Optional[str], index: Optional[int]) \
+            -> Iterator[bytes]:
         return self._raise_aborted()
 
-    def get_measures_files_tarball(self) -> Iterator[bytes]:
+    def get_measures_files_tarball(
+            self, index: Optional[int]) -> Iterator[bytes]:
         return self._raise_aborted()
 
     def get_stored_metadata(self) -> dict:
@@ -187,13 +193,13 @@ class Paths:
         self.logs = os.path.join(self.directory, 'logs')
         self.metadata = os.path.join(self.directory, 'metadata.json')
 
-    def output(self, subdir: Optional[str] = None) -> str:
+    def output(self, subdir: Optional[str]) -> str:
         return os.path.join(
             self.directory,
             subdir if subdir is not None else '',
             'output.tar')
 
-    def measures(self, subdir: Optional[str] = None) -> str:
+    def measures(self, subdir: Optional[str]) -> str:
         return os.path.join(
             self.directory,
             subdir if subdir is not None else '',

@@ -1,5 +1,7 @@
 import os
-from typing import Tuple, Optional
+import tarfile
+import tempfile
+from typing import Tuple, Optional, Dict, Iterator, IO
 
 from plz.cli.configuration import Configuration
 from plz.cli.controller_proxy import ControllerProxy
@@ -130,3 +132,30 @@ def harvest():
     server = Server.from_configuration(configuration)
     controller = ControllerProxy(server)
     controller.harvest()
+
+
+def create_file_map_from_tarball(
+        tarball_bytes: Iterator[bytes]) -> Dict[str, str]:
+    # The first parameter is a tarball we need to extract into `output_dir`.
+    with tempfile.TemporaryFile() as tarball:
+        # `tarfile.open` needs to read from a real file, so we copy to one.
+        for bs in tarball_bytes:
+            tarball.write(bs)
+        # And rewind to the start.
+        tarball.seek(0)
+        tar = tarfile.open(fileobj=tarball)
+        tarball_to_file_map = {}
+        for tarinfo in tar.getmembers():
+            # Drop the first segment, because it's just the name of the
+            # directory that was tarred up, and we don't care.
+            path_segments = os.path.split(tarinfo.name)[1:]
+            if path_segments is not []:
+                # Unfortunately we can't just pass `*path_segments`
+                # because `os.path.join` explicitly expects an argument
+                # for the first parameter.
+                path = os.path.join(path_segments[0], *path_segments[1:])
+                source: IO[bytes] = tar.extractfile(tarinfo.name)
+                if source:
+                    content = str(b''.join(s for s in source), 'utf-8')
+                    tarball_to_file_map[path] = content
+        return tarball_to_file_map

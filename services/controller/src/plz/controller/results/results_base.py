@@ -45,11 +45,14 @@ class Results(ABC):
         pass
 
     @abstractmethod
-    def get_output_files_tarball(self, path: Optional[str]) -> Iterator[bytes]:
+    def get_output_files_tarball(
+            self, path: Optional[str], index: Optional[int]) \
+            -> Iterator[bytes]:
         pass
 
     @abstractmethod
-    def get_measures_files_tarball(self) -> Iterator[bytes]:
+    def get_measures_files_tarball(self, index: Optional[int]) \
+            -> Iterator[bytes]:
         pass
 
     @abstractmethod

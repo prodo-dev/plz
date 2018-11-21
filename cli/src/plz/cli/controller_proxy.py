@@ -86,8 +86,8 @@ class ControllerProxy(Controller):
         _check_status(response, requests.codes.ok)
         return response.raw
 
-    def get_output_files(self, execution_id: str, path: Optional[str]) \
-            -> Iterator[bytes]:
+    def get_output_files(self, execution_id: str, path: Optional[str],
+                         index: Optional[int]) -> Iterator[bytes]:
         response = self.server.get(
             'executions', execution_id, 'output', 'files',
             codes_with_exceptions={requests.codes.not_implemented},
@@ -97,7 +97,8 @@ class ControllerProxy(Controller):
         return response.raw
 
     def get_measures(
-            self, execution_id: str, summary: bool) -> Iterator[JSONString]:
+            self, execution_id: str, summary: bool, index: Optional[int]) \
+            -> Iterator[JSONString]:
         response = self.server.get(
             'executions', execution_id, 'measures',
             params={'summary': summary},

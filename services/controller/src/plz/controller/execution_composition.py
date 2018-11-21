@@ -1,7 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from collections import namedtuple
-from typing import Any, Dict, Iterator, Optional, Set, Tuple
+from typing import Any, Callable, Dict, Iterator, Optional, Set, Tuple
 
 from plz.controller.containers import Containers
 from plz.controller.volumes import VolumeEmptyDirectory, Volumes
@@ -75,12 +75,23 @@ WorkerStartupConfig = namedtuple(
     ['config_keys', 'volumes'])
 
 
+def subdir_name_for_index(index: int):
+    return str(index)
+
+
 def _dirname_for_index(original_dirname: str, index: int):
-    return os.path.join(original_dirname, str(index))
+    return os.path.join(original_dirname, subdir_name_for_index(index))
 
 
 class InstanceComposition(ABC):
     """Helpers for instances based on the composition they're running"""
+
+    @staticmethod
+    def create_for(index_range_to_run: Optional[Tuple[int, int]]) \
+            -> 'InstanceComposition':
+        if index_range_to_run is None:
+            return AtomicInstanceComposition()
+        return IndicesInstanceComposition(index_range_to_run)
 
     @abstractmethod
     def get_startup_config(self) -> WorkerStartupConfig:
@@ -99,12 +110,41 @@ class InstanceComposition(ABC):
             -> [(Optional[str], Iterator[bytes])]:
         pass
 
+    @abstractmethod
+    def compose_measures(
+            self, measures_from_index: Callable[[Optional[int]], dict]) \
+            -> dict:
+        pass
+
     @staticmethod
-    def create_for(index_range_to_run: Optional[Tuple[int, int]]) \
-            -> 'InstanceComposition':
-        if index_range_to_run is None:
-            return AtomicInstanceComposition()
-        return IndicesInstanceComposition(index_range_to_run)
+    def get_output_tarball(containers: Containers, execution_id: str,
+                           index: Optional[int], output_path: Optional[str]) \
+            -> Iterator[bytes]:
+        output_path = output_path if output_path is not None else ''
+        if index is not None:
+            return containers.get_files(
+                execution_id,
+                os.path.join(
+                    _dirname_for_index(Volumes.OUTPUT_DIRECTORY_PATH, index),
+                    output_path))
+        else:
+            return containers.get_files(
+                execution_id,
+                os.path.join(Volumes.OUTPUT_DIRECTORY_PATH, output_path))
+
+    @staticmethod
+    def get_measures_tarball(
+            containers: Containers, execution_id: str, index: Optional[int]) \
+            -> Iterator[bytes]:
+        if index is not None:
+            return containers.get_files(
+                execution_id,
+                _dirname_for_index(Volumes.MEASURES_DIRECTORY_PATH, index)
+            )
+        else:
+            return containers.get_files(
+                execution_id,
+                Volumes.MEASURES_DIRECTORY_PATH)
 
 
 class AtomicInstanceComposition(InstanceComposition):
@@ -127,22 +167,23 @@ class AtomicInstanceComposition(InstanceComposition):
             self, execution_id: str, containers: Containers,
             output_path: Optional[str] = None) \
             -> [(Optional[str], Iterator[bytes])]:
-        tarball = containers.get_files(
-            execution_id,
-            os.path.join(
-                Volumes.OUTPUT_DIRECTORY_PATH,
-                output_path if output_path is not None else ''))
+        tarball = InstanceComposition.get_output_tarball(
+            containers, execution_id, index=None, output_path=output_path)
         directory = None
         return [(directory, tarball)]
 
     def get_measures_dirs_and_tarballs(
             self, execution_id: str, containers: Containers) \
             -> [(Optional[str], Iterator[bytes])]:
-        tarball = containers.get_files(
-            execution_id,
-            Volumes.MEASURES_DIRECTORY_PATH)
+        tarball = InstanceComposition.get_measures_tarball(
+            containers, execution_id, index=None)
         directory = None
         return [(directory, tarball)]
+
+    def compose_measures(
+            self, measures_from_index: Callable[[Optional[int]], dict]) \
+            -> dict:
+        return measures_from_index(index=None)
 
 
 class IndicesInstanceComposition(InstanceComposition):
@@ -190,13 +231,10 @@ class IndicesInstanceComposition(InstanceComposition):
             -> [(Optional[str], Iterator[bytes])]:
         output_dirs_and_tarballs = []
         indices_to_run = range(*self.range_index_to_run)
-        for i in indices_to_run:
-            tarball = containers.get_files(
-                execution_id,
-                os.path.join(
-                    _dirname_for_index(Volumes.OUTPUT_DIRECTORY_PATH, i),
-                    output_path if output_path is not None else ''))
-            directory = str(i)
+        for index in indices_to_run:
+            tarball = InstanceComposition.get_output_tarball(
+                containers, execution_id, index, output_path)
+            directory = subdir_name_for_index(index)
             output_dirs_and_tarballs.append((directory, tarball))
         return output_dirs_and_tarballs
 
@@ -205,11 +243,17 @@ class IndicesInstanceComposition(InstanceComposition):
             -> [(Optional[str], Iterator[bytes])]:
         measures_dirs_and_tarballs = []
         indices_to_run = range(*self.range_index_to_run)
-        for i in indices_to_run:
-            tarball = containers.get_files(
-                execution_id,
-                _dirname_for_index(Volumes.MEASURES_DIRECTORY_PATH, i)
-            )
-            directory = str(i)
+        for index in indices_to_run:
+            tarball = InstanceComposition.get_measures_tarball(
+                containers, execution_id, index)
+            directory = subdir_name_for_index(index)
             measures_dirs_and_tarballs.append((directory, tarball))
         return measures_dirs_and_tarballs
+
+    def compose_measures(
+            self, measures_from_index: Callable[[Optional[int]], dict]) \
+            -> dict:
+        return {
+            index: measures_from_index(index)
+            for index in self.range_index_to_run
+        }

@@ -1,7 +1,6 @@
 import io
 import json
 import logging
-import os
 from typing import Dict, Iterator, List, Optional, Tuple
 
 from docker.types import Mount
@@ -170,15 +169,16 @@ class DockerInstance(Instance):
                                     stdout=stdout,
                                     stderr=stderr)
 
-    def get_output_files_tarball(self, path: Optional[str]) -> Iterator[bytes]:
-        return self.containers.get_files(
-            self.execution_id,
-            os.path.join(Volumes.OUTPUT_DIRECTORY_PATH,
-                         path if path is not None else ''))
+    def get_output_files_tarball(
+            self, path: Optional[str], index: Optional[int]) \
+            -> Iterator[bytes]:
+        return InstanceComposition.get_output_tarball(
+            self.containers, self.execution_id, index, path)
 
-    def get_measures_files_tarball(self) -> Iterator[bytes]:
-        return self.containers.get_files(
-            self.execution_id, Volumes.MEASURES_DIRECTORY_PATH)
+    def get_measures_files_tarball(self, index: Optional[int]) \
+            -> Iterator[bytes]:
+        return InstanceComposition.get_measures_tarball(
+            self.containers, self.execution_id, index)
 
     def get_stored_metadata(self) -> dict:
         raise InstanceStillRunningException(self.execution_id)
