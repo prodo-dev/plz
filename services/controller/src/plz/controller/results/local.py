@@ -58,7 +58,6 @@ class LocalResultsStorage(ResultsStorage):
                 self.db_storage, execution_id, finish_timestamp)
             index_range_to_run = metadata['execution_spec'].get(
                 'index_range_to_run')
-            log.debug(f'Index range to run is: {index_range_to_run}')
 
             _write_output_and_measures(paths, containers, execution_id,
                                        index_range_to_run)

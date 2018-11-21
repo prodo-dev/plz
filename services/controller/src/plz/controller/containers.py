@@ -94,7 +94,6 @@ class Containers:
 
     def get_files(self, execution_id: str, path: str) -> Iterator[bytes]:
         container = self.from_execution_id(execution_id)
-        log.debug(f'!!!!!!Getting file: {path}')
         tar, _ = container.get_archive(path)
         yield from tar
 
