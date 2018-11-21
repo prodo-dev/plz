@@ -8,4 +8,4 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 SECRETS_DIR=$PWD/aws_config \
   BUILD_TIMESTAMP="$(cat STABLE_BUILD_TIMESTAMP)" \
   LOG_LEVEL="${LOG_LEVEL:-WARNING}" \
-  docker-compose --project-name=plz --file="${DIR}/aws-prebuilt.yml" up "$@"
+  docker-compose --project-name=plz --file="${DIR}/aws-prebuilt.yml" up --no-build "$@"
