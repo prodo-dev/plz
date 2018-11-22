@@ -11,20 +11,37 @@ services:
         condition: service_healthy
 
   controller:
-    extends:
-      file: ../docker-compose.base.yml
-      service: controller
+    image: plz/controller
+    build:
+      context: ../services/controller
     container_name: $CONTROLLER_CONTAINER
+    environment:
+      CONFIGURATION: |
+        # copied from ../start/docker.conf, as we can't mount files inside CircleCI
+        log_level = DEBUG
+        log_level = $${?LOG_LEVEL}
+        port = 80
+        redis_host = redis
+        data_dir = /data
+        results = {
+          directory = /data/results
+        }
+        assumptions = {
+          docker_api_client_timeout_in_minutes = 10
+          ecr_login_validity_in_minutes = 5
+          instance_lock_timeout = 3600
+          instance_max_startup_time_in_minutes = 20
+          container_idle_timestamp_grace = 60
+        }
     volumes:
-      - ./services/controller/config/localhost.conf:/root/server.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       redis:
         condition: service_started
 
   redis:
-    extends:
-      file: ../docker-compose.base.yml
-      service: redis
+    image: redis:4
+    entrypoint: redis-server --save 300 1
     volumes:
       - ../cache/redis_data:/data
 

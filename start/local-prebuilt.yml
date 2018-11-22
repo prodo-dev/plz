@@ -1,0 +1,22 @@
+version: "2.3"
+
+services:
+  controller:
+    image: prodoai/plz_controller:timestamp_${BUILD_TIMESTAMP}
+    ports:
+      - ${PORT:-5123}:80
+    environment:
+      CONFIGURATION: |
+        include "/root/docker.conf"
+    volumes:
+      - ./docker.conf:/root/docker.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      redis:
+        condition: service_started
+
+  redis:
+    image: redis:4
+    entrypoint: redis-server --save 2 1
+    volumes:
+      - ../cache/redis_data:/data

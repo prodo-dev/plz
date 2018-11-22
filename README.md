@@ -301,22 +301,25 @@ these are broadly used tools.
 The first time you run the controller, it will take some time, as it downloads a
 "standard" environment which includes Anaconda and PyTorch.
 
-The controller runs in "detached" mode, which means it will carry on running if
-you close the terminal, but logs its output to that terminal. We suggest opening
-another terminal window to run executions.
+The controller runs in the foreground, and can be killed with _Ctrl+C_. If you'd
+like to run it in the background, append `-d` to the command to run it in
+"detached" mode.
+
+If you've run the controller in the background, or if you lose your terminal, it
+will carry on running. You can stop it with `./stop`.
 
 ### Running executions locally
 
 Once you've set up your system as above, run:
 
 ```
-./start_local_controller
+./start/local-prebuilt
 ```
 
 The controller can be stopped at any time with:
 
 ```
-./stop_controller
+./stop
 ```
 
 ### AWS configuration
@@ -341,7 +344,7 @@ region to _eu-west-1_ (Ireland).
 Then run:
 
 ```
-./start_aws_controller
+./start/aws-prebuilt
 ```
 
 Unless you add `"instance_max_uptime_in_minutes": null,` to your

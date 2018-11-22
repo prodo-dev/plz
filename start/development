@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -e
+set -u
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
+
+LOG_LEVEL="${LOG_LEVEL:-WARNING}" \
+  docker-compose --project-name=plz --file="${DIR}/development.yml" up --build "$@"

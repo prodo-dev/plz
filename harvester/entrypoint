@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+set -eu
+
+while true; do
+  sleep "$WAIT_FOR_SECONDS"
+  echo 'Harvesting...'
+  if curl -fsS -X POST "${HOST}:${PORT}/executions/harvest" > /dev/null; then
+    echo 'Harvesting complete.'
+  else
+    echo 'Error harvesting!'
+  fi
+done
