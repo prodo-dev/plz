@@ -5,6 +5,10 @@ set -u
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 
+docker pull prodoai/plz_ml-pytorch
+docker pull python:3-slim
+docker pull "prodoai/plz_controller:timestamp_$(cat STABLE_BUILD_TIMESTAMP)"
+
 docker build ${DIR}/../harvester -t plz/harvester
 
 BUILD_TIMESTAMP="$(cat ${DIR}/../STABLE_BUILD_TIMESTAMP)" \
