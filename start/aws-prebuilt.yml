@@ -4,9 +4,8 @@ services:
   controller:
     image: prodoai/plz_controller:timestamp_${BUILD_TIMESTAMP}
     ports:
-      - ${PORT:-6000}:80
+      - ${PORT:-5123}:80
     environment:
-      AWS_PROFILE: ${AWS_PROFILE}
       CREATE_AWS_RESOURCES: "yes"
       CONFIGURATION: |
         config = { include "/root/config.json" }
@@ -23,19 +22,6 @@ services:
     depends_on:
       redis:
         condition: service_started
-
-  harvester:
-    image: plz/harvester
-    build:
-      context: ../harvester
-    environment:
-      - HOST=localhost
-      - PORT=${PORT:-6000}
-      - WAIT_FOR_SECONDS=60
-    network_mode: host
-    depends_on:
-      controller:
-        condition: service_healthy
 
   redis:
     image: redis:4

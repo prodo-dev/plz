@@ -2,6 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import ContextManager, Iterator, Optional
 
+from plz.controller.containers import Containers
 from plz.controller.db_storage import DBStorage
 
 log = logging.getLogger(__name__)
@@ -16,8 +17,7 @@ class ResultsStorage(ABC):
                 execution_id: str,
                 exit_status: int,
                 logs: Iterator[bytes],
-                output_tarball: Iterator[bytes],
-                measures_tarball: Iterator[bytes],
+                containers: Containers,
                 finish_timestamp: int):
         pass
 
@@ -45,11 +45,14 @@ class Results(ABC):
         pass
 
     @abstractmethod
-    def get_output_files_tarball(self, path: Optional[str]) -> Iterator[bytes]:
+    def get_output_files_tarball(
+            self, path: Optional[str], index: Optional[int]) \
+            -> Iterator[bytes]:
         pass
 
     @abstractmethod
-    def get_measures_files_tarball(self) -> Iterator[bytes]:
+    def get_measures_files_tarball(self, index: Optional[int]) \
+            -> Iterator[bytes]:
         pass
 
     @abstractmethod

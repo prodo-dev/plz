@@ -1,0 +1,15 @@
+version: "2.3"
+
+services:
+  harvester:
+    image: plz/harvester
+    build:
+      context: ../harvester
+    environment:
+      - HOST=localhost
+      - PORT=${PORT:-5123}
+      - WAIT_FOR_SECONDS=60
+    network_mode: host
+    depends_on:
+      controller:
+        condition: service_started

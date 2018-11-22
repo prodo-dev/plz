@@ -63,7 +63,7 @@ class RetrieveOutputOperation(Operation):
     def retrieve_output(self):
         execution_id = self.get_execution_id()
         output_tarball_bytes = self.controller.get_output_files(
-            self.get_execution_id(), path=self.path)
+            self.get_execution_id(), path=self.path, index=None)
         formatted_output_dir = self.output_dir.replace('%e', execution_id)
         formatted_output_dir = os.path.join(
             formatted_output_dir,

@@ -312,11 +312,13 @@ class EC2Instance(Instance):
             since=since, stdout=stdout, stderr=stderr)
 
     def get_output_files_tarball(
-            self, path: Optional[str]) -> Iterator[bytes]:
-        return self.delegate.get_output_files_tarball(path)
+            self, path: Optional[str], index: Optional[int]) \
+            -> Iterator[bytes]:
+        return self.delegate.get_output_files_tarball(path, index)
 
-    def get_measures_files_tarball(self) -> Iterator[bytes]:
-        return self.delegate.get_measures_files_tarball()
+    def get_measures_files_tarball(self, index: Optional[int]) \
+            -> Iterator[bytes]:
+        return self.delegate.get_measures_files_tarball(index)
 
     def get_stored_metadata(self) -> dict:
         return self.delegate.get_stored_metadata()

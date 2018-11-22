@@ -5,4 +5,4 @@ set -u
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 
-docker-compose --project-name=plz --file="${DIR}/start/development.yml" down
+docker-compose --project-name=plz --file="${DIR}/start/development.yml" --file="${DIR}/start/harvester.yml" down

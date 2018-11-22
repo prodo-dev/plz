@@ -206,7 +206,8 @@ def get_logs_entrypoint(execution_id):
 @app.route(f'/executions/<execution_id>/output/files')
 def get_output_files_entrypoint(execution_id):
     path: Optional[str] = request.args.get('path', default=None, type=str)
-    return Response(controller.get_output_files(execution_id, path),
+    index: Optional[int] = request.args.get('index', default=None, type=int)
+    return Response(controller.get_output_files(execution_id, path, index),
                     mimetype='application/octet-stream')
 
 
@@ -214,8 +215,10 @@ def get_output_files_entrypoint(execution_id):
 def get_measures(execution_id):
     summary: bool = request.args.get(
         'summary', default=False, type=strtobool)
+    index: Optional[int] = request.args.get('index', default=None, type=int)
     return Response(
-        stream_with_context(controller.get_measures(execution_id, summary)),
+        stream_with_context(controller.get_measures(
+            execution_id, summary, index)),
         mimetype='text/plain')
 
 
