@@ -1,6 +1,8 @@
 from abc import ABC
+from typing import Optional
 
 from plz.controller.api.exceptions import ExecutionNotFoundException
+from plz.controller.execution_composition import InstanceComposition
 from plz.controller.execution_metadata import convert_measures_to_dict
 from plz.controller.instances.instance_base import InstanceProvider
 from plz.controller.results import ResultsStorage
@@ -14,9 +16,9 @@ class Execution(ABC):
         self.get_output_files_tarball = self.results.get_output_files_tarball
         self.get_status = self.results.get_status
 
-    def get_measures(self) -> dict:
+    def get_measures(self, index: Optional[int]) -> dict:
         return convert_measures_to_dict(
-            self.results.get_measures_files_tarball())
+            self.results.get_measures_files_tarball(index))
 
     def get_metadata(self) -> dict:
         stored_metadata = self.results.get_stored_metadata()
@@ -26,7 +28,12 @@ class Execution(ABC):
         # having two sources of truth. Instead, we recompute the structured
         # representation from the tarball and add it to the metadata each time
         # it's requested.
-        stored_metadata.update({'measures': self.get_measures()})
+        index_range_to_run = stored_metadata['execution_spec'].get(
+            'index_range_to_run')
+        ic = InstanceComposition.create_for(
+            index_range_to_run)
+        stored_metadata.update({'measures': ic.compose_measures(
+            lambda index: self.get_measures(index))})
         return stored_metadata
 
 
