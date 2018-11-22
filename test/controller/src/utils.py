@@ -39,6 +39,7 @@ def create_context_for_example(
         example_name)
     configuration = Configuration.load(example_dir)
     configuration.context_path = example_dir
+    configuration.instance_market_type = 'spot'
     # The default is None (by design, so that the user needs to specify it),
     # and it will break when running tests against a controller starting
     # AWS instances

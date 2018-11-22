@@ -276,50 +276,67 @@ Chances are you that you have most of the supporting tools already installed, as
 these are broadly used tools.
 
 1. Install Git, and Python 3.
-   1. On Ubuntu, you can run `sudo apt install git python3 python3-pip`.
+   1. On Ubuntu, you can run
+      `sudo apt install -y git python3 python3-pip python-pip`.
    2. On macOS, install [Homebrew](https://brew.sh/), then run
       `brew install git python`.
    3. For all other operating systems, you're going to have to Google it.
 2. Install [Docker](https://docs.docker.com/install/).
    1. On Ubuntu, you can run:
       ```
+      sudo apt install -y curl
       curl -fsSL https://get.docker.com -o get-docker.sh
       sudo sh get-docker.sh
-      sudo usermod -aG docker your-user
+      sudo usermod -aG docker "$USER"
       ```
-      then restart your shell so that it picks up the membership to the `docker`
-      group.
+      then start a new shell with `sudo su - "$USER"` so that it picks up the
+      membership to the `docker` group.
    2. On macOS, you can use Homebrew to install Docker with
       `brew cask install docker`.
-3. Install Docker Compose (`pip install docker-compose`).
-4. If you're planning on running code with CUDA, install the
-   [NVIDIA Container Runtime for Docker](https://github.com/NVIDIA/nvidia-docker).
+3. Install Docker Compose (`pip install docker-compose`). You might want to make
+   sure that `pip` installs the `docker-compose` command somewhere in your
+   `PATH`. On Ubuntu with the default Python installation, this is typically
+   `$HOME/.local/bin` (so you need the command
+   `export PATH="${HOME}/.local/bin:${PATH}"`).
+4. If you're planning on running code with CUDA in your machine, install the
+   [NVIDIA Container Runtime for Docker](https://github.com/NVIDIA/nvidia-docker)
+   (not needed for using CUDA on AWS).
 5. `git clone https://github.com/prodo-ai/plz`, then `cd plz`.
-6. Install the CLI by running `./install_cli`.
+6. Install the CLI by running `./install_cli`, which calls `pip3`. Same as for
+   `docker-compose` you might want to check that the `plz` command is in your
+   path.
 7. Run the controller (see below).
 
 The first time you run the controller, it will take some time, as it downloads a
 "standard" environment which includes Anaconda and PyTorch.
 
-The controller runs in "detached" mode, which means it will carry on running if
-you close the terminal, but logs its output to that terminal. We suggest opening
-another terminal window to run executions.
+The controller runs in the foreground, and can be killed with _Ctrl+C_. If you'd
+like to run it in the background, append `-d` to the command to run it in
+"detached" mode.
+
+If you've run the controller in the background, or if you lose your terminal, it
+will carry on running. You can stop it with `./stop`.
 
 ### Running executions locally
 
 Once you've set up your system as above, run:
 
 ```
-./start_local_controller
+./start/local-prebuilt
 ```
 
 The controller can be stopped at any time with:
 
 ```
-./stop_controller
+./stop
 ```
 
 ### AWS configuration
+
+If you want to run the examples using the AWS instances, be aware that this has
+a cost. By default, Plz uses _t2.micro_ on-demand instances. You can find out
+how much these cost on the
+[AWS EC2 Pricing](https://aws.amazon.com/ec2/pricing/on-demand/) page.
 
 To start a controller that talks to AWS, you'll need to first set up the AWS
 CLI:
@@ -336,7 +353,7 @@ region to _eu-west-1_ (Ireland).
 Then run:
 
 ```
-./start_aws_controller
+./start/aws-prebuilt
 ```
 
 Unless you add `"instance_max_uptime_in_minutes": null,` to your
@@ -347,11 +364,19 @@ well (for example, there's a power cut). You can always use `plz list` and
 remaining. For maximum assurance, we recommend checking the state of your
 instances in the AWS console.
 
-If you want to run the examples using the AWS instances, be aware that this has
-a cost. You can change the value of `"max_bid_price_in_dollars_per_hour": N` in
-`plz.config.json` to any value you like. Examples takes around 5 minutes to run.
-The value in the provided configs range from \$0.5/hour to \$2/hour (for
-GPU-powered machines).
+By default, Plz uses on-demand instances. In order to use spot instances,
+specify the following in your _plz.config.json_ file:
+
+```json
+{
+    ...
+    "instance_market_type": "spot",
+    "max_bid_price_in_dollars_per_hour": <price>
+}
+```
+
+The value in the example configuration files range from \$0.5/hour to \$2/hour
+(for GPU-powered machines).
 
 ## Examples
 

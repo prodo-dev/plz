@@ -1,0 +1,27 @@
+version: "2.3"
+
+services:
+  controller:
+    image: plz/controller
+    build:
+      context: ../services/controller
+    ports:
+      - ${PORT:-5123}:80
+    environment:
+      CONFIGURATION: |
+        config = { include "/root/config.json" }
+        include "/root/docker.conf"
+    volumes:
+      - ${SECRETS_DIR}/config.json:/root/config.json:ro
+      - ./docker.conf:/root/docker.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${HOME}/.aws:/root/.aws
+    depends_on:
+      redis:
+        condition: service_started
+
+  redis:
+    image: redis:4
+    entrypoint: redis-server --save 2 1
+    volumes:
+      - ../cache/redis_data:/data

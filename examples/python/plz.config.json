@@ -8,5 +8,6 @@
     "input": "file://../data/python_example",
     "instance_type": "t3.micro",
     "instance_max_idle_time_in_minutes": 2,
+    "instance_market_type": "spot",
     "max_bid_price_in_dollars_per_hour": 0.5
 }

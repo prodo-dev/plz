@@ -132,14 +132,7 @@ def run_execution_entrypoint():
     parameters = request.json['parameters']
     execution_spec = request.json['execution_spec']
     start_metadata = request.json['start_metadata']
-    instance_market_spec = request.json.get(
-        'instance_market_spec',
-        # TODO: delete this once people update their CLI
-        {
-            'instance_market_type': 'spot',
-            'max_bid_price_in_dollars_per_hour': 3,
-            'instance_max_idle_time_in_minutes': 30
-        })
+    instance_market_spec = request.json.get('instance_market_spec')
     parallel_indices_range = request.json.get('parallel_indices_range')
 
     @_json_stream
