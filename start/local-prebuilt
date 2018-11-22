@@ -13,4 +13,4 @@ docker build ${DIR}/../harvester -t plz/harvester
 
 BUILD_TIMESTAMP="$(cat ${DIR}/../STABLE_BUILD_TIMESTAMP)" \
   LOG_LEVEL="${LOG_LEVEL:-WARNING}" \
-  docker-compose --project-name=plz --file="${DIR}/local-prebuilt.yml" up --no-build "$@"
+  docker-compose --project-name=plz --file="${DIR}/local-prebuilt.yml" --file="${DIR}/harvester.yml" up --no-build "$@"
