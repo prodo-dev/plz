@@ -12,4 +12,4 @@ services:
     network_mode: host
     depends_on:
       controller:
-        condition: service_healthy
+        condition: service_started
