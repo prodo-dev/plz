@@ -5,7 +5,9 @@ set -u
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 
+docker build ${DIR}/../harvester -t plz/harvester
+
 SECRETS_DIR=$PWD/aws_config \
-  BUILD_TIMESTAMP="$(cat ${DIR}/STABLE_BUILD_TIMESTAMP)" \
+  BUILD_TIMESTAMP="$(cat ${DIR}/../STABLE_BUILD_TIMESTAMP)" \
   LOG_LEVEL="${LOG_LEVEL:-WARNING}" \
-  docker-compose --project-name=plz --file="${DIR}/aws-prebuilt.yml" up "$@"
+  docker-compose --project-name=plz --no-build --file="${DIR}/aws-prebuilt.yml" up --no-build "$@"

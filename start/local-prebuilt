@@ -5,6 +5,8 @@ set -u
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 
-BUILD_TIMESTAMP="$(cat ${DIR}/STABLE_BUILD_TIMESTAMP)" \
+docker build ${DIR}/../harvester -t plz/harvester
+
+BUILD_TIMESTAMP="$(cat ${DIR}/../STABLE_BUILD_TIMESTAMP)" \
   LOG_LEVEL="${LOG_LEVEL:-WARNING}" \
-  docker-compose --project-name=plz --file="${DIR}/local-prebuilt.yml" up "$@"
+  docker-compose --project-name=plz --file="${DIR}/local-prebuilt.yml" up --no-build "$@"
