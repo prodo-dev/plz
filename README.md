@@ -276,26 +276,31 @@ Chances are you that you have most of the supporting tools already installed, as
 these are broadly used tools.
 
 1. Install Git, and Python 3.
-   1. On Ubuntu, you can run `sudo apt install git python3 python3-pip`.
+   1. On Ubuntu, you can run
+      `sudo apt install git python3 python3-pip python-pip`.
    2. On macOS, install [Homebrew](https://brew.sh/), then run
       `brew install git python`.
    3. For all other operating systems, you're going to have to Google it.
 2. Install [Docker](https://docs.docker.com/install/).
    1. On Ubuntu, you can run:
       ```
+      sudo apt install curl
       curl -fsSL https://get.docker.com -o get-docker.sh
       sudo sh get-docker.sh
-      sudo usermod -aG docker your-user
+      sudo usermod -aG docker $USER
       ```
-      then restart your shell so that it picks up the membership to the `docker`
-      group.
+      then start a new shell with `sudo su - $USER` so that it picks up the
+      membership to the `docker` group.
    2. On macOS, you can use Homebrew to install Docker with
       `brew cask install docker`.
 3. Install Docker Compose (`pip install docker-compose`).
 4. If you're planning on running code with CUDA, install the
    [NVIDIA Container Runtime for Docker](https://github.com/NVIDIA/nvidia-docker).
 5. `git clone https://github.com/prodo-ai/plz`, then `cd plz`.
-6. Install the CLI by running `./install_cli`.
+6. Install the CLI by running `./install_cli`, which calls `pip3`. You might
+   want to make sure that `pip3` installed the `plz` command somewhere in your
+   `PATH`. On Ubuntu with the default Python installation, this is typically
+   `$HOME/.local/bin` (`export PATH="${HOME}/.local/bin:${PATH}"`).
 7. Run the controller (see below).
 
 The first time you run the controller, it will take some time, as it downloads a
