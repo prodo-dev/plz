@@ -298,9 +298,9 @@ these are broadly used tools.
    `PATH`. On Ubuntu with the default Python installation, this is typically
    `$HOME/.local/bin` (so you need the command
    `export PATH="${HOME}/.local/bin:${PATH}"`).
-
-4. If you're planning on running code with CUDA, install the
-   [NVIDIA Container Runtime for Docker](https://github.com/NVIDIA/nvidia-docker).
+4. If you're planning on running code with CUDA in your machine, install the
+   [NVIDIA Container Runtime for Docker](https://github.com/NVIDIA/nvidia-docker)
+   (not needed for using CUDA on AWS).
 5. `git clone https://github.com/prodo-ai/plz`, then `cd plz`.
 6. Install the CLI by running `./install_cli`, which calls `pip3`. Same as for
    `docker-compose` you might want to check that the `plz` command is in your
