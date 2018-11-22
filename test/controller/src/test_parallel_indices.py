@@ -31,3 +31,7 @@ class TestParallelIndices(unittest.TestCase):
                     subcomp['execution_id'], index=index, path=None))
 
             self.assertDictEqual(file_map, {'the_file': f'index is: {index}'})
+
+            measures = context.controller.get_measures(
+                subcomp['execution_id'], summary=False, index=index)
+            self.assertDictEqual(measures, {'accuracy': index})
