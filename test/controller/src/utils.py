@@ -160,3 +160,12 @@ def create_file_map_from_tarball(
                     content = str(b''.join(s for s in source), 'utf-8')
                     tarball_to_file_map[path] = content
         return tarball_to_file_map
+
+
+def get_execution_listing_status(controller: Controller, execution_id: str) \
+        -> Optional[str]:
+    executions = controller.list_executions()
+    for execution in executions:
+        if execution['execution_id'] == execution_id:
+            return execution['status']
+    return None
