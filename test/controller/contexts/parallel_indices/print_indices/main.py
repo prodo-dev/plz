@@ -13,17 +13,22 @@ else:
 
 index_to_output_directory = config['index_to_output_directory']
 index_to_measures_directory = config['index_to_measures_directory']
+index_to_summary_measures_path = config['index_to_summary_measures_path']
+
 
 for i in range(start, end):
     # Note: keys in json objects are always strings, so this uses str(i)
     output_directory = index_to_output_directory[str(i)]
-    file_name = os.path.join(output_directory, 'the_file')
-    with open(file_name, 'w') as f:
+    output_path = os.path.join(output_directory, 'the_file')
+    with open(output_path, 'w') as f:
         f.write(f'index is: {i}')
     print(i)
 
-    measures_name = os.path.join(
+    index_to_measures_directory = config['index_to_measures_directory']
+    accuracy_measure_path = os.path.join(
         index_to_measures_directory[str(i)], 'accuracy')
-
-    with open(measures_name, 'w') as f:
+    with open(accuracy_measure_path, 'w') as f:
         json.dump(i, f)
+
+    with open(index_to_summary_measures_path[str(i)], 'w') as f:
+        json.dump({'time': i}, f)
