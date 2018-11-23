@@ -69,3 +69,18 @@ class TestParallelIndices(unittest.TestCase):
                 ''.join(context.controller.get_measures(
                     index_execution, summary=True, index=index)))
             self.assertDictEqual(summary_measures, {'time': index})
+
+            if harvest_after_run:
+                metadata = json.loads(''.join(context.controller.get_history(
+                    user=context.configuration.user,
+                    project=context.configuration.project)))[index_execution]
+
+                self.assertDictEqual(metadata['measures'],
+                                     {
+                                         str(index): {
+                                             'accuracy': index,
+                                             'summary': {
+                                                 'time': index
+                                             }
+                                         }
+                                     })

@@ -261,5 +261,5 @@ class IndicesInstanceComposition(InstanceComposition):
             -> dict:
         return {
             index: measures_from_index(index)
-            for index in self.range_index_to_run
+            for index in range(*self.range_index_to_run)
         }
