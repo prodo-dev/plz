@@ -70,10 +70,14 @@ class TestParallelIndices(unittest.TestCase):
                     index_execution, summary=True, index=index)))
             self.assertDictEqual(summary_measures, {'time': index})
 
+            # When not harvesting after run, check that the history works
+            history = context.controller.get_history(
+                user=context.configuration.user,
+                project=context.configuration.project)
+            # If we harvested, the execution is in the history, we can check
+            # the metadata
             if harvest_after_run:
-                metadata = json.loads(''.join(context.controller.get_history(
-                    user=context.configuration.user,
-                    project=context.configuration.project)))[index_execution]
+                metadata = json.loads(''.join(history))[index_execution]
 
                 self.assertDictEqual(metadata['measures'],
                                      {
