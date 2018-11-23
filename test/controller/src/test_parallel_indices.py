@@ -1,3 +1,4 @@
+import json
 import unittest
 
 from .utils import run_example, harvest, create_file_map_from_tarball
@@ -21,10 +22,12 @@ class TestParallelIndices(unittest.TestCase):
             execution_id)
         indices_to_compositions = composition['indices_to_compositions']
         for index, subcomp in indices_to_compositions.items():
+            # Json indices are always strings...
+            index = int(index)
             logs_bytes = context.controller.get_logs(
                 subcomp['execution_id'], since=None)
             logs_str = str(b''.join(logs_bytes), 'utf-8')
-            self.assertEqual(logs_str, index + '\n')
+            self.assertEqual(logs_str, str(index) + '\n')
 
             file_map = create_file_map_from_tarball(
                 context.controller.get_output_files(
@@ -32,6 +35,11 @@ class TestParallelIndices(unittest.TestCase):
 
             self.assertDictEqual(file_map, {'the_file': f'index is: {index}'})
 
-            measures = context.controller.get_measures(
-                subcomp['execution_id'], summary=False, index=index)
-            self.assertDictEqual(measures, {'accuracy': index})
+            measures = json.loads(''.join(context.controller.get_measures(
+                subcomp['execution_id'], summary=False, index=index)))
+            self.assertDictEqual(measures,
+                {
+                    str(index): {
+                        'accuracy': index
+                    }
+                })

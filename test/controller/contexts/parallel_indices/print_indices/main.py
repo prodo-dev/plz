@@ -15,8 +15,15 @@ index_to_output_directory = config['index_to_output_directory']
 index_to_measures_directory = config['index_to_measures_directory']
 
 for i in range(start, end):
-    file_name = os.path.join(
-        index_to_output_directory[str(i)], 'the_file')
+    # Note: keys in json objects are always strings, so this uses str(i)
+    output_directory = index_to_output_directory[str(i)]
+    file_name = os.path.join(output_directory, 'the_file')
     with open(file_name, 'w') as f:
         f.write(f'index is: {i}')
     print(i)
+
+    measures_name = os.path.join(
+        index_to_measures_directory[str(i)], 'accuracy')
+
+    with open(measures_name, 'w') as f:
+        json.dump(i, f)
