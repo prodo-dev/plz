@@ -11,10 +11,12 @@ services:
       CONFIGURATION: |
         config = { include "/root/config.json" }
         include "/root/docker.conf"
+        log_level = ${LOG_DEVEL:-DEBUG}
     volumes:
-      - ${SECRETS_DIR}/config.json:/root/config.json:ro
       - ./docker.conf:/root/docker.conf:ro
       - /var/run/docker.sock:/var/run/docker.sock
+      - ${CACHE_DIR}/controller:/data
+      - ${CACHE_DIR}/results:/data/results
       - ${HOME}/.aws:/root/.aws
     depends_on:
       redis:
@@ -24,4 +26,4 @@ services:
     image: redis:4
     entrypoint: redis-server --save 2 1
     volumes:
-      - ../cache/redis_data:/data
+      - ${CACHE_DIR}/redis_data:/data
