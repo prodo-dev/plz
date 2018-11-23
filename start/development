@@ -5,5 +5,6 @@ set -u
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 
-LOG_LEVEL="${LOG_LEVEL:-WARNING}" \
+LOG_LEVEL="${LOG_LEVEL:-DEBUG}" \
+  CACHE_DIR="${CACHE_DIR:-${DIR}/../cache/}" \
   docker-compose --project-name=plz --file="${DIR}/development.yml" up --build "$@"

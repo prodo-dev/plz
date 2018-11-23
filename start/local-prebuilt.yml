@@ -8,9 +8,12 @@ services:
     environment:
       CONFIGURATION: |
         include "/root/docker.conf"
+        log_level = ${LOG_LEVEL:-DEBUG}
     volumes:
       - ./docker.conf:/root/docker.conf:ro
       - /var/run/docker.sock:/var/run/docker.sock
+      - ${CACHE_DIR}/controller:/data
+      - ${CACHE_DIR}/results:/data/results
     depends_on:
       redis:
         condition: service_started
@@ -19,4 +22,4 @@ services:
     image: redis:4
     entrypoint: redis-server --save 2 1
     volumes:
-      - ../cache/redis_data:/data
+      - ${CACHE_DIR}/redis_data:/data
