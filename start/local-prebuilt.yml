@@ -1,7 +1,5 @@
 version: "2.3"
 
-CACHE_DIR = ${CACHE_DIR:-../cache}
-
 services:
   controller:
     image: prodoai/plz_controller:timestamp_${BUILD_TIMESTAMP}

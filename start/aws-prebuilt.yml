@@ -1,7 +1,5 @@
 version: "2.3"
 
-CACHE_DIR=${CACHE_DIR:-../cache}
-
 services:
   controller:
     image: prodoai/plz_controller:timestamp_${BUILD_TIMESTAMP}
@@ -19,7 +17,7 @@ services:
       - ./docker.conf:/root/docker.conf:ro
       - ../services/controller/config/localserver.conf:/root/server.conf:ro
       - ${CACHE_DIR}/controller:/data
-      - ${GACHE_DIR}/results:/data/results
+      - ${CACHE_DIR}/results:/data/results
       - ${HOME}/.aws:/root/.aws
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:

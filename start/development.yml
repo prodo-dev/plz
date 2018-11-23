@@ -1,7 +1,5 @@
 version: "2.3"
 
-CACHE_DIR=${CACHE_DIR:-../dev_cache/}
-
 services:
   controller:
     image: plz/controller
