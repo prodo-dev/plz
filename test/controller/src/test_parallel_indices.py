@@ -46,8 +46,4 @@ class TestParallelIndices(unittest.TestCase):
             summary_measures = json.loads(
                 ''.join(context.controller.get_measures(
                     subcomp['execution_id'], summary=True, index=index)))
-            self.assertDictEqual(summary_measures, {
-                'summary': {
-                    'time': index
-                }
-            })
+            self.assertDictEqual(summary_measures, {'time': index})
