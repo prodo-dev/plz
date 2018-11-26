@@ -300,7 +300,8 @@ class ControllerImpl(Controller):
                     return
                 indices_to_compositions = {
                     i: AtomicComposition(m['execution_id'])
-                    for (i, m) in enumerate(metadatas)
+                    for m in metadatas
+                    for i in range(*m['index_range_to_run'])
                 }
                 self.log.debug(
                     f'Idx to compositions {indices_to_compositions}')
@@ -329,6 +330,7 @@ class ControllerImpl(Controller):
             previous_execution_id=previous_execution_id)
         self.db_storage.store_start_metadata(
             execution_id, enriched_start_metadata)
+        self.log.debug(f'Indices per execution: {indices_per_execution}')
         if parallel_indices_range is not None:
             if indices_per_execution is None:
                 indices_per_execution = 1
@@ -336,12 +338,15 @@ class ControllerImpl(Controller):
             for i in range(parallel_indices_range[0],
                            parallel_indices_range[1],
                            indices_per_execution):
+                this_exec_indices = min(
+                    indices_per_execution,
+                    parallel_indices_range[1] - parallel_indices_range[0] - i)
                 enriched_start_metadata = _enrich_start_metadata(
                     _get_execution_uuid(),
                     start_metadata, command, snapshot_id, parameters,
                     instance_market_spec, execution_spec,
                     parallel_indices_range=None,
-                    index_range_to_run=(i, i + indices_per_execution),
+                    index_range_to_run=(i, i + this_exec_indices),
                     indices_per_execution=None,
                     previous_execution_id=previous_execution_id)
                 metadatas.append(enriched_start_metadata)
@@ -382,6 +387,7 @@ def _enrich_start_metadata(
     enriched_start_metadata['user'] = execution_spec['user']
     enriched_start_metadata['project'] = execution_spec['project']
     enriched_start_metadata['parallel_indices_range'] = parallel_indices_range
+    enriched_start_metadata['index_range_to_run'] = index_range_to_run
     enriched_start_metadata['indices_per_execution'] = indices_per_execution
     enriched_start_metadata['previous_execution_id'] = previous_execution_id
     return enriched_start_metadata

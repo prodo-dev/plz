@@ -44,7 +44,8 @@ class ControllerProxy(Controller):
                 'execution_spec': execution_spec,
                 'instance_market_spec': instance_market_spec,
                 'start_metadata': start_metadata,
-                'parallel_indices_range': parallel_indices_range
+                'parallel_indices_range': parallel_indices_range,
+                'indices_per_execution': indices_per_execution
             })
         _check_status(response, requests.codes.accepted)
         return (json.loads(line) for line in response.iter_lines())
