@@ -134,13 +134,15 @@ def run_execution_entrypoint():
     start_metadata = request.json['start_metadata']
     instance_market_spec = request.json.get('instance_market_spec')
     parallel_indices_range = request.json.get('parallel_indices_range')
+    indices_per_execution = request.json.get('indices_per_execution')
 
     @_json_stream
     @stream_with_context
     def act() -> Iterator[dict]:
         yield from controller.run_execution(
             command, snapshot_id, parameters, instance_market_spec,
-            execution_spec, start_metadata, parallel_indices_range)
+            execution_spec, start_metadata, parallel_indices_range,
+            indices_per_execution)
     return Response(
         act(), mimetype='text/plain', status=requests.codes.accepted)
 
