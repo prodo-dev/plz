@@ -303,8 +303,6 @@ class ControllerImpl(Controller):
                     for m in metadatas
                     for i in range(*m['index_range_to_run'])
                 }
-                self.log.debug(
-                    f'Idx to compositions {indices_to_compositions}')
                 composition = IndicesComposition(
                     execution_id,
                     indices_to_compositions=indices_to_compositions,
@@ -330,7 +328,6 @@ class ControllerImpl(Controller):
             previous_execution_id=previous_execution_id)
         self.db_storage.store_start_metadata(
             execution_id, enriched_start_metadata)
-        self.log.debug(f'Indices per execution: {indices_per_execution}')
         if parallel_indices_range is not None:
             if indices_per_execution is None:
                 indices_per_execution = 1
