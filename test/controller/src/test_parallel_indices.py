@@ -25,9 +25,9 @@ class TestParallelIndices(unittest.TestCase):
     #                                       harvest_after_run=False,
     #                                       indices_per_execution=None)
     #
-    def test_five_separate_indices_harvest_after_run(self):
-        self._run_range_and_check_results((0, 5), harvest_after_run=True,
-                                          indices_per_execution=None)
+    # def test_five_separate_indices_harvest_after_run(self):
+    #     self._run_range_and_check_results((0, 5), harvest_after_run=True,
+    #                                       indices_per_execution=None)
     #
     # def test_five_indices_two_per_exec_no_harvest(self):
     #     self._run_range_and_check_results((0, 5), harvest_after_run=False,
@@ -36,30 +36,30 @@ class TestParallelIndices(unittest.TestCase):
     # def test_six_indices_two_per_exec_no_harvest(self):
     #     self._run_range_and_check_results((0, 6), harvest_after_run=False,
     #                                       indices_per_execution=2)
-    #
-    # def test_five_indices_two_per_exec_harvest_after_run(self):
-    #     self._run_range_and_check_results((0, 5), harvest_after_run=True,
-    #                                       indices_per_execution=2)
 
-    def test_rerun_parallel_indices(self):
-        rainch = (0, 5)
-        indices_per_execution = 2
-        context, execution_id = self._run_range_and_check_results(
-            rainch, harvest_after_run=False,
-            indices_per_execution=indices_per_execution,
-            check_only_assignment=True)
-        _, execution_id = rerun_execution(
-            context.controller,
-            user='rerunner_user',
-            project='rerunner_project',
-            previous_execution_id=execution_id,
-            override_parameters=None,
-            instance_market_spec=create_instance_market_spec(
-                context.configuration))
-        execution_composition = context.controller.get_execution_composition(
-            execution_id)['indices_to_compositions']
-        self._check_execution_assignment(rainch, indices_per_execution,
-                                         execution_composition)
+    def test_five_indices_two_per_exec_harvest_after_run(self):
+        self._run_range_and_check_results((0, 5), harvest_after_run=True,
+                                          indices_per_execution=2)
+
+    # def test_rerun_parallel_indices(self):
+    #     rainch = (0, 5)
+    #     indices_per_execution = 2
+    #     context, execution_id = self._run_range_and_check_results(
+    #         rainch, harvest_after_run=False,
+    #         indices_per_execution=indices_per_execution,
+    #         check_only_assignment=True)
+    #     _, execution_id = rerun_execution(
+    #         context.controller,
+    #         user='rerunner_user',
+    #         project='rerunner_project',
+    #         previous_execution_id=execution_id,
+    #         override_parameters=None,
+    #         instance_market_spec=create_instance_market_spec(
+    #             context.configuration))
+    #     execution_composition = context.controller.get_execution_composition(
+    #         execution_id)['indices_to_compositions']
+    #     self._check_execution_assignment(rainch, indices_per_execution,
+    #                                      execution_composition)
 
     def _run_range_and_check_results(
             self, rainch: Tuple[int, int], harvest_after_run: bool,
@@ -98,6 +98,9 @@ class TestParallelIndices(unittest.TestCase):
                 execution_listing_status = get_execution_listing_status(
                     context.controller, index_execution)
 
+            n_indices_of_execution = len(
+                execution_ids_to_indices[index_execution])
+
             logs_bytes = context.controller.get_logs(
                 index_execution, since=None)
             logs_str = str(b''.join(logs_bytes), 'utf-8')
@@ -106,8 +109,7 @@ class TestParallelIndices(unittest.TestCase):
             self.assertEqual(logs_lines[-1], '')
             # ... and remove the empty line created by split
             logs_lines = logs_lines[:-1]
-            self.assertEqual(len(logs_lines),
-                             len(execution_ids_to_indices[index_execution]))
+            self.assertEqual(len(logs_lines), n_indices_of_execution)
             self.assertTrue(not all(
                 [line != str(index) for line in logs_lines]))
 
@@ -138,21 +140,20 @@ class TestParallelIndices(unittest.TestCase):
             # the metadata
             if harvest_after_run:
                 metadata = json.loads(''.join(history))[index_execution]
-
-                self.assertDictEqual(metadata['measures'],
+                # Check that the number of in
+                self.assertEqual(len(metadata['measures'].keys()),
+                                 n_indices_of_execution)
+                self.assertDictEqual(metadata['measures'][str(index)],
                                      {
-                                         str(index): {
-                                             'accuracy': index,
-                                             'summary': {
-                                                 'time': index
-                                             }
+                                         'accuracy': index,
+                                         'summary': {
+                                             'time': index
                                          }
                                      })
         return context, execution_id
 
     def _check_execution_assignment(self, rainch, indices_per_execution,
                                     indices_to_compositions):
-        print('Indices to compositions:', indices_to_compositions)
         range_len = rainch[1] - rainch[0]
         self.assertEqual(len(indices_to_compositions), range_len)
         number_of_different_executions = len(
