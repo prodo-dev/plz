@@ -1,7 +1,7 @@
 import json
 import time
 import unittest
-from typing import Tuple
+from typing import Tuple, Optional
 
 from .utils import run_example, harvest, create_file_map_from_tarball, \
     get_execution_listing_status
@@ -17,17 +17,22 @@ class TestParallelIndices(unittest.TestCase):
         super().tearDownClass()
 
     def test_five_separate_indices_no_harvest(self):
-        self._run_range_and_check_results((0, 5), harvest_after_run=False)
+        self._run_range_and_check_results((0, 5),
+                                          harvest_after_run=False,
+                                          indices_per_execution=None)
 
     def test_five_separate_indices_harvest_after_run(self):
-        self._run_range_and_check_results((0, 5), harvest_after_run=True)
+        self._run_range_and_check_results((0, 5), harvest_after_run=True,
+                                          indices_per_execution=None)
 
     def _run_range_and_check_results(
-            self, rainch: Tuple[int, int], harvest_after_run: bool):
+            self, rainch: Tuple[int, int], harvest_after_run: bool,
+            indices_per_execution: Optional[int]):
         context, execution_id = run_example(
             'parallel_indices', 'print_indices',
             is_end_to_end_path=False,
-            parallel_indices_range=rainch)
+            parallel_indices_range=rainch,
+            indices_per_execution=indices_per_execution)
         composition = context.controller.get_execution_composition(
             execution_id)
         indices_to_compositions = composition['indices_to_compositions']
