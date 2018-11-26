@@ -203,7 +203,8 @@ class RunExecutionOperation(Operation):
                 }
             },
             # TODO: read from config
-            parallel_indices_range=None
+            parallel_indices_range=None,
+            indices_per_execution=None
         )
         return RunExecutionOperation.get_execution_id_from_start_response(
             response_dicts)
