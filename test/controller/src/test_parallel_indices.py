@@ -20,46 +20,46 @@ class TestParallelIndices(unittest.TestCase):
         harvest()
         super().tearDownClass()
 
-    # def test_five_separate_indices_no_harvest(self):
-    #     self._run_range_and_check_results((0, 5),
-    #                                       harvest_after_run=False,
-    #                                       indices_per_execution=None)
-    #
-    # def test_five_separate_indices_harvest_after_run(self):
-    #     self._run_range_and_check_results((0, 5), harvest_after_run=True,
-    #                                       indices_per_execution=None)
-    #
-    # def test_five_indices_two_per_exec_no_harvest(self):
-    #     self._run_range_and_check_results((0, 5), harvest_after_run=False,
-    #                                       indices_per_execution=2)
-    #
-    # def test_six_indices_two_per_exec_no_harvest(self):
-    #     self._run_range_and_check_results((0, 6), harvest_after_run=False,
-    #                                       indices_per_execution=2)
+    def test_five_separate_indices_no_harvest(self):
+        self._run_range_and_check_results((0, 5),
+                                          harvest_after_run=False,
+                                          indices_per_execution=None)
+
+    def test_five_separate_indices_harvest_after_run(self):
+        self._run_range_and_check_results((0, 5), harvest_after_run=True,
+                                          indices_per_execution=None)
+
+    def test_five_indices_two_per_exec_no_harvest(self):
+        self._run_range_and_check_results((0, 5), harvest_after_run=False,
+                                          indices_per_execution=2)
+
+    def test_six_indices_two_per_exec_no_harvest(self):
+        self._run_range_and_check_results((0, 6), harvest_after_run=False,
+                                          indices_per_execution=2)
 
     def test_five_indices_two_per_exec_harvest_after_run(self):
         self._run_range_and_check_results((0, 5), harvest_after_run=True,
                                           indices_per_execution=2)
 
-    # def test_rerun_parallel_indices(self):
-    #     rainch = (0, 5)
-    #     indices_per_execution = 2
-    #     context, execution_id = self._run_range_and_check_results(
-    #         rainch, harvest_after_run=False,
-    #         indices_per_execution=indices_per_execution,
-    #         check_only_assignment=True)
-    #     _, execution_id = rerun_execution(
-    #         context.controller,
-    #         user='rerunner_user',
-    #         project='rerunner_project',
-    #         previous_execution_id=execution_id,
-    #         override_parameters=None,
-    #         instance_market_spec=create_instance_market_spec(
-    #             context.configuration))
-    #     execution_composition = context.controller.get_execution_composition(
-    #         execution_id)['indices_to_compositions']
-    #     self._check_execution_assignment(rainch, indices_per_execution,
-    #                                      execution_composition)
+    def test_rerun_parallel_indices(self):
+        rainch = (0, 5)
+        indices_per_execution = 2
+        context, execution_id = self._run_range_and_check_results(
+            rainch, harvest_after_run=False,
+            indices_per_execution=indices_per_execution,
+            check_only_assignment=True)
+        _, execution_id = rerun_execution(
+            context.controller,
+            user='rerunner_user',
+            project='rerunner_project',
+            previous_execution_id=execution_id,
+            override_parameters=None,
+            instance_market_spec=create_instance_market_spec(
+                context.configuration))
+        execution_composition = context.controller.get_execution_composition(
+            execution_id)['indices_to_compositions']
+        self._check_execution_assignment(rainch, indices_per_execution,
+                                         execution_composition)
 
     def _run_range_and_check_results(
             self, rainch: Tuple[int, int], harvest_after_run: bool,
