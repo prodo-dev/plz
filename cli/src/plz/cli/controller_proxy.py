@@ -91,7 +91,7 @@ class ControllerProxy(Controller):
         response = self.server.get(
             'executions', execution_id, 'output', 'files',
             codes_with_exceptions={requests.codes.not_implemented},
-            params={'path': path},
+            params={'path': path, 'index': index},
             stream=True)
         _check_status(response, requests.codes.ok)
         return response.raw
@@ -101,7 +101,7 @@ class ControllerProxy(Controller):
             -> Iterator[JSONString]:
         response = self.server.get(
             'executions', execution_id, 'measures',
-            params={'summary': summary},
+            params={'summary': summary, 'index': index},
             stream=True,
             codes_with_exceptions={requests.codes.conflict})
         _check_status(response, requests.codes.ok)

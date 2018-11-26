@@ -208,10 +208,12 @@ class IndicesInstanceComposition(InstanceComposition):
             for kind in name_map
         }
         config_keys.update({
-            'index_to_summary_measures_path': os.path.join(
-                _dirname_for_index(Volumes.MEASURES_DIRECTORY_PATH, i),
-                'summary')
-            for i in indices_to_run
+            'index_to_summary_measures_path': {
+                i: os.path.join(
+                    _dirname_for_index(Volumes.MEASURES_DIRECTORY_PATH, i),
+                    'summary')
+                for i in indices_to_run
+            }
         })
         config_keys.update({
             'indices': {'range': self.range_index_to_run}
@@ -259,5 +261,5 @@ class IndicesInstanceComposition(InstanceComposition):
             -> dict:
         return {
             index: measures_from_index(index)
-            for index in self.range_index_to_run
+            for index in range(*self.range_index_to_run)
         }
