@@ -69,7 +69,9 @@ class ControllerImpl(Controller):
             -> Iterator[dict]:
         return self._do_run_execution(
             command, snapshot_id, parameters, instance_market_spec,
-            execution_spec, start_metadata, parallel_indices_range,
+            execution_spec, start_metadata,
+            parallel_indices_range=parallel_indices_range,
+            indices_per_execution=indices_per_execution,
             previous_execution_id=None)
 
     def rerun_execution(
@@ -249,13 +251,14 @@ class ControllerImpl(Controller):
             instance_market_spec: dict, execution_spec: dict,
             start_metadata: dict,
             parallel_indices_range: Optional[Tuple[int, int]],
+            indices_per_execution: Optional[int],
             previous_execution_id: Optional[str]) -> Iterator[dict]:
         execution_id = str(_get_execution_uuid())
 
         metadatas = self._store_metadata_for_all_executions(
             command, snapshot_id, parameters, instance_market_spec,
             execution_spec, start_metadata, parallel_indices_range,
-            previous_execution_id, execution_id)
+            indices_per_execution, previous_execution_id, execution_id)
 
         self._set_user_last_execution_id(
             execution_spec['user'], execution_id)
@@ -314,6 +317,7 @@ class ControllerImpl(Controller):
             instance_market_spec: dict, execution_spec: dict,
             start_metadata: dict,
             parallel_indices_range: Optional[Tuple[int, int]],
+            indices_per_execution: Optional[int],
             previous_execution_id: Optional[str],
             execution_id: str) -> [dict]:
         enriched_start_metadata = _enrich_start_metadata(
@@ -324,15 +328,18 @@ class ControllerImpl(Controller):
         self.db_storage.store_start_metadata(
             execution_id, enriched_start_metadata)
         if parallel_indices_range is not None:
+            if indices_per_execution is None:
+                indices_per_execution = 1
             metadatas = []
             for i in range(parallel_indices_range[0],
-                           parallel_indices_range[1]):
+                           parallel_indices_range[1],
+                           indices_per_execution):
                 enriched_start_metadata = _enrich_start_metadata(
                     _get_execution_uuid(),
                     start_metadata, command, snapshot_id, parameters,
                     instance_market_spec, execution_spec,
                     parallel_indices_range=None,
-                    index_range_to_run=(i, i + 1),
+                    index_range_to_run=(i, i + indices_per_execution),
                     previous_execution_id=previous_execution_id)
                 metadatas.append(enriched_start_metadata)
                 self.db_storage.store_start_metadata(
