@@ -100,6 +100,7 @@ class ControllerImpl(Controller):
             execution_spec, start_metadata,
             parallel_indices_range=start_metadata.get(
                 'parallel_indices_range'),
+            indices_per_execution=start_metadata.get('indices_per_execution'),
             previous_execution_id=previous_execution_id)
 
     def list_executions(self) -> [dict]:
@@ -324,6 +325,7 @@ class ControllerImpl(Controller):
             execution_id, start_metadata, command, snapshot_id, parameters,
             instance_market_spec, execution_spec, parallel_indices_range,
             index_range_to_run=None,
+            indices_per_execution=indices_per_execution,
             previous_execution_id=previous_execution_id)
         self.db_storage.store_start_metadata(
             execution_id, enriched_start_metadata)
@@ -340,6 +342,7 @@ class ControllerImpl(Controller):
                     instance_market_spec, execution_spec,
                     parallel_indices_range=None,
                     index_range_to_run=(i, i + indices_per_execution),
+                    indices_per_execution=None,
                     previous_execution_id=previous_execution_id)
                 metadatas.append(enriched_start_metadata)
                 self.db_storage.store_start_metadata(
@@ -363,6 +366,7 @@ def _enrich_start_metadata(
         parameters: dict, instance_market_spec: dict, execution_spec: dict,
         parallel_indices_range: Optional[Tuple[int, int]],
         index_range_to_run: Optional[Tuple[int, int]],
+        indices_per_execution: Optional[int],
         previous_execution_id: Optional[str]) -> dict:
     enriched_start_metadata = deepcopy(start_metadata)
     enriched_start_metadata['execution_id'] = execution_id
@@ -378,6 +382,7 @@ def _enrich_start_metadata(
     enriched_start_metadata['user'] = execution_spec['user']
     enriched_start_metadata['project'] = execution_spec['project']
     enriched_start_metadata['parallel_indices_range'] = parallel_indices_range
+    enriched_start_metadata['indices_per_execution'] = indices_per_execution
     enriched_start_metadata['previous_execution_id'] = previous_execution_id
     return enriched_start_metadata
 
