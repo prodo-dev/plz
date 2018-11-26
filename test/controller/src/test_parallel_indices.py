@@ -20,26 +20,26 @@ class TestParallelIndices(unittest.TestCase):
         harvest()
         super().tearDownClass()
 
-    def test_five_separate_indices_no_harvest(self):
-        self._run_range_and_check_results((0, 5),
-                                          harvest_after_run=False,
-                                          indices_per_execution=None)
-
+    # def test_five_separate_indices_no_harvest(self):
+    #     self._run_range_and_check_results((0, 5),
+    #                                       harvest_after_run=False,
+    #                                       indices_per_execution=None)
+    #
     def test_five_separate_indices_harvest_after_run(self):
         self._run_range_and_check_results((0, 5), harvest_after_run=True,
                                           indices_per_execution=None)
-
-    def test_five_indices_two_per_exec_no_harvest(self):
-        self._run_range_and_check_results((0, 5), harvest_after_run=False,
-                                          indices_per_execution=2)
-
-    def test_six_indices_two_per_exec_no_harvest(self):
-        self._run_range_and_check_results((0, 6), harvest_after_run=False,
-                                          indices_per_execution=2)
-
-    def test_five_indices_two_per_exec_harvest_after_run(self):
-        self._run_range_and_check_results((0, 5), harvest_after_run=True,
-                                          indices_per_execution=2)
+    #
+    # def test_five_indices_two_per_exec_no_harvest(self):
+    #     self._run_range_and_check_results((0, 5), harvest_after_run=False,
+    #                                       indices_per_execution=2)
+    #
+    # def test_six_indices_two_per_exec_no_harvest(self):
+    #     self._run_range_and_check_results((0, 6), harvest_after_run=False,
+    #                                       indices_per_execution=2)
+    #
+    # def test_five_indices_two_per_exec_harvest_after_run(self):
+    #     self._run_range_and_check_results((0, 5), harvest_after_run=True,
+    #                                       indices_per_execution=2)
 
     def test_rerun_parallel_indices(self):
         rainch = (0, 5)
@@ -57,7 +57,7 @@ class TestParallelIndices(unittest.TestCase):
             instance_market_spec=create_instance_market_spec(
                 context.configuration))
         execution_composition = context.controller.get_execution_composition(
-            execution_id)
+            execution_id)['indices_to_compositions']
         self._check_execution_assignment(rainch, indices_per_execution,
                                          execution_composition)
 
@@ -73,7 +73,6 @@ class TestParallelIndices(unittest.TestCase):
         composition = context.controller.get_execution_composition(
             execution_id)
         indices_to_compositions = composition['indices_to_compositions']
-
         self._check_execution_assignment(rainch, indices_per_execution,
                                          indices_to_compositions)
 
@@ -153,6 +152,7 @@ class TestParallelIndices(unittest.TestCase):
 
     def _check_execution_assignment(self, rainch, indices_per_execution,
                                     indices_to_compositions):
+        print('Indices to compositions:', indices_to_compositions)
         range_len = rainch[1] - rainch[0]
         self.assertEqual(len(indices_to_compositions), range_len)
         number_of_different_executions = len(
