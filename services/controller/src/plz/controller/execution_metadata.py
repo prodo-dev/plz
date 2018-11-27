@@ -5,6 +5,7 @@ import os
 import shutil
 import tarfile
 import tempfile
+from copy import deepcopy
 from json import JSONDecodeError
 from typing import IO, Iterator, Optional, Tuple
 
@@ -74,3 +75,31 @@ def _tar_iterator(tarball_bytes: Iterator[bytes]) \
                 # Not None for files and links
                 if file_bytes is not None:
                     yield path, tar.extractfile(tarinfo.name)
+
+
+def enrich_start_metadata(
+        execution_id: str,
+        start_metadata: dict, command: [str], snapshot_id: str,
+        parameters: dict, instance_market_spec: dict, execution_spec: dict,
+        parallel_indices_range: Optional[Tuple[int, int]],
+        index_range_to_run: Optional[Tuple[int, int]],
+        indices_per_execution: Optional[int],
+        previous_execution_id: Optional[str]) -> dict:
+    enriched_start_metadata = deepcopy(start_metadata)
+    enriched_start_metadata['execution_id'] = execution_id
+    enriched_start_metadata['command'] = command
+    enriched_start_metadata['snapshot_id'] = snapshot_id
+    enriched_start_metadata['parameters'] = parameters
+    enriched_start_metadata['instance_market_spec'] = instance_market_spec
+    enriched_start_metadata['execution_spec'] = {
+        k: v for k, v in execution_spec.items()
+        if k not in {'user', 'project'}}
+    enriched_start_metadata['execution_spec']['index_range_to_run'] = \
+        index_range_to_run
+    enriched_start_metadata['user'] = execution_spec['user']
+    enriched_start_metadata['project'] = execution_spec['project']
+    enriched_start_metadata['parallel_indices_range'] = parallel_indices_range
+    enriched_start_metadata['index_range_to_run'] = index_range_to_run
+    enriched_start_metadata['indices_per_execution'] = indices_per_execution
+    enriched_start_metadata['previous_execution_id'] = previous_execution_id
+    return enriched_start_metadata
