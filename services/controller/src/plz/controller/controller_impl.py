@@ -256,10 +256,13 @@ class ControllerImpl(Controller):
             previous_execution_id: Optional[str]) -> Iterator[dict]:
         execution_id = str(_get_execution_uuid())
 
-        all_metadatas = self._store_metadata_for_all_executions(
+        all_metadatas = self._create_metadatas_for_all_executions(
             command, snapshot_id, parameters, instance_market_spec,
             execution_spec, start_metadata, parallel_indices_range,
             indices_per_execution, previous_execution_id, execution_id)
+
+        for m in all_metadatas:
+            self.db_storage.store_start_metadata(m['execution_id'], m)
 
         metadatas_to_run = [m for m in all_metadatas if is_atomic(m)]
 
@@ -314,7 +317,7 @@ class ControllerImpl(Controller):
             self.log.exception('Exception running command.')
             yield {'error': str(e)}
 
-    def _store_metadata_for_all_executions(
+    def _create_metadatas_for_all_executions(
             self, command: [str], snapshot_id: str, parameters: dict,
             instance_market_spec: dict, execution_spec: dict,
             start_metadata: dict,
@@ -328,8 +331,6 @@ class ControllerImpl(Controller):
             index_range_to_run=None,
             indices_per_execution=indices_per_execution,
             previous_execution_id=previous_execution_id)
-        self.db_storage.store_start_metadata(
-            execution_id, enriched_start_metadata)
         metadatas = [enriched_start_metadata]
         if parallel_indices_range is not None:
             if indices_per_execution is None:
@@ -349,9 +350,6 @@ class ControllerImpl(Controller):
                     indices_per_execution=None,
                     previous_execution_id=previous_execution_id)
                 metadatas.append(enriched_start_metadata)
-                self.db_storage.store_start_metadata(
-                    enriched_start_metadata['execution_id'],
-                    enriched_start_metadata)
         return metadatas
 
 
