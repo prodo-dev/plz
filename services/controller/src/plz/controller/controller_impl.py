@@ -21,7 +21,7 @@ from plz.controller.db_storage import DBStorage
 from plz.controller.execution import Executions
 from plz.controller.execution_composition import AtomicComposition, \
     IndicesComposition
-from plz.controller.execution_metadata import enrich_start_metadata
+from plz.controller.execution_metadata import enrich_start_metadata, is_atomic
 from plz.controller.images import Images
 from plz.controller.input_data import InputDataConfiguration
 from plz.controller.instances.instance_base import Instance, \
@@ -256,10 +256,12 @@ class ControllerImpl(Controller):
             previous_execution_id: Optional[str]) -> Iterator[dict]:
         execution_id = str(_get_execution_uuid())
 
-        metadatas = self._store_metadata_for_all_executions(
+        all_metadatas = self._store_metadata_for_all_executions(
             command, snapshot_id, parameters, instance_market_spec,
             execution_spec, start_metadata, parallel_indices_range,
             indices_per_execution, previous_execution_id, execution_id)
+
+        metadatas_to_run = [m for m in all_metadatas if is_atomic(m)]
 
         self._set_user_last_execution_id(
             execution_spec['user'], execution_id)
@@ -276,7 +278,7 @@ class ControllerImpl(Controller):
 
             statuses_generators = [
                 status_generator(m['execution_id'], m['execution_spec'])
-                for m in metadatas
+                for m in metadatas_to_run
             ]
 
             instances = [None for _ in statuses_generators]
@@ -300,7 +302,7 @@ class ControllerImpl(Controller):
                     return
                 indices_to_compositions = {
                     i: AtomicComposition(m['execution_id'])
-                    for m in metadatas
+                    for m in metadatas_to_run
                     for i in range(*m['index_range_to_run'])
                 }
                 composition = IndicesComposition(
@@ -328,10 +330,10 @@ class ControllerImpl(Controller):
             previous_execution_id=previous_execution_id)
         self.db_storage.store_start_metadata(
             execution_id, enriched_start_metadata)
+        metadatas = [enriched_start_metadata]
         if parallel_indices_range is not None:
             if indices_per_execution is None:
                 indices_per_execution = 1
-            metadatas = []
             for i in range(parallel_indices_range[0],
                            parallel_indices_range[1],
                            indices_per_execution):
@@ -350,8 +352,6 @@ class ControllerImpl(Controller):
                 self.db_storage.store_start_metadata(
                     enriched_start_metadata['execution_id'],
                     enriched_start_metadata)
-        else:
-            metadatas = [enriched_start_metadata]
         return metadatas
 
 

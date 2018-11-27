@@ -103,3 +103,7 @@ def enrich_start_metadata(
     enriched_start_metadata['indices_per_execution'] = indices_per_execution
     enriched_start_metadata['previous_execution_id'] = previous_execution_id
     return enriched_start_metadata
+
+
+def is_atomic(start_metadata: dict) -> bool:
+    return start_metadata.get('parallel_indices_range', None) is None
