@@ -139,28 +139,27 @@ class IndicesComposition(ExecutionComposition):
             indices_per_execution=indices_per_execution,
             previous_execution_id=previous_execution_id)
         metadatas = [enriched_start_metadata]
-        if parallel_indices_range is not None:
-            if indices_per_execution is None:
-                indices_per_execution = 1
-            for i in range(parallel_indices_range[0],
-                           parallel_indices_range[1],
-                           indices_per_execution):
-                this_exec_n_indices = min(
-                    indices_per_execution,
-                    parallel_indices_range[1] - parallel_indices_range[0] - i)
-                subexecution_id = execution_id_generator()
-                for j in range(this_exec_n_indices):
-                    self.assign_index(i + j,
-                                      AtomicComposition(subexecution_id))
-                enriched_start_metadata = enrich_start_metadata(
-                    subexecution_id,
-                    start_metadata, command, snapshot_id, parameters,
-                    instance_market_spec, execution_spec,
-                    parallel_indices_range=None,
-                    index_range_to_run=(i, i + this_exec_n_indices),
-                    indices_per_execution=None,
-                    previous_execution_id=None)
-                metadatas.append(enriched_start_metadata)
+        if indices_per_execution is None:
+            indices_per_execution = 1
+        for i in range(parallel_indices_range[0],
+                       parallel_indices_range[1],
+                       indices_per_execution):
+            this_exec_n_indices = min(
+                indices_per_execution,
+                parallel_indices_range[1] - parallel_indices_range[0] - i)
+            subexecution_id = execution_id_generator()
+            for j in range(this_exec_n_indices):
+                self.assign_index(i + j,
+                                  AtomicComposition(subexecution_id))
+            enriched_start_metadata = enrich_start_metadata(
+                subexecution_id,
+                start_metadata, command, snapshot_id, parameters,
+                instance_market_spec, execution_spec,
+                parallel_indices_range=None,
+                index_range_to_run=(i, i + this_exec_n_indices),
+                indices_per_execution=None,
+                previous_execution_id=None)
+            metadatas.append(enriched_start_metadata)
         return metadatas
 
     def assign_index(
