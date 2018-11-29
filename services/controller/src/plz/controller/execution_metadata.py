@@ -11,8 +11,6 @@ from typing import IO, Iterator, Optional, Tuple
 
 from werkzeug.contrib.iterio import IterIO
 
-from plz.controller.db_storage import DBStorage
-
 
 def convert_measures_to_dict(measures_tarball: Iterator[bytes]) -> dict:
     measures_dict = {}
@@ -46,9 +44,11 @@ def _container_object_and_key_from_path(measures_dict: dict, path: str):
 
 
 def compile_metadata_for_storage(
-        db_storage: DBStorage, execution_id: str,
+        start_metadata: dict,
         finish_timestamp: int) -> dict:
-    start_metadata = db_storage.retrieve_start_metadata(execution_id)
+    # This function doesn't do much for now, but having it is a way to
+    # document that what we store as metadata is the start metadata plus
+    # other stuff
     return {**start_metadata,
             'finish_timestamp': finish_timestamp}
 

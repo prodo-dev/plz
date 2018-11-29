@@ -19,9 +19,8 @@ from plz.controller.api.types import InputMetadata, JSONString
 from plz.controller.configuration import Dependencies
 from plz.controller.db_storage import DBStorage
 from plz.controller.execution import Executions
-from plz.controller.execution_composition import AtomicComposition, \
-    IndicesComposition
-from plz.controller.execution_metadata import enrich_start_metadata, is_atomic
+from plz.controller.execution_composition import ExecutionComposition
+from plz.controller.execution_metadata import is_atomic
 from plz.controller.images import Images
 from plz.controller.input_data import InputDataConfiguration
 from plz.controller.instances.instance_base import Instance, \
@@ -256,10 +255,14 @@ class ControllerImpl(Controller):
             previous_execution_id: Optional[str]) -> Iterator[dict]:
         execution_id = str(_get_execution_uuid())
 
-        all_metadatas = self._create_metadatas_for_all_executions(
+        composition = ExecutionComposition.from_parallel_indices_range(
+            parallel_indices_range, execution_id)
+
+        all_metadatas = composition.create_metadatas_for_all_executions(
             command, snapshot_id, parameters, instance_market_spec,
             execution_spec, start_metadata, parallel_indices_range,
-            indices_per_execution, previous_execution_id, execution_id)
+            indices_per_execution, previous_execution_id, execution_id,
+            execution_id_generator=_get_execution_uuid)
 
         for m in all_metadatas:
             self.db_storage.store_start_metadata(m['execution_id'], m)
@@ -286,71 +289,26 @@ class ControllerImpl(Controller):
 
             instances = [None for _ in statuses_generators]
 
-            yield from _assign_instances(instances, parallel_indices_range,
-                                         statuses_generators)
+            yield from _create_instances(
+                composition, instances, metadatas_to_run, statuses_generators)
 
-            if parallel_indices_range is None:
-                if instances[0] is None:
-                    yield {'error': 'Couldn\'t get an instance.'}
-                    return
-                composition = AtomicComposition(execution_id)
-            else:
-                indices_without_instance = [
-                    i for (i, instance) in enumerate(instances)
-                    if instance is None]
+            indices_without_instance = [
+                i for (i, instance) in enumerate(instances)
+                if instance is None]
 
-                if len(indices_without_instance) > 0:
-                    yield {'error': f'Couldn\'t get instances for indices: '
-                                    f'{indices_without_instance}'}
+            if len(indices_without_instance) > 0:
+                for i in indices_without_instance:
+                    status_prefix = _status_prefix(
+                        composition, metadatas_to_run[i])
+                    yield {
+                        'error': status_prefix + 'Couldn\'t get an instance'
+                    }
                     return
-                indices_to_compositions = {
-                    i: AtomicComposition(m['execution_id'])
-                    for m in metadatas_to_run
-                    for i in range(*m['index_range_to_run'])
-                }
-                composition = IndicesComposition(
-                    execution_id,
-                    indices_to_compositions=indices_to_compositions,
-                    tombstone_execution_ids=set())
+
             self.db_storage.store_execution_composition(composition)
         except Exception as e:
             self.log.exception('Exception running command.')
             yield {'error': str(e)}
-
-    def _create_metadatas_for_all_executions(
-            self, command: [str], snapshot_id: str, parameters: dict,
-            instance_market_spec: dict, execution_spec: dict,
-            start_metadata: dict,
-            parallel_indices_range: Optional[Tuple[int, int]],
-            indices_per_execution: Optional[int],
-            previous_execution_id: Optional[str],
-            execution_id: str) -> [dict]:
-        enriched_start_metadata = enrich_start_metadata(
-            execution_id, start_metadata, command, snapshot_id, parameters,
-            instance_market_spec, execution_spec, parallel_indices_range,
-            index_range_to_run=None,
-            indices_per_execution=indices_per_execution,
-            previous_execution_id=previous_execution_id)
-        metadatas = [enriched_start_metadata]
-        if parallel_indices_range is not None:
-            if indices_per_execution is None:
-                indices_per_execution = 1
-            for i in range(parallel_indices_range[0],
-                           parallel_indices_range[1],
-                           indices_per_execution):
-                this_exec_indices = min(
-                    indices_per_execution,
-                    parallel_indices_range[1] - parallel_indices_range[0] - i)
-                enriched_start_metadata = enrich_start_metadata(
-                    _get_execution_uuid(),
-                    start_metadata, command, snapshot_id, parameters,
-                    instance_market_spec, execution_spec,
-                    parallel_indices_range=None,
-                    index_range_to_run=(i, i + this_exec_indices),
-                    indices_per_execution=None,
-                    previous_execution_id=previous_execution_id)
-                metadatas.append(enriched_start_metadata)
-        return metadatas
 
 
 def _get_execution_uuid() -> str:
@@ -360,9 +318,10 @@ def _get_execution_uuid() -> str:
     return str(uuid.uuid1(node=random_node))
 
 
-def _assign_instances(
+def _create_instances(
+        composition: ExecutionComposition,
         instances: [Optional[Instance]],
-        parallel_indices_range: Optional[Tuple[int, int]],
+        metadatas_to_run: [dict],
         statuses_generators: [Iterator[dict]]) -> Iterator[dict]:
     # Whether was there a status update
     was_there_status = True
@@ -374,10 +333,17 @@ def _assign_instances(
                 continue
             was_there_status = True
             if 'message' in status:
-                if parallel_indices_range is not None:
-                    prefix = f'{i}: '
-                else:
-                    prefix = ''
-                yield {'status': prefix + status['message']}
+                status_prefix = _status_prefix(composition,
+                                               metadatas_to_run[i])
+                yield {'status': status_prefix + status['message']}
             if 'instance' in status:
                 instances[i] = status['instance']
+
+
+def _status_prefix(composition: ExecutionComposition, metadata: dict) -> str:
+    brief_description = \
+        composition.get_component_brief_description(metadata)
+    if brief_description != '':
+        return f'{brief_description}: '
+    else:
+        return ''
