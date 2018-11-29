@@ -51,7 +51,7 @@ class ExecutionComposition(ABC):
         pass
 
     @abstractmethod
-    def get_component_brief_description(self, metadata: dict) -> '':
+    def get_component_brief_description(self, metadata: dict) -> str:
         pass
 
 
@@ -83,8 +83,8 @@ class AtomicComposition(ExecutionComposition):
             previous_execution_id=previous_execution_id)
         return [enriched_start_metadata]
 
-    def get_component_brief_description(self, metadata: dict) -> '':
-        return ', '.join(metadata['index_range_to_run'])
+    def get_component_brief_description(self, metadata: dict) -> str:
+        return ''
 
 
 class IndicesComposition(ExecutionComposition):
@@ -167,7 +167,7 @@ class IndicesComposition(ExecutionComposition):
             -> None:
         self.indices_to_compositions[index] = execution_composition
 
-    def get_component_brief_description(self, metadata: dict) -> '':
+    def get_component_brief_description(self, metadata: dict) -> str:
         return 'Indices: ' + (', '.join(
             str(n) for n in range(*metadata['index_range_to_run'])))
 
