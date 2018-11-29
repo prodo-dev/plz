@@ -120,9 +120,19 @@ class EC2InstanceGroup(InstanceProvider):
                               ''),
                              ('instance-type', instance_type)])
                 if len(instances_not_assigned) > 0:
-                    yield _msg('reusing existing instance')
-                    is_instance_newly_created = False
                     instance_data = instances_not_assigned[0]
+                    instance = self._ec2_instance_from_instance_data(
+                        instances_not_assigned[0],
+                        container_execution_id=execution_id)
+                    try:
+                        instance.earmark_for(
+                            execution_id,
+                            self.instance_max_startup_time_in_minutes)
+                    except InstanceUnavailableException:
+                        instance_data = None
+                        continue
+                    is_instance_newly_created = False
+                    yield _msg('reusing existing instance')
                 else:
                     yield _msg('requesting new instance')
                     is_instance_newly_created = True
