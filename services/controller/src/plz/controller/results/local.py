@@ -56,7 +56,8 @@ class LocalResultsStorage(ResultsStorage):
             log.debug(f'Writing logs and output for {execution_id}')
             write_bytes(paths.logs, logs)
             metadata = compile_metadata_for_storage(
-                self.db_storage, execution_id, finish_timestamp)
+                self.db_storage.retrieve_start_metadata(execution_id),
+                finish_timestamp)
             index_range_to_run = metadata['execution_spec'].get(
                 'index_range_to_run')
 

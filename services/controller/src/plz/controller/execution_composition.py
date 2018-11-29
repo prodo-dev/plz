@@ -1,9 +1,10 @@
 import os
 from abc import ABC, abstractmethod
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from typing import Any, Callable, Dict, Iterator, Optional, Set, Tuple
 
 from plz.controller.containers import Containers
+from plz.controller.execution_metadata import enrich_start_metadata
 from plz.controller.volumes import VolumeEmptyDirectory, Volumes
 
 
@@ -18,11 +19,39 @@ class ExecutionComposition(ABC):
     def __init__(self, execution_id: str):
         self.execution_id = execution_id
 
+    @staticmethod
+    def from_parallel_indices_range(
+            parallel_indices_range: Optional[Tuple[int, int]],
+            execution_id: str) -> 'ExecutionComposition':
+        if parallel_indices_range is None:
+            return AtomicComposition(execution_id)
+        else:
+            return IndicesComposition(
+                execution_id,
+                indices_to_compositions=None,
+                tombstone_execution_ids=None)
+
     @abstractmethod
     def to_jsonable_dict(self) -> Any:
         """
         Create a dict that we can turn into json
         """
+        pass
+
+    @abstractmethod
+    def create_metadatas_for_all_executions(
+                self, command: [str], snapshot_id: str, parameters: dict,
+                instance_market_spec: dict, execution_spec: dict,
+                start_metadata: dict,
+                parallel_indices_range: Optional[Tuple[int, int]],
+                indices_per_execution: Optional[int],
+                previous_execution_id: Optional[str],
+                execution_id: str,
+                execution_id_generator: Callable[[], str]) -> [dict]:
+        pass
+
+    @abstractmethod
+    def get_component_brief_description(self, metadata: dict) -> str:
         pass
 
 
@@ -37,6 +66,26 @@ class AtomicComposition(ExecutionComposition):
     def to_jsonable_dict(self):
         return {'execution_id': self.execution_id}
 
+    def create_metadatas_for_all_executions(
+            self, command: [str], snapshot_id: str, parameters: dict,
+            instance_market_spec: dict, execution_spec: dict,
+            start_metadata: dict,
+            parallel_indices_range: Optional[Tuple[int, int]],
+            indices_per_execution: Optional[int],
+            previous_execution_id: Optional[str],
+            execution_id: str,
+            execution_id_generator: Callable[[], str]) -> [dict]:
+        enriched_start_metadata = enrich_start_metadata(
+            execution_id, start_metadata, command, snapshot_id, parameters,
+            instance_market_spec, execution_spec, parallel_indices_range,
+            index_range_to_run=None,
+            indices_per_execution=indices_per_execution,
+            previous_execution_id=previous_execution_id)
+        return [enriched_start_metadata]
+
+    def get_component_brief_description(self, metadata: dict) -> str:
+        return ''
+
 
 class IndicesComposition(ExecutionComposition):
     """
@@ -45,14 +94,19 @@ class IndicesComposition(ExecutionComposition):
 
     def __init__(
             self, execution_id: str,
-            indices_to_compositions: Dict[int, Optional[ExecutionComposition]],
-            tombstone_execution_ids: Set[str]):
+            indices_to_compositions: Optional[
+                Dict[int, Optional[ExecutionComposition]]],
+            tombstone_execution_ids: Optional[Set[str]]):
         super().__init__(execution_id)
         # A non-injective map with the sub-execution for a given index. If
         # there's no execution for a given index (for instance, it didn't
         # execute yet) the value is None
-        self.indices_to_compositions = indices_to_compositions
-        self.tombstone_execution_ids = tombstone_execution_ids
+        self.indices_to_compositions = indices_to_compositions \
+            if indices_to_compositions is not None \
+            else defaultdict(lambda: None)
+        self.tombstone_execution_ids = tombstone_execution_ids \
+            if tombstone_execution_ids is not None \
+            else {}
 
     def to_jsonable_dict(self):
         def jsonable_of_index(i: int):
@@ -68,6 +122,54 @@ class IndicesComposition(ExecutionComposition):
             },
             'tombstone_executions': list(self.tombstone_execution_ids)
         }
+
+    def create_metadatas_for_all_executions(
+            self, command: [str], snapshot_id: str, parameters: dict,
+            instance_market_spec: dict, execution_spec: dict,
+            start_metadata: dict,
+            parallel_indices_range: Optional[Tuple[int, int]],
+            indices_per_execution: Optional[int],
+            previous_execution_id: Optional[str],
+            execution_id: str,
+            execution_id_generator: Callable[[], str]) -> [dict]:
+        enriched_start_metadata = enrich_start_metadata(
+            execution_id, start_metadata, command, snapshot_id, parameters,
+            instance_market_spec, execution_spec, parallel_indices_range,
+            index_range_to_run=None,
+            indices_per_execution=indices_per_execution,
+            previous_execution_id=previous_execution_id)
+        metadatas = [enriched_start_metadata]
+        if indices_per_execution is None:
+            indices_per_execution = 1
+        for i in range(parallel_indices_range[0],
+                       parallel_indices_range[1],
+                       indices_per_execution):
+            this_exec_n_indices = min(
+                indices_per_execution,
+                parallel_indices_range[1] - parallel_indices_range[0] - i)
+            subexecution_id = execution_id_generator()
+            for j in range(this_exec_n_indices):
+                self.assign_index(i + j,
+                                  AtomicComposition(subexecution_id))
+            enriched_start_metadata = enrich_start_metadata(
+                subexecution_id,
+                start_metadata, command, snapshot_id, parameters,
+                instance_market_spec, execution_spec,
+                parallel_indices_range=None,
+                index_range_to_run=(i, i + this_exec_n_indices),
+                indices_per_execution=None,
+                previous_execution_id=None)
+            metadatas.append(enriched_start_metadata)
+        return metadatas
+
+    def assign_index(
+            self, index: int, execution_composition: ExecutionComposition) \
+            -> None:
+        self.indices_to_compositions[index] = execution_composition
+
+    def get_component_brief_description(self, metadata: dict) -> str:
+        return 'Indices: ' + (', '.join(
+            str(n) for n in range(*metadata['index_range_to_run'])))
 
 
 WorkerStartupConfig = namedtuple(
