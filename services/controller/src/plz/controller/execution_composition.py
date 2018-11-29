@@ -168,8 +168,9 @@ class IndicesComposition(ExecutionComposition):
         self.indices_to_compositions[index] = execution_composition
 
     def get_component_brief_description(self, metadata: dict) -> str:
+        index_range_to_run = metadata['execution_spec']['index_range_to_run']
         return 'Indices: ' + (', '.join(
-            str(n) for n in range(*metadata['index_range_to_run'])))
+            str(n) for n in range(*index_range_to_run)))
 
 
 WorkerStartupConfig = namedtuple(

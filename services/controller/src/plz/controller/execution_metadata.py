@@ -99,7 +99,6 @@ def enrich_start_metadata(
     enriched_start_metadata['user'] = execution_spec['user']
     enriched_start_metadata['project'] = execution_spec['project']
     enriched_start_metadata['parallel_indices_range'] = parallel_indices_range
-    enriched_start_metadata['index_range_to_run'] = index_range_to_run
     enriched_start_metadata['indices_per_execution'] = indices_per_execution
     enriched_start_metadata['previous_execution_id'] = previous_execution_id
     return enriched_start_metadata
