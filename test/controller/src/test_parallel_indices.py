@@ -99,7 +99,26 @@ class TestParallelIndices(unittest.TestCase):
             self._check_metadata_in_history(context, harvest_after_run, index,
                                             index_execution_id,
                                             n_indices_of_execution)
+            self._check_describe(context, index, index_execution_id,
+                                 n_indices_of_execution)
+        # Test describe for the whole execution
+        metadata = context.controller.describe_execution_entrypoint(
+            execution_id)['start_metadata']
+        range_from_describe = metadata['parallel_indices_range']
+        self.assertEqual(range_from_describe, [r for r in rainch])
         return context, execution_id
+
+    def _check_describe(self, context: TestingContext, index: int,
+                        index_execution_id: str,
+                        n_indices_of_execution: int):
+        metadata = context.controller.describe_execution_entrypoint(
+            index_execution_id)['start_metadata']
+        range_from_describe = metadata['execution_spec']['index_range_to_run']
+        # Check the range is two elements...
+        self.assertEqual(len(range_from_describe), 2)
+        self.assertEqual(range_from_describe[1] - range_from_describe[0],
+                         n_indices_of_execution)
+        self.assertIn(index, range(*range_from_describe))
 
     def _check_metadata_in_history(
             self, context: TestingContext, harvest_after_run: bool,
