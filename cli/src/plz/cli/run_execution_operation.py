@@ -1,7 +1,6 @@
 import os
-from typing import Any, Callable, Iterator, Optional, Tuple
-
 import time
+from typing import Any, Callable, Iterator, Optional, Tuple
 
 from plz.cli import parameters
 from plz.cli.configuration import Configuration
@@ -15,8 +14,8 @@ from plz.cli.parameters import Parameters
 from plz.cli.retrieve_measures_operation import RetrieveMeasuresOperation
 from plz.cli.retrieve_output_operation import RetrieveOutputOperation
 from plz.cli.show_status_operation import ShowStatusOperation
-from plz.cli.snapshot import capture_build_context, \
-    submit_context_for_building, PullAccessDeniedException
+from plz.cli.snapshot import DOCKERFILE_NAME, PullAccessDeniedException, \
+    capture_build_context, submit_context_for_building
 
 
 class RunExecutionOperation(Operation):
@@ -56,9 +55,20 @@ class RunExecutionOperation(Operation):
             raise CLIException('No command specified! Use --command or '
                                'include a `command` entry in plz.config.json')
 
-        if not self.configuration.image:
+        if self.configuration.image is not None and \
+                os.path.isfile(os.path.join(
+                    self.configuration.context_path, DOCKERFILE_NAME)):
+            raise CLIException('You have both an `image` entry in '
+                               f'plz.config.json and a file {DOCKERFILE_NAME} '
+                               f'(that would be used to create an image). '
+                               'Please remove the `image` entry or move the '
+                               'file somewhere else')
+        if self.configuration.image is None and \
+                not os.path.isfile(os.path.join(
+                    self.configuration.context_path, DOCKERFILE_NAME)):
             raise CLIException('No image specified! Include an `image` entry '
-                               'in plz.config.json')
+                               'in plz.config.json, or a file called '
+                               f'{DOCKERFILE_NAME} in your context path')
 
         if os.path.exists(self.output_dir):
             raise CLIException(
