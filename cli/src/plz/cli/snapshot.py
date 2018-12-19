@@ -12,26 +12,30 @@ from plz.cli.log import log_error
 from plz.controller.api import Controller
 
 
+DOCKERFILE_NAME = 'plz.Dockerfile'
+
+
 def capture_build_context(
         image: str, image_extensions: [str], command: str,
         context_path: [str],
         excluded_paths: [str], included_paths: [str],
         exclude_gitignored_files) -> BinaryIO:
-    dockerfile_path = os.path.join(context_path, 'plz.Dockerfile')
+    dockerfile_path = os.path.join(context_path, DOCKERFILE_NAME)
     dockerfile_created = False
     try:
-        with open(dockerfile_path, mode='x') as dockerfile:
-            dockerfile_created = True
-            dockerfile.write(f'FROM {image}\n')
-            for step in image_extensions:
-                dockerfile.write(step)
-                dockerfile.write('\n')
-            dockerfile.write(
-                f'WORKDIR /src\n'
-                f'COPY . ./\n'
-                f'CMD {command}\n'
-            )
-        os.chmod(dockerfile_path, 0o644)
+        if not os.path.isfile(dockerfile_path):
+            with open(dockerfile_path, mode='x') as dockerfile:
+                dockerfile_created = True
+                dockerfile.write(f'FROM {image}\n')
+                for step in image_extensions:
+                    dockerfile.write(step)
+                    dockerfile.write('\n')
+                dockerfile.write(
+                    f'WORKDIR /src\n'
+                    f'COPY . ./\n'
+                    f'CMD {command}\n'
+                )
+            os.chmod(dockerfile_path, 0o644)
         matching_excluded_paths = get_matching_excluded_paths(
             context_path=context_path, excluded_paths=excluded_paths,
             included_paths=included_paths,
@@ -41,9 +45,6 @@ def capture_build_context(
             exclude=matching_excluded_paths,
             gzip=True,
         )
-    except FileExistsError as e:
-        raise CLIException(
-            'The directory cannot have a plz.Dockerfile.') from e
     finally:
         if dockerfile_created:
             os.remove(dockerfile_path)
