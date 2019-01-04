@@ -166,7 +166,7 @@ def create_file_map_from_tarball(
 
 def get_execution_listing_status(
         user: str, controller: Controller, execution_id: str) -> Optional[str]:
-    executions = controller.list_executions(user, list_for_all_users=True)
+    executions = controller.list_executions(user, list_for_all_users=False)
     for execution in executions:
         if execution['execution_id'] == execution_id:
             return execution['status']
