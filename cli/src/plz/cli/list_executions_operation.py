@@ -2,6 +2,7 @@ from datetime import datetime
 
 from prettytable import PrettyTable
 
+from plz.cli.configuration import Configuration
 from plz.cli.operation import Operation
 
 
@@ -14,12 +15,19 @@ class ListExecutionsOperation(Operation):
 
     @classmethod
     def prepare_argument_parser(cls, parser, args):
-        pass
+        parser.add_argument(
+            '-a', '--all-users', action='store_const', const=True,
+            default=False, help='List executions for all users')
+
+    def __init__(self, configuration: Configuration, all_users: bool):
+        self.all_users = all_users
+        super().__init__(configuration)
 
     def run(self):
         table = PrettyTable(['Execution Id', 'Instance Id', 'Running',
                              'Status', 'Type', 'Idle since', 'Disposal time'])
-        executions = self.controller.list_executions()
+        executions = self.controller.list_executions(
+            self.configuration.user, self.all_users)
         for execution in executions:
             execution_id = execution['execution_id']
             instance_id = execution['instance_id']

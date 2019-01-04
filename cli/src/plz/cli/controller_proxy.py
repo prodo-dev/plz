@@ -68,8 +68,12 @@ class ControllerProxy(Controller):
         _check_status(response, requests.codes.accepted)
         return (json.loads(line) for line in response.iter_lines())
 
-    def list_executions(self) -> [dict]:
-        response = self.server.get('executions', 'list')
+    def list_executions(self, user: str, list_for_all_users: bool) -> [dict]:
+        response = self.server.get(
+            'executions',
+            'list',
+            params={'user': user,
+                    'list_for_all_users': list_for_all_users})
         _check_status(response, requests.codes.ok)
         return json.loads(response.content)['executions']
 

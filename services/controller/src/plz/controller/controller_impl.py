@@ -102,12 +102,14 @@ class ControllerImpl(Controller):
             indices_per_execution=start_metadata.get('indices_per_execution'),
             previous_execution_id=previous_execution_id)
 
-    def list_executions(self) -> [dict]:
+    def list_executions(self, user: str, list_for_all_users: bool) -> [dict]:
         # It's not protected, it's preceded by underscore as to avoid
         # name conflicts, see docs
         # noinspection PyProtectedMember
         return [info._asdict()
-                for info in self.instance_provider.get_executions()]
+                for info in self.instance_provider.get_executions()
+                if list_for_all_users or _get_user_of_execution(
+                        self.db_storage, info.execution_id) == user]
 
     def harvest(self) -> None:
         self.instance_provider.harvest()
@@ -347,3 +349,7 @@ def _status_prefix(composition: ExecutionComposition, metadata: dict) -> str:
         return f'{brief_description}: '
     else:
         return ''
+
+
+def _get_user_of_execution(db_storage: DBStorage, execution_id: str) -> str:
+    return db_storage.retrieve_start_metadata(execution_id)['user']
