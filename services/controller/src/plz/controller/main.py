@@ -178,8 +178,16 @@ def rerun_execution_entrypoint():
 
 @app.route('/executions/list', methods=['GET'])
 def list_executions_entrypoint():
+    user: str = request.args.get('user', type=str)
+    list_for_all_users: bool = request.args.get(
+        'list_for_all_users', type=strtobool, default=False)
+
+    log.debug(f'Listing for: {user} {list_for_all_users}')
+
     return Response(
-        json.dumps({'executions': controller.list_executions()}),
+        json.dumps({
+            'executions': controller.list_executions(user, list_for_all_users)
+        }),
         mimetype='application/json',
         status=requests.codes.ok)
 

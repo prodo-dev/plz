@@ -37,7 +37,7 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def list_executions(self) -> [dict]:
+    def list_executions(self, user: str, list_for_all_users: bool) -> [dict]:
         pass
 
     @abstractmethod

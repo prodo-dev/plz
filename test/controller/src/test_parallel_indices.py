@@ -195,10 +195,14 @@ class TestParallelIndices(unittest.TestCase):
 def _maybe_harvest(harvest_after_run: bool, context: TestingContext,
                    index_execution_id: str):
     execution_listing_status = get_execution_listing_status(
-        context.controller, index_execution_id)
+        context.configuration.user,
+        context.controller,
+        index_execution_id)
     while harvest_after_run and execution_listing_status is not None:
         if execution_listing_status is not 'running':
             context.controller.harvest()
         time.sleep(0.1)
         execution_listing_status = get_execution_listing_status(
-            context.controller, index_execution_id)
+            context.configuration.user,
+            context.controller,
+            index_execution_id)
