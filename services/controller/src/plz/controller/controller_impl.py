@@ -222,10 +222,12 @@ class ControllerImpl(Controller):
     def kill_instances(self,
                        user: str,
                        instance_ids: Optional[List[str]],
+                       including_idle: Optional[bool],
                        force_if_not_idle: bool) -> bool:
         try:
             self.instance_provider.kill_instances(
                 instance_ids=instance_ids,
+                including_idle=including_idle,
                 force_if_not_idle=force_if_not_idle,
                 user=user)
             return True

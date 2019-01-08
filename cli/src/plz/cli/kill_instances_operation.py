@@ -23,24 +23,34 @@ class KillInstancesOperation(Operation):
         parser.add_argument('--force-if-not-idle', action='store_true',
                             default=False,
                             help='Kills instances even if they\'re not idle')
+        parser.add_argument('--including-idle', action='store_true',
+                            default=False,
+                            help='When killing all instances, kill idle '
+                                 'ones as well')
         parser.add_argument('--oh-yeah', action='store_true',
                             default=False,
-                            help='Do not ask use')
+                            help='Do not ask user for confirmation when '
+                                 'killing all instances')
 
     def __init__(self, configuration: Configuration, all_of_them_plz: bool,
-                 force_if_not_idle: bool, instance_ids: [str], oh_yeah: bool):
+                 force_if_not_idle: bool, instance_ids: [str], oh_yeah: bool,
+                 including_idle: bool):
         super().__init__(configuration)
         self.all_of_them_plz = all_of_them_plz
+        self.including_idle = including_idle
         self.instance_ids = instance_ids
         self.force_if_not_idle = force_if_not_idle or all_of_them_plz
         self.oh_yeah = oh_yeah
 
     def run(self):
+        user = self.configuration.user
         if self.all_of_them_plz:
             if self.instance_ids is not None:
                 raise CLIException('Can\'t specify both a list of instances '
                                    'and --all-of-them')
-            log_warning('Killing all instances for all users and projects')
+            log_warning(
+                f'Killing all instances running jobs of {user} '
+                'for all projects')
             if not self.oh_yeah:
                 answer = input('Are you sure? (yeah/Nope): ')
                 if answer != 'yeah':
@@ -50,6 +60,10 @@ class KillInstancesOperation(Operation):
                 raise CLIException(
                     'You must specify a list of instance IDs with the -i '
                     'option. Use `plz list` to get instance IDs')
+            if self.including_idle:
+                raise CLIException(
+                    'Option --including-idle only makes sense together with '
+                    '--all-of-them')
             log_info('Killing instances: ' + ' '.join(self.instance_ids))
         if not self.all_of_them_plz and not self.instance_ids:
             raise CLIException('No instance IDs specified')
@@ -58,7 +72,9 @@ class KillInstancesOperation(Operation):
             were_there_instances_to_kill = self.controller.kill_instances(
                 instance_ids=self.instance_ids,
                 force_if_not_idle=self.force_if_not_idle,
-                user=self.configuration.user)
+                including_idle=
+                self.including_idle if self.all_of_them_plz else None,
+                user=user)
         except ProviderKillingInstancesException as e:
             fails = e.failed_instance_ids_to_messages
             log_error(

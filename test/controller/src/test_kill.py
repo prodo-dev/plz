@@ -33,6 +33,7 @@ class TestKill(unittest.TestCase):
         context.controller.kill_instances(
             user=context.configuration.user,
             instance_ids=None,
+            including_idle=False,
             force_if_not_idle=True)
 
         infos = context.controller.list_executions(
@@ -54,6 +55,7 @@ class TestKill(unittest.TestCase):
         with self.assertRaises(ProviderKillingInstancesException):
             context.controller.kill_instances(
                 instance_ids=[infos[0]['instance_id']],
+                including_idle=None,
                 force_if_not_idle=False,
                 user=context.configuration.user)
 
@@ -89,6 +91,7 @@ class TestKill(unittest.TestCase):
         with self.assertRaises(ProviderKillingInstancesException):
             context.controller.kill_instances(
                 instance_ids=[infos[0]['instance_id']],
+                including_idle=None,
                 force_if_not_idle=False,
                 user=context.configuration.user)
 
@@ -114,6 +117,7 @@ class TestKill(unittest.TestCase):
 
         context.controller.kill_instances(
             instance_ids=[infos[0]['instance_id']],
+            including_idle=None,
             force_if_not_idle=True,
             user=context.configuration.user)
 
@@ -139,6 +143,7 @@ class TestKill(unittest.TestCase):
         with self.assertRaises(ProviderKillingInstancesException):
             context.controller.kill_instances(
                 instance_ids=[infos[0]['instance_id']],
+                including_idle=None,
                 force_if_not_idle=True,
                 user=second_user)
 
@@ -176,7 +181,10 @@ class TestKill(unittest.TestCase):
                             {i['execution_id'] for i in infos})
 
         context.controller.kill_instances(
-            user=second_user, instance_ids=None, force_if_not_idle=True)
+            user=second_user,
+            instance_ids=None,
+            including_idle=None,
+            force_if_not_idle=True)
 
         # Check the execution for the first user still exists
         infos = context.controller.list_executions(
@@ -205,7 +213,8 @@ class TestKill(unittest.TestCase):
                               for i in infos
                               if i['execution_id'] in execution_ids],
                 user=user,
-                force_if_not_idle=True)
+                force_if_not_idle=True,
+                including_idle=None)
         except ProviderKillingInstancesException as e:
             print(e.failed_instance_ids_to_messages)
             raise

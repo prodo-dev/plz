@@ -333,12 +333,14 @@ class InstanceProvider(ABC):
             self,
             user: str,
             instance_ids: Optional[List[str]],
+            including_idle: bool,
             force_if_not_idle: bool) -> None:
         """ Hard stop for a set of instances
 
-        :param user: limit to
+        :param user: user requesting the instances to be killed
         :param instance_ids: instances to dispose of. A value of `None` means
-               all instances in the group
+               all instances in the group running jobs of the user
+        :param including_idle: when killing all instances, kill idle ones
         :param force_if_not_idle: force termination for non-idle instances
         :raises: :class:`ProviderKillingInstancesException` if some instances
                  failed to terminate
@@ -356,6 +358,7 @@ class InstanceProvider(ABC):
         there_is_one_instance = False
         for instance in self.instance_iterator(only_running=False):
             if self._must_skip_killing_instance(
+                    including_idle,
                     instance,
                     instance_ids_to_messages,
                     terminate_all_user_instances,
@@ -385,20 +388,23 @@ class InstanceProvider(ABC):
 
     def _must_skip_killing_instance(
             self,
+            including_idle: bool,
             instance: Instance,
             instance_ids_to_messages: dict,
             terminate_all_instances: bool,
             unprocessed_instance_ids: [str],
-            user: str):
+            user: str) -> bool:
         if instance.is_terminated():
             return True
 
         if instance.get_execution_id() == '':
-            # Terminate idle instances only if they have been explicitly
-            # named. Idle instances don't belong to anyone, and will be
-            # eventually terminated if no one uses them anyway
-            if terminate_all_instances:
-                return True
+            if not terminate_all_instances:
+                # If instances are explicitly named, we don't skip idle ones
+                return False
+            else:
+                # If we are terminating all instances for a user, skip an
+                # idle instance iff we are not including idle instances
+                return not including_idle
         else:
             # If the instance is running something, kill it only if it's
             # for current user
