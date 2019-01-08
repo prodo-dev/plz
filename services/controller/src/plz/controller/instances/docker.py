@@ -163,7 +163,7 @@ class DockerInstance(Instance):
 
     @property
     def instance_id(self):
-        return self.execution_id
+        return 'docker:' + self.execution_id
 
     def get_logs(self, since: Optional[int] = None, stdout: bool = True,
                  stderr: bool = True) -> Iterator[bytes]:

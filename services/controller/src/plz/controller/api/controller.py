@@ -105,7 +105,12 @@ class Controller(ABC):
             user: str,
             instance_ids: Optional[List[str]],
             force_if_not_idle: bool) -> bool:
-        """:raises ProviderKillingInstancesException:
+        """
+           :param user: the user requesting to kill the instances
+           :param instance_ids: list of instances to kill. A value of `None`
+                means all instances
+           :param force_if_not_idle: kill instances even if they're not idle
+           :raises ProviderKillingInstancesException:
 
            :returns bool: false if there are no instances to kill
         """

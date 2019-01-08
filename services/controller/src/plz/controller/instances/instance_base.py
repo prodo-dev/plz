@@ -345,9 +345,9 @@ class InstanceProvider(ABC):
         :raises: :class:`NoInstancesFound` if asked for the termination of all
                  instances, and there are no instances
         """
-        terminate_all_instances = instance_ids is None
+        terminate_all_user_instances = instance_ids is None
 
-        if not terminate_all_instances:
+        if not terminate_all_user_instances:
             unprocessed_instance_ids = [i for i in instance_ids]
         else:
             unprocessed_instance_ids = []
@@ -358,20 +358,21 @@ class InstanceProvider(ABC):
             if self._must_skip_killing_instance(
                     instance,
                     instance_ids_to_messages,
-                    terminate_all_instances,
+                    terminate_all_user_instances,
                     unprocessed_instance_ids,
                     user):
                 continue
 
             there_is_one_instance = True
-            if terminate_all_instances or instance.instance_id in instance_ids:
-                    try:
-                        instance.kill(force_if_not_idle)
-                    except KillingInstanceException as e:
-                        instance_ids_to_messages[instance.instance_id] = \
-                            e.message
-                    if not terminate_all_instances:
-                        unprocessed_instance_ids.remove(instance.instance_id)
+            if terminate_all_user_instances \
+                    or instance.instance_id in instance_ids:
+                try:
+                    instance.kill(force_if_not_idle)
+                except KillingInstanceException as e:
+                    instance_ids_to_messages[instance.instance_id] = \
+                        e.message
+                if not terminate_all_user_instances:
+                    unprocessed_instance_ids.remove(instance.instance_id)
 
         for instance_id in unprocessed_instance_ids:
             instance_ids_to_messages[instance_id] = 'Instance not found'
@@ -379,7 +380,7 @@ class InstanceProvider(ABC):
         if len(instance_ids_to_messages) > 0:
             raise ProviderKillingInstancesException(instance_ids_to_messages)
 
-        if terminate_all_instances and not there_is_one_instance:
+        if terminate_all_user_instances and not there_is_one_instance:
             raise NoInstancesFoundException()
 
     def _must_skip_killing_instance(

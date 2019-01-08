@@ -16,14 +16,13 @@ class KillInstancesOperation(Operation):
     def prepare_argument_parser(cls, parser, args):
         parser.add_argument(
             '--all-of-them-plz', action='store_true', default=False,
-            help='Kills all instances for all users and projects. Y\'know... '
-            'Be careful...')
+            help='Kills instances that are running jobs for this user only. '
+                 'Implies --force-if-not-idle')
         parser.add_argument('-i', '--instance-ids', nargs='+', type=str,
                             help='IDs of the instances to kill')
         parser.add_argument('--force-if-not-idle', action='store_true',
                             default=False,
-                            help='Kills all instances for all users and '
-                                 'projects. Y\'know... Be careful...')
+                            help='Kills instances even if they\'re not idle')
         parser.add_argument('--oh-yeah', action='store_true',
                             default=False,
                             help='Do not ask use')
@@ -33,12 +32,12 @@ class KillInstancesOperation(Operation):
         super().__init__(configuration)
         self.all_of_them_plz = all_of_them_plz
         self.instance_ids = instance_ids
-        self.force_if_not_idle = force_if_not_idle
+        self.force_if_not_idle = force_if_not_idle or all_of_them_plz
         self.oh_yeah = oh_yeah
 
     def run(self):
         if self.all_of_them_plz:
-            if self.instance_ids is not None and len(self.instance_ids) != 0:
+            if self.instance_ids is not None:
                 raise CLIException('Can\'t specify both a list of instances '
                                    'and --all-of-them')
             log_warning('Killing all instances for all users and projects')
@@ -46,20 +45,18 @@ class KillInstancesOperation(Operation):
                 answer = input('Are you sure? (yeah/Nope): ')
                 if answer != 'yeah':
                     raise CLIException('Cancelled by user')
-            instance_ids_for_controller = None
         else:
             if self.instance_ids is None or len(self.instance_ids) == 0:
                 raise CLIException(
                     'You must specify a list of instance IDs with the -i '
                     'option. Use `plz list` to get instance IDs')
             log_info('Killing instances: ' + ' '.join(self.instance_ids))
-            instance_ids_for_controller = self.instance_ids
         if not self.all_of_them_plz and not self.instance_ids:
             raise CLIException('No instance IDs specified')
 
         try:
             were_there_instances_to_kill = self.controller.kill_instances(
-                instance_ids=instance_ids_for_controller,
+                instance_ids=self.instance_ids,
                 force_if_not_idle=self.force_if_not_idle,
                 user=self.configuration.user)
         except ProviderKillingInstancesException as e:

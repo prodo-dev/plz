@@ -311,16 +311,17 @@ def kill_instances_entrypoint():
     # boolean and we expect it to be consistent with whether we get a list or
     # not
     all_of_them_plz: bool = request.json['all_of_them_plz']
+    force_if_not_idle = request.json['force_if_not_idle']
     instance_ids: Optional[List[str]] = request.json['instance_ids']
+    user = request.json['user']
     if all_of_them_plz:
-        if instance_ids is not None:
+        # Check that `all_of_them_plz` implies `force_if_not_idle`
+        if instance_ids is not None or not force_if_not_idle:
             abort(requests.codes.bad_request)
     else:
         if not isinstance(instance_ids, list) or len(instance_ids) == 0:
             abort(requests.codes.bad_request)
 
-    force_if_not_idle = request.json['force_if_not_idle']
-    user = request.json['user']
     were_there_instances_to_kill = controller.kill_instances(
         instance_ids=instance_ids,
         force_if_not_idle=force_if_not_idle,
