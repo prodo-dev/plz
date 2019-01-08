@@ -70,6 +70,8 @@ class KillInstancesOperation(Operation):
                 raise CLIException(
                     'Option --including-idle only makes sense together with '
                     '--all-of-them')
+            # The way the API likes it in this case
+            self.including_idle = None
             log_info('Killing instances: ' + ' '.join(self.instance_ids))
         if not self.all_of_them_plz and not self.instance_ids:
             raise CLIException('No instance IDs specified')
@@ -79,8 +81,7 @@ class KillInstancesOperation(Operation):
                 instance_ids=self.instance_ids,
                 force_if_not_idle=self.force_if_not_idle,
                 ignore_ownership=self.ignore_ownership,
-                including_idle=
-                self.including_idle if self.all_of_them_plz else None,
+                including_idle=self.including_idle,
                 user=user)
         except ProviderKillingInstancesException as e:
             fails = e.failed_instance_ids_to_messages
