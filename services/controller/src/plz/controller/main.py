@@ -320,9 +320,11 @@ def kill_instances_entrypoint():
             abort(requests.codes.bad_request)
 
     force_if_not_idle = request.json['force_if_not_idle']
-
+    user = request.json['user']
     were_there_instances_to_kill = controller.kill_instances(
-        instance_ids=instance_ids, force_if_not_idle=force_if_not_idle)
+        instance_ids=instance_ids,
+        force_if_not_idle=force_if_not_idle,
+        user=user)
 
     response_dict = {
         'were_there_instances_to_kill': were_there_instances_to_kill}

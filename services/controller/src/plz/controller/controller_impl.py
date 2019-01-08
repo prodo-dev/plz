@@ -108,8 +108,8 @@ class ControllerImpl(Controller):
         # noinspection PyProtectedMember
         return [info._asdict()
                 for info in self.instance_provider.get_executions()
-                if list_for_all_users or _get_user_of_execution(
-                        self.db_storage, info.execution_id) == user]
+                if list_for_all_users or self.db_storage.get_user_of_execution(
+                    info.execution_id) == user]
 
     def harvest(self) -> None:
         self.instance_provider.harvest()
@@ -219,11 +219,15 @@ class ControllerImpl(Controller):
         else:
             return None
 
-    def kill_instances(self, instance_ids: Optional[List[str]],
+    def kill_instances(self,
+                       user: str,
+                       instance_ids: Optional[List[str]],
                        force_if_not_idle: bool) -> bool:
         try:
             self.instance_provider.kill_instances(
-                instance_ids=instance_ids, force_if_not_idle=force_if_not_idle)
+                instance_ids=instance_ids,
+                force_if_not_idle=force_if_not_idle,
+                user=user)
             return True
         except NoInstancesFoundException:
             return False

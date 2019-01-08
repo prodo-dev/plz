@@ -1,7 +1,9 @@
 import unittest
+from typing import Set
 
 import time
 
+from plz.controller.api import Controller
 from plz.controller.api.exceptions import ProviderKillingInstancesException
 from src.utils import get_execution_listing_status, harvest, run_example
 
@@ -29,7 +31,9 @@ class TestKill(unittest.TestCase):
                             {i['execution_id'] for i in infos})
 
         context.controller.kill_instances(
-            instance_ids=None, force_if_not_idle=True)
+            user=context.configuration.user,
+            instance_ids=None,
+            force_if_not_idle=True)
 
         infos = context.controller.list_executions(
             context.configuration.user,
@@ -52,7 +56,9 @@ class TestKill(unittest.TestCase):
 
         with self.assertRaises(ProviderKillingInstancesException):
             context.controller.kill_instances(
-                instance_ids=None, force_if_not_idle=False)
+                instance_ids=None,
+                force_if_not_idle=False,
+                user=context.configuration.user)
 
         infos = context.controller.list_executions(
             context.configuration.user,
@@ -61,6 +67,10 @@ class TestKill(unittest.TestCase):
         self.assertSetEqual({execution_id1,
                              execution_id2},
                             {i['execution_id'] for i in infos})
+        self._cleanup_instances(
+            context.controller,
+            context.configuration.user,
+            {execution_id1, execution_id2})
 
     def test_exited_is_not_idle(self):
         context, finished_execution_id = run_example(
@@ -82,10 +92,35 @@ class TestKill(unittest.TestCase):
 
         with self.assertRaises(ProviderKillingInstancesException):
             context.controller.kill_instances(
-                instance_ids=None, force_if_not_idle=False)
+                instance_ids=None,
+                force_if_not_idle=False,
+                user=context.configuration.user)
 
         infos = context.controller.list_executions(
             context.configuration.user,
             list_for_all_users=False)
         self.assertSetEqual({finished_execution_id},
                             {i['execution_id'] for i in infos})
+        self._cleanup_instances(
+            context.controller,
+            context.configuration.user,
+            {finished_execution_id})
+
+    def _cleanup_instances(
+            self, controller: Controller, user: str, execution_ids: Set[str]) \
+            -> None:
+        infos = controller.list_executions(user, list_for_all_users=False)
+
+        try:
+            controller.kill_instances(
+                instance_ids=[i['instance_id']
+                              for i in infos
+                              if i['execution_id'] in execution_ids],
+                user=user,
+                force_if_not_idle=True)
+        except ProviderKillingInstancesException as e:
+            print(e.failed_instance_ids_to_messages)
+            raise
+
+        infos = controller.list_executions(user, list_for_all_users=False)
+        self.assertListEqual(infos, [])

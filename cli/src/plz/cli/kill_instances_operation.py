@@ -60,7 +60,8 @@ class KillInstancesOperation(Operation):
         try:
             were_there_instances_to_kill = self.controller.kill_instances(
                 instance_ids=instance_ids_for_controller,
-                force_if_not_idle=self.force_if_not_idle)
+                force_if_not_idle=self.force_if_not_idle,
+                user=self.configuration.user)
         except ProviderKillingInstancesException as e:
             fails = e.failed_instance_ids_to_messages
             log_error(

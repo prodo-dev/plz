@@ -101,8 +101,10 @@ class Controller(ABC):
 
     @abstractmethod
     def kill_instances(
-            self, instance_ids: Optional[List[str]], force_if_not_idle: bool) \
-            -> bool:
+            self,
+            user: str,
+            instance_ids: Optional[List[str]],
+            force_if_not_idle: bool) -> bool:
         """:raises ProviderKillingInstancesException:
 
            :returns bool: false if there are no instances to kill

@@ -114,7 +114,9 @@ class DockerInstance(Instance):
             raise KillingInstanceException(
                 'Attempt to kill a running local container, which is not idle')
         try:
-            self.containers.kill(self.get_execution_id())
+            # If the container has exited, when killing we only need to remove
+            if self.containers.get_state(self.execution_id).status != 'exited':
+                self.containers.kill(self.get_execution_id())
             self.containers.rm(self.get_execution_id())
         except Exception as e:
             raise KillingInstanceException(str(e)) from e

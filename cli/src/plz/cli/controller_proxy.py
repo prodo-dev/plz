@@ -205,14 +205,17 @@ class ControllerProxy(Controller):
             raise ValueError('Expected an execution ID')
 
     def kill_instances(
-            self, instance_ids: Optional[List[str]], force_if_not_idle: bool) \
-            -> bool:
+            self,
+            user: str,
+            instance_ids: Optional[List[str]],
+            force_if_not_idle: bool) -> bool:
         response = self.server.post(
             'instances', 'kill',
             json={
                 'all_of_them_plz': instance_ids is None,
                 'instance_ids': instance_ids,
-                'force_if_not_idle': force_if_not_idle
+                'force_if_not_idle': force_if_not_idle,
+                'user': user
             },
             codes_with_exceptions={requests.codes.conflict})
         _check_status(response, requests.codes.ok)

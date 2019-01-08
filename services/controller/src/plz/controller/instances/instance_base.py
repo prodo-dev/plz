@@ -8,8 +8,8 @@ from typing import Any, ContextManager, Dict, Iterator, List, Optional, Tuple
 from redis import StrictRedis
 from redis.lock import Lock
 
-from plz.controller.containers import ContainerMissingException, ContainerState
 from plz.controller.api.exceptions import ProviderKillingInstancesException
+from plz.controller.containers import ContainerMissingException, ContainerState
 from plz.controller.results.results_base import InstanceStatus, \
     InstanceStatusFailure, InstanceStatusRunning, InstanceStatusSuccess, \
     Results, ResultsStorage
@@ -330,10 +330,13 @@ class InstanceProvider(ABC):
         instance.release(self.results_storage, idle_since_timestamp)
 
     def kill_instances(
-            self, instance_ids: Optional[List[str]], force_if_not_idle: bool) \
-            -> None:
+            self,
+            user: str,
+            instance_ids: Optional[List[str]],
+            force_if_not_idle: bool) -> None:
         """ Hard stop for a set of instances
 
+        :param user: limit to
         :param instance_ids: instances to dispose of. A value of `None` means
                all instances in the group
         :param force_if_not_idle: force termination for non-idle instances
@@ -352,8 +355,14 @@ class InstanceProvider(ABC):
         instance_ids_to_messages = {}
         there_is_one_instance = False
         for instance in self.instance_iterator(only_running=False):
-            if instance.is_terminated():
+            if self._must_skip_killing_instance(
+                    instance,
+                    instance_ids_to_messages,
+                    terminate_all_instances,
+                    unprocessed_instance_ids,
+                    user):
                 continue
+
             there_is_one_instance = True
             if terminate_all_instances or instance.instance_id in instance_ids:
                     try:
@@ -372,6 +381,40 @@ class InstanceProvider(ABC):
 
         if terminate_all_instances and not there_is_one_instance:
             raise NoInstancesFoundException()
+
+    def _must_skip_killing_instance(
+            self,
+            instance: Instance,
+            instance_ids_to_messages: dict,
+            terminate_all_instances: bool,
+            unprocessed_instance_ids: [str],
+            user: str):
+        if instance.is_terminated():
+            return True
+
+        if instance.get_execution_id() == '':
+            # Terminate idle instances only if they have been explicitly
+            # named. Idle instances don't belong to anyone, and will be
+            # eventually terminated if no one uses them anyway
+            if terminate_all_instances:
+                return True
+        else:
+            # If the instance is running something, kill it only if it's
+            # for current user
+            if self.results_storage.db_storage.get_user_of_execution(
+                    instance.get_execution_id()) != user:
+                # It's an error only if the instance was explicitly named.
+                # If someone just requested "all of them", we silently
+                # skip instances belonging to others
+                if not terminate_all_instances:
+                    instance_ids_to_messages[instance.instance_id] = \
+                        'Instance is running an execution for a ' \
+                        'different user'
+                    unprocessed_instance_ids.remove(instance.instance_id)
+
+                return True
+
+        return False
 
     @abstractmethod
     def push(self, image_tag: str):
