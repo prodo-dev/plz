@@ -312,6 +312,7 @@ def kill_instances_entrypoint():
     # not
     all_of_them_plz: bool = request.json['all_of_them_plz']
     force_if_not_idle = request.json['force_if_not_idle']
+    ignore_ownership = request.json['ignore_ownership']
     instance_ids: Optional[List[str]] = request.json['instance_ids']
     including_idle: Optional[bool] = request.json['including_idle']
     user = request.json['user']
@@ -328,6 +329,7 @@ def kill_instances_entrypoint():
 
     were_there_instances_to_kill = controller.kill_instances(
         instance_ids=instance_ids,
+        ignore_ownership=ignore_ownership,
         including_idle=including_idle,
         force_if_not_idle=force_if_not_idle,
         user=user)

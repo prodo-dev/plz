@@ -33,6 +33,7 @@ class TestKill(unittest.TestCase):
         context.controller.kill_instances(
             user=context.configuration.user,
             instance_ids=None,
+            ignore_ownership=False,
             including_idle=False,
             force_if_not_idle=True)
 
@@ -55,6 +56,7 @@ class TestKill(unittest.TestCase):
         with self.assertRaises(ProviderKillingInstancesException):
             context.controller.kill_instances(
                 instance_ids=[infos[0]['instance_id']],
+                ignore_ownership=False,
                 including_idle=None,
                 force_if_not_idle=False,
                 user=context.configuration.user)
@@ -91,6 +93,7 @@ class TestKill(unittest.TestCase):
         with self.assertRaises(ProviderKillingInstancesException):
             context.controller.kill_instances(
                 instance_ids=[infos[0]['instance_id']],
+                ignore_ownership=False,
                 including_idle=None,
                 force_if_not_idle=False,
                 user=context.configuration.user)
@@ -117,6 +120,7 @@ class TestKill(unittest.TestCase):
 
         context.controller.kill_instances(
             instance_ids=[infos[0]['instance_id']],
+            ignore_ownership=False,
             including_idle=None,
             force_if_not_idle=True,
             user=context.configuration.user)
@@ -143,6 +147,7 @@ class TestKill(unittest.TestCase):
         with self.assertRaises(ProviderKillingInstancesException):
             context.controller.kill_instances(
                 instance_ids=[infos[0]['instance_id']],
+                ignore_ownership=False,
                 including_idle=None,
                 force_if_not_idle=True,
                 user=second_user)
@@ -182,6 +187,7 @@ class TestKill(unittest.TestCase):
 
         context.controller.kill_instances(
             user=second_user,
+            ignore_ownership=False,
             instance_ids=None,
             including_idle=None,
             force_if_not_idle=True)
@@ -203,6 +209,46 @@ class TestKill(unittest.TestCase):
             first_user,
             {first_user_execution_id})
 
+    def test_kill_all_berserk(self):
+        context, first_user_execution_id = run_example(
+            'common', 'run_forever', is_end_to_end_path=False)
+
+        first_user = context.configuration.user
+        second_user = first_user + '_second'
+        context.configuration.user = second_user
+
+        infos = context.controller.list_executions(
+            first_user,
+            list_for_all_users=False)
+        self.assertSetEqual({first_user_execution_id},
+                            {i['execution_id'] for i in infos})
+
+        context, second_user_execution_id = run_example(
+            'common', 'run_forever', context=context, is_end_to_end_path=False)
+
+        third_user = second_user + '_third'
+
+        # List for all users
+        infos = context.controller.list_executions(
+            user=third_user,
+            list_for_all_users=True)
+        self.assertSetEqual(
+            {first_user_execution_id, second_user_execution_id},
+            {i['execution_id'] for i in infos})
+
+        context.controller.kill_instances(
+            user=second_user,
+            instance_ids=None,
+            including_idle=None,
+            ignore_ownership=True,
+            force_if_not_idle=True)
+
+        # List for all users
+        infos = context.controller.list_executions(
+            user=third_user,
+            list_for_all_users=True)
+        self.assertListEqual(infos, [])
+
     def _cleanup_instances(
             self, controller: Controller, user: str, execution_ids: Set[str]) \
             -> None:
@@ -214,6 +260,7 @@ class TestKill(unittest.TestCase):
                               if i['execution_id'] in execution_ids],
                 user=user,
                 force_if_not_idle=True,
+                ignore_ownership=False,
                 including_idle=None)
         except ProviderKillingInstancesException as e:
             print(e.failed_instance_ids_to_messages)

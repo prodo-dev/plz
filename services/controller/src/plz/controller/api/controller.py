@@ -104,15 +104,18 @@ class Controller(ABC):
             self,
             user: str,
             instance_ids: Optional[List[str]],
+            ignore_ownership: bool,
             including_idle: Optional[bool],
             force_if_not_idle: bool) -> bool:
         """
            :param user: the user requesting to kill the instances
            :param instance_ids: list of instances to kill. A value of `None`
-                means all instances running jobs of the user
-           :param force_if_not_idle: kill instances even if they're not idle
+               means all instances running jobs of the user
+           :param ignore_ownership: kill instances even if they're running jobs
+               of other users
            :param including_idle: when killing all instances, kill idle ones.
                 Use None if specifying the instances
+           :param force_if_not_idle: kill instances even if they're not idle
            :raises ProviderKillingInstancesException:
 
            :returns bool: false if there are no instances to kill

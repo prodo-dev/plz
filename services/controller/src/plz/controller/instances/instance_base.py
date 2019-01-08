@@ -333,6 +333,7 @@ class InstanceProvider(ABC):
             self,
             user: str,
             instance_ids: Optional[List[str]],
+            ignore_ownership: bool,
             including_idle: bool,
             force_if_not_idle: bool) -> None:
         """ Hard stop for a set of instances
@@ -340,6 +341,8 @@ class InstanceProvider(ABC):
         :param user: user requesting the instances to be killed
         :param instance_ids: instances to dispose of. A value of `None` means
                all instances in the group running jobs of the user
+        :param ignore_ownership: kill instances even if they're running jobs
+               of other users
         :param including_idle: when killing all instances, kill idle ones
         :param force_if_not_idle: force termination for non-idle instances
         :raises: :class:`ProviderKillingInstancesException` if some instances
@@ -358,6 +361,7 @@ class InstanceProvider(ABC):
         there_is_one_instance = False
         for instance in self.instance_iterator(only_running=False):
             if self._must_skip_killing_instance(
+                    ignore_ownership,
                     including_idle,
                     instance,
                     instance_ids_to_messages,
@@ -388,6 +392,7 @@ class InstanceProvider(ABC):
 
     def _must_skip_killing_instance(
             self,
+            ignore_ownership: bool,
             including_idle: bool,
             instance: Instance,
             instance_ids_to_messages: dict,
@@ -406,8 +411,9 @@ class InstanceProvider(ABC):
                 # idle instance iff we are not including idle instances
                 return not including_idle
         else:
-            # If the instance is running something, kill it only if it's
-            # for current user
+            # We don't skip if we aren't ignoring ownership
+            if ignore_ownership:
+                return False
             if self.results_storage.db_storage.get_user_of_execution(
                     instance.get_execution_id()) != user:
                 # It's an error only if the instance was explicitly named.
@@ -418,7 +424,6 @@ class InstanceProvider(ABC):
                         'Instance is running an execution for a ' \
                         'different user'
                     unprocessed_instance_ids.remove(instance.instance_id)
-
                 return True
 
         return False

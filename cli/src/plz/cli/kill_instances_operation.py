@@ -16,7 +16,7 @@ class KillInstancesOperation(Operation):
     def prepare_argument_parser(cls, parser, args):
         parser.add_argument(
             '--all-of-them-plz', action='store_true', default=False,
-            help='Kills instances that are running jobs for this user only. '
+            help='Kills all instances that are running jobs for this user. '
                  'Implies --force-if-not-idle')
         parser.add_argument('-i', '--instance-ids', nargs='+', type=str,
                             help='IDs of the instances to kill')
@@ -27,6 +27,10 @@ class KillInstancesOperation(Operation):
                             default=False,
                             help='When killing all instances, kill idle '
                                  'ones as well')
+        parser.add_argument('--berserk', action='store_true',
+                            default=False,
+                            help='Ignore user ownership when killing '
+                                 'instances. Easy with this one, mate.')
         parser.add_argument('--oh-yeah', action='store_true',
                             default=False,
                             help='Do not ask user for confirmation when '
@@ -34,9 +38,10 @@ class KillInstancesOperation(Operation):
 
     def __init__(self, configuration: Configuration, all_of_them_plz: bool,
                  force_if_not_idle: bool, instance_ids: [str], oh_yeah: bool,
-                 including_idle: bool):
+                 including_idle: bool, berserk: bool):
         super().__init__(configuration)
         self.all_of_them_plz = all_of_them_plz
+        self.ignore_ownership = berserk
         self.including_idle = including_idle
         self.instance_ids = instance_ids
         self.force_if_not_idle = force_if_not_idle or all_of_them_plz
@@ -48,8 +53,9 @@ class KillInstancesOperation(Operation):
             if self.instance_ids is not None:
                 raise CLIException('Can\'t specify both a list of instances '
                                    'and --all-of-them')
+            user_in_message = 'all users' if self.ignore_ownership else user
             log_warning(
-                f'Killing all instances running jobs of {user} '
+                f'Killing all instances running jobs of {user_in_message} '
                 'for all projects')
             if not self.oh_yeah:
                 answer = input('Are you sure? (yeah/Nope): ')
@@ -72,6 +78,7 @@ class KillInstancesOperation(Operation):
             were_there_instances_to_kill = self.controller.kill_instances(
                 instance_ids=self.instance_ids,
                 force_if_not_idle=self.force_if_not_idle,
+                ignore_ownership=self.ignore_ownership,
                 including_idle=
                 self.including_idle if self.all_of_them_plz else None,
                 user=user)

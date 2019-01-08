@@ -208,12 +208,14 @@ class ControllerProxy(Controller):
             self,
             user: str,
             instance_ids: Optional[List[str]],
+            ignore_ownership: bool,
             including_idle: Optional[bool],
             force_if_not_idle: bool) -> bool:
         response = self.server.post(
             'instances', 'kill',
             json={
                 'all_of_them_plz': instance_ids is None,
+                'ignore_ownership': ignore_ownership,
                 'including_idle': including_idle,
                 'instance_ids': instance_ids,
                 'force_if_not_idle': force_if_not_idle,
