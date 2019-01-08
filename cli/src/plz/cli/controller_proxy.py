@@ -207,18 +207,16 @@ class ControllerProxy(Controller):
     def kill_instances(
             self, instance_ids: Optional[List[str]], force_if_not_idle: bool) \
             -> bool:
-        instance_ids = instance_ids if instance_ids is not None else []
         response = self.server.post(
             'instances', 'kill',
             json={
-                'all_of_them_plz': instance_ids == [],
+                'all_of_them_plz': instance_ids is None,
                 'instance_ids': instance_ids,
                 'force_if_not_idle': force_if_not_idle
             },
             codes_with_exceptions={requests.codes.conflict})
         _check_status(response, requests.codes.ok)
         response_json = response.json()
-        # TODO: The warning message was the mechanism before serverless
         return response_json['were_there_instances_to_kill']
 
     def describe_execution_entrypoint(self, execution_id: str) -> dict:

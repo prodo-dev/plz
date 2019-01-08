@@ -27,7 +27,7 @@ class TestParallelIndices(unittest.TestCase):
                              first_user_execution_id2},
                             {i['execution_id'] for i in infos})
 
-        second_user = context.configuration.user + '_second'
+        second_user = first_user + '_second'
         context.configuration.user = second_user
 
         # Nothing for the second user yet

@@ -38,6 +38,9 @@ class KillInstancesOperation(Operation):
 
     def run(self):
         if self.all_of_them_plz:
+            if self.instance_ids is not None and len(self.instance_ids) != 0:
+                raise CLIException('Can\'t specify both a list of instances '
+                                   'and --all-of-them')
             log_warning('Killing all instances for all users and projects')
             if not self.oh_yeah:
                 answer = input('Are you sure? (yeah/Nope): ')

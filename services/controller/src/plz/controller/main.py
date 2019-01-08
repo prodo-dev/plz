@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 from distutils.util import strtobool
-from typing import Any, Callable, Iterator, Optional, TypeVar, Union
+from typing import Any, Callable, Iterator, List, Optional, TypeVar, Union
 
 import requests
 from flask import Flask, Response, abort, jsonify, request, stream_with_context
@@ -305,15 +305,20 @@ def last_execution_id_entrypoint(user: str):
 
 @app.route(f'/instances/kill', methods=['POST'])
 def kill_instances_entrypoint():
-    # TODO: make the entrypoint receive the instance ids instead of
-    # implementing this logic. The CLI converts the all_of_them_plz boolean to
-    # a list of instances, then the proxy on the CLI side reconverts that
-    # to all_of_them_plz as to fit the entrypoint, which is bizarre
+    # Internally, we represent "all of them" by setting the list of instance
+    # IDs to None. That might be risky for an API (if the request is built
+    # incorrectly we might end up killing everything), so we have an explicit
+    # boolean and we expect it to be consistent with whether we get a list or
+    # not
     all_of_them_plz: bool = request.json['all_of_them_plz']
+    instance_ids: Optional[List[str]] = request.json['instance_ids']
     if all_of_them_plz:
-        instance_ids = None
+        if instance_ids is not None:
+            abort(requests.codes.bad_request)
     else:
-        instance_ids: [str] = request.json['instance_ids']
+        if not isinstance(instance_ids, list) or len(instance_ids) == 0:
+            abort(requests.codes.bad_request)
+
     force_if_not_idle = request.json['force_if_not_idle']
 
     were_there_instances_to_kill = controller.kill_instances(

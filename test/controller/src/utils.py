@@ -1,16 +1,15 @@
 import os
 import tarfile
 import tempfile
-from typing import Tuple, Optional, Dict, Iterator, IO
+from typing import Dict, IO, Iterator, Optional, Tuple
 
 from plz.cli.configuration import Configuration
 from plz.cli.controller_proxy import ControllerProxy
 from plz.cli.run_execution_operation import RunExecutionOperation, \
     create_instance_market_spec
 from plz.cli.server import Server
-from plz.controller.api import Controller
-
 from plz.cli.snapshot import capture_build_context, submit_context_for_building
+from plz.controller.api import Controller
 
 dir_of_this_script = os.path.dirname(os.path.abspath(__file__))
 
@@ -171,3 +170,8 @@ def get_execution_listing_status(
         if execution['execution_id'] == execution_id:
             return execution['status']
     return None
+
+
+def create_controller():
+    configuration = Configuration.from_env(Configuration.PROPERTIES)
+    return ControllerProxy(Server.from_configuration(configuration))
