@@ -25,7 +25,7 @@ class KillInstancesOperation(Operation):
                             help='Kills instances even if they\'re not idle')
         parser.add_argument('--including-idle', action='store_true',
                             default=False,
-                            help='When killing all instances, kill idle '
+                            help='When killing all user instances, kill idle '
                                  'ones as well')
         parser.add_argument('--berserk', action='store_true',
                             default=False,
@@ -52,7 +52,7 @@ class KillInstancesOperation(Operation):
         if self.all_of_them_plz:
             if self.instance_ids is not None:
                 raise CLIException('Can\'t specify both a list of instances '
-                                   'and --all-of-them')
+                                   'and --all-of-them-plz')
             user_in_message = 'all users' if self.ignore_ownership else user
             log_warning(
                 f'Killing all instances running jobs of {user_in_message} '
@@ -69,7 +69,7 @@ class KillInstancesOperation(Operation):
             if self.including_idle:
                 raise CLIException(
                     'Option --including-idle only makes sense together with '
-                    '--all-of-them')
+                    '--all-of-them-plz')
             # The way the API likes it in this case
             self.including_idle = None
             log_info('Killing instances: ' + ' '.join(self.instance_ids))

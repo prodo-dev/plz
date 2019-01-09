@@ -343,7 +343,7 @@ class InstanceProvider(ABC):
                all instances in the group running jobs of the user
         :param ignore_ownership: kill instances even if they're running jobs
                of other users
-        :param including_idle: when killing all instances, kill idle ones
+        :param including_idle: when killing all user instances, kill idle ones
         :param force_if_not_idle: force termination for non-idle instances
         :raises: :class:`ProviderKillingInstancesException` if some instances
                  failed to terminate
