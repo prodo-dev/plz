@@ -360,7 +360,7 @@ class InstanceProvider(ABC):
         instance_ids_to_messages = {}
         there_is_one_instance = False
         for instance in self.instance_iterator(only_running=False):
-            if self._must_skip_killing_instance(
+            if not self._must_kill_instance(
                     ignore_ownership,
                     including_idle,
                     instance,
@@ -389,7 +389,7 @@ class InstanceProvider(ABC):
         if terminate_all_user_instances and not there_is_one_instance:
             raise NoInstancesFoundException()
 
-    def _must_skip_killing_instance(
+    def _must_kill_instance(
             self,
             ignore_ownership: bool,
             including_idle: bool,
@@ -400,24 +400,25 @@ class InstanceProvider(ABC):
             unprocessed_instance_ids: [str],
             user: str) -> bool:
         if instance.is_terminated():
-            return True
+            return False
 
         if not terminate_all_instances \
                 and instance.instance_id not in instance_ids:
-            return True
+            return False
 
         if instance.get_execution_id() == '':
             if not terminate_all_instances:
-                # If instances are explicitly named, we don't skip idle ones
-                return False
+                # If instances are explicitly named, we kill idle ones
+                return True
             else:
-                # If we are terminating all instances for a user, skip an
-                # idle instance iff we are not including idle instances
-                return not including_idle
+                # If we are terminating all instances for a user, kill an
+                # idle instance iff we are including idle instances
+                return including_idle
         else:
-            # We don't skip if we aren't ignoring ownership
+            # If we aren't ignoring ownership we must kill regardless of the
+            # user
             if ignore_ownership:
-                return False
+                return True
             if self.results_storage.db_storage.get_user_of_execution(
                     instance.get_execution_id()) != user:
                 if not terminate_all_instances:
@@ -428,9 +429,9 @@ class InstanceProvider(ABC):
                         'Instance is running an execution for a ' \
                         'different user'
                     unprocessed_instance_ids.remove(instance.instance_id)
+                return False
+            else:
                 return True
-
-        return False
 
     @abstractmethod
     def push(self, image_tag: str):
