@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Set, Optional
+from typing import Optional, Set
 
 from plz.controller.execution_composition import ExecutionComposition
 
@@ -45,3 +45,6 @@ class DBStorage(ABC):
     @abstractmethod
     def retrieve_tombstone_sub_execution_ids(self, execution_id: str) -> [str]:
         pass
+
+    def get_user_of_execution(self, execution_id: str) -> str:
+        return self.retrieve_start_metadata(execution_id)['user']

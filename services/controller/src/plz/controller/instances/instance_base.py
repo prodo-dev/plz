@@ -8,8 +8,8 @@ from typing import Any, ContextManager, Dict, Iterator, List, Optional, Tuple
 from redis import StrictRedis
 from redis.lock import Lock
 
-from plz.controller.containers import ContainerMissingException, ContainerState
 from plz.controller.api.exceptions import ProviderKillingInstancesException
+from plz.controller.containers import ContainerMissingException, ContainerState
 from plz.controller.results.results_base import InstanceStatus, \
     InstanceStatusFailure, InstanceStatusRunning, InstanceStatusSuccess, \
     Results, ResultsStorage
@@ -330,21 +330,29 @@ class InstanceProvider(ABC):
         instance.release(self.results_storage, idle_since_timestamp)
 
     def kill_instances(
-            self, instance_ids: Optional[List[str]], force_if_not_idle: bool) \
-            -> None:
+            self,
+            user: str,
+            instance_ids: Optional[List[str]],
+            ignore_ownership: bool,
+            including_idle: bool,
+            force_if_not_idle: bool) -> None:
         """ Hard stop for a set of instances
 
+        :param user: user requesting the instances to be killed
         :param instance_ids: instances to dispose of. A value of `None` means
-               all instances in the group
+               all instances in the group running jobs of the user
+        :param ignore_ownership: kill instances even if they're running jobs
+               of other users
+        :param including_idle: when killing all user instances, kill idle ones
         :param force_if_not_idle: force termination for non-idle instances
         :raises: :class:`ProviderKillingInstancesException` if some instances
                  failed to terminate
         :raises: :class:`NoInstancesFound` if asked for the termination of all
                  instances, and there are no instances
         """
-        terminate_all_instances = instance_ids is None
+        terminate_all_user_instances = instance_ids is None
 
-        if not terminate_all_instances:
+        if not terminate_all_user_instances:
             unprocessed_instance_ids = [i for i in instance_ids]
         else:
             unprocessed_instance_ids = []
@@ -352,17 +360,25 @@ class InstanceProvider(ABC):
         instance_ids_to_messages = {}
         there_is_one_instance = False
         for instance in self.instance_iterator(only_running=False):
-            if instance.is_terminated():
+            if not self._must_kill_instance(
+                    ignore_ownership,
+                    including_idle,
+                    instance,
+                    instance_ids,
+                    instance_ids_to_messages,
+                    terminate_all_user_instances,
+                    unprocessed_instance_ids,
+                    user):
                 continue
+
             there_is_one_instance = True
-            if terminate_all_instances or instance.instance_id in instance_ids:
-                    try:
-                        instance.kill(force_if_not_idle)
-                    except KillingInstanceException as e:
-                        instance_ids_to_messages[instance.instance_id] = \
-                            e.message
-                    if not terminate_all_instances:
-                        unprocessed_instance_ids.remove(instance.instance_id)
+            try:
+                instance.kill(force_if_not_idle)
+            except KillingInstanceException as e:
+                instance_ids_to_messages[instance.instance_id] = \
+                    e.message
+            if not terminate_all_user_instances:
+                unprocessed_instance_ids.remove(instance.instance_id)
 
         for instance_id in unprocessed_instance_ids:
             instance_ids_to_messages[instance_id] = 'Instance not found'
@@ -370,8 +386,52 @@ class InstanceProvider(ABC):
         if len(instance_ids_to_messages) > 0:
             raise ProviderKillingInstancesException(instance_ids_to_messages)
 
-        if terminate_all_instances and not there_is_one_instance:
+        if terminate_all_user_instances and not there_is_one_instance:
             raise NoInstancesFoundException()
+
+    def _must_kill_instance(
+            self,
+            ignore_ownership: bool,
+            including_idle: bool,
+            instance: Instance,
+            instance_ids: [str],
+            instance_ids_to_messages: dict,
+            terminate_all_instances: bool,
+            unprocessed_instance_ids: [str],
+            user: str) -> bool:
+        if instance.is_terminated():
+            return False
+
+        if not terminate_all_instances \
+                and instance.instance_id not in instance_ids:
+            return False
+
+        if instance.get_execution_id() == '':
+            if not terminate_all_instances:
+                # If instances are explicitly named, we kill idle ones
+                return True
+            else:
+                # If we are terminating all instances for a user, kill an
+                # idle instance iff we are including idle instances
+                return including_idle
+        else:
+            # If we aren't ignoring ownership we must kill regardless of the
+            # user
+            if ignore_ownership:
+                return True
+            if self.results_storage.db_storage.get_user_of_execution(
+                    instance.get_execution_id()) != user:
+                if not terminate_all_instances:
+                    # It's an error only if the instance was explicitly named.
+                    # If someone just requested "all of them", we silently
+                    # skip instances belonging to others
+                    instance_ids_to_messages[instance.instance_id] = \
+                        'Instance is running an execution for a ' \
+                        'different user'
+                    unprocessed_instance_ids.remove(instance.instance_id)
+                return False
+            else:
+                return True
 
     @abstractmethod
     def push(self, image_tag: str):
