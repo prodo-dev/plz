@@ -364,6 +364,7 @@ class InstanceProvider(ABC):
                     ignore_ownership,
                     including_idle,
                     instance,
+                    instance_ids,
                     instance_ids_to_messages,
                     terminate_all_user_instances,
                     unprocessed_instance_ids,
@@ -371,15 +372,13 @@ class InstanceProvider(ABC):
                 continue
 
             there_is_one_instance = True
-            if terminate_all_user_instances \
-                    or instance.instance_id in instance_ids:
-                try:
-                    instance.kill(force_if_not_idle)
-                except KillingInstanceException as e:
-                    instance_ids_to_messages[instance.instance_id] = \
-                        e.message
-                if not terminate_all_user_instances:
-                    unprocessed_instance_ids.remove(instance.instance_id)
+            try:
+                instance.kill(force_if_not_idle)
+            except KillingInstanceException as e:
+                instance_ids_to_messages[instance.instance_id] = \
+                    e.message
+            if not terminate_all_user_instances:
+                unprocessed_instance_ids.remove(instance.instance_id)
 
         for instance_id in unprocessed_instance_ids:
             instance_ids_to_messages[instance_id] = 'Instance not found'
@@ -395,11 +394,16 @@ class InstanceProvider(ABC):
             ignore_ownership: bool,
             including_idle: bool,
             instance: Instance,
+            instance_ids: [str],
             instance_ids_to_messages: dict,
             terminate_all_instances: bool,
             unprocessed_instance_ids: [str],
             user: str) -> bool:
         if instance.is_terminated():
+            return True
+
+        if not terminate_all_instances \
+                and instance.instance_id not in instance_ids:
             return True
 
         if instance.get_execution_id() == '':
@@ -416,10 +420,10 @@ class InstanceProvider(ABC):
                 return False
             if self.results_storage.db_storage.get_user_of_execution(
                     instance.get_execution_id()) != user:
-                # It's an error only if the instance was explicitly named.
-                # If someone just requested "all of them", we silently
-                # skip instances belonging to others
                 if not terminate_all_instances:
+                    # It's an error only if the instance was explicitly named.
+                    # If someone just requested "all of them", we silently
+                    # skip instances belonging to others
                     instance_ids_to_messages[instance.instance_id] = \
                         'Instance is running an execution for a ' \
                         'different user'

@@ -96,5 +96,7 @@ class KillInstancesOperation(Operation):
         if not were_there_instances_to_kill:
             log_warning(
                 'Request to kill all instances, yet no instances were found.')
+            if not self.including_idle:
+                log_warning('Maybe you forgot --including-idle ?')
 
         log_info('It was a clean job')

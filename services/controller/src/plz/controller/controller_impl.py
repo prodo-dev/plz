@@ -103,13 +103,17 @@ class ControllerImpl(Controller):
             previous_execution_id=previous_execution_id)
 
     def list_executions(self, user: str, list_for_all_users: bool) -> [dict]:
-        # It's not protected, it's preceded by underscore as to avoid
-        # name conflicts, see docs
-        # noinspection PyProtectedMember
-        return [info._asdict()
-                for info in self.instance_provider.get_executions()
-                if list_for_all_users or self.db_storage.get_user_of_execution(
-                    info.execution_id) == user]
+        execution_infos = []
+        db_storage = self.db_storage
+        for info in self.instance_provider.get_executions():
+            execution_id = info.execution_id
+            if list_for_all_users or info.execution_id == '' \
+                    or db_storage.get_user_of_execution(execution_id) == user:
+                # _asdict is not protected, it's preceded by underscore as to
+                # avoid name conflicts, see docs
+                # noinspection PyProtectedMember
+                execution_infos.append(info._asdict())
+        return execution_infos
 
     def harvest(self) -> None:
         self.instance_provider.harvest()

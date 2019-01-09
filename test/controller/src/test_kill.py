@@ -261,9 +261,14 @@ class TestKill(unittest.TestCase):
             user: str,
             execution_ids: Set[str],
             list_for_all_users: bool = False) -> [dict]:
-        infos = controller.list_executions(
-            user=user,
-            list_for_all_users=list_for_all_users)
+        # Filter instances shutting down, as they appear in the listing when
+        # running in AWS (either with an execution ID, or idle, with an
+        # empty execution ID)
+        infos = [
+            i for i in controller.list_executions(
+                user=user,
+                list_for_all_users=list_for_all_users)
+            if i['status'] not in {'shutting-down'}]
         self.assertSetEqual(execution_ids,
                             {i['execution_id'] for i in infos})
         return infos
@@ -286,4 +291,3 @@ class TestKill(unittest.TestCase):
             print(e.failed_instance_ids_to_messages)
             raise
         self._assert_running_executions(controller, user, execution_ids=set())
-        return infos
