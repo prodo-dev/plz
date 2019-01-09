@@ -23,12 +23,10 @@ class TestKill(unittest.TestCase):
         context, execution_id2 = run_example(
             'common', 'run_forever', context=context, is_end_to_end_path=False)
 
-        infos = context.controller.list_executions(
+        self._assert_running_executions(
+            context.controller,
             context.configuration.user,
-            list_for_all_users=False)
-        self.assertSetEqual({execution_id1,
-                             execution_id2},
-                            {i['execution_id'] for i in infos})
+            {execution_id1, execution_id2})
 
         context.controller.kill_instances(
             user=context.configuration.user,
@@ -37,21 +35,19 @@ class TestKill(unittest.TestCase):
             including_idle=False,
             force_if_not_idle=True)
 
-        infos = context.controller.list_executions(
+        self._assert_running_executions(
+            context.controller,
             context.configuration.user,
-            list_for_all_users=False)
-
-        self.assertListEqual([], infos)
+            execution_ids=set())
 
     def test_kill_fail_because_non_idle(self):
         context, execution_id = run_example(
             'common', 'run_forever', is_end_to_end_path=False)
 
-        infos = context.controller.list_executions(
+        infos = self._assert_running_executions(
+            context.controller,
             context.configuration.user,
-            list_for_all_users=False)
-        self.assertSetEqual({execution_id},
-                            {i['execution_id'] for i in infos})
+            execution_ids={execution_id})
 
         with self.assertRaises(ProviderKillingInstancesException):
             context.controller.kill_instances(
@@ -61,13 +57,7 @@ class TestKill(unittest.TestCase):
                 force_if_not_idle=False,
                 user=context.configuration.user)
 
-        infos = context.controller.list_executions(
-            context.configuration.user,
-            list_for_all_users=False)
-
-        self.assertSetEqual({execution_id},
-                            {i['execution_id'] for i in infos})
-        self._cleanup_instances(
+        self._assert_and_cleanup_instances(
             context.controller,
             context.configuration.user,
             {execution_id})
@@ -76,11 +66,10 @@ class TestKill(unittest.TestCase):
         context, finished_execution_id = run_example(
             'logs', 'simple', is_end_to_end_path=True)
 
-        infos = context.controller.list_executions(
+        infos = self._assert_running_executions(
+            context.controller,
             context.configuration.user,
-            list_for_all_users=False)
-        self.assertSetEqual({finished_execution_id},
-                            {i['execution_id'] for i in infos})
+            {finished_execution_id})
 
         execution_listing_status = None
         while execution_listing_status != 'exited':
@@ -101,12 +90,7 @@ class TestKill(unittest.TestCase):
                 force_if_not_idle=False,
                 user=context.configuration.user)
 
-        infos = context.controller.list_executions(
-            context.configuration.user,
-            list_for_all_users=False)
-        self.assertSetEqual({finished_execution_id},
-                            {i['execution_id'] for i in infos})
-        self._cleanup_instances(
+        self._assert_and_cleanup_instances(
             context.controller,
             context.configuration.user,
             {finished_execution_id})
@@ -115,11 +99,10 @@ class TestKill(unittest.TestCase):
         context, finished_execution_id = run_example(
             'logs', 'simple', is_end_to_end_path=True)
 
-        infos = context.controller.list_executions(
+        infos = self._assert_running_executions(
+            context.controller,
             context.configuration.user,
-            list_for_all_users=False)
-        self.assertSetEqual({finished_execution_id},
-                            {i['execution_id'] for i in infos})
+            {finished_execution_id})
 
         execution_listing_status = None
         while execution_listing_status != 'exited':
@@ -138,10 +121,10 @@ class TestKill(unittest.TestCase):
             force_if_not_idle=True,
             user=context.configuration.user)
 
-        infos = context.controller.list_executions(
+        self._assert_running_executions(
+            context.controller,
             context.configuration.user,
-            list_for_all_users=False)
-        self.assertListEqual(infos, [])
+            execution_ids=set())
 
     def test_kill_single_instance(self):
         context, execution_id1 = run_example(
@@ -149,11 +132,10 @@ class TestKill(unittest.TestCase):
         context, execution_id2 = run_example(
             'common', 'run_forever', context=context, is_end_to_end_path=False)
 
-        infos = context.controller.list_executions(
+        infos = self._assert_running_executions(
+            context.controller,
             context.configuration.user,
-            list_for_all_users=False)
-        self.assertSetEqual({execution_id1, execution_id2},
-                            {i['execution_id'] for i in infos})
+            {execution_id1, execution_id2})
 
         context.controller.kill_instances(
             instance_ids=[i['instance_id'] for i in infos
@@ -163,12 +145,7 @@ class TestKill(unittest.TestCase):
             force_if_not_idle=True,
             user=context.configuration.user)
 
-        infos = context.controller.list_executions(
-            context.configuration.user,
-            list_for_all_users=False)
-        self.assertSetEqual({execution_id2},
-                            {i['execution_id'] for i in infos})
-        self._cleanup_instances(
+        self._assert_and_cleanup_instances(
             context.controller,
             context.configuration.user,
             {execution_id2})
@@ -177,15 +154,13 @@ class TestKill(unittest.TestCase):
         context, execution_id = run_example(
             'common', 'run_forever', is_end_to_end_path=False)
 
+        infos = self._assert_running_executions(
+            context.controller,
+            context.configuration.user,
+            {execution_id})
+
         first_user = context.configuration.user
         second_user = first_user + '_second'
-        context.configuration.user = second_user
-
-        infos = context.controller.list_executions(
-            first_user,
-            list_for_all_users=False)
-        self.assertSetEqual({execution_id},
-                            {i['execution_id'] for i in infos})
 
         with self.assertRaises(ProviderKillingInstancesException):
             context.controller.kill_instances(
@@ -195,38 +170,29 @@ class TestKill(unittest.TestCase):
                 force_if_not_idle=True,
                 user=second_user)
 
-        infos = context.controller.list_executions(
-            first_user,
-            list_for_all_users=False)
-        self.assertSetEqual({execution_id},
-                            {i['execution_id'] for i in infos})
-        self._cleanup_instances(
-            context.controller,
-            first_user,
-            {execution_id})
+        self._assert_and_cleanup_instances(
+            context.controller, first_user, {execution_id})
 
     def test_kill_all_kills_only_user(self):
         context, first_user_execution_id = run_example(
             'common', 'run_forever', is_end_to_end_path=False)
 
+        self._assert_running_executions(
+            context.controller,
+            context.configuration.user,
+            {first_user_execution_id})
+
         first_user = context.configuration.user
         second_user = first_user + '_second'
         context.configuration.user = second_user
 
-        infos = context.controller.list_executions(
-            first_user,
-            list_for_all_users=False)
-        self.assertSetEqual({first_user_execution_id},
-                            {i['execution_id'] for i in infos})
-
         context, second_user_execution_id = run_example(
             'common', 'run_forever', context=context, is_end_to_end_path=False)
 
-        infos = context.controller.list_executions(
+        self._assert_running_executions(
+            context.controller,
             second_user,
-            list_for_all_users=False)
-        self.assertSetEqual({second_user_execution_id},
-                            {i['execution_id'] for i in infos})
+            {second_user_execution_id})
 
         context.controller.kill_instances(
             user=second_user,
@@ -236,18 +202,17 @@ class TestKill(unittest.TestCase):
             force_if_not_idle=True)
 
         # Check the execution for the first user still exists
-        infos = context.controller.list_executions(
+        self._assert_running_executions(
+            context.controller,
             first_user,
-            list_for_all_users=False)
-        self.assertSetEqual({first_user_execution_id},
-                            {i['execution_id'] for i in infos})
+            {first_user_execution_id})
 
-        infos = context.controller.list_executions(
+        self._assert_running_executions(
+            context.controller,
             second_user,
-            list_for_all_users=False)
-        self.assertListEqual([], infos)
+            execution_ids=set())
 
-        self._cleanup_instances(
+        self._assert_and_cleanup_instances(
             context.controller,
             first_user,
             {first_user_execution_id})
@@ -260,24 +225,19 @@ class TestKill(unittest.TestCase):
         second_user = first_user + '_second'
         context.configuration.user = second_user
 
-        infos = context.controller.list_executions(
-            first_user,
-            list_for_all_users=False)
-        self.assertSetEqual({first_user_execution_id},
-                            {i['execution_id'] for i in infos})
+        self._assert_running_executions(
+            context.controller, first_user, {first_user_execution_id})
 
         context, second_user_execution_id = run_example(
             'common', 'run_forever', context=context, is_end_to_end_path=False)
 
+        # The user doesn't really matter as we'll list for all users
         third_user = second_user + '_third'
-
-        # List for all users
-        infos = context.controller.list_executions(
-            user=third_user,
-            list_for_all_users=True)
-        self.assertSetEqual(
+        self._assert_running_executions(
+            context.controller,
+            third_user,
             {first_user_execution_id, second_user_execution_id},
-            {i['execution_id'] for i in infos})
+            list_for_all_users=True)
 
         # Kill ignoring ownership
         context.controller.kill_instances(
@@ -289,15 +249,30 @@ class TestKill(unittest.TestCase):
 
         # Same listing as before but there's nothing there because
         # EVERYTHING WAS KILLED
-        infos = context.controller.list_executions(
-            user=third_user,
+        self._assert_running_executions(
+            context.controller,
+            third_user,
+            execution_ids=set(),
             list_for_all_users=True)
-        self.assertListEqual(infos, [])
 
-    def _cleanup_instances(
+    def _assert_running_executions(
+            self,
+            controller: Controller,
+            user: str,
+            execution_ids: Set[str],
+            list_for_all_users: bool = False) -> [dict]:
+        infos = controller.list_executions(
+            user=user,
+            list_for_all_users=list_for_all_users)
+        self.assertSetEqual(execution_ids,
+                            {i['execution_id'] for i in infos})
+        return infos
+
+    def _assert_and_cleanup_instances(
             self, controller: Controller, user: str, execution_ids: Set[str]) \
             -> None:
-        infos = controller.list_executions(user, list_for_all_users=False)
+        infos = self._assert_running_executions(
+            controller, user, execution_ids)
         try:
             controller.kill_instances(
                 instance_ids=[i['instance_id']
@@ -310,18 +285,5 @@ class TestKill(unittest.TestCase):
         except ProviderKillingInstancesException as e:
             print(e.failed_instance_ids_to_messages)
             raise
-
-        infos = controller.list_executions(user, list_for_all_users=False)
-        self.assertListEqual(infos, [])
-
-    def _assertRunningExecutions(
-            self,
-            controller: Controller,
-            user: str,
-            execution_ids: Set[str],
-            list_for_all_users: bool = False):
-        infos = controller.list_executions(
-            user=user,
-            list_for_all_users=list_for_all_users)
-        self.assertSetEqual(execution_ids,
-                            {i['execution_id'] for i in infos})
+        self._assert_running_executions(controller, user, execution_ids=set())
+        return infos
