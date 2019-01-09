@@ -44,6 +44,9 @@ class KillInstancesOperation(Operation):
         self.ignore_ownership = berserk
         self.including_idle = including_idle
         self.instance_ids = instance_ids
+        # If the user has set all_of_them_plz, set force_if_not_idle, as
+        # (unless including_idle is set) instances will be
+        # non-idle
         self.force_if_not_idle = force_if_not_idle or all_of_them_plz
         self.oh_yeah = oh_yeah
 
