@@ -254,10 +254,10 @@ def _check_status(response: requests.Response, expected_status: int):
         raise RequestException(response)
 
 
-def _read_response_in_chunks(http_response: Response, chunked_read: bool) \
+def _read_response_in_chunks(http_response: Response) \
         -> Iterator[bytes]:
     while True:
-        bs = http_response.raw.read(1024 * 1024 if chunked_read else None)
+        bs = http_response.raw.read(1024 * 1024)
         if bs is None or len(bs) == 0:
             return
         yield bs
