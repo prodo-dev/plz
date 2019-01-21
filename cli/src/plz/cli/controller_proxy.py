@@ -94,7 +94,8 @@ class ControllerProxy(Controller):
             params={'since': since} if since is not None else {},
             stream=True)
         _check_status(response, requests.codes.ok)
-        return _response_to_bytes(response)
+        # Do not read in chunks as otherwise the logs don't flow interactively
+        return response.raw
 
     def get_output_files(self, execution_id: str, path: Optional[str],
                          index: Optional[int]) -> Iterator[bytes]:
@@ -104,7 +105,8 @@ class ControllerProxy(Controller):
             params={'path': path, 'index': index},
             stream=True)
         _check_status(response, requests.codes.ok)
-        return _response_to_bytes(response)
+        # Read in chunks as to avoid several writes for long lifes
+        return _read_response_in_chunks(response)
 
     def get_measures(
             self, execution_id: str, summary: bool, index: Optional[int]) \
@@ -252,9 +254,10 @@ def _check_status(response: requests.Response, expected_status: int):
         raise RequestException(response)
 
 
-def _response_to_bytes(http_response: Response) -> Iterator[bytes]:
+def _read_response_in_chunks(http_response: Response, chunked_read: bool) \
+        -> Iterator[bytes]:
     while True:
-        bs = http_response.raw.read(1024 * 1024)
+        bs = http_response.raw.read(1024 * 1024 if chunked_read else None)
         if bs is None or len(bs) == 0:
             return
         yield bs
