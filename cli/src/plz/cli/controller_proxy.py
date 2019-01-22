@@ -4,12 +4,16 @@ import json
 from typing import BinaryIO, Iterator, List, Optional, Tuple
 
 import requests
+from requests import Response
 
 from plz.cli.exceptions import CLIException, RequestException
 from plz.cli.server import Server
 from plz.controller.api import Controller
 from plz.controller.api.exceptions import ResponseHandledException
 from plz.controller.api.types import InputMetadata, JSONString
+
+
+_HTTP_RESPONSE_READ_CHUNK_SIZE = 1024 * 1024
 
 
 class ControllerProxy(Controller):
@@ -90,6 +94,7 @@ class ControllerProxy(Controller):
             params={'since': since} if since is not None else {},
             stream=True)
         _check_status(response, requests.codes.ok)
+        # Do not read in chunks as otherwise the logs don't flow interactively
         return response.raw
 
     def get_output_files(self, execution_id: str, path: Optional[str],
@@ -100,7 +105,8 @@ class ControllerProxy(Controller):
             params={'path': path, 'index': index},
             stream=True)
         _check_status(response, requests.codes.ok)
-        return response.raw
+        # Read in chunks as to avoid several writes for long files
+        return _read_response_in_chunks(response)
 
     def get_measures(
             self, execution_id: str, summary: bool, index: Optional[int]) \
@@ -246,3 +252,12 @@ class ControllerProxy(Controller):
 def _check_status(response: requests.Response, expected_status: int):
     if response.status_code != expected_status:
         raise RequestException(response)
+
+
+def _read_response_in_chunks(http_response: Response) \
+        -> Iterator[bytes]:
+    while True:
+        bs = http_response.raw.read(_HTTP_RESPONSE_READ_CHUNK_SIZE)
+        if bs is None or len(bs) == 0:
+            return
+        yield bs

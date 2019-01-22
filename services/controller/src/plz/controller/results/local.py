@@ -21,7 +21,6 @@ from plz.controller.results.results_base import InstanceStatus, \
 
 log = logging.getLogger(__name__)
 
-LOCK_TIMEOUT = 60  # 1 minute
 CHUNK_SIZE = 1024 * 1024  # 1 MB
 
 
@@ -91,7 +90,7 @@ class LocalResultsStorage(ResultsStorage):
 
     def _lock(self, execution_id: str):
         lock_name = f'lock:{__name__}.{self.__class__.__name__}:{execution_id}'
-        lock = self.redis.lock(lock_name, timeout=LOCK_TIMEOUT)
+        lock = self.redis.lock(lock_name)
         return lock
 
     def is_finished(self, execution_id: str):
