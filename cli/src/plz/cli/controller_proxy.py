@@ -105,7 +105,7 @@ class ControllerProxy(Controller):
             params={'path': path, 'index': index},
             stream=True)
         _check_status(response, requests.codes.ok)
-        # Read in chunks as to avoid several writes for long lifes
+        # Read in chunks as to avoid several writes for long files
         return _read_response_in_chunks(response)
 
     def get_measures(
