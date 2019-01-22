@@ -257,7 +257,7 @@ def _check_status(response: requests.Response, expected_status: int):
 def _read_response_in_chunks(http_response: Response) \
         -> Iterator[bytes]:
     while True:
-        bs = http_response.raw.read(1024 * 1024)
+        bs = http_response.raw.read(_HTTP_RESPONSE_READ_CHUNK_SIZE)
         if bs is None or len(bs) == 0:
             return
         yield bs
