@@ -3,10 +3,10 @@ include ../../vars.mk
 AWS_REGION = $(shell jq -r '.aws_region' $(CONFIG_FILE))
 AWS_PROJECT = $(shell jq -r '.aws_project' $(CONFIG_FILE))
 TAG = $(AWS_PROJECT)/ml-pytorch
-CACHE_DIR = ../../cache/base-images/ml-pytorch
+CACHE_DIR = ../../cache/base-images/
 
-ANACONDA_VERSION = 5.2.0
-ANACONDA_INSTALLER_SHA256 = 09f53738b0cd3bb96f5b1bac488e5528df9906be2480fe61df40e0e0d19e3d48
+ANACONDA_VERSION = 5.3.1
+ANACONDA_INSTALLER_SHA256 = d4c4256a8f46173b675dd6a62d12f566ed3487f932bab6bb7058f06c124bcc27
 
 .PHONY: build
 build: cache
