@@ -17,14 +17,14 @@
         upgrade: full
     - name: Install the fundamentals
       apt:
-        name: "{{ item }}"
-      with_items:
-        - ansible
-        - apt-transport-https
-        - ca-certificates
-        - curl
-        - mosh
-        - python-pip
+        name: [
+          'ansible',
+          'apt-transport-https',
+          'ca-certificates',
+          'curl',
+          'mosh',
+          'python-pip'
+        ]
     - name: Install awscli
       pip:
         name: awscli

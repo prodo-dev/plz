@@ -6,7 +6,7 @@ endif
 
 CONFIG_FILE = $(SECRETS_DIR)/config.json
 
-AMI_TAG = 2018-11-08
+AMI_TAG = 2019-01-28
 
 # The build timestamp is set in the secrets, and used when building the image
 # for the controller and the distribution for the cli. Uses:
