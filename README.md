@@ -280,8 +280,8 @@ these are broadly used tools.
 6. Install the CLI by running `./install_cli`, which calls `pip3`. Same as for
    `docker-compose` you might want to check that the `plz` command is in your
    path.
-7. Run the controller (
-   [keep reading](#running-the-controller-for-local-executions)).
+7. Run the controller
+   ([keep reading](#running-the-controller-for-local-executions)).
 
 The first time you run the controller, it will take some time, as it downloads a
 "standard" environment which includes Anaconda and PyTorch. When it's ready the
