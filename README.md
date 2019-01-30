@@ -14,6 +14,7 @@ _Plz is an experimental product and is not guaranteed to be stable across
 versions._
 
 ## Contents:
+
 - [Plz in action](#plz-in-action)
 - [How does it work?](#how-does-it-work?)
 - [Installation instructions](#installation-instructions)
@@ -359,9 +360,9 @@ The value in the example configuration files range from \$0.5/hour to \$2/hour
 ### Python
 
 In the directory `examples/python`, there is a minimal example showing how to
-run a program with Plz that handles input and output. Once you [have a working
-controller](#installation-instructions), running `plz run` inside the directory
-will start the job.
+run a program with Plz that handles input and output. Once you
+[have a working controller](#installation-instructions), running `plz run`
+inside the directory will start the job.
 
 ### PyTorch
 
