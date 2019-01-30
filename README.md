@@ -48,8 +48,8 @@ versions._
 
 ## Plz in action
 
-We offer more details below on how to setup Plz and run your jobs, but we can
-start by giving you an overview of what Plz does.
+We offer more details [below](#installation-instructions) on how to setup Plz
+and run your jobs, but we can start by giving you an overview of what Plz does.
 
 Plz offers a command-line interface. You start by adding a `plz.config.json`
 file to the directory where you have your source code. This file contains, among
