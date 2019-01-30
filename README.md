@@ -120,6 +120,7 @@ From the above output, you'll see Plz do the following:
 - It shows metrics you collected during the run, such as _accuracy_ and _loss_
   (you can query those later).
 - Finally, it downloads output files you might have created.
+- (The AWS instance will be shut down in the background)
 
 You can be patient and wait until it finishes, or you can hit `Ctrl+C` and stop
 the program early:
