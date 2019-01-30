@@ -20,6 +20,6 @@ services:
 
   redis:
     image: redis:4
-    entrypoint: redis-server --save 2 1
+    entrypoint: redis-server --save 2 1 --loglevel warning
     volumes:
       - ${CACHE_DIR}/redis_data:/data
