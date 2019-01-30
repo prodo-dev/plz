@@ -6,7 +6,7 @@ _Plz_ (pronounced "please") runs your jobs storing code, input, outputs and
 results so that they can be queried programmatically. That way, it helps with
 traceability and reproducibility. In case you want to run your jobs in the
 cloud, it makes the process frictionless compared to running them locally. Jump
-[here](#usage-overview) to see it in action.
+[here](#plz-in-action) to see it in action.
 
 At Prodo.AI, we use Plz to train our PyTorch-based machine learning models.
 
