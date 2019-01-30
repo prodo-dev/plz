@@ -16,7 +16,7 @@ versions._
 ## Contents:
 
 - [Plz in action](#plz-in-action)
-- [How does it work?](#how-does-it-work?)
+- [How does it work?](#how-does-it-work)
 - [Installation instructions](#installation-instructions)
 - [Examples](#examples)
 - [Plz principles](#plz-principles)
