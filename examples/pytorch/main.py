@@ -125,7 +125,7 @@ def main():
             training_loss_at_max = loss
             epoch_at_max = epoch
             print(f'Best model found at epoch {epoch}, '
-                  f'with accurary {accuracy:.2f}')
+                  f'with accuracy {accuracy:.2f}')
             torch.save(model.state_dict(),
                        os.path.join(output_directory, 'le_net.pth'))
 
