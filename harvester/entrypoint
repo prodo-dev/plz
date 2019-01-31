@@ -2,12 +2,14 @@
 
 set -eu
 
+sleep 10
+
 while true; do
-  sleep "$WAIT_FOR_SECONDS"
   echo 'Harvesting...'
   if curl -fsS -X POST "${HOST}:${PORT}/executions/harvest" > /dev/null; then
-    echo 'Harvesting complete.'
+    echo 'Harvesting complete. You can run plz commands now'
   else
     echo 'Error harvesting!'
   fi
+  sleep "$WAIT_FOR_SECONDS"
 done

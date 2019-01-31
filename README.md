@@ -2,13 +2,25 @@
 
 _Say the magic word._
 
-_Plz_ (pronounced "please") is a job runner targeted at running highly intensive
-data processing jobs as simply, systematically, tidily and cheaply as possible.
+_Plz_ (pronounced "please") runs your jobs storing code, input, outputs and
+results so that they can be queried programmatically. That way, it helps with
+traceability and reproducibility. In case you want to run your jobs in the
+cloud, it makes the process frictionless compared to running them locally. Jump
+[here](#plz-in-action) to see it in action.
 
 At Prodo.AI, we use Plz to train our PyTorch-based machine learning models.
 
 _Plz is an experimental product and is not guaranteed to be stable across
 versions._
+
+## Contents:
+
+- [Plz in action](#plz-in-action)
+- [How does it work?](#how-does-it-work)
+- [Installation instructions](#installation-instructions)
+- [Examples](#examples)
+- [Plz principles](#plz-principles)
+- [Future work](#future-work)
 
 ## Highlights
 
@@ -34,10 +46,10 @@ versions._
   (see [LICENSE](LICENSE) for more details)
 - open for contributions, plz
 
-## Usage overview
+## Plz in action
 
-We offer more details below on how to setup Plz and run your jobs, but we can
-start by giving you an overview of what Plz does.
+We offer more details [below](#installation-instructions) on how to setup Plz
+and run your jobs, but we can start by giving you an overview of what Plz does.
 
 Plz offers a command-line interface. You start by adding a `plz.config.json`
 file to the directory where you have your source code. This file contains, among
@@ -109,6 +121,7 @@ From the above output, you'll see Plz do the following:
 - It shows metrics you collected during the run, such as _accuracy_ and _loss_
   (you can query those later).
 - Finally, it downloads output files you might have created.
+- (The AWS instance will be shut down in the background)
 
 You can be patient and wait until it finishes, or you can hit `Ctrl+C` and stop
 the program early:
@@ -207,44 +220,6 @@ will be applied on top of
 Installation of dependencies is cached, so the process of dependency
 installation occurs only the first time after you change the environment file.
 
-### Functionality summary
-
-Plz helps with the gruntwork around managing long-running tasks. It:
-
-1. reruns previous jobs as to make sure the results are repeatable,
-2. lets you customise parameters while keeping the work the same, and
-3. provides a history including the result and parameters, so that you have
-   experiment data in a structured format.
-
-Plz also helps automate cloud-related tasks. It:
-
-4. starts a "worker" (typically on AWS EC2, but also locally) to run your job,
-5. packages your code, parameters and data and ships them to the worker,
-6. runs your code,
-7. saves the results (like losses) and outcomes (like models, but also the
-   console output) so that you can back to them in the future, and
-8. takes down the worker.
-
-We build Plz following these principles:
-
-- Code and data must be stored for future reference.
-- Whatever part of the running environment can be captured by Plz, we capture it
-  as to make jobs repeatable.
-- Functionality is based on standard mechanisms like files and environment
-  variables. You don't need to add extra dependencies to your code or learn how
-  to read/write your data in specific ways.
-- The tool must be flexible enough so that no unnecessary restrictions are
-  imposed by the architecture. You should be able to do with Plz whatever you
-  can do by running a program manually. It was surprising to find out how many
-  issues, mostly around running jobs in the cloud, could be solved only by
-  tweaking the configuration, without requiring any changes to the code.
-
-Plz is routinely used at `prodo.ai` to train ML models on AWS, some of them
-taking days to run in the most powerful instances available. We trust it to
-start and terminate these instances as needed, and to manage our spot instances,
-allowing us to get a much better price than if we were using on-demand instances
-all the time.
-
 ## How does it work?
 
 Plz consists of a _controller_ service and a _command-line interface_ (CLI) that
@@ -305,10 +280,12 @@ these are broadly used tools.
 6. Install the CLI by running `./install_cli`, which calls `pip3`. Same as for
    `docker-compose` you might want to check that the `plz` command is in your
    path.
-7. Run the controller (see below).
+7. Run the controller
+   ([keep reading](#running-the-controller-for-local-executions)).
 
 The first time you run the controller, it will take some time, as it downloads a
-"standard" environment which includes Anaconda and PyTorch.
+"standard" environment which includes Anaconda and PyTorch. When it's ready the
+logs will show `Harvesting complete. You can run plz commands now`.
 
 The controller runs in the foreground, and can be killed with _Ctrl+C_. If you'd
 like to run it in the background, append `-d` to the command to run it in
@@ -317,7 +294,7 @@ like to run it in the background, append `-d` to the command to run it in
 If you've run the controller in the background, or if you lose your terminal, it
 will carry on running. You can stop it with `./stop`.
 
-### Running executions locally
+### Running the controller for local executions
 
 Once you've set up your system as above, run:
 
@@ -331,7 +308,7 @@ The controller can be stopped at any time with:
 ./stop
 ```
 
-### AWS configuration
+### Running the controller for AWS executions
 
 If you want to run the examples using the AWS instances, be aware that this has
 a cost. By default, Plz uses _t2.micro_ on-demand instances. You can find out
@@ -383,8 +360,9 @@ The value in the example configuration files range from \$0.5/hour to \$2/hour
 ### Python
 
 In the directory `examples/python`, there is a minimal example showing how to
-run a program with Plz that handles input and output. Once you have a working
-controller, running `plz run` should start the job.
+run a program with Plz that handles input and output. Once you
+[have a working controller](#installation-instructions), running `plz run`
+inside the directory will start the job.
 
 ### PyTorch
 
@@ -470,6 +448,28 @@ plz -c plz.cuda.config.json run
 
 This tells Docker to use the
 [CUDA runtime](https://github.com/NVIDIA/nvidia-docker).
+
+## Plz principles
+
+We built Plz following these principles:
+
+- Code and data must be stored for future reference.
+- Whatever part of the running environment can be captured by Plz, we capture it
+  as to make jobs repeatable.
+- Functionality is based on standard mechanisms like files and environment
+  variables. You don't need to add extra dependencies to your code or learn how
+  to read/write your data in specific ways.
+- The tool must be flexible enough so that no unnecessary restrictions are
+  imposed by the architecture. You should be able to do with Plz whatever you
+  can do by running a program manually. It was surprising to find out how many
+  issues, mostly around running jobs in the cloud, could be solved only by
+  tweaking the configuration, without requiring any changes to the code.
+
+Plz is routinely used at `prodo.ai` to train ML models on AWS, some of them
+taking days to run in the most powerful instances available. We trust it to
+start and terminate these instances as needed, and to manage our spot instances,
+allowing us to get a much better price than if we were using on-demand instances
+all the time.
 
 ## Future work
 
