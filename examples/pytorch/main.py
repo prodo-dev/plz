@@ -73,6 +73,10 @@ def main():
     input_directory = get_from_plz_config(
         'input_directory', os.path.join('..', 'data'))
     output_directory = get_from_plz_config('output_directory', 'models')
+    previous_epoch_directory = get_from_plz_config(
+            'previous_output_directory', 'previous_models')
+    plz_epoch_number = get_from_plz_config('sequence_number', None)
+    plz_epoch_number = plz_epoch_number + 1 if plz_epoch_number is not None else None
     parameters = get_from_plz_config('parameters', DEFAULT_PARAMETERS)
     # If some parameters weren't passed, use default values for them
     for p in DEFAULT_PARAMETERS:
@@ -100,14 +104,28 @@ def main():
     model = LeNet(
         device,
         learning_rate=parameters['learning_rate'],
-        momentum=parameters['momentum']).to(device)
+        momentum=parameters['momentum'])
+    previous_epoch_model = os.path.join(previous_epoch_directory, 'le_net.pth')
+    if os.path.exists(os.path.join(previous_epoch_directory, 'le_net.pth')):
+        # We enter here both when plz is not managing epochs and when plz
+        # is managing epochs but it's not the first one
+        model.load_dict(torch.load(previous_epoch_model))
+    model.to(device)
 
     training_time_start = time.time()
 
     max_accuracy = 0
     training_loss_at_max = 0
     epoch_at_max = 0
-    for epoch in range(1, parameters['epochs'] + 1):
+
+    if plz_epoch_number is not None:
+        epoch_start = plz_epoch_number
+        epoch_end = epoch_start + 1
+    else:
+        epoch_start = 1
+        epoch_end = parameters['epochs'] + 1
+
+    for i in range(epoch_start, epoch_end):
         loss = model.epoch(training_loader)
 
         accuracy = model.evaluation(eval_loader)
