@@ -140,12 +140,36 @@ class EC2Instance(Instance):
         if self._get_earmark() != execution_id:
             return
         with self._lock:
-            # Check the earmark is still the same after waiting for the lock
-            if self._get_earmark() != execution_id:
-                return
-            self._set_tags([
-                {'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,
-                 'Value': ''}])
+            self._do_unearmark()
+
+    class HardUnearmarkException(Exception):
+        pass
+
+    def hard_unearmark_for(self, execution_id: str) -> None:
+        """
+        If the instance is earmarked for this execution ID, remove the earmark
+
+        Do not lock the instance, just do it. To be used for error handling
+        """
+        # Rationale for this method:
+        # By not getting the lock, we might might get into a race condition
+        # with another thread earmarking, and potentially voiding its
+        # earmark. The worst thing that can happen is that, when the thread
+        # is ready to run, it checks the earmark and doesn't run as the
+        # earmark is gone. It'll retry, again, possibly finding this very
+        # instance, or another suitable one that is free
+
+        # Do nothing if the instance is not earmarked for this execution
+        if self._get_earmark() != execution_id:
+            return
+        log.warning(f'Hard unearmarking instance {self.instance_id} '
+                    f'for execution {execution_id}')
+        self._do_unearmark()
+
+    def _do_unearmark(self):
+        self._set_tags([
+            {'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,
+             'Value': ''}])
 
     def _set_execution_id(
             self, execution_id: str, max_idle_seconds: int):
@@ -153,13 +177,8 @@ class EC2Instance(Instance):
             {'Key': EC2Instance.EXECUTION_ID_TAG,
              'Value': execution_id},
             {'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
-             'Value': str(max_idle_seconds)},
-            # If we are setting the execution id, either we are freeing the
-            # instance or assigning to an execution. In both case we don't
-            # want the instance to be earmarked
-            {'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,
-             'Value': ''}
-        ])
+             'Value': str(max_idle_seconds)}])
+        self._do_unearmark()
 
     def _get_earmark(self):
         return get_tag(self.data, EC2Instance.EARMARK_EXECUTION_ID_TAG)

@@ -109,38 +109,51 @@ class EC2InstanceGroup(InstanceProvider):
         instance: EC2Instance = None
         # Just to make the IDE happy, it's initialised in all execution paths
         is_instance_newly_created = False
-        while tries_remaining > 0:
-            tries_remaining -= 1
-            if instance_data is None:
-                instance_data, is_instance_newly_created = \
-                    yield from self._create_or_reuse_instance(
-                        execution_id, instance_market_spec,
-                        instance_max_uptime_in_minutes, instance_type)
+        need_to_recreate_instance = False
+        try:
+            while tries_remaining > 0:
+                tries_remaining -= 1
+                if instance_data is None:
+                    instance_data, is_instance_newly_created = \
+                        yield from self._create_or_reuse_instance(
+                            execution_id, instance_market_spec,
+                            instance_max_uptime_in_minutes, instance_type)
 
-            if instance is None:
-                instance, instance_data = \
-                    yield from self._make_earmarked_instance_from_data(
-                        execution_id, instance_data, is_instance_newly_created)
+                if instance is None or need_to_recreate_instance:
+                    if instance is not None:
+                        instance.hard_unearmark_for(execution_id)
+                    instance, instance_data = \
+                        yield from self._make_earmarked_instance_from_data(
+                            execution_id, instance_data,
+                            is_instance_newly_created)
 
-            # If the instance is None, it might mean that AWS instance is not
-            # yet ready as to create an EC2Instance object (for instance, it
-            # still doesn't have DNS assigned)
-            if instance is not None and instance.is_up(
-                    is_instance_newly_created):
-                instance, instance_data = \
-                    yield from self._start_container_in_instance(
-                        command, execution_id, execution_spec, input_stream,
-                        instance, instance_data, instance_market_spec,
-                        instance_max_uptime_in_minutes, instance_type,
-                        parameters, snapshot_id)
-                if instance is not None:
-                    # We are done!
-                    return
-            else:
-                yield _msg('pending')
-                # TODO: discount the time elapsed since before the yield
-                # while sleeping
-                time.sleep(delay_in_seconds)
+                # If the instance is None, it might mean that AWS instance
+                # is not yet ready as to create an EC2Instance object (for
+                # instance, it still doesn't have DNS assigned)
+                if instance is not None and instance.is_up(
+                        is_instance_newly_created):
+                    yield _msg('starting container')
+                    need_to_recreate_instance, instance_data = \
+                        yield from self._start_container_in_instance(
+                            command, execution_id, execution_spec,
+                            input_stream, instance, instance_data,
+                            instance_market_spec,
+                            instance_max_uptime_in_minutes,
+                            instance_type,
+                            parameters, snapshot_id)
+                    if not need_to_recreate_instance:
+                        yield _msg('running')
+                        yield {'instance': instance}
+                        return
+
+                time_before_yield = time.time()
+                yield _msg(
+                    f'pending. Tries remaining: {tries_remaining}')
+                time_during_yield = time.time() - time_before_yield
+                time.sleep(max(delay_in_seconds - time_during_yield, 0))
+        finally:
+            if instance is not None:
+                instance.hard_unearmark_for(execution_id)
 
     def _start_container_in_instance(
             self, command: [str], execution_id: str, execution_spec: dict,
@@ -148,7 +161,6 @@ class EC2InstanceGroup(InstanceProvider):
             instance_data: dict, instance_market_spec: dict,
             instance_max_uptime_in_minutes: int, instance_type: str,
             parameters: dict, snapshot_id: str):
-        yield _msg('starting container')
         try:
             instance.run(
                 command=command,
@@ -177,11 +189,9 @@ class EC2InstanceGroup(InstanceProvider):
                 instance_max_uptime_in_minutes,
                 instance_market_spec,
                 execution_id)
-            instance = None
-        else:
-            yield _msg('running')
-            yield {'instance': instance}
-        return instance, instance_data
+            # need_to_recreate_instance is True
+            return True, instance_data
+        return False, instance_data
 
     def _make_earmarked_instance_from_data(
             self, execution_id: str, instance_data: dict,
