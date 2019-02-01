@@ -3,12 +3,13 @@ from typing import Optional
 
 import dateutil.parser
 
+from plz.cli.composition_operation import CompositionOperation
 from plz.cli.configuration import Configuration
 from plz.cli.log import log_info
-from plz.cli.operation import Operation, on_exception_reraise
+from plz.cli.operation import on_exception_reraise
 
 
-class LogsOperation(Operation):
+class LogsOperation(CompositionOperation):
     """Output logs for a given execution"""
 
     @classmethod
@@ -69,8 +70,12 @@ class LogsOperation(Operation):
             raise
         print()
 
-    def run(self):
+    def run_atomic(
+            self, atomic_execution_id: str, composition_path: [(str, str)]):
+        if len(composition_path) > 0:
+            raise NotImplemented(
+                'Logs for parallel executions are not implemented')
         try:
-            self.display_logs(self.get_execution_id())
+            self.display_logs(atomic_execution_id)
         except KeyboardInterrupt:
             pass

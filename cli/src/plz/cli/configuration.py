@@ -157,6 +157,7 @@ class Configuration:
                      default=0),
             Property('max_bid_price_in_dollars_per_hour', type=float,
                      default=None),
+            Property('parallel_indices_range', type=list, default=None)
         ]
     }
 

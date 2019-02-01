@@ -131,7 +131,8 @@ class RunExecutionOperation(Operation):
     def follow_execution(self, was_start_ok: bool):
         log_info(f'Execution ID is: {self.execution_id}')
 
-        if self.detach:
+        if self.detach \
+                or self.configuration.parallel_indices_range is not None:
             return
         retrieve_output_operation = RetrieveOutputOperation(
             self.configuration,
@@ -212,8 +213,7 @@ class RunExecutionOperation(Operation):
                     if k not in {'user', 'project'}
                 }
             },
-            # TODO: read from config
-            parallel_indices_range=None,
+            parallel_indices_range=configuration.parallel_indices_range,
             indices_per_execution=None
         )
         return RunExecutionOperation.get_execution_id_from_start_response(
@@ -250,8 +250,8 @@ class RunExecutionOperation(Operation):
         }
 
     def get_execution_id(self):
-        # Override this method, in this operation we shouldn't call the server
-        # asking for the previous one
+        # Overriding this method, as in this operation we shouldn't call the
+        # server asking for the previous one
         return self.execution_id
 
     def suboperation(self,

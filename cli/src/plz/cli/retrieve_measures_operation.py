@@ -1,10 +1,12 @@
-from typing import Optional
+from typing import Optional, List
 
+from plz.cli.composition_operation import CompositionOperation
 from plz.cli.configuration import Configuration
-from plz.cli.operation import Operation, on_exception_reraise
+from plz.cli.composition_operation import create_path_string_prefix
+from plz.cli.operation import on_exception_reraise
 
 
-class RetrieveMeasuresOperation(Operation):
+class RetrieveMeasuresOperation(CompositionOperation):
     """Output measures for an execution"""
 
     @classmethod
@@ -25,13 +27,17 @@ class RetrieveMeasuresOperation(Operation):
         self.execution_id = execution_id
 
     @on_exception_reraise('Retrieving the measures failed.')
-    def retrieve_measures(self):
+    def retrieve_measures(self, atomic_execution_id: Optional[str] = None,
+                          composition_path: Optional[List[(str, str)]] = None):
+        execution_id = atomic_execution_id \
+            if atomic_execution_id is not None else self.get_execution_id()
         json_strings = self.controller.get_measures(
-            execution_id=self.get_execution_id(),
+            execution_id=execution_id,
             summary=self.summary,
             index=None)
         for line in json_strings:
-            print(line, end='')
+            print(create_path_string_prefix(composition_path), line, end='')
 
-    def run(self):
-        self.retrieve_measures()
+    def run_atomic(
+            self, atomic_execution_id: str, composition_path: [(str, str)]):
+        self.retrieve_measures(atomic_execution_id, composition_path)

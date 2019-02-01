@@ -2,17 +2,18 @@ import os
 import shutil
 import tarfile
 import tempfile
-from typing import IO, Iterator, Optional
+from typing import IO, Iterator, Optional, List
 
+from plz.cli.composition_operation import CompositionOperation, \
+    create_path_string_prefix
 from plz.cli.configuration import Configuration
 from plz.cli.exceptions import CLIException
 from plz.cli.log import log_info
-from plz.cli.operation import Operation, add_output_dir_arg, \
-    on_exception_reraise
+from plz.cli.operation import add_output_dir_arg, on_exception_reraise
 from plz.controller.api.exceptions import InstanceStillRunningException
 
 
-class RetrieveOutputOperation(Operation):
+class RetrieveOutputOperation(CompositionOperation):
     """Download output for an execution"""
 
     @classmethod
@@ -44,14 +45,21 @@ class RetrieveOutputOperation(Operation):
         self.path = path
         self.execution_id = execution_id
 
-    def harvest(self):
+    def harvest(
+            self,
+            atomic_execution_id: Optional[str] = None,
+            composition_path: Optional[List[(str, str)]] = None):
+        execution_id = atomic_execution_id if atomic_execution_id is not None \
+            else self.get_execution_id()
+        if composition_path is None:
+            composition_path = []
         try:
             self.controller.delete_execution(
-                execution_id=self.get_execution_id(),
+                execution_id=execution_id,
                 fail_if_running=True,
                 fail_if_deleted=False)
         except InstanceStillRunningException:
-            if self.force_if_running:
+            if self.force_if_running or len(composition_path) > 0:
                 log_info('Process is still running')
                 return
             else:
@@ -60,13 +68,24 @@ class RetrieveOutputOperation(Operation):
                     'terminate it, \nor use --force-if-running (discouraged)')
 
     @on_exception_reraise('Retrieving the output failed.')
-    def retrieve_output(self):
-        execution_id = self.get_execution_id()
+    def retrieve_output(
+            self,
+            atomic_execution_id: Optional[str] = None,
+            composition_path: Optional[List[(str, str)]] = None):
+        if atomic_execution_id is None:
+            atomic_execution_id = self.get_execution_id()
+
+        if len(composition_path) > 0:
+            index = composition_path[-1][1]
+        else:
+            index = None
         output_tarball_bytes = self.controller.get_output_files(
-            self.get_execution_id(), path=self.path, index=None)
-        formatted_output_dir = self.output_dir.replace('%e', execution_id)
+            atomic_execution_id, path=self.path, index=index)
+        formatted_output_dir = \
+            self.output_dir.replace('%e', self.get_execution_id())
         formatted_output_dir = os.path.join(
             formatted_output_dir,
+            *('-'.join(e for e in composition_path)),
             self.path if self.path is not None else '')
         try:
             os.makedirs(formatted_output_dir)
@@ -82,11 +101,17 @@ class RetrieveOutputOperation(Operation):
         for path in untar(output_tarball_bytes, formatted_output_dir):
             print(path)
 
-    def run(self):
-        log_info('Harvesting the output...')
-        self.harvest()
-        log_info('Retrieving the output...')
-        self.retrieve_output()
+    def run_atomic(
+            self, atomic_execution_id: str, composition_path: [(str, str)]):
+        string_prefix = create_path_string_prefix(composition_path)
+        if len(string_prefix) > 0:
+            message_suffix = f' for {string_prefix[:-1]}'
+        else:
+            message_suffix = ''
+        log_info(f'Harvesting the output{message_suffix}...')
+        self.harvest(atomic_execution_id, composition_path)
+        log_info(f'Retrieving the output{message_suffix}...')
+        self.retrieve_output(atomic_execution_id, composition_path)
 
 
 def untar(tarball_bytes: Iterator[bytes], formatted_output_dir: str) \
