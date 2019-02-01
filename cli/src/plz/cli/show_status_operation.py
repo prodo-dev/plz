@@ -1,5 +1,5 @@
 import collections
-from typing import Optional
+from typing import Any, Optional
 
 from plz.cli.composition_operation import CompositionOperation, \
     create_path_string_prefix
@@ -41,7 +41,7 @@ class ShowStatusOperation(CompositionOperation):
             code=status['exit_status'])
 
     def run_atomic(
-            self, atomic_execution_id: str, composition_path: [(str, str)]):
+            self, atomic_execution_id: str, composition_path: [(str, Any)]):
         status = self.get_status(atomic_execution_id)
         string_prefix = create_path_string_prefix(composition_path)
         log_info(f'{string_prefix}Status:')

@@ -2,7 +2,7 @@ import os
 import shutil
 import tarfile
 import tempfile
-from typing import IO, Iterator, Optional, List
+from typing import Any, IO, Iterator, List, Optional, Tuple
 
 from plz.cli.composition_operation import CompositionOperation, \
     create_path_string_prefix
@@ -33,22 +33,27 @@ class RetrieveOutputOperation(CompositionOperation):
         parser.add_argument(
             '--path', '-p', type=str, default=None,
             help='Download only the path specified')
+        parser.add_argument(
+            '--rewrite-subexecutions', action='store_true', default=False,
+            help='When downloading output of subexecutions, ')
 
     def __init__(self, configuration: Configuration,
                  output_dir: str,
                  force_if_running: bool,
                  path: Optional[str],
+                 rewrite_subexecutions: bool,
                  execution_id: Optional[str] = None):
         super().__init__(configuration)
         self.output_dir = output_dir
         self.force_if_running = force_if_running
         self.path = path
+        self.rewrite_subexecutions = rewrite_subexecutions
         self.execution_id = execution_id
 
     def harvest(
             self,
             atomic_execution_id: Optional[str] = None,
-            composition_path: Optional[List[(str, str)]] = None):
+            composition_path: Optional[List[Tuple[str, Any]]] = None):
         execution_id = atomic_execution_id if atomic_execution_id is not None \
             else self.get_execution_id()
         if composition_path is None:
@@ -71,12 +76,12 @@ class RetrieveOutputOperation(CompositionOperation):
     def retrieve_output(
             self,
             atomic_execution_id: Optional[str] = None,
-            composition_path: Optional[List[(str, str)]] = None):
+            composition_path: Optional[List[Tuple[str, Any]]] = None):
         if atomic_execution_id is None:
             atomic_execution_id = self.get_execution_id()
 
         if len(composition_path) > 0:
-            index = composition_path[-1][1]
+            index = int(composition_path[-1][1])
         else:
             index = None
         output_tarball_bytes = self.controller.get_output_files(
@@ -85,12 +90,15 @@ class RetrieveOutputOperation(CompositionOperation):
             self.output_dir.replace('%e', self.get_execution_id())
         formatted_output_dir = os.path.join(
             formatted_output_dir,
-            *('-'.join(e for e in composition_path)),
+            *('-'.join(node) for node in composition_path),
             self.path if self.path is not None else '')
         try:
             os.makedirs(formatted_output_dir)
         except FileExistsError:
-            if self.force_if_running:
+            if len(composition_path) > 0 and not self.rewrite_subexecutions:
+                log_info('Output directory already present')
+                return
+            if self.force_if_running or len(composition_path) > 0:
                 log_info('Removing existing output directory')
                 shutil.rmtree(formatted_output_dir)
                 os.makedirs(formatted_output_dir)
@@ -102,7 +110,7 @@ class RetrieveOutputOperation(CompositionOperation):
             print(path)
 
     def run_atomic(
-            self, atomic_execution_id: str, composition_path: [(str, str)]):
+            self, atomic_execution_id: str, composition_path: [(str, Any)]):
         string_prefix = create_path_string_prefix(composition_path)
         if len(string_prefix) > 0:
             message_suffix = f' for {string_prefix[:-1]}'

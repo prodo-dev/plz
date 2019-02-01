@@ -1,7 +1,7 @@
-import time
-from typing import Optional
+from typing import Any, Optional
 
 import dateutil.parser
+import time
 
 from plz.cli.composition_operation import CompositionOperation
 from plz.cli.configuration import Configuration
@@ -71,7 +71,7 @@ class LogsOperation(CompositionOperation):
         print()
 
     def run_atomic(
-            self, atomic_execution_id: str, composition_path: [(str, str)]):
+            self, atomic_execution_id: str, composition_path: [(str, Any)]):
         if len(composition_path) > 0:
             raise NotImplemented(
                 'Logs for parallel executions are not implemented')

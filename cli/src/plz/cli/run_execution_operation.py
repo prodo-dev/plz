@@ -1,6 +1,7 @@
 import os
-import time
 from typing import Any, Callable, Iterator, Optional, Tuple
+
+import time
 
 from plz.cli import parameters
 from plz.cli.configuration import Configuration
@@ -139,7 +140,8 @@ class RunExecutionOperation(Operation):
             output_dir=self.output_dir,
             execution_id=self.execution_id,
             force_if_running=False,
-            path=None)
+            path=None,
+            rewrite_subexecutions=False)
 
         try:
             if not was_start_ok:
@@ -214,7 +216,7 @@ class RunExecutionOperation(Operation):
                 }
             },
             parallel_indices_range=configuration.parallel_indices_range,
-            indices_per_execution=None
+            indices_per_execution=configuration.indices_per_execution
         )
         return RunExecutionOperation.get_execution_id_from_start_response(
             response_dicts)

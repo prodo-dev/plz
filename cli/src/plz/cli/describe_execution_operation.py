@@ -1,5 +1,5 @@
 import json
-from typing import Optional
+from typing import Any, Optional
 
 from plz.cli.composition_operation import CompositionOperation, \
     create_path_string_prefix
@@ -23,7 +23,7 @@ class DescribeExecutionOperation(CompositionOperation):
         self.execution_id = execution_id
 
     def run_atomic(
-            self, atomic_execution_id: str, composition_path: [(str, str)]):
+            self, atomic_execution_id: str, composition_path: [(str, Any)]):
         description = self.controller.describe_execution_entrypoint(
             atomic_execution_id)
         description_str = json.dumps(description['start_metadata'], indent=2)
