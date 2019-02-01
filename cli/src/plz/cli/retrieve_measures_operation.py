@@ -31,9 +31,11 @@ class RetrieveMeasuresOperation(CompositionOperation):
             self,
             atomic_execution_id: Optional[str] = None,
             composition_path: Optional[List[Tuple[str, Any]]] = None):
+        if composition_path is None:
+            composition_path = []
         if atomic_execution_id is None:
             atomic_execution_id = self.get_execution_id()
-        if composition_path is not None and len(composition_path) > 0:
+        if len(composition_path) > 0:
             index = int(composition_path[-1][1])
         else:
             index = None
