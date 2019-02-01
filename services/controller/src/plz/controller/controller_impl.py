@@ -332,6 +332,9 @@ def _get_execution_uuid() -> str:
     return str(uuid.uuid1(node=random_node))
 
 
+log = logging.getLogger(__name__)
+
+
 def _create_instances(
         composition: ExecutionComposition,
         instances: [Optional[Instance]],
@@ -342,7 +345,10 @@ def _create_instances(
     while was_there_status:
         was_there_status = False
         for (i, statuses_generator) in enumerate(statuses_generators):
-            status = next(statuses_generator)
+            try:
+                status = next(statuses_generator)
+            except StopIteration:
+                status = None
             if status is None:
                 continue
             was_there_status = True
