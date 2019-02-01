@@ -25,7 +25,7 @@ class ServerTest(unittest.TestCase):
         latch = multiprocessing.Condition()
 
         def start_app():
-            cls.app.run()
+            cls.app.run(host='localhost', port=cls.port)
             with latch:
                 latch.notify()
 
