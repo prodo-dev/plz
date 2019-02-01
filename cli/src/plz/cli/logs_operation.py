@@ -73,7 +73,7 @@ class LogsOperation(CompositionOperation):
     def run_atomic(
             self, atomic_execution_id: str, composition_path: [(str, Any)]):
         if len(composition_path) > 0:
-            raise NotImplemented(
+            raise NotImplementedError(
                 'Logs for parallel executions are not implemented')
         try:
             self.display_logs(atomic_execution_id)
