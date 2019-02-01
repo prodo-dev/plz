@@ -64,7 +64,8 @@ class RetrieveOutputOperation(CompositionOperation):
                 fail_if_running=True,
                 fail_if_deleted=False)
         except InstanceStillRunningException:
-            if self.force_if_running or len(composition_path) > 0:
+            if self.force_if_running or (composition_path is not None
+                                         and len(composition_path) > 0):
                 log_info('Process is still running')
                 return
             else:
@@ -80,7 +81,7 @@ class RetrieveOutputOperation(CompositionOperation):
         if atomic_execution_id is None:
             atomic_execution_id = self.get_execution_id()
 
-        if len(composition_path) > 0:
+        if composition_path is not None and len(composition_path) > 0:
             index = int(composition_path[-1][1])
         else:
             index = None
@@ -95,10 +96,12 @@ class RetrieveOutputOperation(CompositionOperation):
         try:
             os.makedirs(formatted_output_dir)
         except FileExistsError:
-            if len(composition_path) > 0 and not self.rewrite_subexecutions:
+            if composition_path is not None and len(composition_path) > 0 and \
+                    not self.rewrite_subexecutions:
                 log_info('Output directory already present')
                 return
-            if self.force_if_running or len(composition_path) > 0:
+            if self.force_if_running or (composition_path is not None and
+                                         len(composition_path) > 0):
                 log_info('Removing existing output directory')
                 shutil.rmtree(formatted_output_dir)
                 os.makedirs(formatted_output_dir)
