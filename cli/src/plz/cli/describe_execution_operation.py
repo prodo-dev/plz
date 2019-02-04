@@ -1,11 +1,12 @@
 import json
-from typing import Optional
+from typing import Any, Optional
 
+from plz.cli.composition_operation import CompositionOperation, \
+    create_path_string_prefix
 from plz.cli.configuration import Configuration
-from plz.cli.operation import Operation
 
 
-class DescribeExecutionOperation(Operation):
+class DescribeExecutionOperation(CompositionOperation):
     """Print metadata about an execution"""
 
     @classmethod
@@ -21,8 +22,10 @@ class DescribeExecutionOperation(Operation):
         super().__init__(configuration)
         self.execution_id = execution_id
 
-    def run(self):
+    def run_atomic(
+            self, atomic_execution_id: str, composition_path: [(str, Any)]):
         description = self.controller.describe_execution_entrypoint(
-            self.get_execution_id()
-        )
-        print(json.dumps(description['start_metadata'], indent=2))
+            atomic_execution_id)
+        description_str = json.dumps(description['start_metadata'], indent=2)
+        for l in description_str.splitlines():
+            print(create_path_string_prefix(composition_path) + l)

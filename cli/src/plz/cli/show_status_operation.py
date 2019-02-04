@@ -1,16 +1,18 @@
 import collections
-from typing import Optional
+from typing import Any, Optional
 
+from plz.cli.composition_operation import CompositionOperation, \
+    create_path_string_prefix
 from plz.cli.configuration import Configuration
 from plz.cli.log import log_info
-from plz.cli.operation import Operation, on_exception_reraise
+from plz.cli.operation import on_exception_reraise
 
 ExecutionStatus = collections.namedtuple(
     'ExecutionStatus',
     ['running', 'success', 'code'])
 
 
-class ShowStatusOperation(Operation):
+class ShowStatusOperation(CompositionOperation):
     """Output the status of an execution"""
 
     @classmethod
@@ -27,16 +29,22 @@ class ShowStatusOperation(Operation):
         self.execution_id = execution_id
 
     @on_exception_reraise('Retrieving the status failed.')
-    def get_status(self):
-        status = self.controller.get_status(self.get_execution_id())
+    def get_status(
+            self,
+            atomic_execution_id: Optional[str] = None):
+        if atomic_execution_id is None:
+            atomic_execution_id = self.get_execution_id()
+        status = self.controller.get_status(atomic_execution_id)
         return ExecutionStatus(
             running=status['running'],
             success=status['success'],
             code=status['exit_status'])
 
-    def run(self):
-        status = self.get_status()
-        log_info('Status:')
+    def run_atomic(
+            self, atomic_execution_id: str, composition_path: [(str, Any)]):
+        status = self.get_status(atomic_execution_id)
+        string_prefix = create_path_string_prefix(composition_path)
+        log_info(f'{string_prefix}Status:')
         print('Running:', status.running)
         print('Success:', status.success)
         print('Exit Status:', status.code)
