@@ -288,16 +288,21 @@ class ControllerImpl(Controller):
         yield {'id': execution_id}
 
         try:
-            input_stream = self.input_data_configuration.prepare_input_stream(
-                execution_spec)
-
-            def status_generator(ex_id: str, ex_spec: dict) -> Iterator[dict]:
+            def status_generator(
+                    ex_id: str, ex_spec: dict,
+                    input_data_configuration: InputDataConfiguration) \
+                    -> Iterator[dict]:
+                input_stream = input_data_configuration.prepare_input_stream(
+                    execution_spec)
                 return self.instance_provider.run_in_instance(
                     ex_id, command, snapshot_id, parameters,
                     input_stream, instance_market_spec, ex_spec)
 
             statuses_generators = [
-                status_generator(m['execution_id'], m['execution_spec'])
+                status_generator(
+                    m['execution_id'],
+                    m['execution_spec'],
+                    self.input_data_configuration)
                 for m in metadatas_to_run
             ]
 
