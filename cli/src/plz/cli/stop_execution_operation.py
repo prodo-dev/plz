@@ -1,13 +1,13 @@
-from typing import Any, Optional
+from typing import Optional
 
-from plz.cli.composition_operation import CompositionOperation, \
-    create_path_string_prefix, get_all_atomic
+from plz.cli.composition_operation import get_all_atomic
 from plz.cli.configuration import Configuration
 from plz.cli.log import log_info
+from plz.cli.operation import Operation
 from plz.controller.api.exceptions import ExecutionAlreadyHarvestedException
 
 
-class StopExecutionOperation(CompositionOperation):
+class StopExecutionOperation(Operation):
     """Stops an execution"""
 
     @classmethod
