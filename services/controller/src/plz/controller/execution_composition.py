@@ -1,3 +1,4 @@
+import logging
 import os
 from abc import ABC, abstractmethod
 from collections import namedtuple, defaultdict
@@ -6,6 +7,9 @@ from typing import Any, Callable, Dict, Iterator, Optional, Set, Tuple
 from plz.controller.containers import Containers
 from plz.controller.execution_metadata import enrich_start_metadata
 from plz.controller.volumes import VolumeEmptyDirectory, Volumes
+
+
+log = logging.getLogger(__name__)
 
 
 class ExecutionComposition(ABC):
@@ -145,8 +149,7 @@ class IndicesComposition(ExecutionComposition):
                        parallel_indices_range[1],
                        indices_per_execution):
             this_exec_n_indices = min(
-                indices_per_execution,
-                parallel_indices_range[1] - parallel_indices_range[0] - i)
+                indices_per_execution, parallel_indices_range[1] - i)
             subexecution_id = execution_id_generator()
             for j in range(this_exec_n_indices):
                 self.assign_index(i + j,

@@ -41,6 +41,14 @@ class TestParallelIndices(unittest.TestCase):
         self._run_range_and_check_results((0, 5), harvest_after_run=True,
                                           indices_per_execution=2)
 
+    def test_one_to_six_two_per_exec_no_harvest(self):
+        self._run_range_and_check_results(
+            (1, 6), harvest_after_run=False, indices_per_execution=2)
+
+    def test_one_to_six_two_per_exec_harvest_after_run(self):
+        self._run_range_and_check_results(
+            (1, 6), harvest_after_run=True, indices_per_execution=2)
+
     def test_rerun_parallel_indices(self):
         rainch = (0, 5)
         indices_per_execution = 2
