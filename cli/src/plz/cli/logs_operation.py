@@ -61,6 +61,7 @@ class LogsOperation(Operation):
                          'To stream the logs, type:\n\n'
                          f'        plz logs {self.get_execution_id()}\n')
             raise
+        print()
 
     def _print_logs_for_composite(
             self, atomic_executions: [str], since_timestamp: Optional[str]) \
