@@ -1,5 +1,6 @@
 from typing import Optional
 
+from plz.cli.composition_operation import get_all_atomic
 from plz.cli.configuration import Configuration
 from plz.cli.log import log_info
 from plz.cli.operation import Operation
@@ -23,12 +24,20 @@ class StopExecutionOperation(Operation):
         self.execution_id = execution_id
 
     def run(self):
-        try:
-            self.controller.delete_execution(
-                execution_id=self.get_execution_id(),
-                fail_if_running=False,
-                fail_if_deleted=True)
-        except ExecutionAlreadyHarvestedException:
-            log_info('Process already stopped')
-            return
-        log_info('Stopped')
+        composition = self.controller.get_execution_composition(
+            self.get_execution_id())
+        atomic_executions = get_all_atomic(composition)
+        for e in atomic_executions:
+            if len(atomic_executions) > 0:
+                message_prefix = e + '#'
+            else:
+                message_prefix = ''
+            try:
+                self.controller.delete_execution(
+                    execution_id=e,
+                    fail_if_running=False,
+                    fail_if_deleted=True)
+            except ExecutionAlreadyHarvestedException:
+                log_info(message_prefix + 'Process already stopped')
+                return
+            log_info(message_prefix + 'Stopped')

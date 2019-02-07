@@ -1,15 +1,19 @@
-from typing import Any, Optional
+import time
+import traceback
+from queue import Queue
+from threading import Thread
+from typing import Optional
 
 import dateutil.parser
-import time
 
-from plz.cli.composition_operation import CompositionOperation
+from plz.cli.composition_operation import get_all_atomic
 from plz.cli.configuration import Configuration
 from plz.cli.log import log_info
-from plz.cli.operation import on_exception_reraise
+from plz.cli.operation import Operation, on_exception_reraise
+from plz.controller.api import Controller
 
 
-class LogsOperation(CompositionOperation):
+class LogsOperation(Operation):
     """Output logs for a given execution"""
 
     @classmethod
@@ -36,6 +40,48 @@ class LogsOperation(CompositionOperation):
     @on_exception_reraise("Displaying the logs failed.")
     def display_logs(self, execution_id: str, print_interrupt_message=False):
         log_info('Streaming logs...')
+        since_timestamp = self._compute_since_timestamp()
+
+        composition = self.controller.get_execution_composition(execution_id)
+        atomic_executions = get_all_atomic(composition)
+
+        try:
+            if len(atomic_executions) == 1:
+                byte_lines = self.controller.get_logs(
+                    self.get_execution_id(), since=since_timestamp)
+                for byte_line in byte_lines:
+                    print(byte_line.decode('utf-8'), end='', flush=True)
+            else:
+                self._print_logs_for_composite(
+                    atomic_executions, since_timestamp)
+        except KeyboardInterrupt:
+            print()
+            if print_interrupt_message:
+                log_info('Your program is still running. '
+                         'To stream the logs, type:\n\n'
+                         f'        plz logs {self.get_execution_id()}\n')
+            raise
+        print()
+
+    def _print_logs_for_composite(
+            self, atomic_executions: [str], since_timestamp: Optional[str]) \
+            -> None:
+        lines_queue = Queue()
+        for e in atomic_executions:
+            t = Thread(
+                target=_queue_log_lines,
+                args=(self.controller, lines_queue, e, since_timestamp,
+                      self.configuration.debug))
+            t.start()
+        end_signals = 0
+        while end_signals < len(atomic_executions):
+            lines = lines_queue.get()
+            if lines is None:
+                end_signals += 1
+            else:
+                print(lines, end='', flush=True)
+
+    def _compute_since_timestamp(self) -> Optional[str]:
         # For the since argument, pass an integer to the backend. Or nothing
         # in case we want to log from the start (so the default is different
         # in the cli --current time-- and the backend --start time--). That's
@@ -56,26 +102,38 @@ class LogsOperation(CompositionOperation):
             except ValueError:
                 since_timestamp = str(int(time.mktime(
                     dateutil.parser.parse(self.since).timetuple())))
-        byte_lines = self.controller.get_logs(
-            self.get_execution_id(), since=since_timestamp)
-        try:
-            for byte_line in byte_lines:
-                print(byte_line.decode('utf-8'), end='', flush=True)
-        except KeyboardInterrupt:
-            print()
-            if print_interrupt_message:
-                log_info('Your program is still running. '
-                         'To stream the logs, type:\n\n'
-                         f'        plz logs {execution_id}\n')
-            raise
-        print()
+        return since_timestamp
 
-    def run_atomic(
-            self, atomic_execution_id: str, composition_path: [(str, Any)]):
-        if len(composition_path) > 0:
-            raise NotImplementedError(
-                'Logs for parallel executions are not implemented')
+    def run(self):
         try:
-            self.display_logs(atomic_execution_id)
+            self.display_logs(self.get_execution_id())
         except KeyboardInterrupt:
             pass
+
+
+def _queue_log_lines(
+        controller: Controller, lines_queue: Queue, execution_id: str,
+        since_timestamp: Optional[str],
+        debug: bool) -> None:
+    # noinspection PyBroadException
+    try:
+        byte_lines = controller.get_logs(execution_id, since_timestamp)
+        incomplete_line = ''
+        for byte_line in byte_lines:
+            str_line = byte_line.decode('utf-8')
+            if '\n' in str_line:
+                lines, new_incomplete_line = \
+                    str_line.rsplit('\n', 1)
+                lines_queue.put(incomplete_line + lines + '\n')
+                incomplete_line = new_incomplete_line
+            else:
+                incomplete_line += str_line
+        lines_queue.put(incomplete_line)
+    except KeyboardInterrupt:
+        pass
+    except Exception:
+        # Do not mind exceptions in the thread.
+        if debug:
+            traceback.print_exc()
+    finally:
+        lines_queue.put(None)
