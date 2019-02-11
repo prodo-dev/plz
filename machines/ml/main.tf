@@ -79,7 +79,7 @@ data "aws_security_group" "default" {
 data "aws_route53_zone" "internal" {
   name   = "${var.aws_dns_zone}"
   vpc_id = "${data.aws_vpc.main.id}"
-  count = "${var.aws_dns_zone == "" ? 0 : 1}"
+  count  = "${var.aws_dns_zone == "" ? 0 : 1}"
 }
 
 resource "aws_key_pair" "plz" {
@@ -193,7 +193,6 @@ resource "aws_ecr_repository" "controller" {
   name = "plz-controller"
 }
 
-
 output "controller-host" {
   value = "${aws_instance.controller.private_dns}"
 }
@@ -201,7 +200,6 @@ output "controller-host" {
 output "controller-host-public-ip" {
   value = "${aws_instance.controller.public_ip}"
 }
-
 
 ///
 
