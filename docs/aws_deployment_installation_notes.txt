@@ -51,3 +51,6 @@ In your plz.config.json you will need to add:
     }
 
 and change "host" to be the public ip of the controller.
+
+If you don't use the server continuously, you can stop it from the AWS
+console, then restart it and do "make deploy" again.
