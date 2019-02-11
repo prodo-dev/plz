@@ -27,7 +27,7 @@ If you want to make your own amis. Set the ami_tag in secrets/config.json, then
 SECRETS_DIR=$PWD/secrets make -C machines/ml amis
 
 Create the machine and associated resources (security groups, etc.)
-SECRETS_DIR=$PWD/secrets make -C machines/ml
+SECRETS_DIR=$PWD/secrets make -C machines/ml deploy
 Make a note of the line
 controller-host-public-ip = XXX.XXX.XXX.XXX
 
@@ -53,4 +53,10 @@ In your plz.config.json you will need to add:
 and change "host" to be the public ip of the controller.
 
 If you don't use the server continuously, you can stop it from the AWS
-console, then restart it and do "make deploy" again.
+console, then restart it and do "make deploy" again. Or you can terminate it,
+then restart it with
+SECRETS_DIR=$PWD/secrets make -C machines/ml deploy
+make a note of the IP, then
+SECRETS_DIR=$PWD/secrets make deploy
+All of your plz data is stored in a non-ephemeral volume that is re-attached to
+the machine created
