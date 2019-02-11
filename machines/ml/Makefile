@@ -15,7 +15,7 @@ amis:
 		aws --region=$(AWS_REGION) \
 			ec2 describe-images \
 			--owner=099720109477 \
-			--filters='Name=name, Values=ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-*' \
+			--filters='Name=name, Values=ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-*' \
 			| jq -r '.Images | sort_by(.CreationDate) | last | .ImageId' \
 	))
 	$(info SOURCE_AMI = $(SOURCE_AMI))
