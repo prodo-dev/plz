@@ -2,7 +2,6 @@
 
 import json
 import os.path
-import time
 
 with open(os.environ['CONFIGURATION_FILE']) as c:
     config = json.load(c)

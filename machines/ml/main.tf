@@ -4,9 +4,13 @@ variable "aws_region" {}
 
 variable "aws_availability_zone" {}
 
-variable "aws_dns_zone" {}
+variable "aws_dns_zone" {
+  default = ""
+}
 
-variable "subdomain" {}
+variable "subdomain" {
+  default = ""
+}
 
 variable "ami_tag" {}
 
@@ -75,6 +79,7 @@ data "aws_security_group" "default" {
 data "aws_route53_zone" "internal" {
   name   = "${var.aws_dns_zone}"
   vpc_id = "${data.aws_vpc.main.id}"
+  count  = "${var.aws_dns_zone == "" ? 0 : 1}"
 }
 
 resource "aws_key_pair" "plz" {
@@ -98,7 +103,7 @@ resource "aws_security_group" "plz_controller_ssh" {
   vpc_id = "${data.aws_vpc.main.id}"
 
   ingress {
-    from_port   = 0
+    from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
@@ -171,7 +176,7 @@ resource "aws_volume_attachment" "controller-cache-attachment" {
 
   provisioner "local-exec" {
     interpreter = ["/bin/bash", "-c"]
-    command     = "../../scripts/run-ansible-playbook-on-host ../../services/controller/src/plz/controller/startup/startup.yml ${aws_instance.controller.private_dns} /dev/stdin <<< 'device: ${local.actual_device_name}'"
+    command     = "../../scripts/run-ansible-playbook-on-host ../../services/controller/src/plz/controller/startup/startup.yml ${aws_instance.controller.public_ip} /dev/stdin <<< 'device: ${local.actual_device_name}'"
   }
 }
 
@@ -181,10 +186,19 @@ resource "aws_route53_record" "controller" {
   type    = "A"
   ttl     = "300"
   records = ["${aws_instance.controller.private_ip}"]
+  count   = "${var.subdomain == "" ? 0 : 1}"
+}
+
+resource "aws_ecr_repository" "controller" {
+  name = "plz-controller"
 }
 
 output "controller-host" {
   value = "${aws_instance.controller.private_dns}"
+}
+
+output "controller-host-public-ip" {
+  value = "${aws_instance.controller.public_ip}"
 }
 
 ///

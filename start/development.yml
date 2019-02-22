@@ -24,6 +24,8 @@ services:
 
   redis:
     image: redis:4
-    entrypoint: redis-server --save 2 1
+    ports:
+      - ${REDIS_PORT:-6379}:6379
+    entrypoint: redis-server --save 2 1 --port 6379
     volumes:
       - ${CACHE_DIR}/redis_data:/data

@@ -1,10 +1,9 @@
 {
-  "environment_name": "Alice",
+  "environment_name": "your_org_name-env",
   "aws_region": "eu-west-1",
   "aws_availability_zone": "eu-west-1a",
-  "aws_project": "1234567890ab.dkr.ecr.eu-west-1.amazonaws.com",
-  "results_s3_bucket": "results.prodo.ai",
-  "key_name": "plz-alice-key",
-  "aws_dns_zone": "internal.prodo.ai",
-  "subdomain": "plz.internal.prodo.ai"
+  "_comment": "You can get it with `aws ecr get-login` (look at the end of the output",
+  "aws_project": "999999999.dkr.ecr.eu-west-1.amazonaws.com",
+  "_ami_tag": "your_org_name-ami",
+  "key_name": "your_org_name-key"
 }

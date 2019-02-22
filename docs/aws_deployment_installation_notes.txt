@@ -1,0 +1,62 @@
+cd plz
+
+Create a directory to store your secrets
+mkdir -p secrets/keys
+
+Create a key with
+ssh-keygen -t rsa -C 'youemail@mailserver.com' -f secrets/keys/id_rsa -N ''
+This is used when creating the AMIs
+
+Install terraform
+https://learn.hashicorp.com/terraform/getting-started/install.html
+
+Install packer
+https://www.packer.io/intro/getting-started/install.html#precompiled-binaries
+
+Install ansible
+pip install ansible --user
+
+Install basic auxiliary tools
+sudo apt install zsh jq
+
+Configure your aws settings:
+cp example.config.json secrets/config.json
+and edit the file accordingly
+
+If you want to make your own amis. Set the ami_tag in secrets/config.json, then
+SECRETS_DIR=$PWD/secrets make -C machines/ml amis
+
+Create the machine and associated resources (security groups, etc.)
+SECRETS_DIR=$PWD/secrets make -C machines/ml deploy
+Make a note of the line
+controller-host-public-ip = XXX.XXX.XXX.XXX
+
+Deploy the controller image
+SECRETS_DIR=$PWD/secrets make deploy
+
+ssh -i secrets/keys/id_rsa  ubuntu@PUBLIC_IP
+# Where PUBLIC_IP is the one you made a note of after creating the machine
+sudo su -
+cd /cache/plz-user-home
+mkdir .ssh
+vi authorized_keys
+[Paste the contents of secrets/keys/id_rsa.pub]
+
+In your plz.config.json you will need to add:
+
+    "connection_info": {
+      "username": "plz-user",
+      "path_to_private_key": "<absolute_to_your_secrets>/secrets/keys/id_rsa",
+      "schema": "http-ssh"
+    }
+
+and change "host" to be the public ip of the controller.
+
+If you don't use the server continuously, you can stop it from the AWS
+console, then restart it and do "make deploy" again. Or you can terminate it,
+then restart it with
+SECRETS_DIR=$PWD/secrets make -C machines/ml deploy
+make a note of the IP, then
+SECRETS_DIR=$PWD/secrets make deploy
+All of your plz data is stored in a non-ephemeral volume that is re-attached to
+the machine created

@@ -15,9 +15,6 @@ from plz.controller.redis_db_storage import RedisDBStorage
 from plz.controller.results import LocalResultsStorage
 from plz.controller.volumes import Volumes
 
-AMI_TAG = '2019-01-28'
-WORKER_AMI = f'plz-worker-{AMI_TAG}'
-
 Dependencies = collections.namedtuple(
     'Dependencies',
     ['redis', 'instance_provider', 'images', 'results_storage', 'db_storage'])
@@ -77,7 +74,7 @@ def _instance_provider_from(
             client=boto3.client(
                 service_name='ec2',
                 region_name=config['instances.region']),
-            aws_worker_ami=WORKER_AMI,
+            aws_worker_ami=config['instances.aws_worker_ami'],
             aws_key_name=config.get('instances.key_name', None),
             results_storage=results_storage,
             images=images,
