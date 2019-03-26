@@ -202,7 +202,6 @@ class RunExecutionOperation(Operation):
         instance_market_spec = create_instance_market_spec(configuration)
         commit = get_head_commit_or_none(context_path)
         response_dicts = self.controller.run_execution(
-            command=self.command,
             snapshot_id=snapshot_id,
             parameters=params,
             execution_spec=execution_spec,
