@@ -136,7 +136,7 @@ def run_execution_entrypoint():
     @stream_with_context
     def act() -> Iterator[dict]:
         yield from controller.run_execution(
-            command, snapshot_id, parameters, instance_market_spec,
+            snapshot_id, parameters, instance_market_spec,
             execution_spec, start_metadata, parallel_indices_range,
             indices_per_execution)
     return Response(

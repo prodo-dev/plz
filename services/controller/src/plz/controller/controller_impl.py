@@ -60,7 +60,7 @@ class ControllerImpl(Controller):
         }
 
     def run_execution(
-            self, command: [str], snapshot_id: str, parameters: dict,
+            self, snapshot_id: str, parameters: dict,
             instance_market_spec: dict, execution_spec: dict,
             start_metadata: dict,
             parallel_indices_range: Optional[Tuple[int, int]],
