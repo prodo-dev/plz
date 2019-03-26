@@ -33,7 +33,7 @@ def capture_build_context(
                 dockerfile.write(
                     f'WORKDIR /src\n'
                     f'COPY . ./\n'
-                    f'CMD {command}\n'
+                    f'CMD {" ".join(command)}\n'
                 )
             os.chmod(dockerfile_path, 0o644)
         matching_excluded_paths = get_matching_excluded_paths(
