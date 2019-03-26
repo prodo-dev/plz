@@ -124,10 +124,6 @@ def root():
 
 @app.route(f'/executions', methods=['POST'])
 def run_execution_entrypoint():
-    # Test with:
-    # curl -X POST -d '{"command": "ls /" }'
-    #    -H 'Content-Type: application/json' localhost:5000/executions
-    command = request.json['command']
     snapshot_id = request.json['snapshot_id']
     parameters = request.json['parameters']
     execution_spec = request.json['execution_spec']
@@ -149,9 +145,6 @@ def run_execution_entrypoint():
 
 @app.route(f'/executions/rerun', methods=['POST'])
 def rerun_execution_entrypoint():
-    # Test with:
-    # curl -X POST -d '{"command": "ls /" }'
-    #    -H 'Content-Type: application/json' localhost:5000/executions
     user = request.json['user']
     project = request.json['project']
     instance_max_uptime_in_minutes = \

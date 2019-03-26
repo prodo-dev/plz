@@ -67,8 +67,8 @@ class ControllerImpl(Controller):
             indices_per_execution: Optional[int]) \
             -> Iterator[dict]:
         return self._do_run_execution(
-            command, snapshot_id, parameters, instance_market_spec,
-            execution_spec, start_metadata,
+            snapshot_id, parameters, instance_market_spec, execution_spec,
+            start_metadata,
             parallel_indices_range=parallel_indices_range,
             indices_per_execution=indices_per_execution,
             previous_execution_id=None)
@@ -82,7 +82,6 @@ class ControllerImpl(Controller):
         start_metadata = self.db_storage.retrieve_start_metadata(
             previous_execution_id)
 
-        command = start_metadata['command']
         snapshot_id = start_metadata['snapshot_id']
         if override_parameters is not None:
             parameters = override_parameters
@@ -95,7 +94,7 @@ class ControllerImpl(Controller):
         execution_spec['instance_max_uptime_in_minutes'] = \
             instance_max_uptime_in_minutes
         return self._do_run_execution(
-            command, snapshot_id, parameters, instance_market_spec,
+            snapshot_id, parameters, instance_market_spec,
             execution_spec, start_metadata,
             parallel_indices_range=start_metadata.get(
                 'parallel_indices_range'),
@@ -261,7 +260,7 @@ class ControllerImpl(Controller):
                        execution_id)
 
     def _do_run_execution(
-            self, command: [str], snapshot_id: str, parameters: dict,
+            self, snapshot_id: str, parameters: dict,
             instance_market_spec: dict, execution_spec: dict,
             start_metadata: dict,
             parallel_indices_range: Optional[Tuple[int, int]],
@@ -273,7 +272,7 @@ class ControllerImpl(Controller):
             parallel_indices_range, execution_id)
 
         all_metadatas = composition.create_metadatas_for_all_executions(
-            command, snapshot_id, parameters, instance_market_spec,
+            snapshot_id, parameters, instance_market_spec,
             execution_spec, start_metadata, parallel_indices_range,
             indices_per_execution, previous_execution_id, execution_id,
             execution_id_generator=_get_execution_uuid)
@@ -295,8 +294,8 @@ class ControllerImpl(Controller):
                 input_stream = input_data_configuration.prepare_input_stream(
                     execution_spec)
                 return self.instance_provider.run_in_instance(
-                    ex_id, command, snapshot_id, parameters,
-                    input_stream, instance_market_spec, ex_spec)
+                    ex_id, snapshot_id, parameters, input_stream,
+                    instance_market_spec, ex_spec)
 
             statuses_generators = [
                 status_generator(

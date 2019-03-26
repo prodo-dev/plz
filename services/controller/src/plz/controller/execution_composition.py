@@ -44,7 +44,7 @@ class ExecutionComposition(ABC):
 
     @abstractmethod
     def create_metadatas_for_all_executions(
-                self, command: [str], snapshot_id: str, parameters: dict,
+                self, snapshot_id: str, parameters: dict,
                 instance_market_spec: dict, execution_spec: dict,
                 start_metadata: dict,
                 parallel_indices_range: Optional[Tuple[int, int]],
@@ -71,8 +71,9 @@ class AtomicComposition(ExecutionComposition):
         return {'execution_id': self.execution_id}
 
     def create_metadatas_for_all_executions(
-            self, command: [str], snapshot_id: str, parameters: dict,
-            instance_market_spec: dict, execution_spec: dict,
+            self, snapshot_id: str, parameters: dict,
+            instance_market_spec: dict,
+            execution_spec: dict,
             start_metadata: dict,
             parallel_indices_range: Optional[Tuple[int, int]],
             indices_per_execution: Optional[int],
@@ -80,7 +81,7 @@ class AtomicComposition(ExecutionComposition):
             execution_id: str,
             execution_id_generator: Callable[[], str]) -> [dict]:
         enriched_start_metadata = enrich_start_metadata(
-            execution_id, start_metadata, command, snapshot_id, parameters,
+            execution_id, start_metadata, snapshot_id, parameters,
             instance_market_spec, execution_spec, parallel_indices_range,
             index_range_to_run=None,
             indices_per_execution=indices_per_execution,
@@ -128,8 +129,9 @@ class IndicesComposition(ExecutionComposition):
         }
 
     def create_metadatas_for_all_executions(
-            self, command: [str], snapshot_id: str, parameters: dict,
-            instance_market_spec: dict, execution_spec: dict,
+            self, snapshot_id: str, parameters: dict,
+            instance_market_spec: dict,
+            execution_spec: dict,
             start_metadata: dict,
             parallel_indices_range: Optional[Tuple[int, int]],
             indices_per_execution: Optional[int],
@@ -137,7 +139,7 @@ class IndicesComposition(ExecutionComposition):
             execution_id: str,
             execution_id_generator: Callable[[], str]) -> [dict]:
         enriched_start_metadata = enrich_start_metadata(
-            execution_id, start_metadata, command, snapshot_id, parameters,
+            execution_id, start_metadata, snapshot_id, parameters,
             instance_market_spec, execution_spec, parallel_indices_range,
             index_range_to_run=None,
             indices_per_execution=indices_per_execution,
@@ -155,9 +157,9 @@ class IndicesComposition(ExecutionComposition):
                 self.assign_index(i + j,
                                   AtomicComposition(subexecution_id))
             enriched_start_metadata = enrich_start_metadata(
-                subexecution_id,
-                start_metadata, command, snapshot_id, parameters,
-                instance_market_spec, execution_spec,
+                subexecution_id, start_metadata, snapshot_id, parameters,
+                instance_market_spec,
+                execution_spec,
                 parallel_indices_range=None,
                 index_range_to_run=(i, i + this_exec_n_indices),
                 indices_per_execution=None,
