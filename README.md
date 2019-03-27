@@ -460,84 +460,16 @@ We built Plz following these principles:
   variables. You don't need to add extra dependencies to your code or learn how
   to read/write your data in specific ways.
 - The tool must be flexible enough so that no unnecessary restrictions are
-  imposed by its architecture. You should be able to do with Plz whatever you
-  can do by running a program manually. It was surprising to find out how much
-  of the friction around running jobs in the cloud could be solved, only by
-  tweaking the configuration and without requiring any changes to Plz code.
+  imposed by the architecture. You should be able to do with Plz whatever you
+  can do by running a program manually. It was surprising to find out how many
+  issues, mostly around running jobs in the cloud, could be solved only by
+  tweaking the configuration, without requiring any changes to the code.
 
 Plz is routinely used at `prodo.ai` to train ML models on AWS, some of them
 taking days to run in the most powerful instances available. We trust it to
 start and terminate these instances as needed, and to manage our spot instances,
 allowing us to get a much better price than if we were using on-demand instances
 all the time.
-
-## How does Plz help
-
-If you didn't have Plz, the steps you'd need as to run your code in an AWS
-instance would be:
-
-- go to the AWS console and start an instance (or have created a launch template
-and then use the cli)
-- wait until the instance is up
-- get the IP address of the instance from the console
-- copy your code and data by ssh-ing to the instance
-- ssh to the instance and run your job. Preferably inside docker so that a
-dropped connection doesn't kill your job
-- each time the connection drops or you turn off your computer, you need to
-ssh again. If you didn't use docker, you lost your terminal and it's very likely
-your job died
-- watch your job until it finishes (and lose money at the point it has already
-finished and your instance keeps running)
-- copy your results back to your machine by ssh-ing to the instance, being
-disciplined about where you store them and making sure you can link them to the
-(version of the) code that produced them if you'll have several runs that
-you want to compare
-
-All of that gets simplified to `plz run`. If you stopped the output of
-`plz run` (by hitting Ctrl-C, or turning off your computer) can do `plz
-output` to get the output at any time.
-
-If you want to rerun your job later (for instance, to try different parameters),
-you would need to have saved a copy of the code (or have been very disciplined
-with your git history, plus have tags or have commits for every single one-line
-tweak you try --more about that [below](#why-is-Plz-the-way-it-is)), and
-possibly also have the same data you have used. You'd need to retrieve the
-code from wherever you have it (for instance, you may need to find the git
-branch, and switch to it --possibly after creating a different copy of the repo
-if you don't want to stop working on what you are doing it).
-
-
-## Why is Plz the way it is
-
-This section is an attempt to describe the rationale behind the high-level
-architecture of Plz.
-
-- why Docker: simplifies log handling. We obtain a stream of logs from the
-running jobs just by calling the Docker API, with facilities to filter for time.
-Running commands with ssh requires to either keep the connection as to gather
-the output or redirecting the output and reading it later from a file. In
-general, Docker doesn't provide only isolation, but also an environment where
-the job runs autonomously with controlled inputs and outputs
-- why not using git to store code snapshots (and use git to transfer code to
-the instance): because it's very common that users want to make changes that
-they don't necessarily want in their commit history. For instance, when
-users try to make their job run in the cloud, or run at a different scale than
-what they use to (for instance, run the job with far more data than they do
-locally), they might try several one-line tweaks. These commits (possibly paired
-with messages that would be meaningless in a month, like ''Change foobar from 0
-to 1'') are hardly useful and pollute the repo history. Plz could also create a
-different branch for each job, but then these branches should be kept, would
-be listed in `git branch`, etc. _A good summary answer to the question would be:
-because users want to commit stuff that ''works'' and you don't know whether
-something works until you've run it._ The solution for code storage we
-implemented, using Docker images, is quite simple to implement and understand as
-the docker API allows you to just send the files as a tarball in order to create
-an image. The image is then given a name so that it can be referenced later,
-making `plz rerun` easy to implement as well. The code can be retrieved by
-looking inside the image, which is a reliable source of truth, as it was what
-was actually running
-
-
 
 ## Future work
 
