@@ -119,17 +119,20 @@ class RunExecutionOperation(Operation):
         user_provided_dockerfile = os.path.isfile(os.path.join(
             self.configuration.context_path, DOCKERFILE_NAME))
         if self.configuration.image is not None and user_provided_dockerfile:
-            raise CLIException('You have both an `image` entry in '
-                               f'plz.config.json and a file {DOCKERFILE_NAME} '
-                               f'(that would be used to create an image). '
-                               'Please remove the `image` entry or move the '
-                               'file somewhere else')
+            raise CLIException('You specified an image (either in '
+                               '`plz.config.json` or in the `PLZ_IMAGE` '
+                               'environment variable) and you have a file '
+                               f'{DOCKERFILE_NAME} (that would be used to '
+                               'create an image).\nPlease do not specify the '
+                               'image or move the file somewhere else')
         if self.configuration.command is not None and user_provided_dockerfile:
-            raise CLIException('You have both a `command` entry in '
-                               f'plz.config.json and a file {DOCKERFILE_NAME} '
-                               f'(that would be used to create an image). '
-                               'Please remove the `command` entry or move the '
-                               'file somewhere else')
+            raise CLIException('You specified a command (either in '
+                               '`plz.config.json`, in the command you issued, '
+                               'or in the `PLZ_COMMAND` environment variable) '
+                               f'and you have a file {DOCKERFILE_NAME} (that '
+                               'would be used to create an image, including a '
+                               'command). Please do not specify the command, '
+                               'or move the file somewhere else')
         if self.configuration.image is None and not user_provided_dockerfile:
             raise CLIException('No image specified! Include an `image` entry '
                                'in plz.config.json, or a file called '
