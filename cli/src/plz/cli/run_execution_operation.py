@@ -52,9 +52,6 @@ class RunExecutionOperation(Operation):
             self.command = configuration.command
 
     def run(self):
-        if not self.command:
-            raise CLIException('No command specified! Use --command or '
-                               'include a `command` entry in plz.config.json')
         self._check_dockerfile_specs()
 
         if os.path.exists(self.output_dir):
