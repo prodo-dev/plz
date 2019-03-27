@@ -34,7 +34,6 @@ class Containers:
             execution_id: str,
             repository: str,
             tag: str,
-            command: List[str],
             environment: Dict[str, str],
             mounts: List[Mount],
             docker_run_args: Dict[str, str]):
@@ -43,7 +42,6 @@ class Containers:
             raise ValueError('Empty execution id!')
         container = self.docker_client.containers.run(
             image=image,
-            command=command,
             name=self._CONTAINER_NAME_PREFIX + execution_id,
             environment=environment,
             mounts=mounts,

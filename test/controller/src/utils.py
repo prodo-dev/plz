@@ -89,7 +89,6 @@ def run_example(
     execution_spec = RunExecutionOperation.create_execution_spec(
         context.configuration, input_id)
     response_dicts = context.controller.run_execution(
-        context.configuration.command,
         context.snapshot_id,
         parameters=parameters,
         instance_market_spec=instance_market_spec,

@@ -52,24 +52,7 @@ class RunExecutionOperation(Operation):
             self.command = configuration.command
 
     def run(self):
-        if not self.command:
-            raise CLIException('No command specified! Use --command or '
-                               'include a `command` entry in plz.config.json')
-
-        if self.configuration.image is not None and \
-                os.path.isfile(os.path.join(
-                    self.configuration.context_path, DOCKERFILE_NAME)):
-            raise CLIException('You have both an `image` entry in '
-                               f'plz.config.json and a file {DOCKERFILE_NAME} '
-                               f'(that would be used to create an image). '
-                               'Please remove the `image` entry or move the '
-                               'file somewhere else')
-        if self.configuration.image is None and \
-                not os.path.isfile(os.path.join(
-                    self.configuration.context_path, DOCKERFILE_NAME)):
-            raise CLIException('No image specified! Include an `image` entry '
-                               'in plz.config.json, or a file called '
-                               f'{DOCKERFILE_NAME} in your context path')
+        self._check_dockerfile_specs()
 
         if os.path.exists(self.output_dir):
             raise CLIException(
@@ -128,6 +111,33 @@ class RunExecutionOperation(Operation):
                                              context_path))
         self.execution_id = execution_id
         self.follow_execution(was_start_ok)
+
+    def _check_dockerfile_specs(self):
+        user_provided_dockerfile = os.path.isfile(os.path.join(
+            self.configuration.context_path, DOCKERFILE_NAME))
+        if self.configuration.image is not None and user_provided_dockerfile:
+            raise CLIException('You specified an image (either in '
+                               '`plz.config.json` or in the `PLZ_IMAGE` '
+                               'environment variable) and you have a file '
+                               f'{DOCKERFILE_NAME} (that would be used to '
+                               'create an image).\nPlease do not specify the '
+                               'image or move the file somewhere else')
+        if self.configuration.command is not None and user_provided_dockerfile:
+            raise CLIException('You specified a command (either in '
+                               '`plz.config.json`, in the command you issued, '
+                               'or in the `PLZ_COMMAND` environment variable) '
+                               f'and you have a file {DOCKERFILE_NAME} (that '
+                               'would be used to create an image, including a '
+                               'command). Please do not specify the command, '
+                               'or move the file somewhere else')
+        if self.configuration.image is None and not user_provided_dockerfile:
+            raise CLIException('No image specified! Include an `image` entry '
+                               'in plz.config.json, or a file called '
+                               f'{DOCKERFILE_NAME} in your context path')
+        if self.configuration.command is None and not user_provided_dockerfile:
+            raise CLIException('No command specified! Include a `command` '
+                               'entry in plz.config.json, or a file called '
+                               f'{DOCKERFILE_NAME} in your context path')
 
     def follow_execution(self, was_start_ok: bool):
         log_info(f'Execution ID is: {self.execution_id}')
@@ -202,7 +212,6 @@ class RunExecutionOperation(Operation):
         instance_market_spec = create_instance_market_spec(configuration)
         commit = get_head_commit_or_none(context_path)
         response_dicts = self.controller.run_execution(
-            command=self.command,
             snapshot_id=snapshot_id,
             parameters=params,
             execution_spec=execution_spec,

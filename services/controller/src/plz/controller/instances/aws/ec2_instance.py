@@ -1,9 +1,9 @@
 import io
 import logging
 import os.path
-from typing import Dict, Iterator, List, Optional, Tuple
-
 import time
+from typing import Dict, Iterator, Optional, Tuple
+
 from redis import StrictRedis
 
 from plz.controller.containers import ContainerState, Containers
@@ -58,7 +58,6 @@ class EC2Instance(Instance):
         self.container_idle_timestamp_grace = container_idle_timestamp_grace
 
     def run(self,
-            command: List[str],
             snapshot_id: str,
             parameters: Parameters,
             input_stream: Optional[io.BytesIO],
@@ -83,7 +82,7 @@ class EC2Instance(Instance):
                     f'or earmarked for [{self._get_earmark()}] or '
                     f'not running)')
             self.images.pull(snapshot_id)
-            self.delegate.run(command, snapshot_id, parameters, input_stream,
+            self.delegate.run(snapshot_id, parameters, input_stream,
                               docker_run_args, index_range_to_run)
             self._set_execution_id(
                 self.delegate.execution_id, max_idle_seconds)

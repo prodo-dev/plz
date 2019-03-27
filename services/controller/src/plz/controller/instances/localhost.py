@@ -1,6 +1,6 @@
 import io
 import logging
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, Iterator, Optional
 
 from redis import StrictRedis
 
@@ -32,7 +32,6 @@ class Localhost(InstanceProvider):
 
     def run_in_instance(self,
                         execution_id: str,
-                        command: List[str],
                         snapshot_id: str,
                         parameters: Parameters,
                         input_stream: Optional[io.BytesIO],
@@ -48,7 +47,7 @@ class Localhost(InstanceProvider):
             execution_id,
             self.redis,
             self.instance_lock_timeout)
-        instance.run(command=command, snapshot_id=snapshot_id,
+        instance.run(snapshot_id=snapshot_id,
                      parameters=parameters, input_stream=input_stream,
                      docker_run_args=execution_spec['docker_run_args'],
                      index_range_to_run=execution_spec['index_range_to_run'])

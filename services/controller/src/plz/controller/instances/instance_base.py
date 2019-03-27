@@ -34,7 +34,6 @@ class Instance(Results):
 
     @abstractmethod
     def run(self,
-            command: List[str],
             snapshot_id: str,
             parameters: Parameters,
             input_stream: Optional[io.BytesIO],
@@ -304,7 +303,6 @@ class InstanceProvider(ABC):
     @abstractmethod
     def run_in_instance(self,
                         execution_id: str,
-                        command: List[str],
                         snapshot_id: str,
                         parameters: Parameters,
                         input_stream: Optional[io.BytesIO],

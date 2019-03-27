@@ -1,7 +1,7 @@
 import io
 import json
 import logging
-from typing import Dict, Iterator, List, Optional, Tuple
+from typing import Dict, Iterator, Optional, Tuple
 
 from docker.types import Mount
 from redis import StrictRedis
@@ -35,7 +35,6 @@ class DockerInstance(Instance):
         self.execution_id = execution_id
 
     def run(self,
-            command: List[str],
             snapshot_id: str,
             parameters: Parameters,
             input_stream: Optional[io.RawIOBase],
@@ -63,7 +62,6 @@ class DockerInstance(Instance):
         self.containers.run(execution_id=self.execution_id,
                             repository=self.images.repository,
                             tag=snapshot_id,
-                            command=command,
                             environment=environment,
                             mounts=[Mount(source=volume.name,
                                           target=Volumes.VOLUME_MOUNT)],

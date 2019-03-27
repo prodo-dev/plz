@@ -1,0 +1,14 @@
+=> Capturing the files in /data/app
+=> Building the program snapshot
+=> Sending request to start execution
+=> Execution ID is: <UUID>
+=> Streaming logs...
+baz
+
+=> Harvesting the output...
+=> Retrieving summary of measures (if present)...
+=> Execution succeeded.
+=> Retrieving the output...
+foo
+foo/bar
+=> Done and dusted.

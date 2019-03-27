@@ -3,7 +3,7 @@ import logging
 import socket
 import time
 from contextlib import closing
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, Iterator, Optional
 
 from redis import StrictRedis
 
@@ -86,7 +86,6 @@ class EC2InstanceGroup(InstanceProvider):
     def run_in_instance(
             self,
             execution_id: str,
-            command: List[str],
             snapshot_id: str,
             parameters: Parameters,
             input_stream: Optional[io.BytesIO],
@@ -135,7 +134,7 @@ class EC2InstanceGroup(InstanceProvider):
                     yield _msg('starting container')
                     need_to_recreate_instance, instance_data = \
                         yield from self._start_container_in_instance(
-                            command, execution_id, execution_spec,
+                            execution_id, execution_spec,
                             input_stream, instance, instance_data,
                             instance_market_spec,
                             instance_max_uptime_in_minutes,
@@ -156,14 +155,13 @@ class EC2InstanceGroup(InstanceProvider):
                 instance.hard_unearmark_for(execution_id)
 
     def _start_container_in_instance(
-            self, command: [str], execution_id: str, execution_spec: dict,
+            self, execution_id: str, execution_spec: dict,
             input_stream: Optional[io.BytesIO], instance: EC2Instance,
             instance_data: dict, instance_market_spec: dict,
             instance_max_uptime_in_minutes: int, instance_type: str,
             parameters: dict, snapshot_id: str):
         try:
             instance.run(
-                command=command,
                 snapshot_id=snapshot_id,
                 parameters=parameters,
                 input_stream=input_stream,
