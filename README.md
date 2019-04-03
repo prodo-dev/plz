@@ -467,12 +467,12 @@ We built Plz following these principles:
   imposed by its architecture. You should be able to do with Plz whatever you
   can do by running a program manually. It was surprising to find out how much
   of the friction around running jobs in the cloud could be solved, only by
-  tweaking the configuration and without requiring any changes to Plz code.
-Plz is routinely used at `prodo.ai` to train ML models on AWS, some of them
-taking days to run in the most powerful instances available. We trust it to
-start and terminate these instances as needed, and to manage our spot instances,
-allowing us to get a much better price than if we were using on-demand instances
-all the time.
+  tweaking the configuration and without requiring any changes to Plz code. Plz
+  is routinely used at `prodo.ai` to train ML models on AWS, some of them taking
+  days to run in the most powerful instances available. We trust it to start and
+  terminate these instances as needed, and to manage our spot instances,
+  allowing us to get a much better price than if we were using on-demand
+  instances all the time.
 
 ## How does Plz help
 
