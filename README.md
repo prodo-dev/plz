@@ -453,9 +453,13 @@ This tells Docker to use the
 
 We built Plz following these principles:
 
-- Code and data must be stored for future reference.
+- Data that isn't reproducible is worthless.
+- You don't know the value of your data at the time of creation.
 - Whatever part of the running environment can be captured by Plz, we capture it
   as to make jobs repeatable.
+- Hardware is expensive.
+- Code is a means to an end. What matters is the outcome you obtain from running
+  your code.
 - Functionality is based on standard mechanisms like files and environment
   variables. You don't need to add extra dependencies to your code or learn how
   to read/write your data in specific ways.
@@ -464,7 +468,6 @@ We built Plz following these principles:
   can do by running a program manually. It was surprising to find out how much
   of the friction around running jobs in the cloud could be solved, only by
   tweaking the configuration and without requiring any changes to Plz code.
-
 Plz is routinely used at `prodo.ai` to train ML models on AWS, some of them
 taking days to run in the most powerful instances available. We trust it to
 start and terminate these instances as needed, and to manage our spot instances,
