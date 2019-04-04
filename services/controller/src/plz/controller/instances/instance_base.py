@@ -308,6 +308,14 @@ class InstanceProvider(ABC):
                         input_stream: Optional[io.BytesIO],
                         instance_market_spec: dict,
                         execution_spec: dict) -> Iterator[Dict[str, Any]]:
+        '''
+        @param execution_id: uuid that references the execution, unique per container
+        @param snapshot_id: name of the docker image
+        @param parameters: parameters from plz run
+        @param input_stream: file-like object to read the input data (obtained as per execution config)
+        @param instance_market_spec: from execution config
+        @param execution_spec: part of the configuration relevant to this execution
+        '''
         pass
 
     @abstractmethod
@@ -492,6 +500,7 @@ class _InstanceContextManager(ContextManager):
     Allow for the lock to be acquired in several stack frames of the same
     thread
     """
+
     def __init__(self, instance_lock: Lock, redis: StrictRedis,
                  lock_timestamp_seconds_key_name: str,
                  instance_id: str):

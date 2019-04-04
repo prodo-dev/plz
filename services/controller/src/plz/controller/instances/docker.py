@@ -105,7 +105,7 @@ class DockerInstance(Instance):
     def dispose_if_its_time(
             self, execution_info: Optional[ExecutionInfo] = None):
         # It's never time for a local instance
-        pass
+        return None
 
     def kill(self, force_if_not_idle: bool):
         if not force_if_not_idle:

@@ -11,6 +11,7 @@ gunicorn = "*"
 pyhocon = "*"
 redis = "*"
 requests = ">=2.20.0"
+kubernetes = ">=9.0.0"
 
 [dev-packages]
 "flake8" = "*"

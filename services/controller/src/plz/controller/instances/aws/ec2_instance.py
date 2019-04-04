@@ -18,8 +18,6 @@ log = logging.getLogger(__name__)
 
 
 class EC2Instance(Instance):
-    ROOT = os.path.join(os.path.dirname(__file__), '..', '..', '..')
-
     # We find available instances by looking at those in which
     # the Execution-Id tag is the empty string and they are not earmarked (they
     # haven't been started for a particular execution ID). Instances are
