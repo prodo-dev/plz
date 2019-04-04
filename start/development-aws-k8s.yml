@@ -2,11 +2,12 @@ version: "2.3"
 
 services:
   controller:
-    image: prodoai/plz_controller:timestamp_${BUILD_TIMESTAMP}
+    image: plz/controller
+    build:
+      context: ../services/controller
     ports:
       - ${PORT:-5123}:80
     environment:
-      CREATE_AWS_RESOURCES: "yes"
       CONFIGURATION: |
         config = { include "/root/config.json" }
         include "/root/server.conf"
@@ -15,7 +16,7 @@ services:
     volumes:
       - ${SECRETS_DIR}/config.json:/root/config.json:ro
       - ./docker.conf:/root/docker.conf:ro
-      - ./local-aws-ec2.conf:/root/server.conf:ro
+      - ./local-aws-k8s.conf:/root/server.conf:ro
       - ${CACHE_DIR}/controller:/data
       - ${CACHE_DIR}/results:/data/results
       - ${HOME}/.aws:/root/.aws
@@ -26,6 +27,6 @@ services:
 
   redis:
     image: redis:4
-    entrypoint: redis-server --save 2 1 --loglevel warning
+    entrypoint: redis-server --save 2 1
     volumes:
       - ${CACHE_DIR}/redis_data:/data
