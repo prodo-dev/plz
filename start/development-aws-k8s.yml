@@ -20,6 +20,7 @@ services:
       - ${CACHE_DIR}/controller:/data
       - ${CACHE_DIR}/results:/data/results
       - ${HOME}/.aws:/root/.aws
+      - ${HOME}/.kube:/root/.kube
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       redis:

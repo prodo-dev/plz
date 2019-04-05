@@ -181,7 +181,7 @@ class ControllerImpl(Controller):
         tag = Images.construct_tag(image_metadata)
         yield from (
             frag.decode('utf-8') for frag in self.images.build(context, tag))
-        self.instance_provider.push(tag)
+        self.images.push(tag)
         yield json.dumps({'id': tag})
 
     def put_input(self, input_id: str, input_metadata: InputMetadata,
@@ -289,19 +289,21 @@ class ControllerImpl(Controller):
         try:
             def status_generator(
                     ex_id: str, ex_spec: dict,
-                    input_data_configuration: InputDataConfiguration) \
+                    input_data_configuration: InputDataConfiguration,
+                    project) \
                     -> Iterator[dict]:
                 input_stream = input_data_configuration.prepare_input_stream(
                     execution_spec)
                 return self.instance_provider.run_in_instance(
                     ex_id, snapshot_id, parameters, input_stream,
-                    instance_market_spec, ex_spec)
+                    instance_market_spec, ex_spec, project)
 
             statuses_generators = [
                 status_generator(
                     m['execution_id'],
                     m['execution_spec'],
-                    self.input_data_configuration)
+                    self.input_data_configuration,
+                    m['project'])
                 for m in metadatas_to_run
             ]
 

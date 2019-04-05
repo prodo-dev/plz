@@ -13,7 +13,13 @@ RUN set -ex; \
     curl -fsSL -o /tini https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini; \
     chmod +x /tini
 
+
+RUN curl -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.12.7/2019-03-27/bin/linux/amd64/aws-iam-authenticator
+RUN chmod +x ./aws-iam-authenticator
+RUN mkdir -p /bin && cp ./aws-iam-authenticator ./bin/aws-iam-authenticator
+
 RUN mkdir -p /src
+
 WORKDIR /src
 
 COPY Pipfile Pipfile.lock ./

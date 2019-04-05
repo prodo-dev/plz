@@ -3,6 +3,7 @@ import logging
 from typing import Dict, Iterator, Optional, Tuple
 
 from redis import StrictRedis
+from kubernetes import client as kubeclient, config as kubeconfig
 
 from plz.controller.api.exceptions import InstanceStillRunningException
 from plz.controller.containers import ContainerState
@@ -19,10 +20,12 @@ class K8sPod(Instance):
                  redis: StrictRedis,
                  lock_timeout: int,
                  pod_name: str,
-                 execution_id: str):
+                 execution_id: str,
+                 namespace: str):
         super().__init__(redis, lock_timeout)
         self.pod_name = pod_name
         self.execution_id = execution_id
+        self.namespace = namespace
 
     def run(self,
             snapshot_id: str,
@@ -101,14 +104,20 @@ class K8sPod(Instance):
 
     def get_logs(self, since: Optional[int] = None, stdout: bool = True,
                  stderr: bool = True) -> Iterator[bytes]:
-        # TODO: implement later
-        yield b'bbbb'
+        kubeconfig.load_kube_config()
+        for line in kubeclient.CoreV1Api. \
+                read_namespaced_pod_log(self.pod_name,
+                                        self.namespace,
+                                        follow=True,
+                                        _preload_content=False).\
+                stream():
+            yield line
 
     def get_output_files_tarball(
             self, path: Optional[str], index: Optional[int]) \
             -> Iterator[bytes]:
         # TODO: implement later
-        yield b'bbbbb'
+        yield b'bbbbbb'
 
     def get_measures_files_tarball(self, index: Optional[int]) \
             -> Iterator[bytes]:

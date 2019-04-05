@@ -307,7 +307,8 @@ class InstanceProvider(ABC):
                         parameters: Parameters,
                         input_stream: Optional[io.BytesIO],
                         instance_market_spec: dict,
-                        execution_spec: dict) -> Iterator[Dict[str, Any]]:
+                        execution_spec: dict,
+                        project: str) -> Iterator[Dict[str, Any]]:
         '''
         @param execution_id: uuid that references the execution, unique per container
         @param snapshot_id: name of the docker image
@@ -438,10 +439,6 @@ class InstanceProvider(ABC):
                 return False
             else:
                 return True
-
-    @abstractmethod
-    def push(self, image_tag: str):
-        pass
 
     @abstractmethod
     def instance_iterator(self, only_running: bool) -> Iterator[Instance]:

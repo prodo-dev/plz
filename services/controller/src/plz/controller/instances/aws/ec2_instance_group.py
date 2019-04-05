@@ -91,6 +91,7 @@ class EC2InstanceGroup(InstanceProvider):
             input_stream: Optional[io.BytesIO],
             instance_market_spec: dict,
             execution_spec: dict,
+            project: str,
             max_tries: int = 30,
             delay_in_seconds: int = 5) -> Iterator[Dict[str, Any]]:
         """
@@ -167,7 +168,7 @@ class EC2InstanceGroup(InstanceProvider):
                 input_stream=input_stream,
                 docker_run_args=execution_spec['docker_run_args'],
                 max_idle_seconds=instance_market_spec[
-                    'instance_max_idle_time_in_minutes'] * 60,
+                                     'instance_max_idle_time_in_minutes'] * 60,
                 index_range_to_run=execution_spec[
                     'index_range_to_run'])
         except InstanceUnavailableException as e:
@@ -263,9 +264,6 @@ class EC2InstanceGroup(InstanceProvider):
         super().release_instance(execution_id,
                                  fail_if_not_found,
                                  idle_since_timestamp)
-
-    def push(self, image_tag):
-        self.images.push(image_tag)
 
     def _get_group_aws_instances(self, filters, only_running: bool):
         filters += [(f'tag:{EC2Instance.GROUP_NAME_TAG}', self.name)]
@@ -381,4 +379,4 @@ def _is_socket_open(host: str, port: int) -> bool:
 
 
 def _msg(s) -> Dict:
-        return {'message': s}
+    return {'message': s}

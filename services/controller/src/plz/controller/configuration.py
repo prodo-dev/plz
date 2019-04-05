@@ -96,26 +96,11 @@ def _instance_provider_from(
     elif instance_provider_type == 'k8s':
         instance_provider = K8sInstanceProvider(
             redis=redis,
-            client=boto3.client(
-                service_name='ec2',
-                region_name=config['instances.region']),
-            aws_worker_ami=config['instances.aws_worker_ami'],
-            aws_key_name=config.get('instances.key_name', None),
             results_storage=results_storage,
-            images=images,
-            acquisition_delay_in_seconds=config.get_int(
-                'instances.acquisition_delay', 10),
-            max_acquisition_tries=config.get_int(
-                'instances.max_acquisition_tries', 5),
             namespace=config['instances.namespace'],
-            worker_security_group_names=config.get(
-                'instances.worker_security_group_names', []),
-            use_public_dns=config.get('instances.use_public_dns', False),
-            instance_lock_timeout=config['assumptions.instance_lock_timeout'],
-            instance_max_startup_time_in_minutes=config[
-                'assumptions.instance_max_startup_time_in_minutes'],
-            container_idle_timestamp_grace=config[
-                'assumptions.container_idle_timestamp_grace'])
+            pod_lock_timeout=config['assumptions.instance_lock_timeout'],
+            images=images,
+        )
     else:
         raise ValueError('Invalid instance provider.')
     return instance_provider

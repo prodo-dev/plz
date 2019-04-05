@@ -32,10 +32,12 @@ class K8sInstanceProvider(InstanceProvider):
                  namespace: str,
                  redis: StrictRedis,
                  results_storage: ResultsStorage,
-                 pod_lock_timeout: int):
+                 pod_lock_timeout: int,
+                 images: Images):
         super().__init__(results_storage, pod_lock_timeout)
         self.namespace = namespace
         self.redis = redis
+        self.images = images
 
     _TEMPLATE = '''
         apiVersion: batch/v1
@@ -60,14 +62,9 @@ class K8sInstanceProvider(InstanceProvider):
         '''
 
     def create_job(self, job_spec, api_instance):
-        try:
-            api_response = api_instance.create_namespaced_job(self.namespace,
-                                                              job_spec)
-            return api_response
-        except ApiException as e:
-            print(
-                f"Exception when calling BatchV1Api.create_namespaced"
-                f"_job {type(e).__name__}: {e.args}")
+        api_response = api_instance.create_namespaced_job(self.namespace,
+                                                          job_spec)
+        return api_response
 
     def _k8s_pod_from_pod_data(self, pod_data):
         pod_name = pod_data['metadata']['name']
@@ -75,7 +72,8 @@ class K8sInstanceProvider(InstanceProvider):
             redis=self.redis,
             lock_timeout=self.instance_lock_timeout,
             execution_id=self._get_execution_id_from_pod_name(pod_name),
-            pod_name=pod_name)
+            pod_name=pod_name,
+            namespace=self.namespace)
 
     def _get_execution_id_from_pod_name(self, pod_name):
         return pod_name.rsplit('-', 1)[0].rsplit('.', 1)[1]
@@ -116,18 +114,28 @@ class K8sInstanceProvider(InstanceProvider):
             input_stream: Optional[io.BytesIO],
             instance_market_spec: dict,
             execution_spec: dict,
+            project: str,
             max_tries: int = 30,
             delay_in_seconds: int = 5) -> Iterator[Dict[str, Any]]:
         # TODO use docker_run_args and input_stream
+        image_repo = self.images.repository
+        yield 'generating k8s job spec'
         job_spec = yaml.load(
-            self._TEMPLATE.format(project_name=execution_spec['project'],
-                                  image=f'{images.repository}:{snapshot_id}',
+            self._TEMPLATE.format(project_name=project,
+                                  image=f'{image_repo}:{snapshot_id}',
                                   execution_id=execution_id),
             Loader=yaml.SafeLoader)
-
+        yield 'retrieving kube config'
         kubeconfig.load_kube_config()
         api_instance = kubeclient.BatchV1Api()
-        self.create_job(job_spec, api_instance)
+        yield self.create_job(job_spec, api_instance).__dict__
+        yield {'instance': K8sPod(
+            redis=self.redis,
+            lock_timeout=self.instance_lock_timeout,
+            execution_id=execution_id,
+            pod_name=f'plz.{project}.{execution_id}',
+            namespace=self.namespace)
+        }
 
     def instance_for(self, execution_id: str) -> Optional[EC2Instance]:
         kubeconfig.load_kube_config()
@@ -157,9 +165,6 @@ class K8sInstanceProvider(InstanceProvider):
         super().release_instance(execution_id,
                                  fail_if_not_found,
                                  idle_since_timestamp)
-
-    def push(self, image_tag):
-        self.images.push(image_tag)
 
 
 def _is_socket_open(host: str, port: int) -> bool:
