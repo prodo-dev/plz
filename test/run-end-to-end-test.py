@@ -1,99 +1,139 @@
-#!/usr/bin/env zsh
+import argparse
+import datetime
 import json
 import os
 import re
+import sys
+from tempfile import NamedTemporaryFile, TemporaryDirectory, TemporaryFile
 
 import test_utils
+from test_utils import CLI_CONTAINER_PREFIX, DATA_DIRECTORY, NETWORK, \
+    PLZ_ROOT_DIRECTORY, VOLUME_PREFIX
 
-# cd ${0:a:h:h}
-#
-# source ./test/utils.sh
 
-# def run_test(test_name: str):
-#   # local test_name test_directory
-#   # local expected_exit_status actual_exit_status_file actual_exit_status
-#   # local expected_logs actual_logs
-#   # local expected_output_directory actual_output_directory
-#   # local start end
-#
-#   test_directory="${PWD}/test/${test_name}"
-#
-#   echo
-#   info "Running ${test_name}..."
-#
-#   if [[ -f "${test_directory}/expected-status" ]]; then
-#     expected_exit_status=$(cat "${test_directory}/expected-status")
-#   else
-#     expected_exit_status=0
-#   fi
-#   actual_exit_status_file=$(mktemp "${DATA_DIRECTORY}/plz-test-status.XXXXX")
-#   expected_logs="${test_directory}/expected-logs"
-#   actual_logs=$(mktemp "${DATA_DIRECTORY}/plz-test-logs.XXXXX")
-#   expected_output_directory="${test_directory}/expected-output"
-#   actual_output_directory=$(mktemp "${DATA_DIRECTORY}/plz-test-output.XXXXX")
-#   rm $actual_output_directory # It's been created as a file.
-#
-#   start=$(date +%s)
-#   run_cli $test_name $test_directory $actual_exit_status_file $actual_logs $actual_output_directory
-#   end=$(date +%s)
-#
-#   info "Time taken: $((end - start))s."
-#
-#   actual_exit_status=$(cat $actual_exit_status_file)
-#   if $bless; then
-#     if [[ $actual_exit_status -eq $expected_exit_status ]]; then
-#       info 'Blessing output...'
-#       cp $actual_logs $expected_logs
-#       rm -rf $expected_output_directory
-#       if [[ -e $actual_output_directory ]]; then
-#         cp -R $actual_output_directory $expected_output_directory
-#       fi
-#       info 'Test blessed.'
-#     else
-#       error "Exited with a status code of ${actual_exit_status}."
-#       return 1
-#     fi
-#   else
-#     if [[ $actual_exit_status -ne $expected_exit_status ]]; then
-#       error "Exited with a status code of ${actual_exit_status}."
-#       error "Expected a status code of ${expected_exit_status}."
-#       error 'Test failed.'
-#       return 1
-#     else
-#       info 'Comparing output...'
-#       if git --no-pager diff --no-index $expected_logs $actual_logs && \
-#          ( ! [[ -e $expected_output_directory ]] || \
-#            git --no-pager diff --no-index $expected_output_directory $actual_output_directory ); then
-#         info 'Test passed.'
-#       else
-#         error 'Test failed.'
-#         return 1
-#       fi
-#     fi
-#   fi
-# }
-from test_utils import CLI_CONTAINER_PREFIX, VOLUME_PREFIX
+def run_test(plz_host: str, plz_port: int, test_name: str, bless: bool) \
+        -> bool:
+    """
+    :param plz_host: host where the controller is running
+    :param plz_port: port where controller is listening
+    :param test_name: name of the test to run (path from test/)
+    :param bless: whether to override the expected output and logs with the
+           results of the run
+    :return: whether the test passed
+    """
+
+    if not os.path.exists(DATA_DIRECTORY):
+        os.mkdir(DATA_DIRECTORY)
+
+    # Make sure the directory has a single slash at the end
+    test_directory = os.path.join(
+        os.path.normpath(os.path.join(os.getcwd(), test_name)),
+        '')
+
+    test_utils.print_info(f'Running {test_name}...')
+
+    if os.path.isfile(f'{test_directory}/expected-status'):
+        with open(f'{test_directory}/expected-status', 'r') as f:
+            expected_exit_status = int(f.read())
+    else:
+        expected_exit_status = 0
+
+    expected_logs_file_name = f'{test_directory}/expected-logs'
+    expected_output_directory = f'{test_directory}/expected-output'
+    with \
+            NamedTemporaryFile(
+                prefix='plz-test-logs',
+                dir=DATA_DIRECTORY,
+                mode='wb') as logs_file, \
+            TemporaryDirectory(
+                prefix='plz-test-output',
+                dir=DATA_DIRECTORY) as output_directory_name:
+        start = datetime.datetime.now()
+        test_subprocess = run_cli(
+            plz_host=plz_host,
+            plz_port=plz_port,
+            test_name=test_name,
+            app_directory=test_directory,
+            actual_logs_file=logs_file,
+            output_directory_name=output_directory_name)
+        end = datetime.datetime.now()
+        test_utils.print_info(f'Time taken: {end-start}')
+
+        actual_exit_status = test_subprocess.returncode
+        if bless:
+            if actual_exit_status == expected_exit_status:
+                test_utils.print_info('Blessing output...')
+                test_utils.execute_command(
+                    ['cp', logs_file.name, expected_logs_file_name])
+                test_utils.execute_command(
+                    ['rm', '-rf', expected_output_directory])
+                if len(os.listdir(output_directory_name)) != 0:
+                    test_utils.execute_command(
+                        ['cp', '-R', output_directory_name,
+                         expected_output_directory])
+                test_utils.print_info('Test blessed')
+            else:
+                test_utils.print_error(
+                    f'Was going to bless the test but it exited with status '
+                    f'{actual_exit_status} (expected {actual_exit_status}')
+                return False
+        else:
+            if actual_exit_status != expected_exit_status:
+                test_utils.print_error(
+                    f'Exited with a status code of {actual_exit_status}')
+                test_utils.print_error(
+                    f'Expected a status code of {expected_exit_status}')
+                test_utils.print_error('Test failed')
+                return False
+
+            compare_logs_subp = test_utils.execute_command(
+                ['git', '--no-pager', 'diff', '--no-index',
+                 expected_logs_file_name,
+                 logs_file.name],
+                fail_on_failure=False)
+            if compare_logs_subp.returncode != 0:
+                test_utils.print_error(
+                    'Expected logs differ from the actual ones')
+                test_utils.print_error('Test failed')
+                return False
+            if os.path.isdir(expected_output_directory):
+                compare_output_subp = test_utils.execute_command(
+                    ['git',
+                     '--no-pager',
+                     'diff',
+                     '--no-index',
+                     expected_output_directory,
+                     output_directory_name],
+                    fail_on_failure=False)
+                if compare_output_subp.returncode != 0:
+                    test_utils.print_error(
+                        'Expected output differ from the actual one')
+                    test_utils.print_error('Test failed')
+                    return False
+            test_utils.print_info('Test passed')
+            return True
 
 
 def run_cli(
-        test_name: str, app_directory: str, exit_status_file: str,
-        logs_file: str,
-        output_directory: str):
-    # local test_name app_directory exit_status_file logs_file output_directory
-    # local project_name test_config_file suffix cli_container volume test_args
-    exit_status_file = os.path.abspath(exit_status_file)
-    logs_file = os.path.abspath(logs_file)
-    output_directory = os.path.abspath(output_directory)
+        plz_host: str,
+        plz_port: int,
+        test_name: str,
+        app_directory: str,
+        actual_logs_file: TemporaryFile,
+        output_directory_name: str):
+    output_directory_name = os.path.abspath(output_directory_name)
     project_name = re.sub(r'[^0-9a-zA-Z_]', '-', test_name)
     test_config_file = f'{app_directory}/test.config.json'
     suffix = re.sub(r'[^0-9a-zA-Z_]', '-',
-                    '-'.join(os.path.split(app_directory)[-2:]))
+                    '-'.join(os.path.split(test_name)[-2:]))
     cli_container = f'{CLI_CONTAINER_PREFIX}_{suffix}'
-    volume = f'{VOLUME_PREFIX}_${suffix}'
+    volume = f'{VOLUME_PREFIX}{suffix}'
 
     if os.path.exists(test_config_file):
         with open(test_config_file, 'r') as f:
             test_args = json.load(f).get('args', [])
+    else:
+        test_args = []
 
     # Add the app directory to a Docker volume.
     test_utils.execute_command(
@@ -108,80 +148,114 @@ def run_cli(
          f'--volume={volume}:/data',
          'docker:stable-git',
          '/bin/cat'],
-        hide_output=True)
+        hide_output=False)
     test_utils.execute_command(
         ['docker',
          'container',
          'cp',
          app_directory,
-         f'{volume}/data/app'])
+         f'{volume}:/data/app'])
 
     # Initialize a Git repository to make excludes work.
+    test_utils.execute_command(
+        ['docker',
+         'container',
+         'run',
+         '--rm',
+         f'--volume={volume}:/data',
+         'docker:stable-git',
+         'git',
+         'init',
+         '--quiet',
+         '/data/app'])
 
-    docker container run \
-        --rm \
-        --volume=$volume:/data \
-        docker:stable-git \
-    git init --quiet /data/app
+    # Start the CLI process.
+    testp_subprocess = test_utils.execute_command(
+        ['docker',
+         'container',
+         'run',
+         f'--name={cli_container}',
+         f'--detach',
+         f'--network={NETWORK}',
+         f'--env=PLZ_HOST={plz_host}',
+         f'--env=PLZ_PORT={plz_port}',
+         f'--env=PLZ_USER=plz-test',
+         f'--env=PLZ_PROJECT={project_name}',
+         f'--env=PLZ_INSTANCE_MARKET_TYPE=spot',
+         f'--env=PLZ_MAX_BID_PRICE_IN_DOLLARS_PER_HOUR=0.5',
+         f'--env=PLZ_INSTANCE_MAX_UPTIME_IN_MINUTES=0',
+         f'--env=PLZ_QUIET_BUILD=true',
+         f'--workdir=/data/app',
+         f'--volume={volume}:/data',
+         test_utils.CLI_IMAGE,
+         'run',
+         '--output=/data/output',
+         *test_args])
 
-  # Start the CLI process.
-  docker container run \
-      --name=$cli_container \
-      --detach \
-      --network=$NETWORK \
-      --env=PLZ_HOST=$PLZ_HOST \
-      --env=PLZ_PORT=$PLZ_PORT \
-      --env=PLZ_USER='plz-test' \
-      --env=PLZ_PROJECT=$project_name \
-      --env=PLZ_INSTANCE_MARKET_TYPE=spot \
-      --env=PLZ_MAX_BID_PRICE_IN_DOLLARS_PER_HOUR=0.5 \
-      --env=PLZ_INSTANCE_MAX_UPTIME_IN_MINUTES=0 \
-      --env=PLZ_QUIET_BUILD=true \
-      --workdir=/data/app \
-      --volume="${volume}:/data" \
-    $CLI_IMAGE \
-    run --output=/data/output $test_args \
-    > /dev/null
+    # Capture the logs and exit status
+    # Pycharm has the wrong return types for Popen
+    # noinspection PyTypeChecker
+    test_utils.execute_command(
+        ['docker',
+         'container',
+         'logs',
+         '--follow',
+         cli_container],
+        substitute_stdout_lines=[
+            (rb'\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-'
+                rb'[0-9a-f]{12}\b',
+             rb'<UUID>'),
+            (rb'^:: .*', rb''),
+            (rb'^Instance status: .*', rb'')
+        ],
+        file_to_dump_stdout=actual_logs_file,
+        stderr_to_stdout=True
+    )
 
-  # Capture the logs and exit status.
-  docker container logs --follow $cli_container \
-    |& redact_uuids \
-    |& redact_debug_messages \
-    |& redact_instance_status \
-    | tee $logs_file
-  docker wait $cli_container > $exit_status_file
-  docker container rm $cli_container > /dev/null
+    # test_utils.execute_command(
+    #     ['docker',
+    #      'wait'
+    #      '$cli_container'],
+    #     file_to_dump_stdout=exit_status_file)
+    test_utils.execute_command(
+        ['docker',
+         'container',
+         'rm',
+         cli_container],
+        hide_output=True)
 
-  # Extract the output.
-  docker container exec $volume sh -c '[ ! -d /data/output ]' \
-    || docker container cp $volume:/data/output $output_directory
-  test_utils.remove_volume(volume)
-}
+    # Extract the output.
+    subp = test_utils.execute_command(
+        ['docker',
+         'container',
+         'exec',
+         volume,
+         'sh',
+         '-c',
+         '[ ! -d /data/output ]'],
+        fail_on_failure=False)
+    if subp.returncode != 0:
+        test_utils.execute_command(
+            ['docker',
+             'container',
+             'cp',
+             f'{volume}:/data/output',
+             output_directory_name])
+    test_utils.remove_volume(volume)
 
-function redact_uuids {
-  # The "$| = 1" bit disables buffering so we get output as we need it.
-  perl -pe '$| = 1; s/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/<UUID>/g'
-}
+    return testp_subprocess
 
-function redact_debug_messages {
-  grep -v '^:: '
-}
 
-function redact_instance_status {
-  grep -v '^Instance status: '
-}
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('plz_host', type=str)
+    parser.add_argument('plz_port', type=int)
+    parser.add_argument('test_name', type=str)
+    parser.add_argument('--bless', action='store_true', default=False)
+    options = parser.parse_args(sys.argv[1:])
+    run_test(
+        options.plz_host, options.plz_port, options.test_name, options.bless)
 
-# In "bless mode", instead of comparing the actual output against expected
-# output, we save the output.
-bless=false
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --bless)
-      bless=true
-      shift ;;
-    *)
-      break
-  esac
-done
 
-run_test $@
+if __name__ == '__main__':
+    main()

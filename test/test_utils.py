@@ -1,7 +1,9 @@
 import io
 import os
+import re
 import subprocess
 import sys
+import traceback
 
 from typing import Optional, List, Any, Tuple, ContextManager
 
@@ -26,24 +28,30 @@ CONTROLLER_TESTS_CONTAINER = f'{PROJECT_NAME}_controller-tests_1'
 CONTROLLER_PORT = 80
 
 TEST_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
-DATA_DIRECTORY = f'{os.path.abspath(os.getcwd())}/test_cache/'
+PLZ_ROOT_DIRECTORY = os.path.abspath(
+    os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), '..'))
+
+DATA_DIRECTORY = f'{PLZ_ROOT_DIRECTORY}/test_cache/'
 
 
-def print_info(args: List[Any]):
-    _print_with_color('green', args)
+def print_info(*args: Any):
+    _print_with_color('green', *args)
 
 
-def print_warning(args: List[Any]):
-    _print_with_color('yellow', args)
+def print_warning(*args: Any):
+    _print_with_color('yellow', *args)
 
 
-def print_error(args: List[Any]):
-    _print_with_color('red', args)
+def print_error(*args: Any):
+    _print_with_color('red', *args)
 
 
 def _maybe_reopen_stdout(should_reopen_stdout):
     if should_reopen_stdout:
-        os.fdopen(sys.stdout.fileno(), 'wb', buffering=0)
+        # Pycharm doesn't really know the arguments of fdopen or return value
+        # noinspection PyArgumentList
+        return os.fdopen(sys.stdout.fileno(), 'wb', buffering=0, closefd=False)
     else:
         return ContextManager()
 
@@ -55,7 +63,8 @@ def execute_command(
         file_to_dump_stdout: Optional[io.FileIO] = None,
         substitute_stdout_lines: Optional[List[Tuple[bytes, bytes]]] = None,
         stderr_to_stdout: Optional[bool] = False) -> subprocess.Popen:
-    if substitute_stdout_lines is not None:
+    print_info('Running:', ' '.join(args))
+    if substitute_stdout_lines is None:
         substitute_stdout_lines = []
     iterate_stdout = False
     kwargs = {}
@@ -68,28 +77,60 @@ def execute_command(
     if stderr_to_stdout:
         kwargs['stderr'] = subprocess.STDOUT
 
-    subp = subprocess.Popen(args, shell=True, **kwargs)
+    subp = subprocess.Popen(args, bufsize=1, **kwargs)
     # Reopen stdout as to be able to output bytes (to avoid conversion to
     # strings. as we don't know the encoding of whatever we're running)
     should_reopen_stdout = iterate_stdout and not hide_output
     line_so_far = []
     if iterate_stdout:
         with _maybe_reopen_stdout(
-                should_reopen_stdout=should_reopen_stdout) as stdo:
-            for c in subp.stdout.read(1):
+               should_reopen_stdout=should_reopen_stdout) as stdo:
+            c = subp.stdout.read(1)
+            while len(c) > 0:
+                if not substitute_stdout_lines:
+                    if not hide_output:
+                        stdo.write(c)
+                    if file_to_dump_stdout is not None:
+                        file_to_dump_stdout.write(c)
                 if len(substitute_stdout_lines) > 0:
+                    line_so_far.append(c)
+                    if c[0] == bytes(os.linesep, 'utf-8')[0]:
+                        # Pycharm has the wrong return types for Popen
+                        # noinspection PyTypeChecker
+                        line = b''.join(line_so_far)
+                        line_so_far = []
+                        for m, r in substitute_stdout_lines:
+                            line = re.sub(m, r, line)
+                        if not hide_output:
+                            stdo.write(line)
+                        if file_to_dump_stdout is not None:
+                            print('Writing to file!')
+                            file_to_dump_stdout.write(line)
+                c = subp.stdout.read(1)
 
+            if len(substitute_stdout_lines) > 0 and len(line_so_far) > 0:
+                line = b''.join(line_so_far)
+                for m, r in substitute_stdout_lines:
+                    line = re.sub(m, r, line)
                 if not hide_output:
-                    stdo.write(c)
+                    stdo.write(line)
                 if file_to_dump_stdout is not None:
-                    file_to_dump_stdout.write(c)
+                    print('Writing to file at end!')
+                    file_to_dump_stdout.write(line)
+    subp.wait()
+    print('Return code is:', subp.returncode)
+    if file_to_dump_stdout is not None:
+        file_to_dump_stdout.flush()
     if fail_on_failure:
+        print('Checking')
         if subp.returncode != 0:
+            traceback.print_stack()
+            print_error('Error executing:', ' '.join(args))
             sys.exit(subp.returncode)
     return subp
 
 
-def _print_with_color(color: str, args: List[Any]):
+def _print_with_color(color: str, *args: Any):
     # Print with color if using the terminal
     for a in args:
         print(a, end='')
