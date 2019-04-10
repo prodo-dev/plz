@@ -12,8 +12,8 @@ from run_end_to_end_test import run_end_to_end_test
 from test_utils import CLI_BUILDER_IMAGE, CLI_IMAGE, \
     CONTROLLER_CONTAINER, CONTROLLER_HOSTNAME, CONTROLLER_IMAGE, \
     CONTROLLER_PORT, CONTROLLER_TESTS_CONTAINER, CONTROLLER_TESTS_IMAGE, \
-    DATA_DIRECTORY, PLZ_ROOT_DIRECTORY, PROJECT_NAME, TEST_DIRECTORY, \
-    get_network
+    DATA_DIRECTORY, PLZ_ROOT_DIRECTORY, REDIS_DATA_DIRECTORY, TEST_DIRECTORY, \
+    docker_compose, get_network
 
 
 def start_controller():
@@ -28,17 +28,11 @@ def start_controller():
 
     test_utils.stop_container(CONTROLLER_CONTAINER)
 
+    if not os.path.isdir(REDIS_DATA_DIRECTORY):
+        os.makedirs(REDIS_DATA_DIRECTORY)
+
     test_utils.print_info('Starting the controller...')
-    # Specify the container name, as to avoid the random suffix added by docker
-    # compose
-    env = os.environ.copy()
-    env['CONTROLLER_CONTAINER'] = CONTROLLER_CONTAINER
-    test_utils.execute_command(
-        ['docker-compose',
-         'up',
-         '--quiet-pull',
-         '--detach'],
-        env=env)
+    docker_compose('up', '--quiet-pull', '--detach')
 
 
 def build_cli():
@@ -64,7 +58,8 @@ def build_cli():
     ])
 
 
-def run_controller_tests(network: str, plz_host: str, plz_port: int) -> bool:
+def run_controller_tests(network: str, plz_host: str, plz_port: int,
+                         controller_tests_parameters: List[str]) -> bool:
     test_utils.stop_container(CONTROLLER_TESTS_CONTAINER)
     test_utils.execute_command([
         'docker',
@@ -87,17 +82,10 @@ def run_controller_tests(network: str, plz_host: str, plz_port: int) -> bool:
          f'--env=PLZ_PORT={plz_port}',
          f'--env=PLZ_USER=plz-test',
          f'--env=PLZ_PROJECT=controller-tests',
-         CONTROLLER_TESTS_IMAGE],
+         CONTROLLER_TESTS_IMAGE,
+         *controller_tests_parameters],
         fail_on_failure=False)
     return subp.returncode == 0
-
-
-def docker_compose(*args):
-    test_utils.execute_command(
-        ['docker-compose',
-         f'--project-name={PROJECT_NAME}',
-         f'--file={os.path.join(TEST_DIRECTORY, "docker-compose.yml")}',
-         *args])
 
 
 def get_end_to_end_tests(
@@ -189,6 +177,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         'test_dirs', nargs='*', type=str, default=None)
+    parser.add_argument('--controller-tests-parameters', type=str, nargs='+',
+                        default=[])
     parser.add_argument('--bless', action='store_true', default=False)
     parser.add_argument('--in-parallel', action='store_true', default=False)
     parser.add_argument('--end-to-end-only', action='store_true', default=False)
@@ -231,7 +221,9 @@ def main():
                 network = get_network()
 
             if controller_tests:
-                if not run_controller_tests(network, plz_host, plz_port):
+                if not run_controller_tests(
+                        network, plz_host, plz_port,
+                        options.controller_tests_parameters):
                     test_utils.print_error('Some controller tests failed!')
                     passed = False
 

@@ -7,7 +7,7 @@ import sys
 import traceback
 from typing import Any, ContextManager, List, Optional, Tuple
 
-PROJECT_NAME = 'test'
+PROJECT_NAME = 'plztest'
 VOLUME_PREFIX = f'{PROJECT_NAME}_data_'
 CLI_BUILDER_IMAGE = f'{PROJECT_NAME}/cli-builder'
 CLI_IMAGE = f'{PROJECT_NAME}/cli'
@@ -32,6 +32,7 @@ PLZ_ROOT_DIRECTORY = os.path.abspath(
         os.path.dirname(os.path.abspath(__file__)), '..'))
 
 DATA_DIRECTORY = f'{PLZ_ROOT_DIRECTORY}/test_cache/'
+REDIS_DATA_DIRECTORY = f'{DATA_DIRECTORY}/redis_data/'
 PLZ_USER = 'plztest'
 
 
@@ -283,9 +284,9 @@ def stop_all_clis():
 
 
 def stop_controller():
-    execute_command(['docker-compose', 'stop'])
-    execute_command(['docker-compose', 'logs'])
-    execute_command(['docker-compose', 'down', '--volumes'])
+    docker_compose('stop')
+    docker_compose('logs')
+    docker_compose('down', '--volumes')
 
 
 def stop_all_test_containers():
@@ -300,7 +301,21 @@ def stop_all_test_containers():
         stdout_holder=stdout_holder,
         hide_output=True)
     for l in str(b''.join(stdout_holder), 'utf-8').splitlines():
-        container_id, image = l.split(':', 1)
+        container_id, image = l.split('#', 1)
         if image.startswith(f'plz/builds:{PLZ_USER}-'):
-            print_info('Stopping', l)
             stop_container(container_id)
+
+
+def docker_compose(*args):
+    # Specify the container name, as to avoid the random suffix added by docker
+    # compose
+    env = os.environ.copy()
+    env['CONTROLLER_CONTAINER'] = CONTROLLER_CONTAINER
+    env['DATA_DIRECTORY'] = DATA_DIRECTORY
+    env['REDIS_DATA_DIRECTORY'] = REDIS_DATA_DIRECTORY
+    execute_command(
+        ['docker-compose',
+         f'--project-name={PROJECT_NAME}',
+         f'--file={os.path.join(TEST_DIRECTORY, "docker-compose.yml")}',
+         *args],
+        env=env)

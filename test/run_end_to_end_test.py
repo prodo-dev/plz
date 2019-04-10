@@ -9,7 +9,7 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory, TemporaryFile
 
 import test_utils
 from test_utils import CLI_CONTAINER_PREFIX, DATA_DIRECTORY, PLZ_USER, \
-    VOLUME_PREFIX, get_network
+    TEST_DIRECTORY, VOLUME_PREFIX, get_network
 
 
 def run_end_to_end_test(
@@ -24,13 +24,12 @@ def run_end_to_end_test(
            results of the run
     :return: whether the test passed
     """
-
-    if not os.path.exists(DATA_DIRECTORY):
+    if not os.path.isdir(DATA_DIRECTORY):
         os.mkdir(DATA_DIRECTORY)
 
     # Make sure the directory has a single slash at the end
     test_directory = os.path.join(
-        os.path.normpath(os.path.join(os.getcwd(), test_name)),
+        os.path.normpath(os.path.join(TEST_DIRECTORY, test_name)),
         '')
 
     test_utils.print_info(f'Running {test_name}...')

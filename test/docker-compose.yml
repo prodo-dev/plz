@@ -42,8 +42,9 @@ services:
   redis:
     image: redis:4
     entrypoint: redis-server --save 300 1
+    # user: 1000:1000
     volumes:
-      - ../cache/redis_data:/data
+      - $REDIS_DATA_DIRECTORY:/data
 
 volumes:
   redis_data: {}
