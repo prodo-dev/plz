@@ -38,7 +38,7 @@ class TestKill(unittest.TestCase):
         self._assert_running_executions(
             context.controller,
             context.configuration.user,
-            execution_ids=set())
+            execution_ids=set('1'))
 
     def test_kill_fail_because_non_idle(self):
         context, execution_id = run_example(
