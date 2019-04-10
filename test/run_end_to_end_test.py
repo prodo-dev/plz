@@ -3,17 +3,20 @@ import datetime
 import json
 import os
 import re
+import signal
 import sys
 from tempfile import NamedTemporaryFile, TemporaryDirectory, TemporaryFile
 
 import test_utils
-from test_utils import CLI_CONTAINER_PREFIX, DATA_DIRECTORY, NETWORK, \
-    PLZ_ROOT_DIRECTORY, VOLUME_PREFIX
+from test_utils import CLI_CONTAINER_PREFIX, DATA_DIRECTORY, PLZ_USER, \
+    VOLUME_PREFIX, get_network
 
 
-def run_test(plz_host: str, plz_port: int, test_name: str, bless: bool) \
-        -> bool:
+def run_end_to_end_test(
+        network: str, plz_host: str, plz_port: int, test_name: str,
+        bless: bool) -> bool:
     """
+    :param network: docker network where the controller is running (or `host`)
     :param plz_host: host where the controller is running
     :param plz_port: port where controller is listening
     :param test_name: name of the test to run (path from test/)
@@ -42,14 +45,16 @@ def run_test(plz_host: str, plz_port: int, test_name: str, bless: bool) \
     expected_output_directory = f'{test_directory}/expected-output'
     with \
             NamedTemporaryFile(
-                prefix='plz-test-logs',
+                prefix='plz-test-logs_',
                 dir=DATA_DIRECTORY,
                 mode='wb') as logs_file, \
             TemporaryDirectory(
-                prefix='plz-test-output',
-                dir=DATA_DIRECTORY) as output_directory_name:
+                prefix='plz-test-output_',
+                dir=DATA_DIRECTORY) as output_directory:
+        output_directory_name = os.path.abspath(output_directory)
         start = datetime.datetime.now()
-        test_subprocess = run_cli(
+        actual_exit_status = run_cli(
+            network=network,
             plz_host=plz_host,
             plz_port=plz_port,
             test_name=test_name,
@@ -59,7 +64,11 @@ def run_test(plz_host: str, plz_port: int, test_name: str, bless: bool) \
         end = datetime.datetime.now()
         test_utils.print_info(f'Time taken: {end-start}')
 
-        actual_exit_status = test_subprocess.returncode
+        # Because the temporary directory exists, when extracting the `output`
+        # directory from the container via `docker cp` this creates an `output`
+        # directory inside the directory
+        output_directory_name = os.path.join(output_directory_name, 'output')
+
         if bless:
             if actual_exit_status == expected_exit_status:
                 test_utils.print_info('Blessing output...')
@@ -115,12 +124,16 @@ def run_test(plz_host: str, plz_port: int, test_name: str, bless: bool) \
 
 
 def run_cli(
+        network: str,
         plz_host: str,
         plz_port: int,
         test_name: str,
         app_directory: str,
         actual_logs_file: TemporaryFile,
-        output_directory_name: str):
+        output_directory_name: str) -> int:
+    """
+    :return: exit code of the test
+    """
     output_directory_name = os.path.abspath(output_directory_name)
     project_name = re.sub(r'[^0-9a-zA-Z_]', '-', test_name)
     test_config_file = f'{app_directory}/test.config.json'
@@ -148,7 +161,7 @@ def run_cli(
          f'--volume={volume}:/data',
          'docker:stable-git',
          '/bin/cat'],
-        hide_output=False)
+        hide_output=True)
     test_utils.execute_command(
         ['docker',
          'container',
@@ -170,16 +183,16 @@ def run_cli(
          '/data/app'])
 
     # Start the CLI process.
-    testp_subprocess = test_utils.execute_command(
+    test_utils.execute_command(
         ['docker',
          'container',
          'run',
          f'--name={cli_container}',
          f'--detach',
-         f'--network={NETWORK}',
+         f'--network={network}',
          f'--env=PLZ_HOST={plz_host}',
          f'--env=PLZ_PORT={plz_port}',
-         f'--env=PLZ_USER=plz-test',
+         f'--env=PLZ_USER={PLZ_USER}',
          f'--env=PLZ_PROJECT={project_name}',
          f'--env=PLZ_INSTANCE_MARKET_TYPE=spot',
          f'--env=PLZ_MAX_BID_PRICE_IN_DOLLARS_PER_HOUR=0.5',
@@ -192,7 +205,7 @@ def run_cli(
          '--output=/data/output',
          *test_args])
 
-    # Capture the logs and exit status
+    # Capture the logs
     # Pycharm has the wrong return types for Popen
     # noinspection PyTypeChecker
     test_utils.execute_command(
@@ -212,11 +225,12 @@ def run_cli(
         stderr_to_stdout=True
     )
 
-    # test_utils.execute_command(
-    #     ['docker',
-    #      'wait'
-    #      '$cli_container'],
-    #     file_to_dump_stdout=exit_status_file)
+    # Capture the exit status
+    stdout_holder = []
+    test_utils.execute_command(
+        ['docker', 'wait', cli_container], stdout_holder=stdout_holder)
+    exit_status = int(b''.join(stdout_holder))
+
     test_utils.execute_command(
         ['docker',
          'container',
@@ -242,20 +256,43 @@ def run_cli(
              f'{volume}:/data/output',
              output_directory_name])
     test_utils.remove_volume(volume)
+    return exit_status
 
-    return testp_subprocess
 
-
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument('plz_host', type=str)
-    parser.add_argument('plz_port', type=int)
     parser.add_argument('test_name', type=str)
+    parser.add_argument('--clean-up-first', action='store_true', default=False)
     parser.add_argument('--bless', action='store_true', default=False)
+    if 'PLZ_HOST' in os.environ:
+        plz_host = os.environ['PLZ_HOST']
+        if 'PLZ_PORT' not in os.environ:
+            raise ValueError('PLZ_HOST is defined but PLZ_PORT is not!')
+        plz_port = int(os.environ['PLZ_PORT'])
+        network = get_network()
+    else:
+        plz_host = 'localhost'
+        plz_port = 5123
+        network = 'host'
+        test_utils.print_warning(
+            f'Using default controller host and port: {plz_host}:{plz_port} '
+            '(outside docker)')
+
     options = parser.parse_args(sys.argv[1:])
-    run_test(
-        options.plz_host, options.plz_port, options.test_name, options.bless)
+
+    if options.clean_up_first:
+        test_utils.cleanup(interrupted=False)
+
+    signal.signal(signal.SIGTERM, test_utils.sig_cleanup)
+    with test_utils.DoCleanupContextManager() as cleanup_context:
+        try:
+            success = run_end_to_end_test(
+                network, plz_host, plz_port, options.test_name, options.bless)
+            return 0 if success else 1
+        except InterruptedError:
+            cleanup_context.interrupted = True
+            raise
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

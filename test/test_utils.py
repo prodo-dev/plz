@@ -1,14 +1,13 @@
 import io
 import os
 import re
+import shutil
 import subprocess
 import sys
 import traceback
+from typing import Any, ContextManager, List, Optional, Tuple
 
-from typing import Optional, List, Any, Tuple, ContextManager
-
-PROJECT_NAME = 'plztest'
-NETWORK = os.environ.get('NETWORK', f'{PROJECT_NAME}_default')
+PROJECT_NAME = 'test'
 VOLUME_PREFIX = f'{PROJECT_NAME}_data_'
 CLI_BUILDER_IMAGE = f'{PROJECT_NAME}/cli-builder'
 CLI_IMAGE = f'{PROJECT_NAME}/cli'
@@ -33,6 +32,11 @@ PLZ_ROOT_DIRECTORY = os.path.abspath(
         os.path.dirname(os.path.abspath(__file__)), '..'))
 
 DATA_DIRECTORY = f'{PLZ_ROOT_DIRECTORY}/test_cache/'
+PLZ_USER = 'plztest'
+
+
+def get_network():
+    return os.environ.get('NETWORK', f'{PROJECT_NAME}_default')
 
 
 def print_info(*args: Any):
@@ -47,37 +51,54 @@ def print_error(*args: Any):
     _print_with_color('red', *args)
 
 
+def print_debug(*args: Any):
+    if 'PLZ_TEST_DEBUG' in os.environ:
+        _print_with_color('blue', *args)
+
+
+class EmptyContextManager(ContextManager):
+    def __exit__(self, *args):
+        pass
+
+
 def _maybe_reopen_stdout(should_reopen_stdout):
     if should_reopen_stdout:
         # Pycharm doesn't really know the arguments of fdopen or return value
         # noinspection PyArgumentList
         return os.fdopen(sys.stdout.fileno(), 'wb', buffering=0, closefd=False)
     else:
-        return ContextManager()
+        return EmptyContextManager()
 
 
 def execute_command(
-        args,
-        hide_output: Optional[bool] = False,
-        fail_on_failure: Optional[bool] = True,
+        args: [str],
+        hide_output: bool = False,
+        hide_stderr: bool = False,
+        fail_on_failure: bool = True,
         file_to_dump_stdout: Optional[io.FileIO] = None,
         substitute_stdout_lines: Optional[List[Tuple[bytes, bytes]]] = None,
-        stderr_to_stdout: Optional[bool] = False) -> subprocess.Popen:
-    print_info('Running:', ' '.join(args))
+        stderr_to_stdout: bool = False,
+        env: Optional[dict] = None,
+        stdout_holder: Optional[List[bytes]] = None) -> subprocess.Popen:
     if substitute_stdout_lines is None:
         substitute_stdout_lines = []
+    if env is None:
+        env = os.environ
+    print_debug('Running:', ' '.join(args))
     iterate_stdout = False
     kwargs = {}
     if hide_output:
         kwargs['stdout'] = subprocess.DEVNULL
+    if hide_stderr:
         kwargs['stderr'] = subprocess.DEVNULL
-    if file_to_dump_stdout is not None or len(substitute_stdout_lines) > 0:
+    if file_to_dump_stdout is not None or len(substitute_stdout_lines) > 0 \
+            or stdout_holder is not None:
         iterate_stdout = True
         kwargs['stdout'] = subprocess.PIPE
     if stderr_to_stdout:
         kwargs['stderr'] = subprocess.STDOUT
 
-    subp = subprocess.Popen(args, bufsize=1, **kwargs)
+    subp = subprocess.Popen(args, bufsize=1, env=env, **kwargs)
     # Reopen stdout as to be able to output bytes (to avoid conversion to
     # strings. as we don't know the encoding of whatever we're running)
     should_reopen_stdout = iterate_stdout and not hide_output
@@ -85,14 +106,20 @@ def execute_command(
     if iterate_stdout:
         with _maybe_reopen_stdout(
                should_reopen_stdout=should_reopen_stdout) as stdo:
-            c = subp.stdout.read(1)
+
+            def write_to_stdo(bs: bytes):
+                if not hide_output:
+                    stdo.write(bs)
+                if file_to_dump_stdout is not None:
+                    file_to_dump_stdout.write(bs)
+                if stdout_holder is not None:
+                    stdout_holder.append(bs)
+
+            c: bytes = subp.stdout.read(1)
             while len(c) > 0:
-                if not substitute_stdout_lines:
-                    if not hide_output:
-                        stdo.write(c)
-                    if file_to_dump_stdout is not None:
-                        file_to_dump_stdout.write(c)
-                if len(substitute_stdout_lines) > 0:
+                if len(substitute_stdout_lines) == 0:
+                    write_to_stdo(c)
+                else:
                     line_so_far.append(c)
                     if c[0] == bytes(os.linesep, 'utf-8')[0]:
                         # Pycharm has the wrong return types for Popen
@@ -101,28 +128,19 @@ def execute_command(
                         line_so_far = []
                         for m, r in substitute_stdout_lines:
                             line = re.sub(m, r, line)
-                        if not hide_output:
-                            stdo.write(line)
-                        if file_to_dump_stdout is not None:
-                            print('Writing to file!')
-                            file_to_dump_stdout.write(line)
+                        write_to_stdo(line)
                 c = subp.stdout.read(1)
 
             if len(substitute_stdout_lines) > 0 and len(line_so_far) > 0:
                 line = b''.join(line_so_far)
                 for m, r in substitute_stdout_lines:
                     line = re.sub(m, r, line)
-                if not hide_output:
-                    stdo.write(line)
-                if file_to_dump_stdout is not None:
-                    print('Writing to file at end!')
-                    file_to_dump_stdout.write(line)
+                write_to_stdo(line)
     subp.wait()
-    print('Return code is:', subp.returncode)
+    print_debug('Return code is:', subp.returncode)
     if file_to_dump_stdout is not None:
         file_to_dump_stdout.flush()
     if fail_on_failure:
-        print('Checking')
         if subp.returncode != 0:
             traceback.print_stack()
             print_error('Error executing:', ' '.join(args))
@@ -131,7 +149,18 @@ def execute_command(
 
 
 def _print_with_color(color: str, *args: Any):
-    # Print with color if using the terminal
+    is_a_tty = sys.stdout.isatty()
+    color_to_int = {
+        'red': 31,
+        'yellow': 33,
+        'green': 32,
+        'blue': 34
+    }
+    if is_a_tty:
+        print(f'\x1b[{color_to_int[color]}m', end='')
+    print('> ', end='')
+    if is_a_tty:
+        print('\x1b[0m', end='')
     for a in args:
         print(a, end='')
     print()
@@ -142,6 +171,7 @@ def remove_volume(volume_name: str):
         execute_command(
             ['docker', 'container', 'kill', volume_name],
             hide_output=True,
+            hide_stderr=True,
             fail_on_failure=False)
         execute_command(
             ['docker', 'container', 'rm', volume_name],
@@ -156,6 +186,7 @@ def container_exists(container_name: str) -> bool:
     completed_process = execute_command(
         ['docker', 'container', 'inspect', container_name],
         hide_output=True,
+        hide_stderr=True,
         fail_on_failure=False)
     return completed_process.returncode == 0
 
@@ -164,6 +195,112 @@ def volume_exists(container_name: str) -> bool:
     completed_process = execute_command(
         ['docker', 'volume', 'inspect', container_name],
         hide_output=True,
+        hide_stderr=True,
         fail_on_failure=False
     )
     return completed_process.returncode == 0
+
+
+def cleanup(interrupted: bool):
+    def rm_on_error_handler(func, path, exc_info):
+        print_error(f'Error deleting [{path}]:', func, exc_info)
+
+    if os.path.isdir(DATA_DIRECTORY):
+        shutil.rmtree(DATA_DIRECTORY, onerror=rm_on_error_handler)
+    stop_all_clis()
+    stop_controller()
+    stop_all_test_containers()
+    stop_container(CONTROLLER_TESTS_CONTAINER)
+    remove_all_volumes()
+    if interrupted:
+        sys.exit(1)
+
+
+# Signal handler
+def sig_cleanup(_, __):
+    cleanup(interrupted=True)
+
+
+class DoCleanupContextManager(ContextManager):
+    def __init__(self):
+        self.interrupted = False
+
+    def __exit__(self, *args):
+        cleanup(self.interrupted)
+
+
+def stop_container(container_name: str):
+    if not container_exists(container_name):
+        return
+    execute_command(
+        ['docker',
+         'container',
+         'stop',
+         container_name
+         ],
+        hide_output=True,
+        fail_on_failure=False)
+    execute_command(
+        ['docker',
+         'container',
+         'rm',
+         container_name
+         ],
+        hide_output=True,
+        fail_on_failure=False)
+
+
+def remove_all_volumes():
+    stdout_holder: List[bytes] = []
+    execute_command(
+        [
+            'docker',
+            'volume',
+            'ls',
+            '--quiet',
+            f'--filter=name={VOLUME_PREFIX}'
+        ],
+        stdout_holder=stdout_holder)
+    volumes = str(b''.join(stdout_holder), 'utf-8').splitlines()
+    for volume in volumes:
+        remove_volume(volume)
+
+
+def stop_all_clis():
+    stdout_holder: List[bytes] = []
+    execute_command(
+        ['docker',
+         'container',
+         'ls',
+         '--quiet',
+         '--all',
+         f'--filter=name={CLI_CONTAINER_PREFIX}'
+         ],
+        stdout_holder=stdout_holder)
+    containers = b''.join(stdout_holder)
+    for container in str(containers, 'utf-8').splitlines():
+        stop_container(container)
+
+
+def stop_controller():
+    execute_command(['docker-compose', 'stop'])
+    execute_command(['docker-compose', 'logs'])
+    execute_command(['docker-compose', 'down', '--volumes'])
+
+
+def stop_all_test_containers():
+    stdout_holder = []
+    execute_command(
+        ['docker',
+         'container',
+         'ls',
+         '-a',
+         '--filter=name=plz.execution.id.',
+         '--format={{.ID}}#{{.Image}}'],
+        stdout_holder=stdout_holder,
+        hide_output=True)
+    for l in str(b''.join(stdout_holder), 'utf-8').splitlines():
+        container_id, image = l.split(':', 1)
+        if image.startswith(f'plz/builds:{PLZ_USER}-'):
+            print_info('Stopping', l)
+            stop_container(container_id)
