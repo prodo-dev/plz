@@ -12,7 +12,7 @@ from run_end_to_end_test import run_end_to_end_test
 from test_utils import CLI_BUILDER_IMAGE, CLI_IMAGE, \
     CONTROLLER_CONTAINER, CONTROLLER_HOSTNAME, CONTROLLER_IMAGE, \
     CONTROLLER_PORT, CONTROLLER_TESTS_CONTAINER, CONTROLLER_TESTS_IMAGE, \
-    DATA_DIRECTORY, PLZ_ROOT_DIRECTORY, REDIS_DATA_DIRECTORY, TEST_DIRECTORY, \
+    DATA_DIRECTORY, PLZ_ROOT_DIRECTORY, PLZ_USER, TEST_DIRECTORY, \
     docker_compose, get_network
 
 
@@ -27,9 +27,6 @@ def start_controller():
         os.path.join(PLZ_ROOT_DIRECTORY, 'services/controller')])
 
     test_utils.stop_container(CONTROLLER_CONTAINER)
-
-    if not os.path.isdir(REDIS_DATA_DIRECTORY):
-        os.makedirs(REDIS_DATA_DIRECTORY)
 
     test_utils.print_info('Starting the controller...')
     docker_compose('up', '--quiet-pull', '--detach')
@@ -80,7 +77,7 @@ def run_controller_tests(network: str, plz_host: str, plz_port: int,
          f'--network={network}',
          f'--env=PLZ_HOST={plz_host}',
          f'--env=PLZ_PORT={plz_port}',
-         f'--env=PLZ_USER=plz-test',
+         f'--env=PLZ_USER={PLZ_USER}',
          f'--env=PLZ_PROJECT=controller-tests',
          CONTROLLER_TESTS_IMAGE,
          *controller_tests_parameters],
