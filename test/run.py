@@ -101,6 +101,9 @@ def get_end_to_end_tests(
     # Run selected tests.
     # But first, verify all arguments are actually test directories
     for tdir in command_line_specified_tests:
+        # Remove trailing slash if present
+        if tdir.endswith(os.sep):
+            tdir = tdir[:-len(os.sep)]
         if re.search(r'^end-to-end/[A-Za-z0-9\-]+/[A-Za-z0-9\-]+$',
                      tdir) is None \
                 or not os.path.isfile(
