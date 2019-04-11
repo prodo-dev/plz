@@ -227,7 +227,9 @@ def run_cli(
     # Capture the exit status
     stdout_holder = []
     test_utils.execute_command(
-        ['docker', 'wait', cli_container], stdout_holder=stdout_holder)
+        ['docker', 'wait', cli_container],
+        stdout_holder=stdout_holder,
+        hide_output=True)
     exit_status = int(b''.join(stdout_holder))
 
     test_utils.execute_command(
