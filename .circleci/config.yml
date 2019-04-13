@@ -4,6 +4,12 @@ jobs:
   build:
     docker:
       - image: circleci/python:3.6-stretch-browsers
+
+    working_directory: ~/src
+
+    environment:
+      SECRETS_DIR: ~/src/secrets
+
     steps:
       - run:
           name: "Install zsh"
@@ -26,11 +32,7 @@ jobs:
       - run:
           name: "Create the environments for each project and install their dependencies"
           command: make environment
-          environment:
-            SECRETS_DIR: ./secrets
 
       - run:
           name: "Run the tests"
           command: make check
-          environment:
-            SECRETS_DIR: ./secrets
