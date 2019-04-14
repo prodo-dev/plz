@@ -381,4 +381,4 @@ def _is_socket_open(host: str, port: int) -> bool:
 
 
 def _msg(s) -> Dict:
-        return {'message': s}
+    return {'message': s}
