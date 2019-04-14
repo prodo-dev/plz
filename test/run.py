@@ -98,6 +98,7 @@ def get_end_to_end_tests(
                     # Remove the dir path until end-to-end
                     tdir[len(os.path.join(TEST_DIRECTORY, '')):])
         return end_to_end_tests
+
     # Run selected tests.
     # But first, verify all arguments are actually test directories
     for tdir in command_line_specified_tests:

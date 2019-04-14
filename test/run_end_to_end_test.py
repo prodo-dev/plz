@@ -3,6 +3,7 @@ import datetime
 import json
 import os
 import re
+import shutil
 import signal
 import sys
 from tempfile import NamedTemporaryFile, TemporaryDirectory, TemporaryFile
@@ -71,14 +72,12 @@ def run_end_to_end_test(
         if bless:
             if actual_exit_status == expected_exit_status:
                 test_utils.print_info('Blessing output...')
-                test_utils.execute_command(
-                    ['cp', logs_file.name, expected_logs_file_name])
-                test_utils.execute_command(
-                    ['rm', '-rf', expected_output_directory])
+                shutil.copyfile(logs_file.name, expected_logs_file_name)
+                shutil.rmtree(expected_output_directory)
                 if len(os.listdir(output_directory_name)) != 0:
-                    test_utils.execute_command(
-                        ['cp', '-R', output_directory_name,
-                         expected_output_directory])
+                    shutil.copytree(
+                        output_directory_name, expected_output_directory,
+                        symlinks=True)
                 test_utils.print_info('Test blessed')
             else:
                 test_utils.print_error(
