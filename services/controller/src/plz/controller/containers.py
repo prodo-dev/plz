@@ -30,12 +30,8 @@ class Containers:
     def __init__(self, docker_client: docker.DockerClient):
         self.docker_client = docker_client
 
-    def run(self,
-            execution_id: str,
-            repository: str,
-            tag: str,
-            environment: Dict[str, str],
-            mounts: List[Mount],
+    def run(self, execution_id: str, repository: str, tag: str,
+            environment: Dict[str, str], mounts: List[Mount],
             docker_run_args: Dict[str, str]):
         image = f'{repository}:{tag}'
         if execution_id == '':
@@ -46,8 +42,7 @@ class Containers:
             environment=environment,
             mounts=mounts,
             detach=True,
-            **docker_run_args
-        )
+            **docker_run_args)
         log.info(f'Started container: {container.id}')
 
     def logs(self,
@@ -57,9 +52,11 @@ class Containers:
              stderr: bool = True) \
             -> Iterator[bytes]:
         container = self.from_execution_id(execution_id)
-        return container.logs(
-            stdout=stdout, stderr=stderr, stream=True, follow=True,
-            since=since)
+        return container.logs(stdout=stdout,
+                              stderr=stderr,
+                              stream=True,
+                              follow=True,
+                              since=since)
 
     def stop(self, name: str):
         try:
@@ -83,12 +80,11 @@ class Containers:
         container_state = container.attrs['State']
         success = container_state['ExitCode'] == 0
         finished_at = _docker_date_to_timestamp(container_state['FinishedAt'])
-        return ContainerState(
-            running=container_state['Running'],
-            status=container_state['Status'],
-            success=success,
-            exit_code=container_state['ExitCode'],
-            finished_at=finished_at)
+        return ContainerState(running=container_state['Running'],
+                              status=container_state['Status'],
+                              success=success,
+                              exit_code=container_state['ExitCode'],
+                              finished_at=finished_at)
 
     def get_files(self, execution_id: str, path: str) -> Iterator[bytes]:
         container = self.from_execution_id(execution_id)
@@ -96,9 +92,11 @@ class Containers:
         yield from tar
 
     def execution_ids(self):
-        return [container.name[len(self._CONTAINER_NAME_PREFIX):]
-                for container in self.docker_client.containers.list(all=True)
-                if container.name.startswith(self._CONTAINER_NAME_PREFIX)]
+        return [
+            container.name[len(self._CONTAINER_NAME_PREFIX):]
+            for container in self.docker_client.containers.list(all=True)
+            if container.name.startswith(self._CONTAINER_NAME_PREFIX)
+        ]
 
     def from_execution_id(self, execution_id: str) -> Optional[Container]:
         try:
@@ -126,8 +124,8 @@ class Containers:
 
 
 def _docker_date_to_timestamp(docker_date):
-    return int(calendar.timegm(
-        dateutil.parser.parse(docker_date).utctimetuple()))
+    return int(
+        calendar.timegm(dateutil.parser.parse(docker_date).utctimetuple()))
 
 
 class ContainerMissingException(Exception):

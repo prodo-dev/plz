@@ -15,7 +15,6 @@ index_to_output_directory = config['index_to_output_directory']
 index_to_measures_directory = config['index_to_measures_directory']
 index_to_summary_measures_path = config['index_to_summary_measures_path']
 
-
 for i in range(start, end):
     # Note: keys in json objects are always strings, so this uses str(i)
     output_directory = index_to_output_directory[str(i)]
@@ -25,8 +24,8 @@ for i in range(start, end):
     print(i)
 
     index_to_measures_directory = config['index_to_measures_directory']
-    accuracy_measure_path = os.path.join(
-        index_to_measures_directory[str(i)], 'accuracy')
+    accuracy_measure_path = os.path.join(index_to_measures_directory[str(i)],
+                                         'accuracy')
     with open(accuracy_measure_path, 'w') as f:
         json.dump(i, f)
 

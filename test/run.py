@@ -19,12 +19,9 @@ from test_utils import CLI_BUILDER_IMAGE, CLI_IMAGE, \
 def start_controller():
     test_utils.print_info('Building the controller...')
     test_utils.execute_command([
-        'docker',
-        'image',
-        'build',
-        '--quiet',
-        f'--tag={CONTROLLER_IMAGE}',
-        os.path.join(PLZ_ROOT_DIRECTORY, 'services/controller')])
+        'docker', 'image', 'build', '--quiet', f'--tag={CONTROLLER_IMAGE}',
+        os.path.join(PLZ_ROOT_DIRECTORY, 'services/controller')
+    ])
 
     test_utils.stop_container(CONTROLLER_CONTAINER)
 
@@ -35,21 +32,13 @@ def start_controller():
 def build_cli():
     test_utils.print_info('Building the CLI...')
     test_utils.execute_command([
-        'docker',
-        'image',
-        'build',
-        '--quiet',
-        '--target=builder',
+        'docker', 'image', 'build', '--quiet', '--target=builder',
         f'--tag={CLI_BUILDER_IMAGE}',
         f'--file={os.path.join(PLZ_ROOT_DIRECTORY, "cli", "Dockerfile")}',
         PLZ_ROOT_DIRECTORY
     ])
     test_utils.execute_command([
-        'docker',
-        'image',
-        'build',
-        '--quiet',
-        f'--tag={CLI_IMAGE}',
+        'docker', 'image', 'build', '--quiet', f'--tag={CLI_IMAGE}',
         f'--file={os.path.join(PLZ_ROOT_DIRECTORY, "cli", "Dockerfile")}',
         PLZ_ROOT_DIRECTORY
     ])
@@ -59,29 +48,22 @@ def run_controller_tests(network: str, plz_host: str, plz_port: int,
                          controller_tests_parameters: List[str]) -> bool:
     test_utils.stop_container(CONTROLLER_TESTS_CONTAINER)
     test_utils.execute_command([
-        'docker',
-        'image',
-        'build',
-        '--quiet',
+        'docker', 'image', 'build', '--quiet',
         f'--tag={CONTROLLER_TESTS_IMAGE}',
         f'--file={os.path.join(TEST_DIRECTORY, "controller", "Dockerfile")}',
-        PLZ_ROOT_DIRECTORY])
+        PLZ_ROOT_DIRECTORY
+    ])
 
     test_utils.print_info('Running controller tests')
 
-    subp = test_utils.execute_command(
-        ['docker',
-         'run',
-         '--name',
-         CONTROLLER_TESTS_CONTAINER,
-         f'--network={network}',
-         f'--env=PLZ_HOST={plz_host}',
-         f'--env=PLZ_PORT={plz_port}',
-         f'--env=PLZ_USER={PLZ_USER}',
-         f'--env=PLZ_PROJECT=controller-tests',
-         CONTROLLER_TESTS_IMAGE,
-         *controller_tests_parameters],
-        fail_on_failure=False)
+    subp = test_utils.execute_command([
+        'docker', 'run', '--name', CONTROLLER_TESTS_CONTAINER,
+        f'--network={network}', f'--env=PLZ_HOST={plz_host}',
+        f'--env=PLZ_PORT={plz_port}', f'--env=PLZ_USER={PLZ_USER}',
+        f'--env=PLZ_PROJECT=controller-tests', CONTROLLER_TESTS_IMAGE,
+        *controller_tests_parameters
+    ],
+                                      fail_on_failure=False)
     return subp.returncode == 0
 
 
@@ -114,14 +96,17 @@ def get_end_to_end_tests(
     return command_line_specified_tests
 
 
-def _run_test_piping_output(
-        run_end_to_end_test_args: dict, output_pipe: multiprocessing.Pipe()):
+def _run_test_piping_output(run_end_to_end_test_args: dict,
+                            output_pipe: multiprocessing.Pipe()):
     os.dup2(output_pipe.fileno(), sys.stdout.fileno())
     run_end_to_end_test(**run_end_to_end_test_args)
 
 
 def run_end_to_end_tests(
-        network: str, plz_host: str, plz_port: int, bless: bool,
+        network: str,
+        plz_host: str,
+        plz_port: int,
+        bless: bool,
         in_parallel: bool,
         command_line_specified_tests: Optional[List[str]] = None) -> Set[str]:
     end_to_end_tests = get_end_to_end_tests(command_line_specified_tests)
@@ -129,22 +114,15 @@ def run_end_to_end_tests(
     if in_parallel:
         pool = multiprocessing.Pool(processes=len(end_to_end_tests))
         pipe_pairs = [multiprocessing.Pipe() for _ in end_to_end_tests]
-        process_args = [
-            (
-                {
-                    'network': network,
-                    'plz_host': plz_host,
-                    'plz_port': plz_port,
-                    'bless': bless,
-                    'test_name': end_to_end_tests[i]
-                },
-                output_pipe
-            )
-            for i, (_, output_pipe) in enumerate(pipe_pairs)]
+        process_args = [({
+            'network': network,
+            'plz_host': plz_host,
+            'plz_port': plz_port,
+            'bless': bless,
+            'test_name': end_to_end_tests[i]
+        }, output_pipe) for i, (_, output_pipe) in enumerate(pipe_pairs)]
         readers = [os.fdopen(r.fileno(), 'r') for r, _ in pipe_pairs]
-        pool_result = pool.starmap_async(
-            _run_test_piping_output,
-            process_args)
+        pool_result = pool.starmap_async(_run_test_piping_output, process_args)
 
         result_ready = False
         while not result_ready:
@@ -167,8 +145,8 @@ def run_end_to_end_tests(
     else:
         failed_tests = set()
         for test_name in end_to_end_tests:
-            success = run_end_to_end_test(
-                network, plz_host, plz_port, test_name, bless)
+            success = run_end_to_end_test(network, plz_host, plz_port,
+                                          test_name, bless)
             if not success:
                 failed_tests.add(test_name)
         return failed_tests
@@ -176,14 +154,18 @@ def run_end_to_end_tests(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        'test_dirs', nargs='*', type=str, default=None)
-    parser.add_argument('--controller-tests-parameters', type=str, nargs='+',
+    parser.add_argument('test_dirs', nargs='*', type=str, default=None)
+    parser.add_argument('--controller-tests-parameters',
+                        type=str,
+                        nargs='+',
                         default=[])
     parser.add_argument('--bless', action='store_true', default=False)
     parser.add_argument('--in-parallel', action='store_true', default=False)
-    parser.add_argument('--end-to-end-only', action='store_true', default=False)
-    parser.add_argument('--controller-tests-only', action='store_true',
+    parser.add_argument('--end-to-end-only',
+                        action='store_true',
+                        default=False)
+    parser.add_argument('--controller-tests-only',
+                        action='store_true',
                         default=False)
     parser.add_argument('--clean-up-first', action='store_true', default=False)
 
@@ -212,7 +194,8 @@ def main():
             if 'PLZ_HOST' in os.environ:
                 plz_host = os.environ['PLZ_HOST']
                 if 'PLZ_PORT' not in os.environ:
-                    raise ValueError('PLZ_HOST is defined but PLZ_PORT is not!')
+                    raise ValueError(
+                        'PLZ_HOST is defined but PLZ_PORT is not!')
                 plz_port = int(os.environ['PLZ_PORT'])
                 network = 'host'
             else:
@@ -229,10 +212,10 @@ def main():
                     passed = False
 
             if end_to_end_tests:
-                failed_tests = run_end_to_end_tests(
-                    network, plz_host, plz_port, options.bless,
-                    options.in_parallel,
-                    options.test_dirs)
+                failed_tests = run_end_to_end_tests(network, plz_host,
+                                                    plz_port, options.bless,
+                                                    options.in_parallel,
+                                                    options.test_dirs)
                 if len(failed_tests) != 0:
                     passed = False
                     test_utils.print_error('Some end-to-end tests failed!')

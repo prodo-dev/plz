@@ -51,11 +51,11 @@ class SSHChannelHTTPConnection(HTTPConnection):
         username = self.connection_info.get('username', 'plz-user')
         path_to_private_key = self.connection_info['path_to_private_key']
         try:
-            transport = _get_transport(
-                hostname=self.host, username=username,
-                path_to_private_key=path_to_private_key)
-            ch = transport.open_channel(
-                'direct-tcpip', ('0.0.0.0', self.port), ('0.0.0.0', 0))
+            transport = _get_transport(hostname=self.host,
+                                       username=username,
+                                       path_to_private_key=path_to_private_key)
+            ch = transport.open_channel('direct-tcpip', ('0.0.0.0', self.port),
+                                        ('0.0.0.0', 0))
             _override_makefile(ch)
             _override_channel_close(ch)
             self._prepare_conn(ch)
@@ -70,10 +70,9 @@ class SSHChannelHTTPConnectionPool(HTTPConnectionPool):
         super().__init__(*args, **kwargs)
 
         connection_info = self.connection_info
-        self.ConnectionCls = type(
-            'SSHChannelHTTPConnectionWithInfo',
-            (SSHChannelHTTPConnection,),
-            {'connection_info': connection_info})
+        self.ConnectionCls = type('SSHChannelHTTPConnectionWithInfo',
+                                  (SSHChannelHTTPConnection, ),
+                                  {'connection_info': connection_info})
 
 
 def _get_transport(hostname: str, username: str, path_to_private_key: str):
@@ -86,8 +85,7 @@ def _get_transport(hostname: str, username: str, path_to_private_key: str):
 
             # noinspection PyTypeChecker
             _transport = Transport(sock)
-            _transport.connect(
-                None, username=username, password='', pkey=key)
+            _transport.connect(None, username=username, password='', pkey=key)
             _validate_key(hostname, _transport.get_remote_server_key())
             if not _transport.is_authenticated():
                 raise SSHAuthenticationError(
@@ -132,6 +130,7 @@ def _override_makefile(ch: Channel):
             return ch.channel_file
         else:
             raise FileExistsError('We allow only one file per channel')
+
     ch.makefile = do_makefile
 
 
@@ -142,6 +141,7 @@ def _override_file_close(channel_file: ChannelFile):
         ChannelFile.close(channel_file)
         if channel_file.channel.close_pending:
             channel_file.channel.close()
+
     channel_file.close = do_close
 
 
@@ -160,6 +160,7 @@ def _override_channel_close(ch: Channel):
                 # Some problems while closing yield an EOFError, which is not
                 # descriptive
                 raise ConnectionError('Closing channel') from e
+
     ch.close = do_close
 
 

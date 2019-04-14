@@ -7,9 +7,8 @@ from plz.cli.configuration import Configuration
 from plz.cli.log import log_info
 from plz.cli.operation import on_exception_reraise
 
-ExecutionStatus = collections.namedtuple(
-    'ExecutionStatus',
-    ['running', 'success', 'code'])
+ExecutionStatus = collections.namedtuple('ExecutionStatus',
+                                         ['running', 'success', 'code'])
 
 
 class ShowStatusOperation(CompositionOperation):
@@ -23,25 +22,23 @@ class ShowStatusOperation(CompositionOperation):
     def prepare_argument_parser(cls, parser, args):
         cls.maybe_add_execution_id_arg(parser, args)
 
-    def __init__(self, configuration: Configuration,
+    def __init__(self,
+                 configuration: Configuration,
                  execution_id: Optional[str] = None):
         super().__init__(configuration)
         self.execution_id = execution_id
 
     @on_exception_reraise('Retrieving the status failed.')
-    def get_status(
-            self,
-            atomic_execution_id: Optional[str] = None):
+    def get_status(self, atomic_execution_id: Optional[str] = None):
         if atomic_execution_id is None:
             atomic_execution_id = self.get_execution_id()
         status = self.controller.get_status(atomic_execution_id)
-        return ExecutionStatus(
-            running=status['running'],
-            success=status['success'],
-            code=status['exit_status'])
+        return ExecutionStatus(running=status['running'],
+                               success=status['success'],
+                               code=status['exit_status'])
 
-    def run_atomic(
-            self, atomic_execution_id: str, composition_path: [(str, Any)]):
+    def run_atomic(self, atomic_execution_id: str,
+                   composition_path: [(str, Any)]):
         status = self.get_status(atomic_execution_id)
         string_prefix = create_path_string_prefix(composition_path)
         log_info(f'{string_prefix}Status:')

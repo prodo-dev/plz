@@ -25,20 +25,15 @@ CHUNK_SIZE = 1024 * 1024  # 1 MB
 
 
 class LocalResultsStorage(ResultsStorage):
-    def __init__(self,
-                 redis: StrictRedis,
-                 db_storage: DBStorage,
+    def __init__(self, redis: StrictRedis, db_storage: DBStorage,
                  directory: str):
         super().__init__(db_storage)
         self.redis = redis
         self.db_storage = db_storage
         self.directory = directory
 
-    def publish(self,
-                execution_id: str,
-                exit_status: int,
-                logs: Iterator[bytes],
-                containers: Containers,
+    def publish(self, execution_id: str, exit_status: int,
+                logs: Iterator[bytes], containers: Containers,
                 finish_timestamp: int):
         paths = Paths(self.directory, execution_id)
         with self._lock(execution_id):
@@ -69,7 +64,8 @@ class LocalResultsStorage(ResultsStorage):
                 pass
             log.debug(f'Storing the execution id {execution_id} as finished')
             self.db_storage.add_finished_execution_id(
-                user=metadata['user'], project=metadata['project'],
+                user=metadata['user'],
+                project=metadata['project'],
                 execution_id=execution_id)
 
     def write_tombstone(self, execution_id: str, tombstone: object) -> None:
@@ -129,7 +125,9 @@ class LocalResults(Results):
         else:
             return InstanceStatusFailure(status)
 
-    def get_logs(self, since: Optional[int] = None, stdout: bool = True,
+    def get_logs(self,
+                 since: Optional[int] = None,
+                 stdout: bool = True,
                  stderr: bool = True) -> Iterator[bytes]:
         return read_bytes(self.paths.logs)
 
@@ -162,7 +160,9 @@ class LocalTombstone(Results):
     def get_status(self) -> InstanceStatus:
         return self._raise_aborted()
 
-    def get_logs(self, since: Optional[int] = None, stdout: bool = True,
+    def get_logs(self,
+                 since: Optional[int] = None,
+                 stdout: bool = True,
                  stderr: bool = True) -> Iterator[bytes]:
         # In the future we might, for instance, store partial logs from the
         # workers. For now, a tombstone just raises exceptions
@@ -173,8 +173,8 @@ class LocalTombstone(Results):
             -> Iterator[bytes]:
         return self._raise_aborted()
 
-    def get_measures_files_tarball(
-            self, index: Optional[int]) -> Iterator[bytes]:
+    def get_measures_files_tarball(self,
+                                   index: Optional[int]) -> Iterator[bytes]:
         return self._raise_aborted()
 
     def get_stored_metadata(self) -> dict:
@@ -194,16 +194,13 @@ class Paths:
         self.metadata = os.path.join(self.directory, 'metadata.json')
 
     def output(self, subdir: Optional[str]) -> str:
-        return os.path.join(
-            self.directory,
-            subdir if subdir is not None else '',
-            'output.tar')
+        return os.path.join(self.directory,
+                            subdir if subdir is not None else '', 'output.tar')
 
     def measures(self, subdir: Optional[str]) -> str:
-        return os.path.join(
-            self.directory,
-            subdir if subdir is not None else '',
-            'measures.tar')
+        return os.path.join(self.directory,
+                            subdir if subdir is not None else '',
+                            'measures.tar')
 
 
 def read_bytes(path: str) -> Iterator[bytes]:
@@ -233,13 +230,11 @@ def _write_output_and_measures(paths: Paths, containers: Containers,
                                execution_id: str,
                                index_range_to_run: Optional[Tuple[int, int]]):
     ic = InstanceComposition.create_for(index_range_to_run)
-    paths_and_getters = [
-        (paths.output, ic.get_output_dirs_and_tarballs),
-        (paths.measures, ic.get_measures_dirs_and_tarballs)
-    ]
+    paths_and_getters = [(paths.output, ic.get_output_dirs_and_tarballs),
+                         (paths.measures, ic.get_measures_dirs_and_tarballs)]
     for path_function, tarball_getter in paths_and_getters:
-        dirs_and_tarballs = tarball_getter(
-            execution_id=execution_id, containers=containers)
+        dirs_and_tarballs = tarball_getter(execution_id=execution_id,
+                                           containers=containers)
         for d, tarball in dirs_and_tarballs:
             dirname = os.path.dirname(path_function(d))
             if not os.path.exists(dirname):

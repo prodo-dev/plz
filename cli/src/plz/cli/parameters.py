@@ -26,5 +26,4 @@ def parse_io(handle, path) -> Parameters:
                 f'The parameters in "{path}" must be a JSON object.')
         return parameters
     except JSONDecodeError as e:
-        raise CLIException(
-            f'There was an error parsing "{path}".') from e
+        raise CLIException(f'There was an error parsing "{path}".') from e

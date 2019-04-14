@@ -14,15 +14,15 @@ from plz.controller.api.exceptions import EXCEPTION_NAMES_TO_CLASSES
 
 class Server:
     @staticmethod
-    def from_configuration(
-            configuration: Configuration):
+    def from_configuration(configuration: Configuration):
         connection_info = configuration.connection_info
-        return Server(
-            host=configuration.host,
-            port=configuration.port,
-            connection_info=connection_info)
+        return Server(host=configuration.host,
+                      port=configuration.port,
+                      connection_info=connection_info)
 
-    def __init__(self, host: str, port: int,
+    def __init__(self,
+                 host: str,
+                 port: int,
                  exception_names_to_classes: Optional[dict] = None,
                  connection_info: Optional[dict] = None):
         self.exceptions_names_to_classes = exception_names_to_classes or \
@@ -44,8 +44,7 @@ class Server:
             response = session.request(method, url, **kwargs)
             self._maybe_raise_exception(response, codes_with_exceptions)
             return response
-        except (ConnectionError,
-                requests.ConnectionError,
+        except (ConnectionError, requests.ConnectionError,
                 urllib3.exceptions.NewConnectionError) as e:
             raise CLIException(
                 f'We couldn\'t establish a connection to the server.') from e
@@ -58,7 +57,7 @@ class Server:
         if response_code in codes_with_exceptions:
             try:
                 response_json = response.json()
-                assert(isinstance(response_json, dict))
+                assert (isinstance(response_json, dict))
                 exception_class = self.exceptions_names_to_classes[
                     response_json['exception_type']]
                 del response_json['exception_type']

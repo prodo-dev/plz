@@ -25,20 +25,11 @@ from plz.cli.show_status_operation import ShowStatusOperation
 from plz.cli.stop_execution_operation import StopExecutionOperation
 
 OPERATIONS: [Type[Operation]] = [
-    RunExecutionOperation,
-    LogsOperation,
-    ListExecutionsOperation,
-    RetrieveOutputOperation,
-    ShowStatusOperation,
-    StopExecutionOperation,
-    RetrieveHistoryOperation,
-    RetrieveMeasuresOperation,
-    PingBackendOperation,
-    RerunExecutionOperation,
-    ListContextOperation,
-    KillInstancesOperation,
-    DescribeExecutionOperation,
-    LastExecutionIDOperation
+    RunExecutionOperation, LogsOperation, ListExecutionsOperation,
+    RetrieveOutputOperation, ShowStatusOperation, StopExecutionOperation,
+    RetrieveHistoryOperation, RetrieveMeasuresOperation, PingBackendOperation,
+    RerunExecutionOperation, ListContextOperation, KillInstancesOperation,
+    DescribeExecutionOperation, LastExecutionIDOperation
 ]
 
 
@@ -102,17 +93,16 @@ def main(args=sys.argv[1:]):
         log_error('Internal error: more than one operation with name: '
                   f'{operation_name}')
         sys.exit(os.EX_SOFTWARE)
-    operation = operation_classes[0](
-        configuration=configuration, **option_dict)
+    operation = operation_classes[0](configuration=configuration,
+                                     **option_dict)
     try:
         if operation_name != 'ping-backend':
             # Ping the backend anyway as to avoid wasting user's time when the
             # backend is down
-            PingBackendOperation(
-                configuration,
-                silent_on_success=True,
-                ping_timeout=ping_timeout,
-                build_timestamp=_build_timestamp).run()
+            PingBackendOperation(configuration,
+                                 silent_on_success=True,
+                                 ping_timeout=ping_timeout,
+                                 build_timestamp=_build_timestamp).run()
 
         operation.run()
     except KeyboardInterrupt:

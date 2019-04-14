@@ -25,19 +25,26 @@ class RetrieveOutputOperation(CompositionOperation):
         cls.maybe_add_execution_id_arg(parser, args)
         add_output_dir_arg(parser)
         parser.add_argument(
-            '--force-if-running', '-f', action='store_true', default=False,
+            '--force-if-running',
+            '-f',
+            action='store_true',
+            default=False,
             help='Download output even if the process is still running. '
-                 'Discouraged as the output might be in an inconsistent '
-                 'state. If the output directory is present it\'ll be '
-                 'overwritten')
-        parser.add_argument(
-            '--path', '-p', type=str, default=None,
-            help='Download only the path specified')
-        parser.add_argument(
-            '--rewrite-subexecutions', action='store_true', default=False,
-            help='When downloading output of subexecutions, ')
+            'Discouraged as the output might be in an inconsistent '
+            'state. If the output directory is present it\'ll be '
+            'overwritten')
+        parser.add_argument('--path',
+                            '-p',
+                            type=str,
+                            default=None,
+                            help='Download only the path specified')
+        parser.add_argument('--rewrite-subexecutions',
+                            action='store_true',
+                            default=False,
+                            help='When downloading output of subexecutions, ')
 
-    def __init__(self, configuration: Configuration,
+    def __init__(self,
+                 configuration: Configuration,
                  output_dir: str,
                  force_if_running: bool,
                  path: Optional[str],
@@ -50,19 +57,17 @@ class RetrieveOutputOperation(CompositionOperation):
         self.rewrite_subexecutions = rewrite_subexecutions
         self.execution_id = execution_id
 
-    def harvest(
-            self,
-            atomic_execution_id: Optional[str] = None,
-            composition_path: Optional[List[Tuple[str, Any]]] = None):
+    def harvest(self,
+                atomic_execution_id: Optional[str] = None,
+                composition_path: Optional[List[Tuple[str, Any]]] = None):
         if atomic_execution_id is None:
             atomic_execution_id = self.get_execution_id()
         if composition_path is None:
             composition_path = []
         try:
-            self.controller.delete_execution(
-                execution_id=atomic_execution_id,
-                fail_if_running=True,
-                fail_if_deleted=False)
+            self.controller.delete_execution(execution_id=atomic_execution_id,
+                                             fail_if_running=True,
+                                             fail_if_deleted=False)
         except InstanceStillRunningException:
             if self.force_if_running or len(composition_path) > 0:
                 log_info('Process is still running')
@@ -111,8 +116,8 @@ class RetrieveOutputOperation(CompositionOperation):
         for path in untar(output_tarball_bytes, formatted_output_dir):
             print(path)
 
-    def run_atomic(
-            self, atomic_execution_id: str, composition_path: [(str, Any)]):
+    def run_atomic(self, atomic_execution_id: str,
+                   composition_path: [(str, Any)]):
         string_prefix = create_path_string_prefix(composition_path)
         if len(string_prefix) > 0:
             message_suffix = f' for {string_prefix[:-1]}'
@@ -149,7 +154,6 @@ def untar(tarball_bytes: Iterator[bytes], formatted_output_dir: str) \
                 if source:
                     # Finally, write the file.
                     absolute_path = os.path.join(formatted_output_dir, path)
-                    os.makedirs(os.path.dirname(absolute_path),
-                                exist_ok=True)
+                    os.makedirs(os.path.dirname(absolute_path), exist_ok=True)
                     with open(absolute_path, 'wb') as dest:
                         shutil.copyfileobj(source, dest)

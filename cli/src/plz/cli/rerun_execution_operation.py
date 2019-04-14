@@ -20,14 +20,16 @@ class RerunExecutionOperation(Operation):
         cls.maybe_add_execution_id_arg(parser, args)
         add_detach_command_line_argument(parser)
         add_output_dir_arg(parser)
-        parser.add_argument('-p', '--override-parameters',
+        parser.add_argument('-p',
+                            '--override-parameters',
                             dest='parameters_file',
                             help='Override the parameters of the previous '
-                                 'run with the ones in this file',
+                            'run with the ones in this file',
                             type=str,
                             default=None)
 
-    def __init__(self, configuration: Configuration,
+    def __init__(self,
+                 configuration: Configuration,
                  output_dir: str,
                  detach: bool,
                  parameters_file: Optional[str],
@@ -39,14 +41,15 @@ class RerunExecutionOperation(Operation):
         self.parameters_file = parameters_file
 
     def run(self):
-        run_operation = RunExecutionOperation(
-            self.configuration, command=None, output_dir=self.output_dir,
-            parameters_file=None, detach=self.detach)
+        run_operation = RunExecutionOperation(self.configuration,
+                                              command=None,
+                                              output_dir=self.output_dir,
+                                              parameters_file=None,
+                                              detach=self.detach)
         instance_max_uptime_in_minutes = \
             self.configuration.instance_max_uptime_in_minutes
         if self.parameters_file is not None:
-            override_parameters = parameters.parse_file(
-                self.parameters_file)
+            override_parameters = parameters.parse_file(self.parameters_file)
         else:
             override_parameters = None
         response_dicts = self.controller.rerun_execution(

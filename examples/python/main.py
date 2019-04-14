@@ -19,7 +19,6 @@ num_iterations = int(sys.argv[1])
 OutputDirectory = str
 InputDirectory = str
 
-
 # You need to read the input from where plz left it, and write to places where
 # plz will pick it up.
 #
@@ -67,8 +66,7 @@ def main():
     print('We are in the quest of finding a mysterious value for k.',
           flush=True)
     time.sleep(5)
-    print('The value happens to be 1/3, but don\'t tell anyone.',
-          flush=True)
+    print('The value happens to be 1/3, but don\'t tell anyone.', flush=True)
     time.sleep(2)
     k = 0.0
 
@@ -85,7 +83,7 @@ def main():
             write_model(output_directory, k)
         update = -6 * pow(x, 2) + 18 * k * pow(x, 2)
         # Weigh the learning rate by x
-        k = k - 0.0001/x * update
+        k = k - 0.0001 / x * update
         # Simulate that this took some time
         time.sleep(0.5)
 

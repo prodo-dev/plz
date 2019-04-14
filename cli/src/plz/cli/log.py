@@ -24,7 +24,8 @@ def _format_info(message: str, use_emojis: bool) -> str:
         ('\x1b[32m', is_a_tty),
         (message, True),
         # End green
-        ('\x1b[0m', is_a_tty)]
+        ('\x1b[0m', is_a_tty)
+    ]
     return ''.join(f for f, show in message_frags if show)
 
 
@@ -45,7 +46,8 @@ def format_warning(message: str, use_emojis: bool) -> str:
         ('\x1b[33m', is_a_tty),
         (message, True),
         # End yellow
-        ('\x1b[0m', is_a_tty)]
+        ('\x1b[0m', is_a_tty)
+    ]
     return ''.join(f for f, shown in message_frags if shown)
 
 
@@ -66,13 +68,14 @@ def _format_error(message, use_emojis):
         ('\x1b[31m', is_a_tty),
         (message, True),
         # End red
-        ('\x1b[0m', is_a_tty)]
+        ('\x1b[0m', is_a_tty)
+    ]
     return ''.join(f for f, shown in message_frags if shown)
 
 
 def setup_logger(configuration):
-    level = configuration.log_level or (
-        logging.INFO if not configuration.debug else logging.DEBUG)
+    level = configuration.log_level or (logging.INFO if not configuration.debug
+                                        else logging.DEBUG)
     logger = logging.getLogger(__name__)
     logger.setLevel(level)
     logger_handler = logging.StreamHandler(stream=sys.stdout)
@@ -92,5 +95,5 @@ class _LogFormatter(logging.Formatter):
         })
 
     def format(self, record: logging.LogRecord):
-        return self.formatter_map[record.levelno](
-            record.getMessage(), self.use_emojis)
+        return self.formatter_map[record.levelno](record.getMessage(),
+                                                  self.use_emojis)

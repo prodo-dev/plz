@@ -64,9 +64,9 @@ class ConfigurationTest(unittest.TestCase):
         with self.assertRaises(ValidationException) as raises_context:
             configuration.validate()
         self.assertEqual(raises_context.exception.errors, [
-            ValidationError(
-                'The property "thing" must be an integer.\n'
-                'Invalid value: \'three\'')])
+            ValidationError('The property "thing" must be an integer.\n'
+                            'Invalid value: \'three\'')
+        ])
 
     def test_some_values_are_required(self):
         properties = property_dict([
@@ -91,8 +91,9 @@ class ConfigurationTest(unittest.TestCase):
         configuration = Configuration(properties, data)
         with self.assertRaises(ValidationException) as raises_context:
             configuration.validate()
-        self.assertEqual(raises_context.exception.errors, [
-            ValidationError('The property "thing" is required.')])
+        self.assertEqual(
+            raises_context.exception.errors,
+            [ValidationError('The property "thing" is required.')])
 
     def test_overriding_configuration_favours_the_latter(self):
         properties = property_dict([

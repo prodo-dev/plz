@@ -22,19 +22,12 @@ log = logging.getLogger(__name__)
 class EC2InstanceGroup(InstanceProvider):
     DOCKER_PORT = 2375
 
-    def __init__(self,
-                 name,
-                 redis: StrictRedis,
-                 client,
-                 aws_worker_ami: str,
-                 aws_key_name: Optional[str],
-                 results_storage: ResultsStorage,
-                 images: Images,
-                 acquisition_delay_in_seconds: int,
-                 max_acquisition_tries: int,
-                 worker_security_group_names: [str],
-                 use_public_dns: bool,
-                 instance_lock_timeout: int,
+    def __init__(self, name, redis: StrictRedis, client, aws_worker_ami: str,
+                 aws_key_name: Optional[str], results_storage: ResultsStorage,
+                 images: Images, acquisition_delay_in_seconds: int,
+                 max_acquisition_tries: int, worker_security_group_names: [
+                     str
+                 ], use_public_dns: bool, instance_lock_timeout: int,
                  instance_max_startup_time_in_minutes: int,
                  container_idle_timestamp_grace: int):
         super().__init__(results_storage, instance_lock_timeout)
@@ -62,14 +55,12 @@ class EC2InstanceGroup(InstanceProvider):
     def ami_id(self) -> str:
         if self._ami_id is not None:
             return self._ami_id
-        response = self.client.describe_images(
-            Filters=[
-                {
-                    'Name': 'name',
-                    'Values': [self.aws_worker_ami],
-                },
-            ],
-        )
+        response = self.client.describe_images(Filters=[
+            {
+                'Name': 'name',
+                'Values': [self.aws_worker_ami],
+            },
+        ], )
         self._ami_id = response['Images'][0]['ImageId']
         return self._ami_id
 
@@ -83,16 +74,15 @@ class EC2InstanceGroup(InstanceProvider):
             return {}
         return instance.get_forensics()
 
-    def run_in_instance(
-            self,
-            execution_id: str,
-            snapshot_id: str,
-            parameters: Parameters,
-            input_stream: Optional[io.BytesIO],
-            instance_market_spec: dict,
-            execution_spec: dict,
-            max_tries: int = 30,
-            delay_in_seconds: int = 5) -> Iterator[Dict[str, Any]]:
+    def run_in_instance(self,
+                        execution_id: str,
+                        snapshot_id: str,
+                        parameters: Parameters,
+                        input_stream: Optional[io.BytesIO],
+                        instance_market_spec: dict,
+                        execution_spec: dict,
+                        max_tries: int = 30,
+                        delay_in_seconds: int = 5) -> Iterator[Dict[str, Any]]:
         """
         Gets an available instance for the execution with the given id.
 
@@ -146,8 +136,7 @@ class EC2InstanceGroup(InstanceProvider):
                         return
 
                 time_before_yield = time.time()
-                yield _msg(
-                    f'pending. Tries remaining: {tries_remaining}')
+                yield _msg(f'pending. Tries remaining: {tries_remaining}')
                 time_during_yield = time.time() - time_before_yield
                 time.sleep(max(delay_in_seconds - time_during_yield, 0))
         finally:
@@ -168,8 +157,7 @@ class EC2InstanceGroup(InstanceProvider):
                 docker_run_args=execution_spec['docker_run_args'],
                 max_idle_seconds=instance_market_spec[
                     'instance_max_idle_time_in_minutes'] * 60,
-                index_range_to_run=execution_spec[
-                    'index_range_to_run'])
+                index_range_to_run=execution_spec['index_range_to_run'])
         except InstanceUnavailableException as e:
             log.info(e)
             yield _msg('gone while waiting')
@@ -183,32 +171,32 @@ class EC2InstanceGroup(InstanceProvider):
             except Exception:
                 log.exception('Exception unearmarking instance')
             instance_data = self._ask_aws_for_new_instance(
-                instance_type,
-                instance_max_uptime_in_minutes,
-                instance_market_spec,
-                execution_id)
+                instance_type, instance_max_uptime_in_minutes,
+                instance_market_spec, execution_id)
             # need_to_recreate_instance is True
             return True, instance_data
         return False, instance_data
 
-    def _make_earmarked_instance_from_data(
-            self, execution_id: str, instance_data: dict,
-            is_instance_newly_created: bool) -> (EC2Instance, dict):
+    def _make_earmarked_instance_from_data(self, execution_id: str,
+                                           instance_data: dict,
+                                           is_instance_newly_created: bool
+                                           ) -> (EC2Instance, dict):
         # When the dns name is public, it takes some time to show up. Make
         # sure there's a dns name before building the instance object.
         # We start by getting a fresh view of the instance data
-        instance_data = describe_instances(
-            self.client,
-            filters=[('instance-id', instance_data['InstanceId'])])[0]
+        instance_data = describe_instances(self.client,
+                                           filters=[
+                                               ('instance-id',
+                                                instance_data['InstanceId'])
+                                           ])[0]
         dns_name = self._get_dns_name(instance_data)
         instance = None
         if dns_name != '':
             instance = self._ec2_instance_from_instance_data(
                 instance_data, container_execution_id=execution_id)
             try:
-                instance.earmark_for(
-                    execution_id,
-                    self.instance_max_startup_time_in_minutes)
+                instance.earmark_for(execution_id,
+                                     self.instance_max_startup_time_in_minutes)
                 yield _msg(f'DNS name is: {dns_name}')
             except InstanceUnavailableException as e:
                 log.info(e)
@@ -219,15 +207,14 @@ class EC2InstanceGroup(InstanceProvider):
                 yield _msg('reusing existing instance')
         return instance, instance_data
 
-    def _create_or_reuse_instance(
-            self, execution_id: str, instance_market_spec: dict,
-            instance_max_uptime_in_minutes: int,
-            instance_type: str) -> (EC2Instance, bool):
+    def _create_or_reuse_instance(self, execution_id: str,
+                                  instance_market_spec: dict,
+                                  instance_max_uptime_in_minutes: int,
+                                  instance_type: str) -> (EC2Instance, bool):
         instances_not_assigned = self._get_group_aws_instances(
             only_running=True,
             filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
-                     (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}',
-                      ''),
+                     (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}', ''),
                      ('instance-type', instance_type)])
         if len(instances_not_assigned) > 0:
             is_instance_newly_created = False
@@ -236,18 +223,16 @@ class EC2InstanceGroup(InstanceProvider):
             yield _msg('requesting new instance')
             is_instance_newly_created = True
             instance_data = self._ask_aws_for_new_instance(
-                instance_type,
-                instance_max_uptime_in_minutes,
-                instance_market_spec,
-                execution_id)
-            yield _msg(
-                f'waiting for the instance to be ready')
+                instance_type, instance_max_uptime_in_minutes,
+                instance_market_spec, execution_id)
+            yield _msg(f'waiting for the instance to be ready')
         return instance_data, is_instance_newly_created
 
     def instance_for(self, execution_id: str) -> Optional[EC2Instance]:
-        instance_data_list = self._get_group_aws_instances(
-            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', execution_id)],
-            only_running=False)
+        instance_data_list = self._get_group_aws_instances(filters=[
+            (f'tag:{EC2Instance.EXECUTION_ID_TAG}', execution_id)
+        ],
+                                                           only_running=False)
         if len(instance_data_list) == 0:
             return None
         elif len(instance_data_list) > 1:
@@ -255,13 +240,13 @@ class EC2InstanceGroup(InstanceProvider):
                 f'More than one instance for execution ID {execution_id}')
         return self._ec2_instance_from_instance_data(instance_data_list[0])
 
-    def release_instance(self, execution_id: str,
+    def release_instance(self,
+                         execution_id: str,
                          fail_if_not_found: bool = True,
                          idle_since_timestamp: Optional[int] = None):
         if idle_since_timestamp is None:
             idle_since_timestamp = int(time.time())
-        super().release_instance(execution_id,
-                                 fail_if_not_found,
+        super().release_instance(execution_id, fail_if_not_found,
                                  idle_since_timestamp)
 
     def push(self, image_tag):
@@ -269,41 +254,37 @@ class EC2InstanceGroup(InstanceProvider):
 
     def _get_group_aws_instances(self, filters, only_running: bool):
         filters += [(f'tag:{EC2Instance.GROUP_NAME_TAG}', self.name)]
-        return get_aws_instances(
-            self.client, filters, only_running=only_running)
+        return get_aws_instances(self.client,
+                                 filters,
+                                 only_running=only_running)
 
     def _ask_aws_for_new_instance(
             self, instance_type: str,
             instance_max_uptime_in_minutes: Optional[int],
-            instance_market_spec: dict,
-            execution_id: str) -> dict:
-        response = self.client.run_instances(
-            **self._get_instance_spec(instance_type,
-                                      instance_max_uptime_in_minutes,
-                                      instance_market_spec, execution_id),
-            MinCount=1, MaxCount=1)
+            instance_market_spec: dict, execution_id: str) -> dict:
+        response = self.client.run_instances(**self._get_instance_spec(
+            instance_type, instance_max_uptime_in_minutes,
+            instance_market_spec, execution_id),
+                                             MinCount=1,
+                                             MaxCount=1)
         return response['Instances'][0]
 
-    def _ec2_instance_from_instance_data(
-            self, instance_data, container_execution_id=None) -> EC2Instance:
+    def _ec2_instance_from_instance_data(self,
+                                         instance_data,
+                                         container_execution_id=None
+                                         ) -> EC2Instance:
         if container_execution_id is None:
-            container_execution_id = get_tag(
-                instance_data, EC2Instance.EXECUTION_ID_TAG)
+            container_execution_id = get_tag(instance_data,
+                                             EC2Instance.EXECUTION_ID_TAG)
         dns_name = self._get_dns_name(instance_data)
         docker_url = f'tcp://{dns_name}:{self.DOCKER_PORT}'
         images = self.images.for_host(docker_url)
         containers = Containers.for_host(docker_url)
         volumes = Volumes.for_host(docker_url)
-        return EC2Instance(
-            self.client,
-            images,
-            containers,
-            volumes,
-            container_execution_id,
-            instance_data,
-            self.redis,
-            self.instance_lock_timeout,
-            self.container_idle_timestamp_grace)
+        return EC2Instance(self.client, images, containers, volumes,
+                           container_execution_id, instance_data, self.redis,
+                           self.instance_lock_timeout,
+                           self.container_idle_timestamp_grace)
 
     def _get_instance_spec(self, instance_type: str,
                            instance_max_uptime_in_minutes: Optional[int],
@@ -313,7 +294,8 @@ class EC2InstanceGroup(InstanceProvider):
         if self.aws_key_name:
             spec['KeyName'] = self.aws_key_name
         spec['TagSpecifications'] = [{
-            'ResourceType': 'instance',
+            'ResourceType':
+            'instance',
             'Tags': [
                 {
                     'Key': EC2Instance.GROUP_NAME_TAG,
@@ -329,18 +311,20 @@ class EC2InstanceGroup(InstanceProvider):
                 },
                 {
                     'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
-                    'Value': str(self.instance_max_startup_time_in_minutes
-                                 * 60)
+                    'Value':
+                    str(self.instance_max_startup_time_in_minutes * 60)
                 },
                 {
                     'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,
                     'Value': execution_id
                 },
                 {
-                    'Key': 'Name',
+                    'Key':
+                    'Name',
                     # Name of the group and timestamp
-                    'Value': f'Plz {self.name} Worker - '
-                             f'{int(time.time() * 1000)}'
+                    'Value':
+                    f'Plz {self.name} Worker - '
+                    f'{int(time.time() * 1000)}'
                 },
             ]
         }]
@@ -349,19 +333,16 @@ class EC2InstanceGroup(InstanceProvider):
         # Script to execute at the beginning. We need to start the nvidia
         # persistence daemon. This is needed because otherwise containers might
         # take too long to start and docker might timeout when starting them
-        spec['UserData'] = '\n'.join([
-            '#!/bin/sh',
-            shutdown_line,
-            'nvidia-persistenced',
-            ''])
+        spec['UserData'] = '\n'.join(
+            ['#!/bin/sh', shutdown_line, 'nvidia-persistenced', ''])
         spec['InstanceType'] = instance_type
         if instance_market_spec['instance_market_type'] == 'spot':
             spec['InstanceMarketOptions'] = {
                 'MarketType': instance_market_spec['instance_market_type'],
                 'SpotOptions': {
-                    'MaxPrice': str(
-                        instance_market_spec[
-                            'max_bid_price_in_dollars_per_hour']),
+                    'MaxPrice':
+                    str(instance_market_spec[
+                        'max_bid_price_in_dollars_per_hour']),
                 }
             }
         if len(self.worker_security_group_names) != 0:

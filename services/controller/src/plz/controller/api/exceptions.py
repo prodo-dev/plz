@@ -23,8 +23,7 @@ class AbortedExecutionException(ResponseHandledException):
 
 class BadInputMetadataException(ResponseHandledException):
     def __init__(self, input_metadata: dict, **kwargs):
-        super().__init__(response_code=requests.codes.bad_request,
-                         **kwargs)
+        super().__init__(response_code=requests.codes.bad_request, **kwargs)
         self.input_metadata = input_metadata
 
 
@@ -60,22 +59,21 @@ class InstanceStillRunningException(ResponseHandledException):
 
 class NotImplementedControllerException(ResponseHandledException):
     def __init__(self, message: str, **kwargs):
-        super().__init__(
-            response_code=requests.codes.not_implemented, **kwargs)
+        super().__init__(response_code=requests.codes.not_implemented,
+                         **kwargs)
         self.message = message
 
 
 class ProviderKillingInstancesException(ResponseHandledException):
-    def __init__(
-            self, failed_instance_ids_to_messages: Dict[str, str], **kwargs):
+    def __init__(self, failed_instance_ids_to_messages: Dict[str, str],
+                 **kwargs):
         super().__init__(requests.codes.conflict, **kwargs)
         self.failed_instance_ids_to_messages = failed_instance_ids_to_messages
 
 
 class WorkerUnreachableException(ResponseHandledException):
     def __init__(self, execution_id: str, **kwargs):
-        super().__init__(
-            response_code=requests.codes.unavailable, **kwargs)
+        super().__init__(response_code=requests.codes.unavailable, **kwargs)
         self.execution_id = execution_id
 
 

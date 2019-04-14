@@ -15,26 +15,35 @@ class KillInstancesOperation(Operation):
     @classmethod
     def prepare_argument_parser(cls, parser, args):
         parser.add_argument(
-            '--all-of-them-plz', action='store_true', default=False,
+            '--all-of-them-plz',
+            action='store_true',
+            default=False,
             help='Kills all instances that are running jobs for this user. '
-                 'Implies --force-if-not-idle')
-        parser.add_argument('-i', '--instance-ids', nargs='+', type=str,
+            'Implies --force-if-not-idle')
+        parser.add_argument('-i',
+                            '--instance-ids',
+                            nargs='+',
+                            type=str,
                             help='IDs of the instances to kill')
-        parser.add_argument('--force-if-not-idle', action='store_true',
+        parser.add_argument('--force-if-not-idle',
+                            action='store_true',
                             default=False,
                             help='Kills instances even if they\'re not idle')
-        parser.add_argument('--including-idle', action='store_true',
+        parser.add_argument('--including-idle',
+                            action='store_true',
                             default=False,
                             help='When killing all user instances, kill idle '
-                                 'ones as well')
-        parser.add_argument('--berserk', action='store_true',
+                            'ones as well')
+        parser.add_argument('--berserk',
+                            action='store_true',
                             default=False,
                             help='Ignore user ownership when killing '
-                                 'instances. Easy with this one, mate.')
-        parser.add_argument('--oh-yeah', action='store_true',
+                            'instances. Easy with this one, mate.')
+        parser.add_argument('--oh-yeah',
+                            action='store_true',
                             default=False,
                             help='Do not ask user for confirmation when '
-                                 'killing all instances')
+                            'killing all instances')
 
     def __init__(self, configuration: Configuration, all_of_them_plz: bool,
                  force_if_not_idle: bool, instance_ids: [str], oh_yeah: bool,
@@ -88,10 +97,10 @@ class KillInstancesOperation(Operation):
                 user=user)
         except ProviderKillingInstancesException as e:
             fails = e.failed_instance_ids_to_messages
-            log_error(
-                'Error terminating instances: \n' + ''.join(
-                    [f'{instance_id}: {message}\n'
-                     for instance_id, message in fails.items()]))
+            log_error('Error terminating instances: \n' + ''.join([
+                f'{instance_id}: {message}\n'
+                for instance_id, message in fails.items()
+            ]))
             raise CLIException(
                 'Couldn\'t terminate all instances. You can use '
                 '--force-if-not-idle for non-idle instances')

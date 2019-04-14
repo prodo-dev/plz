@@ -4,6 +4,7 @@ include vars.mk
 
 .PHONY: check
 check:
+	cd services/controller; pipenv install --dev; pipenv run yapf -rd ../..
 	$(MAKE) -C cli check
 	$(MAKE) -C services/controller check
 	BUILD_TIMESTAMP=$(BUILD_TIMESTAMP) python3 test/run.py

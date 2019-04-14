@@ -13,11 +13,8 @@ class ResultsStorage(ABC):
         self.db_storage = db_storage
 
     @abstractmethod
-    def publish(self,
-                execution_id: str,
-                exit_status: int,
-                logs: Iterator[bytes],
-                containers: Containers,
+    def publish(self, execution_id: str, exit_status: int,
+                logs: Iterator[bytes], containers: Containers,
                 finish_timestamp: int):
         pass
 
@@ -40,7 +37,9 @@ class Results(ABC):
         pass
 
     @abstractmethod
-    def get_logs(self, since: Optional[int] = None, stdout: bool = True,
+    def get_logs(self,
+                 since: Optional[int] = None,
+                 stdout: bool = True,
                  stderr: bool = True) -> Iterator[bytes]:
         pass
 
@@ -61,9 +60,7 @@ class Results(ABC):
 
 
 class InstanceStatus(ABC):
-    def __init__(self,
-                 running: bool,
-                 success: Optional[bool],
+    def __init__(self, running: bool, success: Optional[bool],
                  exit_status: Optional[int]):
         self.running = running
         self.success = success
@@ -72,26 +69,17 @@ class InstanceStatus(ABC):
 
 class InstanceStatusRunning(InstanceStatus):
     def __init__(self):
-        super().__init__(
-            running=True,
-            success=None,
-            exit_status=None)
+        super().__init__(running=True, success=None, exit_status=None)
 
 
 class InstanceStatusSuccess(InstanceStatus):
     def __init__(self):
-        super().__init__(
-            running=False,
-            success=True,
-            exit_status=0)
+        super().__init__(running=False, success=True, exit_status=0)
 
 
 class InstanceStatusFailure(InstanceStatus):
     def __init__(self, exit_status: int):
-        super().__init__(
-            running=False,
-            success=False,
-            exit_status=exit_status)
+        super().__init__(running=False, success=False, exit_status=exit_status)
 
 
 ResultsContext = ContextManager[Optional[Results]]
