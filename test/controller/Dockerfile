@@ -18,5 +18,4 @@ COPY test/controller/contexts /controller_tests/contexts/
 COPY test/end-to-end /end-to-end/
 
 RUN pipenv sync --dev
-
-ENTRYPOINT pipenv run nosetests /controller_tests/ --nocapture -v
+ENTRYPOINT ["pipenv", "run", "nosetests", "-w", "/controller_tests/", "--nocapture", "-v"]

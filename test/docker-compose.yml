@@ -43,7 +43,7 @@ services:
     image: redis:4
     entrypoint: redis-server --save 300 1
     volumes:
-      - ../cache/redis_data:/data
+      - redis_data:/data
 
 volumes:
   redis_data: {}
