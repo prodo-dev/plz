@@ -467,12 +467,13 @@ We built Plz following these principles:
   imposed by its architecture. You should be able to do with Plz whatever you
   can do by running a program manually. It was surprising to find out how much
   of the friction around running jobs in the cloud could be solved, only by
-  tweaking the configuration and without requiring any changes to Plz code. Plz
-  is routinely used at `prodo.ai` to train ML models on AWS, some of them taking
-  days to run in the most powerful instances available. We trust it to start and
-  terminate these instances as needed, and to manage our spot instances,
-  allowing us to get a much better price than if we were using on-demand
-  instances all the time.
+  tweaking the configuration and without requiring any changes to Plz code.
+
+Plz is routinely used at `prodo.ai` to train ML models on AWS, some of them
+taking days to run in the most powerful instances available. We trust it to
+start and terminate these instances as needed, and to manage our spot instances,
+allowing us to get a much better price than if we were using on-demand instances
+all the time.
 
 ## How does Plz help
 
@@ -486,7 +487,7 @@ instance would be:
 - copy your code and data by ssh-ing to the instance
 - ssh to the instance and run your job. Preferably inside docker so that a
   dropped connection doesn't kill your job (but if you want to have docker you
-  have to take care of a docker file and build the image)
+  have to take care of a `Dockerfile` and build the image)
 - each time the connection drops or you turn off your computer, you need to ssh
   again. If you didn't use docker, you lost your terminal and it's very likely
   your job died
@@ -527,40 +528,42 @@ program per team member, instead of one setup per project.
 This section is an attempt to describe the rationale behind the high-level
 architecture of Plz.
 
-- why Docker: simplifies log handling. We obtain a stream of logs from the
-  running jobs just by calling the Docker API, with facilities to filter for
-  time. Running commands with ssh requires to either keep the connection as to
-  gather the output or redirecting the output and reading it later from a file.
-  In general, Docker doesn't provide only isolation, but also an environment
-  where the job runs autonomously with controlled inputs and outputs
+- why Docker: simplifies input and output, which results in concrete
+  simplifications like log handling: we obtain a stream of logs from the running
+  jobs just by calling the Docker API, with facilities to filter for time.
+  Running commands with ssh requires to either keep the connection as to gather
+  the output or redirecting the output and reading it later from a file. In
+  general, Docker doesn't provide only isolation, but also an environment where
+  the job runs autonomously with controlled inputs and outputs
 - why not using git to store code snapshots (and use git to transfer code to the
   instance): because it's very common that users want to make changes that they
   don't necessarily want in their commit history. For instance, when users try
-  to make their job run in the cloud, or run at a different scale than what they
-  use to (for instance, run the job with far more data than they do locally),
-  they might try several one-line tweaks. These commits (possibly paired with
-  messages that would be meaningless in a month, like ''Change foobar from 0 to
-  1'') are hardly useful and pollute the repo history. Plz could also create a
-  different branch for each job but (in order to allow for `plz rerun`) then
-  these branches should be kept, would be listed in `git branch`, etc. _A good
-  summary answer to the question would be: because users want to commit stuff
-  that ''works'' (commits you can revert to, use for reference, etc.) and you
-  don't know whether something works until you've run it._ The solution for code
-  storage we implemented, using Docker images, is quite simple to implement and
-  understand as the docker API allows you to just send the files as a tarball in
-  order to create an image (if we were using git, for the case of private repos,
-  we would need to implement usage of git credentials in the instance, which
-  would actually be more complicated). Docker images are given a name so that
-  they can be referenced later, making `plz rerun` easy to implement as well.
-  The code can be retrieved by looking inside the image, which is a reliable
-  source of truth, as it stores the code that was actually running
+  to make their job run in the cloud, or to run it at a different scale than
+  what they use to (for instance, to run the job with far more data than they do
+  locally), they might try several one-line tweaks. These commits (possibly
+  paired with messages that would be meaningless in a month, like ''Change
+  foobar from 0 to 1'') are hardly useful and pollute the repo history. Plz
+  could also create a different branch for each job but (in order to allow for
+  `plz rerun`) then these branches should be kept, would be listed in
+  `git branch`, etc. _A good summary answer to the question would be: because
+  users want to commit stuff that ''works'' (commits you can revert to, use for
+  reference, etc.) and you don't know whether something works until you've run
+  it._ The solution for code storage we implemented, using Docker images, is
+  quite simple to implement and understand as the docker API allows you to just
+  send the files as a tarball in order to create an image (if we were using git,
+  for the case of private repos, we would need to implement usage of git
+  credentials in the instance, which would actually be more complicated than
+  using Docker). Docker images are given a name so that they can be referenced
+  later, making `plz rerun` easy to implement as well. The code can be retrieved
+  by looking inside the image, which is a reliable source of truth, as it stores
+  the code that was actually running
 
-### Could plz be smaller?
+### Could Plz be smaller?
 
 - why do we need a controller/server: one reason is to manage locks (for
   instance, to avoid two jobs requests using the same instance). It's true that
   locking could be done just by using a redis server (so instead of a
-  controller/plz server, the CLI could maybe point to a redis server taking care
+  controller/Plz server, the CLI could maybe point to a redis server taking care
   of locks). That would force the tool to assume that everyone uses it
   collaboratively (one could engineer an altered CLI that locks every instance,
   etc.). We are having this assumption now, but we are not forced to keep it in
@@ -568,24 +571,46 @@ architecture of Plz.
   considered for a while: to rerun jobs for spot instances that were terminated
   because of being overbid. To that end, we need something to be running
   permanently the cloud, as there might not be a CLI running at the point in
-  time where the spot instance dies. In general, it sounds like if you want to
-  do something serious about a bunch of instances that are running permanently,
-  eventually you'll need a coordinator/controller. Even if the current features
-  might not strictly require a controller, it's good that any features that do
-  require it won't need a major refactor. Needless to say, a controller-less plz
-  cannot be obtained by just erasing the controller: a major effort would be
-  needed so that the tasks being done by the controller (setting inputs,
-  collecting outputs, etc.) are done by, for instance, a wrapper of the program
-  being run by the user
+  time where the spot instance is terminated. In general, it sounds like if you
+  want to do something serious about a bunch of instances that are running
+  permanently, eventually you'll need a coordinator/controller. Even if the
+  current features might not strictly require a controller, it's good that any
+  features that do require it won't need a major refactor. Needless to say, a
+  controller-less Plz cannot be obtained by just erasing the controller: a major
+  effort would be needed so that the tasks being done by the controller (setting
+  inputs, collecting outputs, etc.) are done by, for instance, a wrapper of the
+  program being run by the user
 - why collecting information from the running program: while it would be
-  possible to leave programs the task to write to whatever non-ephemeral storage
-  they choose, it would put a burden on the plz user to change their program
-  significantly, with respect to a program that they already run locally (for
-  instance, instead of writing files, to use the AWS API to write to S3). With
-  the current plz mechanism, as long as there is a point in your program where
-  you can set the output directory (and, if you program doesn't have such point,
-  it's a good idea to implement it anyway) you can write files and plz will make
-  them non-ephemeral for you
+  possible to leave to user programs the task to write to whatever non-ephemeral
+  storage they choose, that would put a burden on the Plz user to change their
+  program significantly, with respect to a program that they already run locally
+  (for instance, instead of writing local files, to use the AWS API to write to
+  S3). With the current Plz mechanism, as long as there is a single point in
+  your program where you can set the output directory (and, if you program
+  doesn't have such point, it's a good idea to implement it anyway) you can
+  write files and Plz will make them non-ephemeral for you. Also, with the
+  current mechanism team members know how to access the outcomes of your job
+  even if they don't know the details (`plz output` for ''blobs'' and
+  `plz measures` for structured outputs), and can read them using standard
+  tools, as every computer setup can process json and files (as opposed to, say,
+  running SQL queries in the cloud)
+- why managing the instances ourselves/why not using Kubernetes: because
+  autoscaling mechanisms (either using Kubernetes or autoscaling groups) do not
+  cover the case of ''interactive users'' which want to run instances, see them
+  spawn when they launch a job and see them terminate when they stop it.
+  Autoscaling mechanisms have ''cooling times'' specified so that scaling
+  changes are not happening all the time, degrading performance, but they cause
+  operations not to be immediate/deterministic and that can be really annoying
+  when working interactively. We discovered all of these because our first
+  attempt was to use AWS autoscaling groups, and that Plz was a pain to use and
+  also to test manually (''did AWS get that we want to terminate this instance?
+  Let's wait, sometimes it takes 5 minutes to take it down''). With respect to
+  Kubernetes specifically, when we started Plz the Kubernetes implementation of
+  AWS (EKS) wasn't there. There is a feature for Kubernetes in the works. We
+  plan that users would be able to specify a Kubernetes cluster to which the
+  execution will be sent (to support the case of a non-interactive user), or, as
+  we currently do, specify an instance type, so that an instance will be started
+  and managed by Plz (to support the case of an interactive user)
 
 ## Future work
 
