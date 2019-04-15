@@ -52,15 +52,19 @@ def is_verbose_from_cl_args() -> bool:
     """
     cl_args_parser = argparse.ArgumentParser(
         description='Plz PyTorch Example: digit recognition using MNIST')
-    cl_args_parser.add_argument('--verbose',
-                                action='store_true',
-                                help='Print progress messages')
+    cl_args_parser.add_argument(
+        '--verbose',
+        action='store_true',
+        help='Print progress messages')
     cl_args = cl_args_parser.parse_args()
     return cl_args.verbose
 
 
-def write_measures(measures_directory: str, epoch: int, training_loss: float,
-                   accuracy: float):
+def write_measures(
+        measures_directory: str,
+        epoch: int,
+        training_loss: float,
+        accuracy: float):
     with open(os.path.join(measures_directory, f'epoch_{epoch:2d}'), 'w') as f:
         json.dump({'training_loss': training_loss, 'accuracy': accuracy}, f)
 
@@ -70,8 +74,10 @@ def main():
 
     is_cuda_available = torch.cuda.is_available()
 
-    input_directory = get_from_plz_config('input_directory',
-                                          os.path.join('..', 'data'))
+    input_directory = get_from_plz_config(
+        'input_directory',
+        os.path.join('..',
+                     'data'))
     output_directory = get_from_plz_config('output_directory', 'models')
     parameters = get_from_plz_config('parameters', DEFAULT_PARAMETERS)
     # If some parameters weren't passed, use default values for them
@@ -80,25 +86,30 @@ def main():
             parameters[p] = DEFAULT_PARAMETERS[p]
     measures_directory = get_from_plz_config('measures_directory', 'measures')
     summary_measures_path = get_from_plz_config(
-        'summary_measures_path', os.path.join('measures', 'summary'))
+        'summary_measures_path',
+        os.path.join('measures',
+                     'summary'))
 
     device = torch.device('cuda' if is_cuda_available else 'cpu')
 
     if is_verbose:
         print(f'Using device: {device}')
 
-    training_loader = create_loader(input_directory,
-                                    parameters['batch_size'],
-                                    pin_memory=is_cuda_available,
-                                    is_training=True)
-    eval_loader = create_loader(input_directory,
-                                parameters['eval_batch_size'],
-                                pin_memory=is_cuda_available,
-                                is_training=False)
+    training_loader = create_loader(
+        input_directory,
+        parameters['batch_size'],
+        pin_memory=is_cuda_available,
+        is_training=True)
+    eval_loader = create_loader(
+        input_directory,
+        parameters['eval_batch_size'],
+        pin_memory=is_cuda_available,
+        is_training=False)
 
-    model = LeNet(device,
-                  learning_rate=parameters['learning_rate'],
-                  momentum=parameters['momentum']).to(device)
+    model = LeNet(
+        device,
+        learning_rate=parameters['learning_rate'],
+        momentum=parameters['momentum']).to(device)
 
     training_time_start = time.time()
 
@@ -111,22 +122,27 @@ def main():
         accuracy = model.evaluation(eval_loader)
         if is_verbose:
             print(f'Epoch: {epoch}. Training loss: {loss:.6f}')
-            print(f'Evaluation accuracy: {accuracy:.2f} '
-                  f'(max {max_accuracy:.2f})')
+            print(
+                f'Evaluation accuracy: {accuracy:.2f} '
+                f'(max {max_accuracy:.2f})')
 
-        write_measures(measures_directory,
-                       epoch=epoch,
-                       training_loss=loss,
-                       accuracy=accuracy)
+        write_measures(
+            measures_directory,
+            epoch=epoch,
+            training_loss=loss,
+            accuracy=accuracy)
 
         if accuracy > max_accuracy:
             max_accuracy = accuracy
             training_loss_at_max = loss
             epoch_at_max = epoch
-            print(f'Best model found at epoch {epoch}, '
-                  f'with accuracy {accuracy:.2f}')
-            torch.save(model.state_dict(),
-                       os.path.join(output_directory, 'le_net.pth'))
+            print(
+                f'Best model found at epoch {epoch}, '
+                f'with accuracy {accuracy:.2f}')
+            torch.save(
+                model.state_dict(),
+                os.path.join(output_directory,
+                             'le_net.pth'))
 
     with open(summary_measures_path, 'w') as f:
         json.dump(
@@ -135,7 +151,8 @@ def main():
                 'training_loss_at_max': training_loss_at_max,
                 'epoch_at_max': epoch_at_max,
                 'training_time': time.time() - training_time_start
-            }, f)
+            },
+            f)
 
 
 if __name__ == '__main__':
