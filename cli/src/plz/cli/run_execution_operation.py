@@ -85,18 +85,10 @@ class RunExecutionOperation(Operation):
                     f'Capturing the files in {os.path.abspath(context_path)}',
                     build_context_suboperation) as build_context:
 
-                def submit_context():
-                    submit_context_for_building(
-                        user=self.configuration.user,
-                        project=self.configuration.project,
-                        controller=self.controller,
-                        build_context=build_context,
-                        quiet_build=self.configuration.quiet_build)
-
                 try:
                     snapshot_id = self.suboperation(
                         'Building the program snapshot',
-                        submit_context)
+                        self._submit_context_callable(build_context))
                     break
                 except CLIException as e:
                     if type(e.__cause__) == PullAccessDeniedException \
@@ -118,6 +110,17 @@ class RunExecutionOperation(Operation):
                 snapshot_id, params, input_id, context_path))
         self.execution_id = execution_id
         self.follow_execution(was_start_ok)
+
+    def _submit_context_callable(self, build_context):
+        # Making it an internal function in self.run doesn't work. Making
+        # _submit_context_callable = lambda: ...
+        # in self.run _does_ work. Bug in python?
+        return lambda: submit_context_for_building(
+            user=self.configuration.user,
+            project=self.configuration.project,
+            controller=self.controller,
+            build_context=build_context,
+            quiet_build=self.configuration.quiet_build)
 
     def _check_dockerfile_specs(self):
         user_provided_dockerfile = os.path.isfile(
