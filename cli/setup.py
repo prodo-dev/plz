@@ -18,7 +18,8 @@ with open(path.join(root, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='plz-cli',
-    version='0.1.' + os.environ.get('BUILD_TIMESTAMP', '0'),
+    version='0.1.' + os.environ.get('BUILD_TIMESTAMP',
+                                    '0'),
     description='Send jobs to the Plz server',
     long_description=long_description,
     url='https://github.com/prodo-ai/plz',
@@ -36,7 +37,8 @@ setup(
         '': 'src',
         'plz.controller.api': '../services/controller/src/plz/controller/api'
     },
-    packages=['plz.cli', 'plz.controller.api'],
+    packages=['plz.cli',
+              'plz.controller.api'],
     python_requires='>= 3.6',
     install_requires=[
         'docker >= 3.3.0',

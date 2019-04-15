@@ -18,19 +18,23 @@ class DBStorage(ABC):
         pass
 
     @abstractmethod
-    def add_finished_execution_id(self, user: str, project: str,
-                                  execution_id: str) -> None:
+    def add_finished_execution_id(
+            self,
+            user: str,
+            project: str,
+            execution_id: str) -> None:
         pass
 
     @abstractmethod
-    def retrieve_finished_execution_ids(self, user: str,
+    def retrieve_finished_execution_ids(self,
+                                        user: str,
                                         project: str) -> Set[str]:
         pass
 
     @abstractmethod
-    def store_execution_composition(self,
-                                    execution_composition: ExecutionComposition
-                                    ) -> None:
+    def store_execution_composition(
+            self,
+            execution_composition: ExecutionComposition) -> None:
         pass
 
     @abstractmethod
@@ -39,9 +43,10 @@ class DBStorage(ABC):
         pass
 
     @abstractmethod
-    def retrieve_execution_id_from_parent_and_index(self, execution_id: str,
-                                                    index: int
-                                                    ) -> Optional[str]:
+    def retrieve_execution_id_from_parent_and_index(
+            self,
+            execution_id: str,
+            index: int) -> Optional[str]:
         pass
 
     @abstractmethod

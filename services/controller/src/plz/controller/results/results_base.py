@@ -13,9 +13,13 @@ class ResultsStorage(ABC):
         self.db_storage = db_storage
 
     @abstractmethod
-    def publish(self, execution_id: str, exit_status: int,
-                logs: Iterator[bytes], containers: Containers,
-                finish_timestamp: int):
+    def publish(
+            self,
+            execution_id: str,
+            exit_status: int,
+            logs: Iterator[bytes],
+            containers: Containers,
+            finish_timestamp: int):
         pass
 
     @abstractmethod
@@ -37,10 +41,11 @@ class Results(ABC):
         pass
 
     @abstractmethod
-    def get_logs(self,
-                 since: Optional[int] = None,
-                 stdout: bool = True,
-                 stderr: bool = True) -> Iterator[bytes]:
+    def get_logs(
+            self,
+            since: Optional[int] = None,
+            stdout: bool = True,
+            stderr: bool = True) -> Iterator[bytes]:
         pass
 
     @abstractmethod
@@ -60,8 +65,11 @@ class Results(ABC):
 
 
 class InstanceStatus(ABC):
-    def __init__(self, running: bool, success: Optional[bool],
-                 exit_status: Optional[int]):
+    def __init__(
+            self,
+            running: bool,
+            success: Optional[bool],
+            exit_status: Optional[int]):
         self.running = running
         self.success = success
         self.exit_status = exit_status

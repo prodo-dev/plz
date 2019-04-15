@@ -43,8 +43,9 @@ def _container_object_and_key_from_path(measures_dict: dict, path: str):
     return obj, fragments[-1]
 
 
-def compile_metadata_for_storage(start_metadata: dict,
-                                 finish_timestamp: int) -> dict:
+def compile_metadata_for_storage(
+        start_metadata: dict,
+        finish_timestamp: int) -> dict:
     # This function doesn't do much for now, but having it is a way to
     # document that what we store as metadata is the start metadata plus
     # other stuff
@@ -75,13 +76,19 @@ def _tar_iterator(tarball_bytes: Iterator[bytes]) \
                     yield path, tar.extractfile(tarinfo.name)
 
 
-def enrich_start_metadata(execution_id: str, start_metadata: dict,
-                          snapshot_id: str, parameters: dict,
-                          instance_market_spec: dict, execution_spec: dict,
-                          parallel_indices_range: Optional[Tuple[int, int]],
-                          index_range_to_run: Optional[Tuple[int, int]],
-                          indices_per_execution: Optional[int],
-                          previous_execution_id: Optional[str]) -> dict:
+def enrich_start_metadata(
+        execution_id: str,
+        start_metadata: dict,
+        snapshot_id: str,
+        parameters: dict,
+        instance_market_spec: dict,
+        execution_spec: dict,
+        parallel_indices_range: Optional[Tuple[int,
+                                               int]],
+        index_range_to_run: Optional[Tuple[int,
+                                           int]],
+        indices_per_execution: Optional[int],
+        previous_execution_id: Optional[str]) -> dict:
     enriched_start_metadata = deepcopy(start_metadata)
     enriched_start_metadata['execution_id'] = execution_id
     enriched_start_metadata['snapshot_id'] = snapshot_id
@@ -89,7 +96,9 @@ def enrich_start_metadata(execution_id: str, start_metadata: dict,
     enriched_start_metadata['instance_market_spec'] = instance_market_spec
     enriched_start_metadata['execution_spec'] = {
         k: v
-        for k, v in execution_spec.items() if k not in {'user', 'project'}
+        for k,
+        v in execution_spec.items() if k not in {'user',
+                                                 'project'}
     }
     enriched_start_metadata['execution_spec']['index_range_to_run'] = \
         index_range_to_run

@@ -25,11 +25,20 @@ from plz.cli.show_status_operation import ShowStatusOperation
 from plz.cli.stop_execution_operation import StopExecutionOperation
 
 OPERATIONS: [Type[Operation]] = [
-    RunExecutionOperation, LogsOperation, ListExecutionsOperation,
-    RetrieveOutputOperation, ShowStatusOperation, StopExecutionOperation,
-    RetrieveHistoryOperation, RetrieveMeasuresOperation, PingBackendOperation,
-    RerunExecutionOperation, ListContextOperation, KillInstancesOperation,
-    DescribeExecutionOperation, LastExecutionIDOperation
+    RunExecutionOperation,
+    LogsOperation,
+    ListExecutionsOperation,
+    RetrieveOutputOperation,
+    ShowStatusOperation,
+    StopExecutionOperation,
+    RetrieveHistoryOperation,
+    RetrieveMeasuresOperation,
+    PingBackendOperation,
+    RerunExecutionOperation,
+    ListContextOperation,
+    KillInstancesOperation,
+    DescribeExecutionOperation,
+    LastExecutionIDOperation
 ]
 
 
@@ -50,11 +59,13 @@ def main(args=sys.argv[1:]):
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--ping-timeout', type=int, default=5)
     parser.add_argument('-c', '--configuration-path', type=str, default=None)
-    subparsers = parser.add_subparsers(title='operations',
-                                       dest='operation_name')
+    subparsers = parser.add_subparsers(
+        title='operations',
+        dest='operation_name')
     for operation in OPERATIONS:
-        subparser = subparsers.add_parser(operation.name(),
-                                          help=operation.__doc__)
+        subparser = subparsers.add_parser(
+            operation.name(),
+            help=operation.__doc__)
         operation.prepare_argument_parser(subparser, args)
     options = parser.parse_args(args)
 
@@ -86,23 +97,27 @@ def main(args=sys.argv[1:]):
 
     operation_classes = [o for o in OPERATIONS if o.name() == operation_name]
     if len(operation_classes) == 0:
-        log_error('Internal error: couldn\'t find operation: '
-                  f'{operation_name}')
+        log_error(
+            'Internal error: couldn\'t find operation: '
+            f'{operation_name}')
         sys.exit(os.EX_SOFTWARE)
     if len(operation_classes) > 1:
-        log_error('Internal error: more than one operation with name: '
-                  f'{operation_name}')
+        log_error(
+            'Internal error: more than one operation with name: '
+            f'{operation_name}')
         sys.exit(os.EX_SOFTWARE)
-    operation = operation_classes[0](configuration=configuration,
-                                     **option_dict)
+    operation = operation_classes[0](
+        configuration=configuration,
+        **option_dict)
     try:
         if operation_name != 'ping-backend':
             # Ping the backend anyway as to avoid wasting user's time when the
             # backend is down
-            PingBackendOperation(configuration,
-                                 silent_on_success=True,
-                                 ping_timeout=ping_timeout,
-                                 build_timestamp=_build_timestamp).run()
+            PingBackendOperation(
+                configuration,
+                silent_on_success=True,
+                ping_timeout=ping_timeout,
+                build_timestamp=_build_timestamp).run()
 
         operation.run()
     except KeyboardInterrupt:

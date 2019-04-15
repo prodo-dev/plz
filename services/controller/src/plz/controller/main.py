@@ -37,11 +37,12 @@ def _setup_logging():
     # Set log level for the controller
     if 'log_level' in config:
         log_level = config['log_level']
-        print(f'Setting log level to: {log_level}',
-              file=sys.stderr,
-              flush=True)
-        controller_logger = logging.getLogger('.'.join(
-            __name__.split('.')[:-1]))
+        print(
+            f'Setting log level to: {log_level}',
+            file=sys.stderr,
+            flush=True)
+        controller_logger = logging.getLogger(
+            '.'.join(__name__.split('.')[:-1]))
         controller_logger.setLevel(log_level)
 
 
@@ -112,7 +113,8 @@ def maybe_add_forensics(exception: WorkerUnreachableException) \
 def ping_entrypoint():
     # We are not calling a server, so the timeout is not used
     return jsonify(
-        controller.ping(ping_timeout=0, build_timestamp=_build_timestamp))
+        controller.ping(ping_timeout=0,
+                        build_timestamp=_build_timestamp))
 
 
 @app.route('/', methods=['GET'])
@@ -133,15 +135,19 @@ def run_execution_entrypoint():
     @_json_stream
     @stream_with_context
     def act() -> Iterator[dict]:
-        yield from controller.run_execution(snapshot_id, parameters,
-                                            instance_market_spec,
-                                            execution_spec, start_metadata,
-                                            parallel_indices_range,
-                                            indices_per_execution)
+        yield from controller.run_execution(
+            snapshot_id,
+            parameters,
+            instance_market_spec,
+            execution_spec,
+            start_metadata,
+            parallel_indices_range,
+            indices_per_execution)
 
-    return Response(act(),
-                    mimetype='text/plain',
-                    status=requests.codes.accepted)
+    return Response(
+        act(),
+        mimetype='text/plain',
+        status=requests.codes.accepted)
 
 
 @app.route(f'/executions/rerun', methods=['POST'])
@@ -161,30 +167,39 @@ def rerun_execution_entrypoint():
     @_json_stream
     @stream_with_context
     def act() -> Iterator[dict]:
-        yield from controller.rerun_execution(user, project,
-                                              instance_max_uptime_in_minutes,
-                                              override_parameters,
-                                              previous_execution_id,
-                                              instance_market_spec)
+        yield from controller.rerun_execution(
+            user,
+            project,
+            instance_max_uptime_in_minutes,
+            override_parameters,
+            previous_execution_id,
+            instance_market_spec)
 
-    return Response(act(),
-                    mimetype='text/plain',
-                    status=requests.codes.accepted)
+    return Response(
+        act(),
+        mimetype='text/plain',
+        status=requests.codes.accepted)
 
 
 @app.route('/executions/list', methods=['GET'])
 def list_executions_entrypoint():
     user: str = request.args.get('user', type=str)
-    list_for_all_users: bool = request.args.get('list_for_all_users',
-                                                type=strtobool,
-                                                default=False)
+    list_for_all_users: bool = request.args.get(
+        'list_for_all_users',
+        type=strtobool,
+        default=False)
 
     log.debug(f'Listing for: {user} {list_for_all_users}')
 
-    return Response(json.dumps(
-        {'executions': controller.list_executions(user, list_for_all_users)}),
-                    mimetype='application/json',
-                    status=requests.codes.ok)
+    return Response(
+        json.dumps(
+            {
+                'executions':
+                    controller.list_executions(user,
+                                               list_for_all_users)
+            }),
+        mimetype='application/json',
+        status=requests.codes.ok)
 
 
 @app.route('/executions/harvest', methods=['POST'])
@@ -201,47 +216,60 @@ def get_status_entrypoint(execution_id):
 @app.route(f'/executions/<execution_id>/logs', methods=['GET'])
 def get_logs_entrypoint(execution_id):
     since: Optional[int] = request.args.get('since', default=None, type=int)
-    return Response(controller.get_logs(execution_id, since=since),
-                    mimetype='application/octet-stream')
+    return Response(
+        controller.get_logs(execution_id,
+                            since=since),
+        mimetype='application/octet-stream')
 
 
 @app.route(f'/executions/<execution_id>/output/files')
 def get_output_files_entrypoint(execution_id):
     path: Optional[str] = request.args.get('path', default=None, type=str)
     index: Optional[int] = request.args.get('index', default=None, type=int)
-    return Response(controller.get_output_files(execution_id, path, index),
-                    mimetype='application/octet-stream')
+    return Response(
+        controller.get_output_files(execution_id,
+                                    path,
+                                    index),
+        mimetype='application/octet-stream')
 
 
 @app.route(f'/executions/<execution_id>/measures', methods=['GET'])
 def get_measures(execution_id):
     summary: bool = request.args.get('summary', default=False, type=strtobool)
     index: Optional[int] = request.args.get('index', default=None, type=int)
-    return Response(stream_with_context(
-        controller.get_measures(execution_id, summary, index)),
-                    mimetype='text/plain')
+    return Response(
+        stream_with_context(
+            controller.get_measures(execution_id,
+                                    summary,
+                                    index)),
+        mimetype='text/plain')
 
 
 @app.route(f'/executions/<execution_id>', methods=['DELETE'])
 def delete_execution(execution_id):
     # Test with:
     # curl -XDELETE localhost:5000/executions/some-id
-    fail_if_running: bool = request.args.get('fail_if_running',
-                                             default=False,
-                                             type=strtobool)
-    fail_if_deleted: bool = request.args.get('fail_if_deleted',
-                                             default=False,
-                                             type=strtobool)
-    controller.delete_execution(execution_id,
-                                fail_if_running=fail_if_running,
-                                fail_if_deleted=fail_if_deleted)
+    fail_if_running: bool = request.args.get(
+        'fail_if_running',
+        default=False,
+        type=strtobool)
+    fail_if_deleted: bool = request.args.get(
+        'fail_if_deleted',
+        default=False,
+        type=strtobool)
+    controller.delete_execution(
+        execution_id,
+        fail_if_running=fail_if_running,
+        fail_if_deleted=fail_if_deleted)
     return jsonify({}), requests.codes.no_content
 
 
 @app.route(f'/executions/<user>/<project>/history', methods=['GET'])
 def history_entrypoint(user, project):
-    return Response(stream_with_context(controller.get_history(user, project)),
-                    mimetype='text/plain')
+    return Response(
+        stream_with_context(controller.get_history(user,
+                                                   project)),
+        mimetype='text/plain')
 
 
 @app.route('/snapshots', methods=['POST'])
@@ -267,7 +295,8 @@ def put_input_entrypoint(input_id: str):
 @app.route('/data/input/<input_id>', methods=['HEAD'])
 def check_input_data_entrypoint(input_id: str):
     is_present = controller.check_input_data(
-        input_id, _get_input_metadata_from_request())
+        input_id,
+        _get_input_metadata_from_request())
     if is_present:
         return jsonify({'id': input_id})
     else:
@@ -372,9 +401,10 @@ def _get_input_metadata_from_request() -> InputMetadata:
     metadata.user = request.args.get('user', default=None, type=str)
     metadata.project = request.args.get('project', default=None, type=str)
     metadata.path = request.args.get('path', default=None, type=str)
-    metadata.timestamp_millis = request.args.get('timestamp_millis',
-                                                 default=None,
-                                                 type=str)
+    metadata.timestamp_millis = request.args.get(
+        'timestamp_millis',
+        default=None,
+        type=str)
     return metadata
 
 

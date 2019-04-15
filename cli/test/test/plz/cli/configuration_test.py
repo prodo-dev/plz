@@ -20,10 +20,12 @@ class ConfigurationTest(unittest.TestCase):
         self.assertEqual(configuration.entity, 'bar')
 
     def test_missing_values_have_defaults(self):
-        properties = property_dict([
-            Property('thing'),
-            Property('entity', default='object'),
-        ])
+        properties = property_dict(
+            [
+                Property('thing'),
+                Property('entity',
+                         default='object'),
+            ])
         data = {}
         configuration = Configuration(properties, data)
         self.assertEqual(configuration.thing, None)
@@ -40,10 +42,13 @@ class ConfigurationTest(unittest.TestCase):
             configuration.entity
 
     def test_values_are_checked_against_their_type(self):
-        properties = property_dict([
-            Property('thing', type=int),
-            Property('entity', type=bool),
-        ])
+        properties = property_dict(
+            [
+                Property('thing',
+                         type=int),
+                Property('entity',
+                         type=bool),
+            ])
         data = {
             'thing': 3,
             'entity': False,
@@ -52,10 +57,13 @@ class ConfigurationTest(unittest.TestCase):
         configuration.validate()
 
     def test_invalid_values_cause_a_validation_exception(self):
-        properties = property_dict([
-            Property('thing', type=int),
-            Property('entity', type=bool),
-        ])
+        properties = property_dict(
+            [
+                Property('thing',
+                         type=int),
+                Property('entity',
+                         type=bool),
+            ])
         data = {
             'thing': 'three',
             'entity': False,
@@ -63,16 +71,21 @@ class ConfigurationTest(unittest.TestCase):
         configuration = Configuration(properties, data)
         with self.assertRaises(ValidationException) as raises_context:
             configuration.validate()
-        self.assertEqual(raises_context.exception.errors, [
-            ValidationError('The property "thing" must be an integer.\n'
-                            'Invalid value: \'three\'')
-        ])
+        self.assertEqual(
+            raises_context.exception.errors,
+            [
+                ValidationError(
+                    'The property "thing" must be an integer.\n'
+                    'Invalid value: \'three\'')
+            ])
 
     def test_some_values_are_required(self):
-        properties = property_dict([
-            Property('thing', required=True),
-            Property('entity'),
-        ])
+        properties = property_dict(
+            [
+                Property('thing',
+                         required=True),
+                Property('entity'),
+            ])
         data = {
             'thing': 'ding',
             'entity': 'dong',
@@ -81,10 +94,12 @@ class ConfigurationTest(unittest.TestCase):
         configuration.validate()
 
     def test_missing_required_values_cause_a_validation_exception(self):
-        properties = property_dict([
-            Property('thing', required=True),
-            Property('entity'),
-        ])
+        properties = property_dict(
+            [
+                Property('thing',
+                         required=True),
+                Property('entity'),
+            ])
         data = {
             'entity': 'dong',
         }
@@ -100,13 +115,16 @@ class ConfigurationTest(unittest.TestCase):
             Property('thing'),
             Property('entity'),
         ])
-        configuration_a = Configuration(properties, {
-            'thing': 'foo',
-            'entity': 'bar',
-        })
-        configuration_b = Configuration(properties, {
-            'thing': 'baz',
-        })
+        configuration_a = Configuration(
+            properties,
+            {
+                'thing': 'foo',
+                'entity': 'bar',
+            })
+        configuration_b = Configuration(properties,
+                                        {
+                                            'thing': 'baz',
+                                        })
         configuration = configuration_a.override_with(configuration_b)
         self.assertEqual(configuration.thing, 'baz')
         self.assertEqual(configuration.entity, 'bar')

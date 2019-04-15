@@ -17,7 +17,11 @@ from plz.controller.volumes import Volumes
 
 Dependencies = collections.namedtuple(
     'Dependencies',
-    ['redis', 'instance_provider', 'images', 'results_storage', 'db_storage'])
+    ['redis',
+     'instance_provider',
+     'images',
+     'results_storage',
+     'db_storage'])
 
 
 def load() -> pyhocon.ConfigTree:
@@ -52,10 +56,17 @@ def dependencies_from_config(config) -> Dependencies:
     db_storage = _db_storage_from(redis)
     images = _images_from(config)
     results_storage = _results_storage_from(config, redis, db_storage)
-    instance_provider = _instance_provider_from(config, images, redis,
-                                                results_storage)
-    return Dependencies(redis, instance_provider, images, results_storage,
-                        db_storage)
+    instance_provider = _instance_provider_from(
+        config,
+        images,
+        redis,
+        results_storage)
+    return Dependencies(
+        redis,
+        instance_provider,
+        images,
+        results_storage,
+        db_storage)
 
 
 def _instance_provider_from(config, images, redis, results_storage):
@@ -65,25 +76,35 @@ def _instance_provider_from(config, images, redis, results_storage):
         containers = Containers.for_host(docker_host)
         volumes = Volumes.for_host(docker_host)
         instance_provider = Localhost(
-            results_storage, images, containers, volumes, redis,
+            results_storage,
+            images,
+            containers,
+            volumes,
+            redis,
             config['assumptions.instance_lock_timeout'])
     elif instance_provider_type == 'aws-ec2':
         instance_provider = EC2InstanceGroup(
             redis=redis,
-            client=boto3.client(service_name='ec2',
-                                region_name=config['instances.region']),
+            client=boto3.client(
+                service_name='ec2',
+                region_name=config['instances.region']),
             aws_worker_ami=config['instances.aws_worker_ami'],
-            aws_key_name=config.get('instances.key_name', None),
+            aws_key_name=config.get('instances.key_name',
+                                    None),
             results_storage=results_storage,
             images=images,
             acquisition_delay_in_seconds=config.get_int(
-                'instances.acquisition_delay', 10),
+                'instances.acquisition_delay',
+                10),
             max_acquisition_tries=config.get_int(
-                'instances.max_acquisition_tries', 5),
+                'instances.max_acquisition_tries',
+                5),
             name=config['instances.group_name'],
             worker_security_group_names=config.get(
-                'instances.worker_security_group_names', []),
-            use_public_dns=config.get('instances.use_public_dns', False),
+                'instances.worker_security_group_names',
+                []),
+            use_public_dns=config.get('instances.use_public_dns',
+                                      False),
             instance_lock_timeout=config['assumptions.instance_lock_timeout'],
             instance_max_startup_time_in_minutes=config[
                 'assumptions.instance_max_startup_time_in_minutes'],
@@ -106,13 +127,16 @@ def _images_from(config):
     elif images_type == 'aws-ecr':
 
         def ecr_client_creator():
-            return boto3.client(service_name='ecr',
-                                region_name=config['images.region'])
+            return boto3.client(
+                service_name='ecr',
+                region_name=config['images.region'])
 
         repository_without_registry = config['images.repository']
-        images = ECRImages(docker_api_client_creator, ecr_client_creator,
-                           repository_without_registry,
-                           config['assumptions.ecr_login_validity_in_minutes'])
+        images = ECRImages(
+            docker_api_client_creator,
+            ecr_client_creator,
+            repository_without_registry,
+            config['assumptions.ecr_login_validity_in_minutes'])
     else:
         raise ValueError('Invalid image provider.')
     return images
@@ -125,7 +149,8 @@ def get_docker_host_from_config(config):
 def docker_client_from_config(config):
     docker_host = get_docker_host_from_config(config)
     docker_api_client_timeout = config.get(
-        'assumptions.docker_api_client_timeout_in_minutes', None)
+        'assumptions.docker_api_client_timeout_in_minutes',
+        None)
     if docker_api_client_timeout is not None:
         client_extra_args = {'timeout': docker_api_client_timeout * 60}
     else:

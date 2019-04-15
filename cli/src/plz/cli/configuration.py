@@ -49,12 +49,13 @@ class Property:
     SUBTYPES[Optional[int]] = [int, None]
 
     # noinspection PyShadowingBuiltins
-    def __init__(self,
-                 name: str,
-                 type: Type[T] = str,
-                 required: bool = False,
-                 default: T = None,
-                 validations: List[ValidationFunction] = None):
+    def __init__(
+            self,
+            name: str,
+            type: Type[T] = str,
+            required: bool = False,
+            default: T = None,
+            validations: List[ValidationFunction] = None):
         self.name = name
         self.type = type
         self.required = required
@@ -75,10 +76,11 @@ def _validate_market_spec(configuration, errors, operation: Optional[str]):
     if operation not in {'run', 'rerun'}:
         return
     if configuration.instance_market_type not in {'spot', 'on_demand'}:
-        errors.append([
-            'Possible values for `instance_market_type` are `spot` or `on_'
-            'demand`'
-        ])
+        errors.append(
+            [
+                'Possible values for `instance_market_type` are `spot` or `on_'
+                'demand`'
+            ])
     if configuration.instance_market_type == 'spot' \
             and configuration.max_bid_price_in_dollars_per_hour is None:
         errors.append(
@@ -101,8 +103,10 @@ def _validate_market_spec(configuration, errors, operation: Optional[str]):
                 use_emojis=False))
 
 
-def _warn_about_instance_max_uptime(configuration, _,
-                                    operation: Optional[str]):
+def _warn_about_instance_max_uptime(
+        configuration,
+        _,
+        operation: Optional[str]):
     if operation not in {'run', 'rerun'}:
         return
     if configuration.instance_max_uptime_in_minutes:
@@ -120,48 +124,91 @@ class Configuration:
     PROPERTIES = {
         prop.name: prop
         for prop in [
-            Property('host', default='localhost'),
-            Property('port', type=int, default=80),
-            Property('quiet_build', type=bool, default=False),
-            Property('user', required=True),
-            Property('instance_type', default='t2.micro'),
-            Property('project', required=True),
-            Property('image', type=str),
-            Property('image_extensions', type=list, default=[]),
-            Property('command', type=list),
-            Property('input', type=str),
+            Property('host',
+                     default='localhost'),
+            Property('port',
+                     type=int,
+                     default=80),
+            Property('quiet_build',
+                     type=bool,
+                     default=False),
+            Property('user',
+                     required=True),
+            Property('instance_type',
+                     default='t2.micro'),
+            Property('project',
+                     required=True),
+            Property('image',
+                     type=str),
+            Property('image_extensions',
+                     type=list,
+                     default=[]),
+            Property('command',
+                     type=list),
+            Property('input',
+                     type=str),
             # Paths to exclude when creating a snapshot. List of python globs
-            Property('excluded_paths', type=list, default=[]),
+            Property('excluded_paths',
+                     type=list,
+                     default=[]),
             # Whether to consider the files ignored by git as excluded,
             # (save for when they are included explicitly).
             # Value of None means "use git if available"
-            Property('exclude_gitignored_files', type=bool, default=None),
+            Property('exclude_gitignored_files',
+                     type=bool,
+                     default=None),
             # Paths to include, as to override exclusion (must be paths under
             # the current work directory)
-            Property('included_paths', type=list, default=[]),
-            Property('debug', type=bool, default=False),
-            Property('docker_run_args', type=dict, default={}),
-            Property('connection_info', type=dict, default={}),
-            Property('context_path', type=str, default='.'),
+            Property('included_paths',
+                     type=list,
+                     default=[]),
+            Property('debug',
+                     type=bool,
+                     default=False),
+            Property('docker_run_args',
+                     type=dict,
+                     default={}),
+            Property('connection_info',
+                     type=dict,
+                     default={}),
+            Property('context_path',
+                     type=str,
+                     default='.'),
             # Default is info, unless debug is enabled, in which case default
             # is debug
-            Property('log_level', type=str, default=None),
-            Property('use_emojis', type=bool, default=True),
-            Property(
-                'workarounds', type=dict, default={'docker_build_retries': 3}),
-            Property('instance_market_type',
+            Property('log_level',
                      type=str,
-                     default='on_demand',
-                     validations=[_validate_market_spec]),
-            Property('instance_max_uptime_in_minutes',
-                     type=Optional[int],
-                     default=60,
-                     validations=[_warn_about_instance_max_uptime]),
-            Property('instance_max_idle_time_in_minutes', type=int, default=0),
+                     default=None),
+            Property('use_emojis',
+                     type=bool,
+                     default=True),
             Property(
-                'max_bid_price_in_dollars_per_hour', type=float, default=None),
-            Property('parallel_indices_range', type=list, default=None),
-            Property('indices_per_execution', type=int, default=None)
+                'workarounds',
+                type=dict,
+                default={'docker_build_retries': 3}),
+            Property(
+                'instance_market_type',
+                type=str,
+                default='on_demand',
+                validations=[_validate_market_spec]),
+            Property(
+                'instance_max_uptime_in_minutes',
+                type=Optional[int],
+                default=60,
+                validations=[_warn_about_instance_max_uptime]),
+            Property('instance_max_idle_time_in_minutes',
+                     type=int,
+                     default=0),
+            Property(
+                'max_bid_price_in_dollars_per_hour',
+                type=float,
+                default=None),
+            Property('parallel_indices_range',
+                     type=list,
+                     default=None),
+            Property('indices_per_execution',
+                     type=int,
+                     default=None)
         ]
     }
 
@@ -171,8 +218,9 @@ class Configuration:
         f'or specify a path to it with -c')
 
     @staticmethod
-    def load(configuration_path: Optional[str] = None,
-             operation: Optional[str] = None) -> 'Configuration':
+    def load(
+            configuration_path: Optional[str] = None,
+            operation: Optional[str] = None) -> 'Configuration':
         config_file_name = Configuration._configuration_file_from_path(
             configuration_path)
 
@@ -204,8 +252,11 @@ class Configuration:
         return Configuration(properties, data)
 
     @staticmethod
-    def from_file(filepath: str, properties: Dict[str, Property],
-                  fail_on_read_error: bool) -> Optional['Configuration']:
+    def from_file(
+            filepath: str,
+            properties: Dict[str,
+                             Property],
+            fail_on_read_error: bool) -> Optional['Configuration']:
         try:
             if not os.path.exists(filepath):
                 return None
@@ -228,7 +279,8 @@ class Configuration:
                 if prop:
                     for t in [prop.type, *Property.SUBTYPES[prop.type]]:
                         data[name] = Configuration._typed_value_from_string(
-                            value, t)
+                            value,
+                            t)
                         if data[name] is not None:
                             break
                     if data[name] is None:
@@ -268,9 +320,10 @@ class Configuration:
 
     @staticmethod
     def _get_top_level_config(config_file_name, config_set_explicitly: bool):
-        config = Configuration.from_file(config_file_name,
-                                         Configuration.PROPERTIES,
-                                         fail_on_read_error=True)
+        config = Configuration.from_file(
+            config_file_name,
+            Configuration.PROPERTIES,
+            fail_on_read_error=True)
         # The user provided a configuration file explicitly, but we couldn't
         # read a configuration from it
         if config_set_explicitly and config is None:
@@ -293,8 +346,10 @@ class Configuration:
         # directory, this is strictly for parents
         for n in range(mount_index, len(path_fragments)):
             configuration = Configuration.from_file(
-                os.path.join('/', *path_fragments[:n],
-                             Configuration.DEFAULT_CONFIGURATION_FILE_NAME),
+                os.path.join(
+                    '/',
+                    *path_fragments[:n],
+                    Configuration.DEFAULT_CONFIGURATION_FILE_NAME),
                 Configuration.PROPERTIES,
                 # If we can read a configuration at some point, we don't
                 # expect to have any permissions problems/filesystem problems
@@ -307,8 +362,11 @@ class Configuration:
     @staticmethod
     def _get_user_level_config() -> 'Configuration':
         user_level_config_file = os.path.expanduser(
-            os.path.join('~', '.config', 'plz',
-                         Configuration.DEFAULT_CONFIGURATION_FILE_NAME))
+            os.path.join(
+                '~',
+                '.config',
+                'plz',
+                Configuration.DEFAULT_CONFIGURATION_FILE_NAME))
 
         return Configuration.from_file(
             user_level_config_file,
@@ -336,8 +394,9 @@ class Configuration:
                 Configuration.DEFAULT_CONFIGURATION_FILE_NAME)
         elif os.path.isdir(configuration_path):
             config_file_name = os.path.abspath(
-                os.path.join(configuration_path,
-                             Configuration.DEFAULT_CONFIGURATION_FILE_NAME))
+                os.path.join(
+                    configuration_path,
+                    Configuration.DEFAULT_CONFIGURATION_FILE_NAME))
         else:
             config_file_name = os.path.abspath(
                 os.path.join(configuration_path))

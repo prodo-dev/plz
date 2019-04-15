@@ -38,25 +38,39 @@ class EC2Instance(Instance):
     IDLE_SINCE_TIMESTAMP_TAG = 'Plz:Idle-Since-Timestamp'
     EARMARK_EXECUTION_ID_TAG = 'Plz:Earmark-Execution-Id'
 
-    def __init__(self, client, images: Images, containers: Containers,
-                 volumes: Volumes, container_execution_id: str, data: dict,
-                 redis: StrictRedis, lock_timeout: int,
-                 container_idle_timestamp_grace: int):
+    def __init__(
+            self,
+            client,
+            images: Images,
+            containers: Containers,
+            volumes: Volumes,
+            container_execution_id: str,
+            data: dict,
+            redis: StrictRedis,
+            lock_timeout: int,
+            container_idle_timestamp_grace: int):
         super().__init__(redis, lock_timeout)
         self.client = client
         self.images = images
-        self.delegate = DockerInstance(images, containers, volumes,
-                                       container_execution_id, redis,
-                                       lock_timeout)
+        self.delegate = DockerInstance(
+            images,
+            containers,
+            volumes,
+            container_execution_id,
+            redis,
+            lock_timeout)
         self.data = data
         self.container_idle_timestamp_grace = container_idle_timestamp_grace
 
-    def run(self,
+    def run(
+            self,
             snapshot_id: str,
             parameters: Parameters,
             input_stream: Optional[io.BytesIO],
-            docker_run_args: Dict[str, str],
-            index_range_to_run: Optional[Tuple[int, int]],
+            docker_run_args: Dict[str,
+                                  str],
+            index_range_to_run: Optional[Tuple[int,
+                                               int]],
             max_idle_seconds: int = 60 * 30) -> None:
         # Sanity check before we get the lock
         if self._get_earmark() != self.delegate.execution_id:
@@ -76,10 +90,15 @@ class EC2Instance(Instance):
                     f'or earmarked for [{self._get_earmark()}] or '
                     f'not running)')
             self.images.pull(snapshot_id)
-            self.delegate.run(snapshot_id, parameters, input_stream,
-                              docker_run_args, index_range_to_run)
-            self._set_execution_id(self.delegate.execution_id,
-                                   max_idle_seconds)
+            self.delegate.run(
+                snapshot_id,
+                parameters,
+                input_stream,
+                docker_run_args,
+                index_range_to_run)
+            self._set_execution_id(
+                self.delegate.execution_id,
+                max_idle_seconds)
 
     def is_up(self, is_instance_newly_created: bool):
         if not self._is_running():
@@ -94,8 +113,10 @@ class EC2Instance(Instance):
         except Exception as e:
             raise KillingInstanceException(str(e)) from e
 
-    def earmark_for(self, execution_id: str,
-                    instance_max_startup_time_in_minutes: int) -> None:
+    def earmark_for(
+            self,
+            execution_id: str,
+            instance_max_startup_time_in_minutes: int) -> None:
         if self._get_earmark() == execution_id:
             return
         # To be on the safe side, we assume that if the instance is locked
@@ -114,13 +135,18 @@ class EC2Instance(Instance):
                     f'free (executing [{self.get_execution_id()}] or locked '
                     f'({not acquired}) or earmarked for '
                     f'[{self._get_earmark()}]')
-            self._set_tags([{
-                'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,
-                'Value': execution_id
-            }, {
-                'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
-                'Value': str(60 * instance_max_startup_time_in_minutes)
-            }])
+            self._set_tags(
+                [
+                    {
+                        'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,
+                        'Value': execution_id
+                    },
+                    {
+                        'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
+                        'Value': str(
+                            60 * instance_max_startup_time_in_minutes)
+                    }
+                ])
         finally:
             if acquired:
                 lock.release()
@@ -155,24 +181,30 @@ class EC2Instance(Instance):
         # Do nothing if the instance is not earmarked for this execution
         if self._get_earmark() != execution_id:
             return
-        log.warning(f'Hard unearmarking instance {self.instance_id} '
-                    f'for execution {execution_id}')
+        log.warning(
+            f'Hard unearmarking instance {self.instance_id} '
+            f'for execution {execution_id}')
         self._do_unearmark()
 
     def _do_unearmark(self):
-        self._set_tags([{
-            'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,
-            'Value': ''
-        }])
+        self._set_tags(
+            [{
+                'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,
+                'Value': ''
+            }])
 
     def _set_execution_id(self, execution_id: str, max_idle_seconds: int):
-        self._set_tags([{
-            'Key': EC2Instance.EXECUTION_ID_TAG,
-            'Value': execution_id
-        }, {
-            'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
-            'Value': str(max_idle_seconds)
-        }])
+        self._set_tags(
+            [
+                {
+                    'Key': EC2Instance.EXECUTION_ID_TAG,
+                    'Value': execution_id
+                },
+                {
+                    'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
+                    'Value': str(max_idle_seconds)
+                }
+            ])
         self._do_unearmark()
 
     def _get_earmark(self):
@@ -181,14 +213,17 @@ class EC2Instance(Instance):
     def _set_tags(self, tags):
         instance_id = self.instance_id
         self.client.create_tags(Resources=[instance_id], Tags=tags)
-        self.data = describe_instances(self.client,
-                                       [('instance-id', instance_id)])[0]
+        self.data = describe_instances(
+            self.client,
+            [('instance-id',
+              instance_id)])[0]
 
     def get_max_idle_seconds(self) -> int:
         return int(get_tag(self.data, self.MAX_IDLE_SECONDS_TAG, '0'))
 
     def get_idle_since_timestamp(
-            self, container_state: Optional[ContainerState] = None) -> int:
+            self,
+            container_state: Optional[ContainerState] = None) -> int:
         if container_state is not None:
             return container_state.finished_at
         return int(get_tag(self.data, self.IDLE_SINCE_TIMESTAMP_TAG, '0'))
@@ -210,11 +245,12 @@ class EC2Instance(Instance):
         now = int(time.time())
 
         if ei.idle_since_timestamp > now:
-            log.warning('Instance has been idle since a '
-                        f'time {ei.idle_since_timestamp} later than the'
-                        f'current one {now}. If this gap is bigger than '
-                        f'{self.container_idle_timestamp_grace} the instance '
-                        f'will be disposed of')
+            log.warning(
+                'Instance has been idle since a '
+                f'time {ei.idle_since_timestamp} later than the'
+                f'current one {now}. If this gap is bigger than '
+                f'{self.container_idle_timestamp_grace} the instance '
+                f'will be disposed of')
 
         graced_timestamp = ei.idle_since_timestamp - \
             self.container_idle_timestamp_grace
@@ -222,9 +258,10 @@ class EC2Instance(Instance):
         if now - ei.idle_since_timestamp > ei.max_idle_seconds or \
                 graced_timestamp > now or \
                 ei.max_idle_seconds <= 0:
-            log.info(f'Disposing of instance {self.instance_id}. Now: {now}.'
-                     f'Idle since: {ei.idle_since_timestamp}. '
-                     f'Max idle seconds: {ei.max_idle_seconds}')
+            log.info(
+                f'Disposing of instance {self.instance_id}. Now: {now}.'
+                f'Idle since: {ei.idle_since_timestamp}. '
+                f'Max idle seconds: {ei.max_idle_seconds}')
             # We check that it's idle. That should be the case as the lock is
             # held and this method is called after the execution ID for the
             # instance was set to the empty string. But, y'know, computers...
@@ -243,53 +280,75 @@ class EC2Instance(Instance):
             return None
         return self.delegate.container_state()
 
-    def release(self,
-                results_storage: ResultsStorage,
-                idle_since_timestamp: int,
-                release_container: bool = True):
+    def release(
+            self,
+            results_storage: ResultsStorage,
+            idle_since_timestamp: int,
+            release_container: bool = True):
         with self._lock:
-            self.delegate.release(results_storage, idle_since_timestamp,
-                                  release_container)
-            self._set_tags([{
-                'Key': EC2Instance.EXECUTION_ID_TAG,
-                'Value': ''
-            }, {
-                'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
-                'Value': str(idle_since_timestamp)
-            }])
+            self.delegate.release(
+                results_storage,
+                idle_since_timestamp,
+                release_container)
+            self._set_tags(
+                [
+                    {
+                        'Key': EC2Instance.EXECUTION_ID_TAG,
+                        'Value': ''
+                    },
+                    {
+                        'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
+                        'Value': str(idle_since_timestamp)
+                    }
+                ])
 
-    def _is_running_and_free(self, earmark: str, check_running: bool,
-                             earmark_optional: bool):
+    def _is_running_and_free(
+            self,
+            earmark: str,
+            check_running: bool,
+            earmark_optional: bool):
         if check_running and not self._is_running():
             return False
         if earmark_optional:
             instances = get_aws_instances(
                 self.client,
                 only_running=check_running,
-                filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
-                         (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}', ''),
-                         ('instance-id', self.instance_id)])
+                filters=[
+                    (f'tag:{EC2Instance.EXECUTION_ID_TAG}',
+                     ''),
+                    (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}',
+                     ''),
+                    ('instance-id',
+                     self.instance_id)
+                ])
             if len(instances) > 0:
                 return True
         instances = get_aws_instances(
             self.client,
             only_running=check_running,
-            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
-                     (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}', earmark),
-                     ('instance-id', self.instance_id)])
+            filters=[
+                (f'tag:{EC2Instance.EXECUTION_ID_TAG}',
+                 ''),
+                (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}',
+                 earmark),
+                ('instance-id',
+                 self.instance_id)
+            ])
         return len(instances) > 0
 
     def _is_running(self):
-        instances = get_aws_instances(self.client,
-                                      only_running=True,
-                                      filters=[('instance-id',
-                                                self.instance_id)])
+        instances = get_aws_instances(
+            self.client,
+            only_running=True,
+            filters=[('instance-id',
+                      self.instance_id)])
         return len(instances) > 0
 
     def get_resource_state(self) -> str:
-        instance = describe_instances(self.client,
-                                      filters=[('instance-id',
-                                                self.instance_id)])[0]
+        instance = describe_instances(
+            self.client,
+            filters=[('instance-id',
+                      self.instance_id)])[0]
         return instance['State']['Name']
 
     def delete_resource(self) -> None:
@@ -298,16 +357,18 @@ class EC2Instance(Instance):
         self._set_tags([{'Key': EC2Instance.GROUP_NAME_TAG, 'Value': ''}])
 
     def get_forensics(self) -> dict:
-        spot_requests = self.client.describe_spot_instance_requests(Filters=[{
-            'Name': 'instance-id',
-            'Values': [self.instance_id]
-        }])['SpotInstanceRequests']
+        spot_requests = self.client.describe_spot_instance_requests(
+            Filters=[{
+                'Name': 'instance-id',
+                'Values': [self.instance_id]
+            }])['SpotInstanceRequests']
         if len(spot_requests) == 0:
             spot_request_info = {}
         elif len(spot_requests) > 1:
             spot_request_info = {}
-            log.warning('More than one spot request for instance '
-                        f'{self.instance_id}')
+            log.warning(
+                'More than one spot request for instance '
+                f'{self.instance_id}')
         else:
             spot_request_info = spot_requests[0]
         return {
@@ -319,13 +380,15 @@ class EC2Instance(Instance):
     def instance_id(self):
         return self.data['InstanceId']
 
-    def get_logs(self,
-                 since: Optional[int] = None,
-                 stdout: bool = True,
-                 stderr: bool = True) -> Iterator[bytes]:
-        return self.delegate.get_logs(since=since,
-                                      stdout=stdout,
-                                      stderr=stderr)
+    def get_logs(
+            self,
+            since: Optional[int] = None,
+            stdout: bool = True,
+            stderr: bool = True) -> Iterator[bytes]:
+        return self.delegate.get_logs(
+            since=since,
+            stdout=stdout,
+            stderr=stderr)
 
     def get_output_files_tarball(
             self, path: Optional[str], index: Optional[int]) \
@@ -347,7 +410,9 @@ def get_tag(instance_data, tag, default=None) -> Optional[str]:
     return default
 
 
-def get_aws_instances(client, filters: [(str, str)],
+def get_aws_instances(client,
+                      filters: [(str,
+                                 str)],
                       only_running: bool) -> [dict]:
     if only_running:
         filters += [('instance-state-name', 'running')]
