@@ -3,7 +3,7 @@ import logging
 import socket
 import time
 from contextlib import closing
-from typing import Any, Dict, Iterator, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 from redis import StrictRedis
 
@@ -25,9 +25,9 @@ class EC2InstanceGroup(InstanceProvider):
     def __init__(self, name, redis: StrictRedis, client, aws_worker_ami: str,
                  aws_key_name: Optional[str], results_storage: ResultsStorage,
                  images: Images, acquisition_delay_in_seconds: int,
-                 max_acquisition_tries: int, worker_security_group_names: [
-                     str
-                 ], use_public_dns: bool, instance_lock_timeout: int,
+                 max_acquisition_tries: int,
+                 worker_security_group_names: List[str], use_public_dns: bool,
+                 instance_lock_timeout: int,
                  instance_max_startup_time_in_minutes: int,
                  container_idle_timestamp_grace: int):
         super().__init__(results_storage, instance_lock_timeout)

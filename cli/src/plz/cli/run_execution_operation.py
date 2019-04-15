@@ -79,15 +79,18 @@ class RunExecutionOperation(Operation):
             with self.suboperation(
                     f'Capturing the files in {os.path.abspath(context_path)}',
                     build_context_suboperation) as build_context:
+
+                def submit_context():
+                    submit_context_for_building(
+                        user=self.configuration.user,
+                        project=self.configuration.project,
+                        controller=self.controller,
+                        build_context=build_context,
+                        quiet_build=self.configuration.quiet_build)
+
                 try:
                     snapshot_id = self.suboperation(
-                        'Building the program snapshot', lambda:
-                        submit_context_for_building(
-                            user=self.configuration.user,
-                            project=self.configuration.project,
-                            controller=self.controller,
-                            build_context=build_context,
-                            quiet_build=self.configuration.quiet_build))
+                        'Building the program snapshot', submit_context)
                     break
                 except CLIException as e:
                     if type(e.__cause__) == PullAccessDeniedException \

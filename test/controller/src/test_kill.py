@@ -134,10 +134,11 @@ class TestKill(unittest.TestCase):
                                                 context.configuration.user,
                                                 {execution_id1, execution_id2})
 
-        context.controller.kill_instances(instance_ids=[
+        instance_ids = [
             i['instance_id'] for i in infos
             if i['execution_id'] == execution_id1
-        ],
+        ]
+        context.controller.kill_instances(instance_ids=instance_ids,
                                           ignore_ownership=False,
                                           including_idle=None,
                                           force_if_not_idle=True,
@@ -262,10 +263,11 @@ class TestKill(unittest.TestCase):
         infos = self._assert_running_executions(controller, user,
                                                 execution_ids)
         try:
-            controller.kill_instances(instance_ids=[
+            instance_ids = [
                 i['instance_id'] for i in infos
                 if i['execution_id'] in execution_ids
-            ],
+            ]
+            controller.kill_instances(instance_ids=instance_ids,
                                       user=user,
                                       force_if_not_idle=True,
                                       ignore_ownership=False,
