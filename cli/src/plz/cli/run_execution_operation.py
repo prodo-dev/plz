@@ -247,17 +247,17 @@ class RunExecutionOperation(Operation):
                               input_id: Optional[str]) -> dict:
         return {
             'instance_type':
-            configuration.instance_type,
+                configuration.instance_type,
             'user':
-            configuration.user,
+                configuration.user,
             'project':
-            configuration.project,
+                configuration.project,
             'input_id':
-            input_id,
+                input_id,
             'docker_run_args':
-            configuration.docker_run_args,
+                configuration.docker_run_args,
             'instance_max_uptime_in_minutes':
-            configuration.instance_max_uptime_in_minutes,
+                configuration.instance_max_uptime_in_minutes,
         }
 
     def get_execution_id(self):

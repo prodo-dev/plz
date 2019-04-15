@@ -119,9 +119,10 @@ class IndicesComposition(ExecutionComposition):
 
         return {
             'execution_id': self.execution_id,
-            'indices_to_compositions':
-            {i: jsonable_of_index(i)
-             for i in self.indices_to_compositions},
+            'indices_to_compositions': {
+                i: jsonable_of_index(i)
+                for i in self.indices_to_compositions
+            },
             'tombstone_executions': list(self.tombstone_execution_ids)
         }
 
@@ -260,11 +261,11 @@ class AtomicInstanceComposition(InstanceComposition):
     def get_startup_config(self) -> WorkerStartupConfig:
         config_keys = {
             'output_directory':
-            Volumes.OUTPUT_DIRECTORY_PATH,
+                Volumes.OUTPUT_DIRECTORY_PATH,
             'measures_directory':
-            Volumes.MEASURES_DIRECTORY_PATH,
+                Volumes.MEASURES_DIRECTORY_PATH,
             'summary_measures_path':
-            os.path.join(Volumes.MEASURES_DIRECTORY_PATH, 'summary')
+                os.path.join(Volumes.MEASURES_DIRECTORY_PATH, 'summary')
         }
         volumes = [
             VolumeEmptyDirectory(Volumes.OUTPUT_DIRECTORY),

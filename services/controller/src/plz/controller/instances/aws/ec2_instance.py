@@ -118,10 +118,8 @@ class EC2Instance(Instance):
                 'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,
                 'Value': execution_id
             }, {
-                'Key':
-                EC2Instance.MAX_IDLE_SECONDS_TAG,
-                'Value':
-                str(60 * instance_max_startup_time_in_minutes)
+                'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
+                'Value': str(60 * instance_max_startup_time_in_minutes)
             }])
         finally:
             if acquired:
@@ -300,11 +298,10 @@ class EC2Instance(Instance):
         self._set_tags([{'Key': EC2Instance.GROUP_NAME_TAG, 'Value': ''}])
 
     def get_forensics(self) -> dict:
-        spot_requests = self.client.describe_spot_instance_requests(
-            Filters=[{
-                'Name': 'instance-id',
-                'Values': [self.instance_id]
-            }])['SpotInstanceRequests']
+        spot_requests = self.client.describe_spot_instance_requests(Filters=[{
+            'Name': 'instance-id',
+            'Values': [self.instance_id]
+        }])['SpotInstanceRequests']
         if len(spot_requests) == 0:
             spot_request_info = {}
         elif len(spot_requests) > 1:

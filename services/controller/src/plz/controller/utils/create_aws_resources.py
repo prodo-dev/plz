@@ -38,22 +38,15 @@ def create_workers_security_group():
     # Authorize the docker port
     ec2_client.authorize_security_group_ingress(GroupId=group_id,
                                                 IpPermissions=[{
-                                                    'IpRanges': [
-                                                        {
-                                                            'CidrIp':
-                                                            '0.0.0.0/0'
-                                                        },
-                                                    ],
+                                                    'IpRanges': [{
+                                                        'CidrIp': '0.0.0.0/0'
+                                                    }, ],
                                                     'Ipv6Ranges': [{
-                                                        'CidrIpv6':
-                                                        '::/0'
+                                                        'CidrIpv6': '::/0'
                                                     }],
-                                                    'FromPort':
-                                                    2375,
-                                                    'ToPort':
-                                                    2375,
-                                                    'IpProtocol':
-                                                    'tcp'
+                                                    'FromPort': 2375,
+                                                    'ToPort': 2375,
+                                                    'IpProtocol': 'tcp'
                                                 }])
 
 

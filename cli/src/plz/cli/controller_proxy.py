@@ -37,24 +37,18 @@ class ControllerProxy(Controller):
                       parallel_indices_range: Optional[Tuple[int, int]],
                       indices_per_execution: Optional[int]) \
             -> Iterator[dict]:
-        response = self.server.post('executions',
-                                    stream=True,
-                                    json={
-                                        'snapshot_id':
-                                        snapshot_id,
-                                        'parameters':
-                                        parameters,
-                                        'execution_spec':
-                                        execution_spec,
-                                        'instance_market_spec':
-                                        instance_market_spec,
-                                        'start_metadata':
-                                        start_metadata,
-                                        'parallel_indices_range':
-                                        parallel_indices_range,
-                                        'indices_per_execution':
-                                        indices_per_execution
-                                    })
+        response = self.server.post(
+            'executions',
+            stream=True,
+            json={
+                'snapshot_id': snapshot_id,
+                'parameters': parameters,
+                'execution_spec': execution_spec,
+                'instance_market_spec': instance_market_spec,
+                'start_metadata': start_metadata,
+                'parallel_indices_range': parallel_indices_range,
+                'indices_per_execution': indices_per_execution
+            })
         _check_status(response, requests.codes.accepted)
         return (json.loads(line) for line in response.iter_lines())
 
@@ -67,17 +61,17 @@ class ControllerProxy(Controller):
                                     stream=True,
                                     json={
                                         'user':
-                                        user,
+                                            user,
                                         'project':
-                                        project,
+                                            project,
                                         'execution_id':
-                                        previous_execution_id,
+                                            previous_execution_id,
                                         'instance_market_spec':
-                                        instance_market_spec,
+                                            instance_market_spec,
                                         'override_parameters':
-                                        override_parameters,
+                                            override_parameters,
                                         'instance_max_uptime_in_minutes':
-                                        instance_max_uptime_in_minutes
+                                            instance_max_uptime_in_minutes
                                     })
         _check_status(response, requests.codes.accepted)
         return (json.loads(line) for line in response.iter_lines())
@@ -178,21 +172,18 @@ class ControllerProxy(Controller):
 
     def put_input(self, input_id: str, input_metadata: InputMetadata,
                   input_data_stream: BinaryIO) -> None:
-        response = self.server.put('data',
-                                   'input',
-                                   input_id,
-                                   data=input_data_stream,
-                                   stream=True,
-                                   params={
-                                       'user':
-                                       input_metadata.user,
-                                       'project':
-                                       input_metadata.project,
-                                       'path':
-                                       input_metadata.path,
-                                       'timestamp_millis':
-                                       input_metadata.timestamp_millis
-                                   })
+        response = self.server.put(
+            'data',
+            'input',
+            input_id,
+            data=input_data_stream,
+            stream=True,
+            params={
+                'user': input_metadata.user,
+                'project': input_metadata.project,
+                'path': input_metadata.path,
+                'timestamp_millis': input_metadata.timestamp_millis
+            })
         _check_status(response, requests.codes.ok)
         if input_id != response.json()['id']:
             raise CLIException('Got wrong input id back from the server')
@@ -217,19 +208,16 @@ class ControllerProxy(Controller):
             raise RequestException(response)
 
     def get_input_id_or_none(self, metadata: InputMetadata) -> Optional[str]:
-        response = self.server.get('data',
-                                   'input',
-                                   'id',
-                                   params={
-                                       'user':
-                                       metadata.user,
-                                       'project':
-                                       metadata.project,
-                                       'path':
-                                       metadata.path,
-                                       'timestamp_millis':
-                                       metadata.timestamp_millis
-                                   })
+        response = self.server.get(
+            'data',
+            'input',
+            'id',
+            params={
+                'user': metadata.user,
+                'project': metadata.project,
+                'path': metadata.path,
+                'timestamp_millis': metadata.timestamp_millis
+            })
         _check_status(response, requests.codes.ok)
         return response.json()['id']
 

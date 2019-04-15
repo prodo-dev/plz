@@ -32,6 +32,9 @@ class ValidationException(Exception):
             print(str(error))
 
 
+ValidationFunction = Callable[['Configuration', List[ValidationError]], None]
+
+
 class Property:
     TYPE_DESCRIPTIONS = {
         str: 'a string',
@@ -51,9 +54,7 @@ class Property:
                  type: Type[T] = str,
                  required: bool = False,
                  default: T = None,
-                 validations: [
-                     Callable[['Configuration', List[ValidationError]], None]
-                 ] = None):
+                 validations: List[ValidationFunction] = None):
         self.name = name
         self.type = type
         self.required = required
@@ -75,8 +76,8 @@ def _validate_market_spec(configuration, errors, operation: Optional[str]):
         return
     if configuration.instance_market_type not in {'spot', 'on_demand'}:
         errors.append([
-            'Possible values for `instance_market_type` are '
-            '`spot` or `on_demand`'
+            'Possible values for `instance_market_type` are `spot` or `on_'
+            'demand`'
         ])
     if configuration.instance_market_type == 'spot' \
             and configuration.max_bid_price_in_dollars_per_hour is None:

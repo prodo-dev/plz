@@ -33,7 +33,7 @@ class Execution(ABC):
         ic = InstanceComposition.create_for(index_range_to_run)
         stored_metadata.update({
             'measures':
-            ic.compose_measures(lambda index: self.get_measures(index))
+                ic.compose_measures(lambda index: self.get_measures(index))
         })
         return stored_metadata
 

@@ -55,9 +55,7 @@ setup(
         ],
     },
     entry_points={
-        'console_scripts': [
-            'plz=plz.cli.main:main',
-        ],
+        'console_scripts': ['plz=plz.cli.main:main', ],
     },
     project_urls={
         'Bug Reports': 'https://github.com/prodo-ai/plz/issues',

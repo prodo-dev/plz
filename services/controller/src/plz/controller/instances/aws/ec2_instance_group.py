@@ -295,7 +295,7 @@ class EC2InstanceGroup(InstanceProvider):
             spec['KeyName'] = self.aws_key_name
         spec['TagSpecifications'] = [{
             'ResourceType':
-            'instance',
+                'instance',
             'Tags': [
                 {
                     'Key': EC2Instance.GROUP_NAME_TAG,
@@ -310,21 +310,20 @@ class EC2InstanceGroup(InstanceProvider):
                     'Value': str(int(time.time()))
                 },
                 {
-                    'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
+                    'Key':
+                        EC2Instance.MAX_IDLE_SECONDS_TAG,
                     'Value':
-                    str(self.instance_max_startup_time_in_minutes * 60)
+                        str(self.instance_max_startup_time_in_minutes * 60)
                 },
                 {
                     'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,
                     'Value': execution_id
                 },
                 {
-                    'Key':
-                    'Name',
+                    'Key': 'Name',
                     # Name of the group and timestamp
-                    'Value':
-                    f'Plz {self.name} Worker - '
-                    f'{int(time.time() * 1000)}'
+                    'Value': f'Plz {self.name} Worker - '
+                             f'{int(time.time() * 1000)}'
                 },
             ]
         }]
@@ -341,8 +340,8 @@ class EC2InstanceGroup(InstanceProvider):
                 'MarketType': instance_market_spec['instance_market_type'],
                 'SpotOptions': {
                     'MaxPrice':
-                    str(instance_market_spec[
-                        'max_bid_price_in_dollars_per_hour']),
+                        str(instance_market_spec[
+                            'max_bid_price_in_dollars_per_hour']),
                 }
             }
         if len(self.worker_security_group_names) != 0:
