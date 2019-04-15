@@ -2,14 +2,11 @@ import base64
 import io
 import json
 import os
-import shutil
 import tarfile
 import tempfile
 from copy import deepcopy
 from json import JSONDecodeError
 from typing import IO, Iterator, Optional, Tuple
-
-from werkzeug.contrib.iterio import IterIO
 
 
 def convert_measures_to_dict(measures_tarball: Iterator[bytes]) -> dict:
@@ -56,7 +53,8 @@ def _tar_iterator(tarball_bytes: Iterator[bytes]) \
     # The response is a tarball we need to extract into `output_dir`.
     with tempfile.TemporaryFile() as tarball:
         # `tarfile.open` needs to read from a real file, so we copy to one.
-        shutil.copyfileobj(IterIO(tarball_bytes), tarball)
+        for bs in tarball_bytes:
+            tarball.write(bs)
         # And rewind to the start.
         tarball.seek(0)
         tar = tarfile.open(fileobj=tarball)
