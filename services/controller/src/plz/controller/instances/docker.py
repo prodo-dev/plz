@@ -3,6 +3,8 @@ import json
 import logging
 from typing import Dict, Iterator, Optional, Tuple
 
+import docker.errors
+import time
 from docker.types import Mount
 from redis import StrictRedis
 
@@ -124,8 +126,20 @@ class DockerInstance(Instance):
             # If the container has exited, when killing we only need to remove
             if self.containers.get_state(self.execution_id).status != 'exited':
                 self.containers.kill(self.get_execution_id())
+                for _ in range(0, 3, -1):
+                    could_remove = False
+                    try:
+                        self.volumes.remove(self.volume_name)
+                        could_remove = True
+                    except docker.errors.APIError:
+                        time.sleep(1)
+                        pass
+                    if not could_remove:
+                        log.error(
+                            f'Couldn\'t remove volume: {self.volume_name}')
             self.containers.rm(self.get_execution_id())
         except Exception as e:
+            log.exception(e)
             raise KillingInstanceException(str(e)) from e
 
     def container_state(self) -> Optional[ContainerState]:
