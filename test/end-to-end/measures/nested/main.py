@@ -12,7 +12,6 @@ for i in range(4):
     os.makedirs(os.path.join(summary_measures_path, str(i)))
 
 for i in range(11):
-    with open(os.path.join(
-            summary_measures_path, str(i%4), str(i)), 'w') as f:
+    with open(os.path.join(summary_measures_path, str(i % 4), str(i)),
+              'w') as f:
         json.dump({'loss': 42 - i}, f)
-

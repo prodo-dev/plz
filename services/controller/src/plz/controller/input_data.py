@@ -24,9 +24,9 @@ class InputDataConfiguration:
         self.input_dir = input_dir
         self.temp_data_dir = temp_data_dir
 
-    def publish_input_data(
-            self, expected_input_id: str, metadata: InputMetadata,
-            input_data_stream: BinaryIO) -> None:
+    def publish_input_data(self, expected_input_id: str,
+                           metadata: InputMetadata,
+                           input_data_stream: BinaryIO) -> None:
         input_file_path = self.input_file(expected_input_id)
         if os.path.exists(input_file_path):
             input_data_stream.close()
@@ -72,8 +72,7 @@ class InputDataConfiguration:
         else:
             return input_id
 
-    def check_input_data(
-            self, input_id: str, metadata: InputMetadata) -> bool:
+    def check_input_data(self, input_id: str, metadata: InputMetadata) -> bool:
         if self._input_file_exists(input_id):
             if metadata.has_all_args():
                 # The reason to do this is that, if there's a blob that
@@ -102,8 +101,7 @@ class InputDataConfiguration:
         input_file_path = os.path.join(self.input_dir, input_id)
         return input_file_path
 
-    def _store_input_id(
-            self, metadata: InputMetadata, input_id: str) -> None:
+    def _store_input_id(self, metadata: InputMetadata, input_id: str) -> None:
         field = metadata.redis_field()
         self.redis.hset(_INPUT_ID_KEY, field, input_id)
         log.debug(field + ': ' +

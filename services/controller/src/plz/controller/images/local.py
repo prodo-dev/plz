@@ -17,6 +17,7 @@ class LocalImages(Images):
     def for_host(self, docker_url: str) -> 'LocalImages':
         def new_docker_api_client_creator():
             return docker.APIClient(base_url=docker_url)
+
         return LocalImages(new_docker_api_client_creator, self.repository)
 
     def push(self, tag: str):

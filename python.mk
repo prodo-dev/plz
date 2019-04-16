@@ -2,7 +2,11 @@ SHELL := zsh -e -u
 
 .PHONY: lint
 lint: environment
-	pipenv run flake8 src
+	pipenv run yapf -rd src/
+
+.PHONY: format
+format: environment
+	pipenv run yapf -ri src/
 
 .PHONY: dist
 dist: environment

@@ -17,10 +17,10 @@ from plz.controller.results.results_base import InstanceStatus, \
 log = logging.getLogger(__name__)
 
 Parameters = Dict[str, Any]
-ExecutionInfo = namedtuple(
-    'ExecutionInfo',
-    ['execution_id', 'running', 'status', 'instance_type', 'max_idle_seconds',
-     'idle_since_timestamp', 'instance_id'])
+ExecutionInfo = namedtuple('ExecutionInfo', [
+    'execution_id', 'running', 'status', 'instance_type', 'max_idle_seconds',
+    'idle_since_timestamp', 'instance_id'
+])
 
 
 class Instance(Results):
@@ -33,9 +33,7 @@ class Instance(Results):
         self._memoised_lock = None
 
     @abstractmethod
-    def run(self,
-            snapshot_id: str,
-            parameters: Parameters,
+    def run(self, snapshot_id: str, parameters: Parameters,
             input_stream: Optional[io.BytesIO],
             docker_run_args: Dict[str, str],
             index_range_to_run: Optional[Tuple[int, int]]) -> None:
@@ -74,8 +72,8 @@ class Instance(Results):
         pass
 
     @abstractmethod
-    def dispose_if_its_time(
-            self, execution_info: Optional[ExecutionInfo] = None):
+    def dispose_if_its_time(self,
+                            execution_info: Optional[ExecutionInfo] = None):
         # We happen to have the execution info at hand when calling it,
         # and getting the info is not free (queries to the docker server in the
         # workers), so we allow to pass the info as parameter
@@ -101,21 +99,21 @@ class Instance(Results):
                 status = container_state.status
                 idle_since_timestamp = self.get_idle_since_timestamp(
                     container_state)
-        return ExecutionInfo(
-            instance_type=self.get_instance_type(),
-            instance_id=self.instance_id,
-            execution_id=self.get_execution_id(),
-            running=running,
-            status=status,
-            idle_since_timestamp=idle_since_timestamp,
-            max_idle_seconds=self.get_max_idle_seconds())
+        return ExecutionInfo(instance_type=self.get_instance_type(),
+                             instance_id=self.instance_id,
+                             execution_id=self.get_execution_id(),
+                             running=running,
+                             status=status,
+                             idle_since_timestamp=idle_since_timestamp,
+                             max_idle_seconds=self.get_max_idle_seconds())
 
     @abstractmethod
     def container_state(self) -> Optional[ContainerState]:
         pass
 
     @abstractmethod
-    def release(self, results_storage: ResultsStorage,
+    def release(self,
+                results_storage: ResultsStorage,
                 idle_since_timestamp: int,
                 release_container: bool = True) -> bool:
         pass
@@ -158,10 +156,9 @@ class Instance(Results):
                         return
                     with results_storage.get(execution_id) as results:
                         if results is not None:
-                            log.debug(
-                                f'Instance [{self.instance_id}] for '
-                                f'execution id [{execution_id}] is '
-                                f'terminated and has results')
+                            log.debug(f'Instance [{self.instance_id}] for '
+                                      f'execution id [{execution_id}] is '
+                                      f'terminated and has results')
                             return
                     log.debug('Writing tombstone for instance '
                               f'[{self.instance_id}] for execution id '
@@ -170,9 +167,8 @@ class Instance(Results):
                         execution_id,
                         tombstone={'forensics': self.get_forensics()})
                 finally:
-                    log.debug(
-                        f'Deleting instance [{self.instance_id}] for '
-                        f'execution id [{execution_id}]')
+                    log.debug(f'Deleting instance [{self.instance_id}] for '
+                              f'execution id [{execution_id}]')
                     self.delete_resource()
 
             # We only care about harvesting running and terminated instances
@@ -186,17 +182,15 @@ class Instance(Results):
 
             try:
                 info = self.get_execution_info()
-                log.debug(
-                    f'Could get execution info for instance '
-                    f'[{self.instance_id}], execution id '
-                    f'[{self.get_execution_id()}]')
+                log.debug(f'Could get execution info for instance '
+                          f'[{self.instance_id}], execution id '
+                          f'[{self.get_execution_id()}]')
             except ContainerMissingException:
                 # The container for an execution can't be found although
                 # we have an instance for it. Release the instance without
                 # trying to access the container
-                log.exception(
-                    f'Instance {self.instance_id} for execution ID: '
-                    f'{self.get_execution_id()} missing container')
+                log.exception(f'Instance {self.instance_id} for execution ID: '
+                              f'{self.get_execution_id()} missing container')
                 self.release(
                     results_storage,
                     idle_since_timestamp=int(time.time()),
@@ -234,15 +228,13 @@ class Instance(Results):
             return False
         else:
             lock_timestamp_seconds_bytes = self.redis.hget(
-                self._lock_timestamp_seconds_key_name,
-                self.instance_id)
+                self._lock_timestamp_seconds_key_name, self.instance_id)
             if lock_timestamp_seconds_bytes is None:
                 log.warning(
                     f'Instance {self.instance_id} does not have a timestamp '
                     f'for its lock, creating it now')
                 self.redis.hset(self._lock_timestamp_seconds_key_name,
-                                self.instance_id,
-                                _get_current_seconds())
+                                self.instance_id, _get_current_seconds())
                 return False
             secs = _get_current_seconds() - int(lock_timestamp_seconds_bytes)
             log.debug(f'Instance {self.instance_id} for execution id '
@@ -287,11 +279,9 @@ class Instance(Results):
 
     @property
     def _lock(self):
-        return _InstanceContextManager(
-            self._redis_lock,
-            self.redis,
-            self._lock_timestamp_seconds_key_name,
-            self.instance_id)
+        return _InstanceContextManager(self._redis_lock, self.redis,
+                                       self._lock_timestamp_seconds_key_name,
+                                       self.instance_id)
 
 
 class InstanceProvider(ABC):
@@ -301,9 +291,7 @@ class InstanceProvider(ABC):
         self.instance_lock_timeout = instance_lock_timeout
 
     @abstractmethod
-    def run_in_instance(self,
-                        execution_id: str,
-                        snapshot_id: str,
+    def run_in_instance(self, execution_id: str, snapshot_id: str,
                         parameters: Parameters,
                         input_stream: Optional[io.BytesIO],
                         instance_market_spec: dict,
@@ -314,10 +302,10 @@ class InstanceProvider(ABC):
     def instance_for(self, execution_id: str) -> Optional[Instance]:
         pass
 
-    def release_instance(
-            self, execution_id: str,
-            fail_if_not_found: bool = True,
-            idle_since_timestamp: Optional[int] = None):
+    def release_instance(self,
+                         execution_id: str,
+                         fail_if_not_found: bool = True,
+                         idle_since_timestamp: Optional[int] = None):
         instance = self.instance_for(execution_id)
         if instance is None:
             if fail_if_not_found:
@@ -327,13 +315,9 @@ class InstanceProvider(ABC):
                 return
         instance.release(self.results_storage, idle_since_timestamp)
 
-    def kill_instances(
-            self,
-            user: str,
-            instance_ids: Optional[List[str]],
-            ignore_ownership: bool,
-            including_idle: bool,
-            force_if_not_idle: bool) -> None:
+    def kill_instances(self, user: str, instance_ids: Optional[List[str]],
+                       ignore_ownership: bool, including_idle: bool,
+                       force_if_not_idle: bool) -> None:
         """ Hard stop for a set of instances
 
         :param user: user requesting the instances to be killed
@@ -359,14 +343,9 @@ class InstanceProvider(ABC):
         there_is_one_instance = False
         for instance in self.instance_iterator(only_running=False):
             if not self._must_kill_instance(
-                    ignore_ownership,
-                    including_idle,
-                    instance,
-                    instance_ids,
-                    instance_ids_to_messages,
-                    terminate_all_user_instances,
-                    unprocessed_instance_ids,
-                    user):
+                    ignore_ownership, including_idle, instance, instance_ids,
+                    instance_ids_to_messages, terminate_all_user_instances,
+                    unprocessed_instance_ids, user):
                 continue
 
             there_is_one_instance = True
@@ -387,16 +366,12 @@ class InstanceProvider(ABC):
         if terminate_all_user_instances and not there_is_one_instance:
             raise NoInstancesFoundException()
 
-    def _must_kill_instance(
-            self,
-            ignore_ownership: bool,
-            including_idle: bool,
-            instance: Instance,
-            instance_ids: [str],
-            instance_ids_to_messages: dict,
-            terminate_all_instances: bool,
-            unprocessed_instance_ids: [str],
-            user: str) -> bool:
+    def _must_kill_instance(self, ignore_ownership: bool, including_idle: bool,
+                            instance: Instance, instance_ids: [str],
+                            instance_ids_to_messages: dict,
+                            terminate_all_instances: bool,
+                            unprocessed_instance_ids: [str
+                                                       ], user: str) -> bool:
         if instance.is_terminated():
             return False
 
@@ -465,7 +440,8 @@ class InstanceProvider(ABC):
         return [
             instance.get_execution_info()
             for instance in self.instance_iterator(only_running=False)
-            if not instance.is_terminated()]
+            if not instance.is_terminated()
+        ]
 
     @abstractmethod
     def get_forensics(self, execution_id: str) -> dict:
@@ -492,9 +468,9 @@ class _InstanceContextManager(ContextManager):
     Allow for the lock to be acquired in several stack frames of the same
     thread
     """
+
     def __init__(self, instance_lock: Lock, redis: StrictRedis,
-                 lock_timestamp_seconds_key_name: str,
-                 instance_id: str):
+                 lock_timestamp_seconds_key_name: str, instance_id: str):
         self.instance_lock = instance_lock
         self.redis = redis
         self.lock_timestamp_seconds_key_name = lock_timestamp_seconds_key_name
@@ -506,8 +482,7 @@ class _InstanceContextManager(ContextManager):
             if self.instance_lock.acquire(blocking=blocking):
                 self.lock = self.instance_lock
                 self.redis.hset(self.lock_timestamp_seconds_key_name,
-                                self.instance_id,
-                                _get_current_seconds())
+                                self.instance_id, _get_current_seconds())
                 return True
             else:
                 return False
@@ -517,8 +492,8 @@ class _InstanceContextManager(ContextManager):
 
     def release(self):
         if self.lock is not None:
-            self.redis.hdel(
-                self.lock_timestamp_seconds_key_name, self.instance_id)
+            self.redis.hdel(self.lock_timestamp_seconds_key_name,
+                            self.instance_id)
             self.lock.release()
 
     def __enter__(self):

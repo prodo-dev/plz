@@ -30,10 +30,11 @@ class Execution(ABC):
         # it's requested.
         index_range_to_run = stored_metadata['execution_spec'].get(
             'index_range_to_run')
-        ic = InstanceComposition.create_for(
-            index_range_to_run)
-        stored_metadata.update({'measures': ic.compose_measures(
-            lambda index: self.get_measures(index))})
+        ic = InstanceComposition.create_for(index_range_to_run)
+        stored_metadata.update({
+            'measures':
+                ic.compose_measures(lambda index: self.get_measures(index))
+        })
         return stored_metadata
 
 

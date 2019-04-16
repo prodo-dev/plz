@@ -24,10 +24,11 @@ class LogsOperation(Operation):
     def prepare_argument_parser(cls, parser, args):
         cls.maybe_add_execution_id_arg(parser, args)
         parser.add_argument(
-            '-s', '--since',
+            '-s',
+            '--since',
             help='Specify a start time for the log output. Unfilled fields are'
-                 'assumed to be same as of current time: `10:30` is today\'s '
-                 '10:30. Use `start` to print all logs')
+            'assumed to be same as of current time: `10:30` is today\'s '
+            '10:30. Use `start` to print all logs')
 
     def __init__(self,
                  configuration: Configuration,
@@ -47,13 +48,13 @@ class LogsOperation(Operation):
 
         try:
             if len(atomic_executions) == 1:
-                byte_lines = self.controller.get_logs(
-                    self.get_execution_id(), since=since_timestamp)
+                byte_lines = self.controller.get_logs(self.get_execution_id(),
+                                                      since=since_timestamp)
                 for byte_line in byte_lines:
                     print(byte_line.decode('utf-8'), end='', flush=True)
             else:
-                self._print_logs_for_composite(
-                    atomic_executions, since_timestamp)
+                self._print_logs_for_composite(atomic_executions,
+                                               since_timestamp)
         except KeyboardInterrupt:
             print()
             if print_interrupt_message:
@@ -68,10 +69,9 @@ class LogsOperation(Operation):
             -> None:
         lines_queue = Queue()
         for e in atomic_executions:
-            t = Thread(
-                target=_queue_log_lines,
-                args=(self.controller, lines_queue, e, since_timestamp,
-                      self.configuration.debug))
+            t = Thread(target=_queue_log_lines,
+                       args=(self.controller, lines_queue, e, since_timestamp,
+                             self.configuration.debug))
             t.start()
         end_signals = 0
         while end_signals < len(atomic_executions):
@@ -100,8 +100,10 @@ class LogsOperation(Operation):
             try:
                 since_timestamp = str(int(self.since))
             except ValueError:
-                since_timestamp = str(int(time.mktime(
-                    dateutil.parser.parse(self.since).timetuple())))
+                since_timestamp = str(
+                    int(
+                        time.mktime(
+                            dateutil.parser.parse(self.since).timetuple())))
         return since_timestamp
 
     def run(self):
@@ -111,10 +113,9 @@ class LogsOperation(Operation):
             pass
 
 
-def _queue_log_lines(
-        controller: Controller, lines_queue: Queue, execution_id: str,
-        since_timestamp: Optional[str],
-        debug: bool) -> None:
+def _queue_log_lines(controller: Controller, lines_queue: Queue,
+                     execution_id: str, since_timestamp: Optional[str],
+                     debug: bool) -> None:
     # noinspection PyBroadException
     try:
         byte_lines = controller.get_logs(execution_id, since_timestamp)

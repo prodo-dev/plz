@@ -21,8 +21,8 @@ class ECRImages(Images):
         self.ecr_client_creator = ecr_client_creator
         self.ecr_client = self.ecr_client_creator()
         self.repository_without_registry = repository_without_registry
-        self.registry = self._get_registry(
-            self.ecr_client, repository_without_registry)
+        self.registry = self._get_registry(self.ecr_client,
+                                           repository_without_registry)
         repository = f'{self.registry}/{repository_without_registry}'
         super().__init__(docker_api_client_creator, repository)
         self.last_login_time = None
@@ -31,29 +31,34 @@ class ECRImages(Images):
     def for_host(self, docker_url: str) -> 'ECRImages':
         def new_docker_api_client_creator():
             return docker.APIClient(base_url=docker_url)
-        return ECRImages(
-            new_docker_api_client_creator,
-            self.ecr_client_creator,
-            self.repository_without_registry,
-            self.login_validity_in_minutes)
+
+        return ECRImages(new_docker_api_client_creator,
+                         self.ecr_client_creator,
+                         self.repository_without_registry,
+                         self.login_validity_in_minutes)
 
     def build(self, fileobj: BinaryIO, tag: str) -> Iterator[bytes]:
         self._login()
         return self._build(fileobj, tag)
 
-    def push(self, tag: str,
-             log_level: int = logging.DEBUG, log_progress: bool = False):
+    def push(self,
+             tag: str,
+             log_level: int = logging.DEBUG,
+             log_progress: bool = False):
         self._login()
         self._log_output(
             'Push',
-            self.docker_api_client.push(
-                repository=self.repository, tag=tag, stream=True),
-            log_level, log_progress)
+            self.docker_api_client.push(repository=self.repository,
+                                        tag=tag,
+                                        stream=True), log_level, log_progress)
 
     def pull(self, tag: str):
         self._login()
-        self._log_output('Push', self.docker_api_client.pull(
-            repository=self.repository, tag=tag, stream=True))
+        self._log_output(
+            'Push',
+            self.docker_api_client.pull(repository=self.repository,
+                                        tag=tag,
+                                        stream=True))
 
     def can_pull(self, times: int) -> bool:
         try:
@@ -84,17 +89,16 @@ class ECRImages(Images):
         encoded_token = authorization_data[0]['authorizationToken']
         token = base64.b64decode(encoded_token).decode('utf-8')
         username, password = token.split(':')
-        self.docker_api_client.login(
-            username=username,
-            password=password,
-            registry=self.registry)
+        self.docker_api_client.login(username=username,
+                                     password=password,
+                                     registry=self.registry)
         self.last_login_time = time.time()
 
     @staticmethod
     def _get_registry(ecr_client, repository_without_uri) -> str:
         repository = ecr_client.describe_repositories(
             repositoryNames=[repository_without_uri])['repositories'][0]
-        return repository['repositoryUri'][:-(len(repository_without_uri)+1)]
+        return repository['repositoryUri'][:-(len(repository_without_uri) + 1)]
 
     @staticmethod
     def _log_output(label: str,

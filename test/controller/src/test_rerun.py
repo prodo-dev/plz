@@ -15,18 +15,16 @@ class TestReRun(unittest.TestCase):
         super().tearDownClass()
 
     def test_rerun(self):
-        context, execution_id = run_example(
-            'parameters', 'simple', is_end_to_end_path=True,
-            parameters={
-                "foo": 55,
-                "bar": "zeppelin"
-            })
-        output = b''.join(context.controller.get_logs(
-            execution_id, since=None))
-        self.assertEqual(
-            'foo = 55\n'
-            'bar = zeppelin\n',
-            str(output, 'utf-8'))
+        context, execution_id = run_example('parameters',
+                                            'simple',
+                                            is_end_to_end_path=True,
+                                            parameters={
+                                                "foo": 55,
+                                                "bar": "zeppelin"
+                                            })
+        output = b''.join(context.controller.get_logs(execution_id,
+                                                      since=None))
+        self.assertEqual('foo = 55\n' 'bar = zeppelin\n', str(output, 'utf-8'))
 
         # Rerun without overriding the parameters
         _, rerun_execution_id = rerun_execution(
@@ -38,26 +36,21 @@ class TestReRun(unittest.TestCase):
             instance_market_spec=create_instance_market_spec(
                 context.configuration))
 
-        output = b''.join(context.controller.get_logs(
-            rerun_execution_id, since=None))
-        self.assertEqual(
-            'foo = 55\n'
-            'bar = zeppelin\n',
-            str(output, 'utf-8'))
+        output = b''.join(
+            context.controller.get_logs(rerun_execution_id, since=None))
+        self.assertEqual('foo = 55\n' 'bar = zeppelin\n', str(output, 'utf-8'))
 
     def test_rerun_override_parameters(self):
-        context, execution_id = run_example(
-            'parameters', 'simple', is_end_to_end_path=True,
-            parameters={
-                "foo": 55,
-                "bar": "zeppelin"
-            })
-        output = b''.join(context.controller.get_logs(
-            execution_id, since=None))
-        self.assertEqual(
-            'foo = 55\n'
-            'bar = zeppelin\n',
-            str(output, 'utf-8'))
+        context, execution_id = run_example('parameters',
+                                            'simple',
+                                            is_end_to_end_path=True,
+                                            parameters={
+                                                "foo": 55,
+                                                "bar": "zeppelin"
+                                            })
+        output = b''.join(context.controller.get_logs(execution_id,
+                                                      since=None))
+        self.assertEqual('foo = 55\n' 'bar = zeppelin\n', str(output, 'utf-8'))
 
         # Rerun overriding the parameters
         _, rerun_execution_id = rerun_execution(
@@ -73,9 +66,6 @@ class TestReRun(unittest.TestCase):
                 context.configuration))
 
         # Make sure we get the overridden the parameters
-        output = b''.join(context.controller.get_logs(
-            rerun_execution_id, since=None))
-        self.assertEqual(
-            'foo = 66\n'
-            'bar = zeppelin\n',
-            str(output, 'utf-8'))
+        output = b''.join(
+            context.controller.get_logs(rerun_execution_id, since=None))
+        self.assertEqual('foo = 66\n' 'bar = zeppelin\n', str(output, 'utf-8'))

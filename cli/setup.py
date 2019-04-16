@@ -34,8 +34,7 @@ setup(
     ],
     package_dir={
         '': 'src',
-        'plz.controller.api':
-            '../services/controller/src/plz/controller/api'
+        'plz.controller.api': '../services/controller/src/plz/controller/api'
     },
     packages=['plz.cli', 'plz.controller.api'],
     python_requires='>= 3.6',
@@ -56,9 +55,7 @@ setup(
         ],
     },
     entry_points={
-        'console_scripts': [
-            'plz=plz.cli.main:main',
-        ],
+        'console_scripts': ['plz=plz.cli.main:main'],
     },
     project_urls={
         'Bug Reports': 'https://github.com/prodo-ai/plz/issues',

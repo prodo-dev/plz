@@ -30,16 +30,15 @@ class RunExecutionOperation(Operation):
     def prepare_argument_parser(cls, parser, args):
         parser.add_argument('--command', type=str, help='Command to run')
         add_output_dir_arg(parser)
-        parser.add_argument('-p', '--parameters', dest='parameters_file',
+        parser.add_argument('-p',
+                            '--parameters',
+                            dest='parameters_file',
                             help='Json file where parameters are stored',
                             type=str)
         add_detach_command_line_argument(parser)
 
-    def __init__(self,
-                 configuration: Configuration,
-                 command: Optional[str],
-                 output_dir: str,
-                 parameters_file: Optional[str],
+    def __init__(self, configuration: Configuration, command: Optional[str],
+                 output_dir: str, parameters_file: Optional[str],
                  detach: bool):
         super().__init__(configuration)
         self.configuration = configuration
@@ -80,15 +79,11 @@ class RunExecutionOperation(Operation):
             with self.suboperation(
                     f'Capturing the files in {os.path.abspath(context_path)}',
                     build_context_suboperation) as build_context:
+
                 try:
                     snapshot_id = self.suboperation(
                         'Building the program snapshot',
-                        lambda: submit_context_for_building(
-                            user=self.configuration.user,
-                            project=self.configuration.project,
-                            controller=self.controller,
-                            build_context=build_context,
-                            quiet_build=self.configuration.quiet_build))
+                        self._submit_context_callable(build_context))
                     break
                 except CLIException as e:
                     if type(e.__cause__) == PullAccessDeniedException \
@@ -101,20 +96,29 @@ class RunExecutionOperation(Operation):
                     else:
                         raise e
 
-        input_id = self.suboperation(
-                'Capturing the input',
-                self.capture_input,
-                if_set=self.configuration.input)
+        input_id = self.suboperation('Capturing the input',
+                                     self.capture_input,
+                                     if_set=self.configuration.input)
         execution_id, was_start_ok = self.suboperation(
-                'Sending request to start execution',
-                lambda: self.start_execution(snapshot_id, params, input_id,
-                                             context_path))
+            'Sending request to start execution', lambda: self.start_execution(
+                snapshot_id, params, input_id, context_path))
         self.execution_id = execution_id
         self.follow_execution(was_start_ok)
 
+    def _submit_context_callable(self, build_context):
+        # Making it an internal function in self.run doesn't work. Making
+        # _submit_context_callable = lambda: ...
+        # in self.run _does_ work. Bug in python?
+        return lambda: submit_context_for_building(
+            user=self.configuration.user,
+            project=self.configuration.project,
+            controller=self.controller,
+            build_context=build_context,
+            quiet_build=self.configuration.quiet_build)
+
     def _check_dockerfile_specs(self):
-        user_provided_dockerfile = os.path.isfile(os.path.join(
-            self.configuration.context_path, DOCKERFILE_NAME))
+        user_provided_dockerfile = os.path.isfile(
+            os.path.join(self.configuration.context_path, DOCKERFILE_NAME))
         if self.configuration.image is not None and user_provided_dockerfile:
             raise CLIException('You specified an image (either in '
                                '`plz.config.json` or in the `PLZ_IMAGE` '
@@ -171,9 +175,8 @@ class RunExecutionOperation(Operation):
 
         retrieve_measures_operation = RetrieveMeasuresOperation(
             self.configuration, execution_id=self.execution_id, summary=True)
-        self.suboperation(
-            'Retrieving summary of measures (if present)...',
-            retrieve_measures_operation.retrieve_measures)
+        self.suboperation('Retrieving summary of measures (if present)...',
+                          retrieve_measures_operation.retrieve_measures)
 
         show_status_operation = ShowStatusOperation(
             self.configuration, execution_id=self.execution_id)
@@ -184,9 +187,8 @@ class RunExecutionOperation(Operation):
                 ' Please report it.')
         elif status.success:
             log_info('Execution succeeded.')
-            self.suboperation(
-                    'Retrieving the output...',
-                    retrieve_output_operation.retrieve_output)
+            self.suboperation('Retrieving the output...',
+                              retrieve_output_operation.retrieve_output)
             log_info('Done and dusted.')
             return status.code
         else:
@@ -195,8 +197,8 @@ class RunExecutionOperation(Operation):
                 exit_code=status.code)
 
     def capture_input(self) -> Optional[str]:
-        with InputData.from_configuration(
-                self.configuration, self.controller) as input_data:
+        with InputData.from_configuration(self.configuration,
+                                          self.controller) as input_data:
             return input_data.publish()
 
     def start_execution(
@@ -219,20 +221,20 @@ class RunExecutionOperation(Operation):
             start_metadata={
                 'commit': commit,
                 'configuration': {
-                    k: v for k, v in configuration.as_dict().items()
+                    k: v
+                    for k, v in configuration.as_dict().items()
                     # User and project are present in the execution spec
                     if k not in {'user', 'project'}
                 }
             },
             parallel_indices_range=configuration.parallel_indices_range,
-            indices_per_execution=configuration.indices_per_execution
-        )
+            indices_per_execution=configuration.indices_per_execution)
         return RunExecutionOperation.get_execution_id_from_start_response(
             response_dicts)
 
     @staticmethod
-    def get_execution_id_from_start_response(
-            response_dicts: Iterator[dict]) -> Tuple[str, bool]:
+    def get_execution_id_from_start_response(response_dicts: Iterator[dict]
+                                             ) -> Tuple[str, bool]:
         execution_id: Optional[str] = None
         ok = True
         for data in response_dicts:
@@ -248,14 +250,19 @@ class RunExecutionOperation(Operation):
         return execution_id, ok
 
     @staticmethod
-    def create_execution_spec(
-            configuration: Configuration, input_id: Optional[str]) -> dict:
+    def create_execution_spec(configuration: Configuration,
+                              input_id: Optional[str]) -> dict:
         return {
-            'instance_type': configuration.instance_type,
-            'user': configuration.user,
-            'project': configuration.project,
-            'input_id': input_id,
-            'docker_run_args': configuration.docker_run_args,
+            'instance_type':
+                configuration.instance_type,
+            'user':
+                configuration.user,
+            'project':
+                configuration.project,
+            'input_id':
+                input_id,
+            'docker_run_args':
+                configuration.docker_run_args,
             'instance_max_uptime_in_minutes':
                 configuration.instance_max_uptime_in_minutes,
         }
@@ -282,17 +289,18 @@ class RunExecutionOperation(Operation):
 
 
 def add_detach_command_line_argument(parser):
-    parser.add_argument('--detach', '-d', action='store_true',
+    parser.add_argument('--detach',
+                        '-d',
+                        action='store_true',
                         default=False,
                         help='Make CLI exit as soon as the job is '
-                             'running (does not print logs, or download '
-                             'outputs, etc.)')
+                        'running (does not print logs, or download '
+                        'outputs, etc.)')
 
 
 def create_instance_market_spec(configuration: Configuration) -> dict:
     return {
         k: getattr(configuration, k)
-        for k in ('instance_market_type',
-                  'instance_max_idle_time_in_minutes',
+        for k in ('instance_market_type', 'instance_max_idle_time_in_minutes',
                   'max_bid_price_in_dollars_per_hour')
     }

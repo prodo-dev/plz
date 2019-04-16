@@ -13,8 +13,9 @@ class TestRun(unittest.TestCase):
         super().tearDownClass()
 
     def test_run(self):
-        context, execution_id = run_example(
-            'logs', 'simple', is_end_to_end_path=True)
-        output = b''.join(context.controller.get_logs(
-            execution_id, since=None))
+        context, execution_id = run_example('logs',
+                                            'simple',
+                                            is_end_to_end_path=True)
+        output = b''.join(context.controller.get_logs(execution_id,
+                                                      since=None))
         self.assertEqual('foo\nbar\nbaz\n', str(output, 'utf-8'))

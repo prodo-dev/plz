@@ -32,6 +32,9 @@ class ValidationException(Exception):
             print(str(error))
 
 
+ValidationFunction = Callable[['Configuration', List[ValidationError]], None]
+
+
 class Property:
     TYPE_DESCRIPTIONS = {
         str: 'a string',
@@ -46,15 +49,12 @@ class Property:
     SUBTYPES[Optional[int]] = [int, None]
 
     # noinspection PyShadowingBuiltins
-    def __init__(
-            self,
-            name: str,
-            type: Type[T] = str,
-            required: bool = False,
-            default: T = None,
-            validations: [
-                Callable[
-                    ['Configuration', List[ValidationError]], None]] = None):
+    def __init__(self,
+                 name: str,
+                 type: Type[T] = str,
+                 required: bool = False,
+                 default: T = None,
+                 validations: List[ValidationFunction] = None):
         self.name = name
         self.type = type
         self.required = required
@@ -75,8 +75,10 @@ def _validate_market_spec(configuration, errors, operation: Optional[str]):
     if operation not in {'run', 'rerun'}:
         return
     if configuration.instance_market_type not in {'spot', 'on_demand'}:
-        errors.append(['Possible values for `instance_market_type` are '
-                       '`spot` or `on_demand`'])
+        errors.append([
+            'Possible values for `instance_market_type` are `spot` or `on_'
+            'demand`'
+        ])
     if configuration.instance_market_type == 'spot' \
             and configuration.max_bid_price_in_dollars_per_hour is None:
         errors.append(
@@ -99,8 +101,8 @@ def _validate_market_spec(configuration, errors, operation: Optional[str]):
                 use_emojis=False))
 
 
-def _warn_about_instance_max_uptime(
-        configuration, _, operation: Optional[str]):
+def _warn_about_instance_max_uptime(configuration, _,
+                                    operation: Optional[str]):
     if operation not in {'run', 'rerun'}:
         return
     if configuration.instance_max_uptime_in_minutes:
@@ -116,7 +118,8 @@ def _warn_about_instance_max_uptime(
 
 class Configuration:
     PROPERTIES = {
-        prop.name: prop for prop in [
+        prop.name: prop
+        for prop in [
             Property('host', default='localhost'),
             Property('port', type=int, default=80),
             Property('quiet_build', type=bool, default=False),
@@ -132,8 +135,7 @@ class Configuration:
             # Whether to consider the files ignored by git as excluded,
             # (save for when they are included explicitly).
             # Value of None means "use git if available"
-            Property('exclude_gitignored_files',
-                     type=bool, default=None),
+            Property('exclude_gitignored_files', type=bool, default=None),
             # Paths to include, as to override exclusion (must be paths under
             # the current work directory)
             Property('included_paths', type=list, default=[]),
@@ -145,18 +147,19 @@ class Configuration:
             # is debug
             Property('log_level', type=str, default=None),
             Property('use_emojis', type=bool, default=True),
-            Property('workarounds', type=dict,
-                     default={'docker_build_retries': 3}),
-            Property('instance_market_type', type=str, default='on_demand',
+            Property(
+                'workarounds', type=dict, default={'docker_build_retries': 3}),
+            Property('instance_market_type',
+                     type=str,
+                     default='on_demand',
                      validations=[_validate_market_spec]),
             Property('instance_max_uptime_in_minutes',
                      type=Optional[int],
                      default=60,
                      validations=[_warn_about_instance_max_uptime]),
-            Property('instance_max_idle_time_in_minutes', type=int,
-                     default=0),
-            Property('max_bid_price_in_dollars_per_hour', type=float,
-                     default=None),
+            Property('instance_max_idle_time_in_minutes', type=int, default=0),
+            Property(
+                'max_bid_price_in_dollars_per_hour', type=float, default=None),
             Property('parallel_indices_range', type=list, default=None),
             Property('indices_per_execution', type=int, default=None)
         ]
@@ -178,15 +181,18 @@ class Configuration:
             *Configuration._get_parent_dirs_configs(config_file_name),
             Configuration._get_top_level_config(
                 config_file_name,
-                config_set_explicitly=configuration_path is not None)]
+                config_set_explicitly=configuration_path is not None)
+        ]
 
         file_configurations = [c for c in file_configurations if c is not None]
         if file_configurations is []:
             raise ValidationException(
                 [Configuration.MISSING_CONFIGURATION_FILE_ERROR])
 
-        configurations = [*file_configurations,
-                          Configuration.from_env(Configuration.PROPERTIES)]
+        configurations = [
+            *file_configurations,
+            Configuration.from_env(Configuration.PROPERTIES)
+        ]
         configuration = Configuration.defaults(Configuration.PROPERTIES)
         for c in configurations:
             configuration = configuration.override_with(c)
@@ -262,9 +268,9 @@ class Configuration:
 
     @staticmethod
     def _get_top_level_config(config_file_name, config_set_explicitly: bool):
-        config = Configuration.from_file(
-            config_file_name, Configuration.PROPERTIES,
-            fail_on_read_error=True)
+        config = Configuration.from_file(config_file_name,
+                                         Configuration.PROPERTIES,
+                                         fail_on_read_error=True)
         # The user provided a configuration file explicitly, but we couldn't
         # read a configuration from it
         if config_set_explicitly and config is None:
@@ -287,9 +293,8 @@ class Configuration:
         # directory, this is strictly for parents
         for n in range(mount_index, len(path_fragments)):
             configuration = Configuration.from_file(
-                os.path.join(
-                    '/', *path_fragments[:n],
-                    Configuration.DEFAULT_CONFIGURATION_FILE_NAME),
+                os.path.join('/', *path_fragments[:n],
+                             Configuration.DEFAULT_CONFIGURATION_FILE_NAME),
                 Configuration.PROPERTIES,
                 # If we can read a configuration at some point, we don't
                 # expect to have any permissions problems/filesystem problems
@@ -306,7 +311,8 @@ class Configuration:
                          Configuration.DEFAULT_CONFIGURATION_FILE_NAME))
 
         return Configuration.from_file(
-            user_level_config_file, Configuration.PROPERTIES,
+            user_level_config_file,
+            Configuration.PROPERTIES,
             # We expect to be able to read a file the home directory
             fail_on_read_error=True)
 
@@ -329,9 +335,9 @@ class Configuration:
             config_file_name = os.path.abspath(
                 Configuration.DEFAULT_CONFIGURATION_FILE_NAME)
         elif os.path.isdir(configuration_path):
-            config_file_name = os.path.abspath(os.path.join(
-                configuration_path,
-                Configuration.DEFAULT_CONFIGURATION_FILE_NAME))
+            config_file_name = os.path.abspath(
+                os.path.join(configuration_path,
+                             Configuration.DEFAULT_CONFIGURATION_FILE_NAME))
         else:
             config_file_name = os.path.abspath(
                 os.path.join(configuration_path))

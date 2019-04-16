@@ -11,9 +11,7 @@ class ExitWithStatusCodeException(Exception):
 
 
 class CLIException(ExitWithStatusCodeException):
-    def __init__(self,
-                 message: str,
-                 exit_code: int = 1):
+    def __init__(self, message: str, exit_code: int = 1):
         super().__init__(exit_code)
         self.message = message
 
@@ -23,8 +21,8 @@ class CLIException(ExitWithStatusCodeException):
         if cause:
             print(cause)
             if configuration.debug:
-                traceback.print_exception(
-                    type(cause), cause, cause.__traceback__)
+                traceback.print_exception(type(cause), cause,
+                                          cause.__traceback__)
 
 
 class RequestException(Exception):
@@ -35,5 +33,4 @@ class RequestException(Exception):
             body = response.text
         super().__init__(
             f'Request failed with status code {response.status_code}.\n' +
-            f'Response:\n{body}'
-        )
+            f'Response:\n{body}')
