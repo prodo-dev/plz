@@ -17,17 +17,10 @@ from plz.controller.results.results_base import InstanceStatus, \
 log = logging.getLogger(__name__)
 
 Parameters = Dict[str, Any]
-ExecutionInfo = namedtuple(
-    'ExecutionInfo',
-    [
-        'execution_id',
-        'running',
-        'status',
-        'instance_type',
-        'max_idle_seconds',
-        'idle_since_timestamp',
-        'instance_id'
-    ])
+ExecutionInfo = namedtuple('ExecutionInfo', [
+    'execution_id', 'running', 'status', 'instance_type', 'max_idle_seconds',
+    'idle_since_timestamp', 'instance_id'
+])
 
 
 class Instance(Results):
@@ -40,15 +33,10 @@ class Instance(Results):
         self._memoised_lock = None
 
     @abstractmethod
-    def run(
-            self,
-            snapshot_id: str,
-            parameters: Parameters,
+    def run(self, snapshot_id: str, parameters: Parameters,
             input_stream: Optional[io.BytesIO],
-            docker_run_args: Dict[str,
-                                  str],
-            index_range_to_run: Optional[Tuple[int,
-                                               int]]) -> None:
+            docker_run_args: Dict[str, str],
+            index_range_to_run: Optional[Tuple[int, int]]) -> None:
         pass
 
     def get_status(self) -> InstanceStatus:
@@ -68,8 +56,7 @@ class Instance(Results):
 
     @abstractmethod
     def get_idle_since_timestamp(
-            self,
-            container_state: Optional[ContainerState] = None) -> int:
+            self, container_state: Optional[ContainerState] = None) -> int:
         pass
 
     @abstractmethod
@@ -85,9 +72,8 @@ class Instance(Results):
         pass
 
     @abstractmethod
-    def dispose_if_its_time(
-            self,
-            execution_info: Optional[ExecutionInfo] = None):
+    def dispose_if_its_time(self,
+                            execution_info: Optional[ExecutionInfo] = None):
         # We happen to have the execution info at hand when calling it,
         # and getting the info is not free (queries to the docker server in the
         # workers), so we allow to pass the info as parameter
@@ -113,25 +99,23 @@ class Instance(Results):
                 status = container_state.status
                 idle_since_timestamp = self.get_idle_since_timestamp(
                     container_state)
-        return ExecutionInfo(
-            instance_type=self.get_instance_type(),
-            instance_id=self.instance_id,
-            execution_id=self.get_execution_id(),
-            running=running,
-            status=status,
-            idle_since_timestamp=idle_since_timestamp,
-            max_idle_seconds=self.get_max_idle_seconds())
+        return ExecutionInfo(instance_type=self.get_instance_type(),
+                             instance_id=self.instance_id,
+                             execution_id=self.get_execution_id(),
+                             running=running,
+                             status=status,
+                             idle_since_timestamp=idle_since_timestamp,
+                             max_idle_seconds=self.get_max_idle_seconds())
 
     @abstractmethod
     def container_state(self) -> Optional[ContainerState]:
         pass
 
     @abstractmethod
-    def release(
-            self,
-            results_storage: ResultsStorage,
-            idle_since_timestamp: int,
-            release_container: bool = True) -> bool:
+    def release(self,
+                results_storage: ResultsStorage,
+                idle_since_timestamp: int,
+                release_container: bool = True) -> bool:
         pass
 
     @abstractmethod
@@ -149,10 +133,9 @@ class Instance(Results):
         lock = self._lock
         have_lock = lock.acquire(blocking=False)
         if not have_lock:
-            log.debug(
-                f'Not harvesting instance [{self.instance_id}] for '
-                f'execution id [{self.get_execution_id()}] as it is '
-                f'locked')
+            log.debug(f'Not harvesting instance [{self.instance_id}] for '
+                      f'execution id [{self.get_execution_id()}] as it is '
+                      f'locked')
             # Do not block waiting for an instance. If the lock is held for
             # too long the provider will kill the instance
             return
@@ -160,10 +143,9 @@ class Instance(Results):
             resource_state = self.get_resource_state()
             execution_id = self.get_execution_id()
             if resource_state == 'terminated':
-                log.debug(
-                    f'Instance [{self.instance_id}] for '
-                    f'execution id [{execution_id}] is '
-                    f'terminated')
+                log.debug(f'Instance [{self.instance_id}] for '
+                          f'execution id [{execution_id}] is '
+                          f'terminated')
                 try:
                     # Ensure that terminated instances with an execution ID
                     # have results (or a tombstone)
@@ -174,48 +156,41 @@ class Instance(Results):
                         return
                     with results_storage.get(execution_id) as results:
                         if results is not None:
-                            log.debug(
-                                f'Instance [{self.instance_id}] for '
-                                f'execution id [{execution_id}] is '
-                                f'terminated and has results')
+                            log.debug(f'Instance [{self.instance_id}] for '
+                                      f'execution id [{execution_id}] is '
+                                      f'terminated and has results')
                             return
-                    log.debug(
-                        'Writing tombstone for instance '
-                        f'[{self.instance_id}] for execution id '
-                        f'[{execution_id}]')
+                    log.debug('Writing tombstone for instance '
+                              f'[{self.instance_id}] for execution id '
+                              f'[{execution_id}]')
                     results_storage.write_tombstone(
                         execution_id,
                         tombstone={'forensics': self.get_forensics()})
                 finally:
-                    log.debug(
-                        f'Deleting instance [{self.instance_id}] for '
-                        f'execution id [{execution_id}]')
+                    log.debug(f'Deleting instance [{self.instance_id}] for '
+                              f'execution id [{execution_id}]')
                     self.delete_resource()
 
             # We only care about harvesting running and terminated instances
             if resource_state != 'running':
-                log.info(
-                    f'Instance for execution ID [{execution_id}] is '
-                    f'[{resource_state}]')
+                log.info(f'Instance for execution ID [{execution_id}] is '
+                         f'[{resource_state}]')
                 return
 
-            log.debug(
-                f'Instance [{self.instance_id}] for [{execution_id}] '
-                'is running')
+            log.debug(f'Instance [{self.instance_id}] for [{execution_id}] '
+                      'is running')
 
             try:
                 info = self.get_execution_info()
-                log.debug(
-                    f'Could get execution info for instance '
-                    f'[{self.instance_id}], execution id '
-                    f'[{self.get_execution_id()}]')
+                log.debug(f'Could get execution info for instance '
+                          f'[{self.instance_id}], execution id '
+                          f'[{self.get_execution_id()}]')
             except ContainerMissingException:
                 # The container for an execution can't be found although
                 # we have an instance for it. Release the instance without
                 # trying to access the container
-                log.exception(
-                    f'Instance {self.instance_id} for execution ID: '
-                    f'{self.get_execution_id()} missing container')
+                log.exception(f'Instance {self.instance_id} for execution ID: '
+                              f'{self.get_execution_id()} missing container')
                 self.release(
                     results_storage,
                     idle_since_timestamp=int(time.time()),
@@ -224,18 +199,16 @@ class Instance(Results):
                     release_container=False)
                 return
             if info.status == 'exited':
-                log.debug(
-                    f'Instance {self.instance_id} for execution ID: '
-                    f'{execution_id} is exited')
+                log.debug(f'Instance {self.instance_id} for execution ID: '
+                          f'{execution_id} is exited')
                 self.release(results_storage, info.idle_since_timestamp)
 
             if info.status in {'exited', 'idle'}:
                 result = self.dispose_if_its_time(execution_info=info)
                 if result is not None:
-                    log.error(
-                        f'Harvesting: Instance {self.instance_id} for '
-                        f'execution ID: {self.get_execution_id()}: '
-                        f'{result}')
+                    log.error(f'Harvesting: Instance {self.instance_id} for '
+                              f'execution ID: {self.get_execution_id()}: '
+                              f'{result}')
         finally:
             lock.release()
 
@@ -255,22 +228,18 @@ class Instance(Results):
             return False
         else:
             lock_timestamp_seconds_bytes = self.redis.hget(
-                self._lock_timestamp_seconds_key_name,
-                self.instance_id)
+                self._lock_timestamp_seconds_key_name, self.instance_id)
             if lock_timestamp_seconds_bytes is None:
                 log.warning(
                     f'Instance {self.instance_id} does not have a timestamp '
                     f'for its lock, creating it now')
-                self.redis.hset(
-                    self._lock_timestamp_seconds_key_name,
-                    self.instance_id,
-                    _get_current_seconds())
+                self.redis.hset(self._lock_timestamp_seconds_key_name,
+                                self.instance_id, _get_current_seconds())
                 return False
             secs = _get_current_seconds() - int(lock_timestamp_seconds_bytes)
-            log.debug(
-                f'Instance {self.instance_id} for execution id '
-                f'{self.get_execution_id()} has been locked for '
-                f'{secs} seconds. Timeout is {self.lock_timeout}')
+            log.debug(f'Instance {self.instance_id} for execution id '
+                      f'{self.get_execution_id()} has been locked for '
+                      f'{secs} seconds. Timeout is {self.lock_timeout}')
             return secs > self.lock_timeout
 
     @abstractmethod
@@ -310,58 +279,45 @@ class Instance(Results):
 
     @property
     def _lock(self):
-        return _InstanceContextManager(
-            self._redis_lock,
-            self.redis,
-            self._lock_timestamp_seconds_key_name,
-            self.instance_id)
+        return _InstanceContextManager(self._redis_lock, self.redis,
+                                       self._lock_timestamp_seconds_key_name,
+                                       self.instance_id)
 
 
 class InstanceProvider(ABC):
-    def __init__(
-            self,
-            results_storage: ResultsStorage,
-            instance_lock_timeout: int):
+    def __init__(self, results_storage: ResultsStorage,
+                 instance_lock_timeout: int):
         self.results_storage = results_storage
         self.instance_lock_timeout = instance_lock_timeout
 
     @abstractmethod
-    def run_in_instance(
-            self,
-            execution_id: str,
-            snapshot_id: str,
-            parameters: Parameters,
-            input_stream: Optional[io.BytesIO],
-            instance_market_spec: dict,
-            execution_spec: dict) -> Iterator[Dict[str,
-                                                   Any]]:
+    def run_in_instance(self, execution_id: str, snapshot_id: str,
+                        parameters: Parameters,
+                        input_stream: Optional[io.BytesIO],
+                        instance_market_spec: dict,
+                        execution_spec: dict) -> Iterator[Dict[str, Any]]:
         pass
 
     @abstractmethod
     def instance_for(self, execution_id: str) -> Optional[Instance]:
         pass
 
-    def release_instance(
-            self,
-            execution_id: str,
-            fail_if_not_found: bool = True,
-            idle_since_timestamp: Optional[int] = None):
+    def release_instance(self,
+                         execution_id: str,
+                         fail_if_not_found: bool = True,
+                         idle_since_timestamp: Optional[int] = None):
         instance = self.instance_for(execution_id)
         if instance is None:
             if fail_if_not_found:
-                raise ValueError(
-                    f'Instance for Execution ID {execution_id} ' + 'not found')
+                raise ValueError(f'Instance for Execution ID {execution_id} ' +
+                                 'not found')
             else:
                 return
         instance.release(self.results_storage, idle_since_timestamp)
 
-    def kill_instances(
-            self,
-            user: str,
-            instance_ids: Optional[List[str]],
-            ignore_ownership: bool,
-            including_idle: bool,
-            force_if_not_idle: bool) -> None:
+    def kill_instances(self, user: str, instance_ids: Optional[List[str]],
+                       ignore_ownership: bool, including_idle: bool,
+                       force_if_not_idle: bool) -> None:
         """ Hard stop for a set of instances
 
         :param user: user requesting the instances to be killed
@@ -386,14 +342,10 @@ class InstanceProvider(ABC):
         instance_ids_to_messages = {}
         there_is_one_instance = False
         for instance in self.instance_iterator(only_running=False):
-            if not self._must_kill_instance(ignore_ownership,
-                                            including_idle,
-                                            instance,
-                                            instance_ids,
-                                            instance_ids_to_messages,
-                                            terminate_all_user_instances,
-                                            unprocessed_instance_ids,
-                                            user):
+            if not self._must_kill_instance(
+                    ignore_ownership, including_idle, instance, instance_ids,
+                    instance_ids_to_messages, terminate_all_user_instances,
+                    unprocessed_instance_ids, user):
                 continue
 
             there_is_one_instance = True
@@ -414,16 +366,12 @@ class InstanceProvider(ABC):
         if terminate_all_user_instances and not there_is_one_instance:
             raise NoInstancesFoundException()
 
-    def _must_kill_instance(
-            self,
-            ignore_ownership: bool,
-            including_idle: bool,
-            instance: Instance,
-            instance_ids: [str],
-            instance_ids_to_messages: dict,
-            terminate_all_instances: bool,
-            unprocessed_instance_ids: [str],
-            user: str) -> bool:
+    def _must_kill_instance(self, ignore_ownership: bool, including_idle: bool,
+                            instance: Instance, instance_ids: [str],
+                            instance_ids_to_messages: dict,
+                            terminate_all_instances: bool,
+                            unprocessed_instance_ids: [str
+                                                       ], user: str) -> bool:
         if instance.is_terminated():
             return False
 
@@ -468,9 +416,8 @@ class InstanceProvider(ABC):
 
     def harvest(self):
         for instance in self.instance_iterator(only_running=False):
-            log.debug(
-                f'Harvest polling for [{instance.instance_id}], '
-                f'[{instance.get_execution_id()}]')
+            log.debug(f'Harvest polling for [{instance.instance_id}], '
+                      f'[{instance.get_execution_id()}]')
             # noinspection PyBroadException
             try:
                 if instance.is_locked_for_too_long():
@@ -522,12 +469,8 @@ class _InstanceContextManager(ContextManager):
     thread
     """
 
-    def __init__(
-            self,
-            instance_lock: Lock,
-            redis: StrictRedis,
-            lock_timestamp_seconds_key_name: str,
-            instance_id: str):
+    def __init__(self, instance_lock: Lock, redis: StrictRedis,
+                 lock_timestamp_seconds_key_name: str, instance_id: str):
         self.instance_lock = instance_lock
         self.redis = redis
         self.lock_timestamp_seconds_key_name = lock_timestamp_seconds_key_name
@@ -538,10 +481,8 @@ class _InstanceContextManager(ContextManager):
         if self.instance_lock.local.token is None:
             if self.instance_lock.acquire(blocking=blocking):
                 self.lock = self.instance_lock
-                self.redis.hset(
-                    self.lock_timestamp_seconds_key_name,
-                    self.instance_id,
-                    _get_current_seconds())
+                self.redis.hset(self.lock_timestamp_seconds_key_name,
+                                self.instance_id, _get_current_seconds())
                 return True
             else:
                 return False
@@ -551,9 +492,8 @@ class _InstanceContextManager(ContextManager):
 
     def release(self):
         if self.lock is not None:
-            self.redis.hdel(
-                self.lock_timestamp_seconds_key_name,
-                self.instance_id)
+            self.redis.hdel(self.lock_timestamp_seconds_key_name,
+                            self.instance_id)
             self.lock.release()
 
     def __enter__(self):

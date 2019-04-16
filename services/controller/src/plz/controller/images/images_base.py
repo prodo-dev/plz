@@ -15,11 +15,9 @@ log = logging.getLogger(__name__)
 
 
 class Images(ABC):
-    def __init__(
-            self,
-            docker_api_client_creator: Callable[[],
-                                                docker.APIClient],
-            repository: str):
+    def __init__(self,
+                 docker_api_client_creator: Callable[[], docker.APIClient],
+                 repository: str):
         self.docker_api_client_creator = docker_api_client_creator
         self.docker_api_client = docker_api_client_creator()
         self.repository = repository
@@ -27,10 +25,8 @@ class Images(ABC):
     @staticmethod
     def construct_tag(image_metadata: dict) -> str:
         timestamp = str(int(time.time() * 1000))
-        metadata = Metadata(
-            image_metadata['user'],
-            image_metadata['project'],
-            timestamp)
+        metadata = Metadata(image_metadata['user'], image_metadata['project'],
+                            timestamp)
         return f'{metadata.user}-{metadata.project}-{metadata.timestamp}'
 
     @abstractmethod
@@ -54,14 +50,13 @@ class Images(ABC):
         pass
 
     def _build(self, fileobj: BinaryIO, tag: str) -> Iterator[bytes]:
-        builder = self.docker_api_client.build(
-            fileobj=fileobj,
-            custom_context=True,
-            encoding='bz2',
-            dockerfile='plz.Dockerfile',
-            rm=True,
-            tag=f'{self.repository}:{tag}',
-            pull=True)
+        builder = self.docker_api_client.build(fileobj=fileobj,
+                                               custom_context=True,
+                                               encoding='bz2',
+                                               dockerfile='plz.Dockerfile',
+                                               rm=True,
+                                               tag=f'{self.repository}:{tag}',
+                                               pull=True)
         for message_bytes in builder:
             try:
                 message_str = message_bytes.decode('utf-8').strip()

@@ -24,9 +24,8 @@ for i in range(start, end):
     print(i)
 
     index_to_measures_directory = config['index_to_measures_directory']
-    accuracy_measure_path = os.path.join(
-        index_to_measures_directory[str(i)],
-        'accuracy')
+    accuracy_measure_path = os.path.join(index_to_measures_directory[str(i)],
+                                         'accuracy')
     with open(accuracy_measure_path, 'w') as f:
         json.dump(i, f)
 

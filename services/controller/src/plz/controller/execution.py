@@ -31,20 +31,16 @@ class Execution(ABC):
         index_range_to_run = stored_metadata['execution_spec'].get(
             'index_range_to_run')
         ic = InstanceComposition.create_for(index_range_to_run)
-        stored_metadata.update(
-            {
-                'measures':
-                    ic.compose_measures(
-                        lambda index: self.get_measures(index))
-            })
+        stored_metadata.update({
+            'measures':
+                ic.compose_measures(lambda index: self.get_measures(index))
+        })
         return stored_metadata
 
 
 class Executions:
-    def __init__(
-            self,
-            results_storage: ResultsStorage,
-            instance_provider: InstanceProvider):
+    def __init__(self, results_storage: ResultsStorage,
+                 instance_provider: InstanceProvider):
         self.results_storage = results_storage
         self.instance_provider = instance_provider
 

@@ -18,10 +18,9 @@ class StopExecutionOperation(Operation):
     def prepare_argument_parser(cls, parser, args):
         cls.maybe_add_execution_id_arg(parser, args)
 
-    def __init__(
-            self,
-            configuration: Configuration,
-            execution_id: Optional[str] = None):
+    def __init__(self,
+                 configuration: Configuration,
+                 execution_id: Optional[str] = None):
         super().__init__(configuration)
         self.execution_id = execution_id
 
@@ -35,10 +34,9 @@ class StopExecutionOperation(Operation):
             else:
                 message_prefix = ''
             try:
-                self.controller.delete_execution(
-                    execution_id=e,
-                    fail_if_running=False,
-                    fail_if_deleted=True)
+                self.controller.delete_execution(execution_id=e,
+                                                 fail_if_running=False,
+                                                 fail_if_deleted=True)
             except ExecutionAlreadyHarvestedException:
                 log_info(message_prefix + 'Process already stopped')
                 return

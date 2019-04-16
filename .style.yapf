@@ -1,4 +1,2 @@
 [style]
 indent_dictionary_value = true
-split_all_comma_separated_values = true
-split_before_first_argument = true

@@ -63,9 +63,8 @@ def write_model(output_directory: OutputDirectory, k: float):
 def main():
     input_directory, output_directory = get_configuration()
 
-    print(
-        'We are in the quest of finding a mysterious value for k.',
-        flush=True)
+    print('We are in the quest of finding a mysterious value for k.',
+          flush=True)
     time.sleep(5)
     print('The value happens to be 1/3, but don\'t tell anyone.', flush=True)
     time.sleep(2)

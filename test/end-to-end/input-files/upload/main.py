@@ -9,12 +9,9 @@ with open(os.environ['CONFIGURATION_FILE']) as c:
 input_directory = config['input_directory']
 output_directory = config['output_directory']
 
-files = (
-    os.path.join(directory,
-                 file) for (directory,
-                            _,
-                            files) in os.walk(input_directory)
-    for file in files)
+files = (os.path.join(directory, file)
+         for (directory, _, files) in os.walk(input_directory)
+         for file in files)
 for input_file_path in files:
     filename = os.path.relpath(input_file_path, input_directory)
     output_file_path = os.path.join(output_directory, filename)

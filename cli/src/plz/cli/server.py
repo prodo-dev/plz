@@ -16,17 +16,15 @@ class Server:
     @staticmethod
     def from_configuration(configuration: Configuration):
         connection_info = configuration.connection_info
-        return Server(
-            host=configuration.host,
-            port=configuration.port,
-            connection_info=connection_info)
+        return Server(host=configuration.host,
+                      port=configuration.port,
+                      connection_info=connection_info)
 
-    def __init__(
-            self,
-            host: str,
-            port: int,
-            exception_names_to_classes: Optional[dict] = None,
-            connection_info: Optional[dict] = None):
+    def __init__(self,
+                 host: str,
+                 port: int,
+                 exception_names_to_classes: Optional[dict] = None,
+                 connection_info: Optional[dict] = None):
         self.exceptions_names_to_classes = exception_names_to_classes or \
             EXCEPTION_NAMES_TO_CLASSES
         connection_info = connection_info or {}
@@ -46,8 +44,7 @@ class Server:
             response = session.request(method, url, **kwargs)
             self._maybe_raise_exception(response, codes_with_exceptions)
             return response
-        except (ConnectionError,
-                requests.ConnectionError,
+        except (ConnectionError, requests.ConnectionError,
                 urllib3.exceptions.NewConnectionError) as e:
             raise CLIException(
                 f'We couldn\'t establish a connection to the server.') from e

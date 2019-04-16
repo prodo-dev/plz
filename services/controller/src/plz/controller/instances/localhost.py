@@ -16,14 +16,9 @@ log = logging.getLogger(__name__)
 
 
 class Localhost(InstanceProvider):
-    def __init__(
-            self,
-            results_storage: ResultsStorage,
-            images: Images,
-            containers: Containers,
-            volumes: Volumes,
-            redis: StrictRedis,
-            instance_lock_timeout: int):
+    def __init__(self, results_storage: ResultsStorage, images: Images,
+                 containers: Containers, volumes: Volumes, redis: StrictRedis,
+                 instance_lock_timeout: int):
         super().__init__(results_storage, instance_lock_timeout)
         self.images = images
         self.containers = containers
@@ -31,31 +26,22 @@ class Localhost(InstanceProvider):
         self.results_storage = results_storage
         self.redis = redis
 
-    def run_in_instance(
-            self,
-            execution_id: str,
-            snapshot_id: str,
-            parameters: Parameters,
-            input_stream: Optional[io.BytesIO],
-            instance_market_spec: dict,
-            execution_spec: dict) -> Iterator[Dict[str,
-                                                   Any]]:
+    def run_in_instance(self, execution_id: str, snapshot_id: str,
+                        parameters: Parameters,
+                        input_stream: Optional[io.BytesIO],
+                        instance_market_spec: dict,
+                        execution_spec: dict) -> Iterator[Dict[str, Any]]:
         """
         Runs a job in an instance, that happens to be always the localhost
         """
-        instance = DockerInstance(
-            self.images,
-            self.containers,
-            self.volumes,
-            execution_id,
-            self.redis,
-            self.instance_lock_timeout)
-        instance.run(
-            snapshot_id=snapshot_id,
-            parameters=parameters,
-            input_stream=input_stream,
-            docker_run_args=execution_spec['docker_run_args'],
-            index_range_to_run=execution_spec['index_range_to_run'])
+        instance = DockerInstance(self.images, self.containers, self.volumes,
+                                  execution_id, self.redis,
+                                  self.instance_lock_timeout)
+        instance.run(snapshot_id=snapshot_id,
+                     parameters=parameters,
+                     input_stream=input_stream,
+                     docker_run_args=execution_spec['docker_run_args'],
+                     index_range_to_run=execution_spec['index_range_to_run'])
         return iter([{'instance': instance}])
 
     def instance_for(self, execution_id: str) -> Optional[Instance]:
@@ -69,13 +55,9 @@ class Localhost(InstanceProvider):
             log.error(f'Looking for:{execution_id}')
             log.error(f'Names are:{self.containers.execution_ids()}')
             return None
-        return DockerInstance(
-            self.images,
-            self.containers,
-            self.volumes,
-            execution_id,
-            self.redis,
-            self.instance_lock_timeout)
+        return DockerInstance(self.images, self.containers, self.volumes,
+                              execution_id, self.redis,
+                              self.instance_lock_timeout)
 
     def push(self, image_tag: str):
         pass

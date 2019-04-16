@@ -24,16 +24,14 @@ class ExecutionComposition(ABC):
 
     @staticmethod
     def from_parallel_indices_range(
-            parallel_indices_range: Optional[Tuple[int,
-                                                   int]],
+            parallel_indices_range: Optional[Tuple[int, int]],
             execution_id: str) -> 'ExecutionComposition':
         if parallel_indices_range is None:
             return AtomicComposition(execution_id)
         else:
-            return IndicesComposition(
-                execution_id,
-                indices_to_compositions=None,
-                tombstone_execution_ids=None)
+            return IndicesComposition(execution_id,
+                                      indices_to_compositions=None,
+                                      tombstone_execution_ids=None)
 
     @abstractmethod
     def to_jsonable_dict(self) -> Any:
@@ -44,19 +42,13 @@ class ExecutionComposition(ABC):
 
     @abstractmethod
     def create_metadatas_for_all_executions(
-            self,
-            snapshot_id: str,
-            parameters: dict,
-            instance_market_spec: dict,
-            execution_spec: dict,
+            self, snapshot_id: str, parameters: dict,
+            instance_market_spec: dict, execution_spec: dict,
             start_metadata: dict,
-            parallel_indices_range: Optional[Tuple[int,
-                                                   int]],
+            parallel_indices_range: Optional[Tuple[int, int]],
             indices_per_execution: Optional[int],
-            previous_execution_id: Optional[str],
-            execution_id: str,
-            execution_id_generator: Callable[[],
-                                             str]) -> [dict]:
+            previous_execution_id: Optional[str], execution_id: str,
+            execution_id_generator: Callable[[], str]) -> [dict]:
         pass
 
     @abstractmethod
@@ -76,19 +68,13 @@ class AtomicComposition(ExecutionComposition):
         return {'execution_id': self.execution_id}
 
     def create_metadatas_for_all_executions(
-            self,
-            snapshot_id: str,
-            parameters: dict,
-            instance_market_spec: dict,
-            execution_spec: dict,
+            self, snapshot_id: str, parameters: dict,
+            instance_market_spec: dict, execution_spec: dict,
             start_metadata: dict,
-            parallel_indices_range: Optional[Tuple[int,
-                                                   int]],
+            parallel_indices_range: Optional[Tuple[int, int]],
             indices_per_execution: Optional[int],
-            previous_execution_id: Optional[str],
-            execution_id: str,
-            execution_id_generator: Callable[[],
-                                             str]) -> [dict]:
+            previous_execution_id: Optional[str], execution_id: str,
+            execution_id_generator: Callable[[], str]) -> [dict]:
         enriched_start_metadata = enrich_start_metadata(
             execution_id,
             start_metadata,
@@ -111,13 +97,9 @@ class IndicesComposition(ExecutionComposition):
     Comprises several executions, each one processing a set of indices
     """
 
-    def __init__(
-            self,
-            execution_id: str,
-            indices_to_compositions: Optional[
-                Dict[int,
-                     Optional[ExecutionComposition]]],
-            tombstone_execution_ids: Optional[Set[str]]):
+    def __init__(self, execution_id: str, indices_to_compositions: Optional[
+            Dict[int, Optional[ExecutionComposition]]],
+                 tombstone_execution_ids: Optional[Set[str]]):
         super().__init__(execution_id)
         # A non-injective map with the sub-execution for a given index. If
         # there's no execution for a given index (for instance, it didn't
@@ -137,28 +119,21 @@ class IndicesComposition(ExecutionComposition):
 
         return {
             'execution_id': self.execution_id,
-            'indices_to_compositions':
-                {
-                    i: jsonable_of_index(i)
-                    for i in self.indices_to_compositions
-                },
+            'indices_to_compositions': {
+                i: jsonable_of_index(i)
+                for i in self.indices_to_compositions
+            },
             'tombstone_executions': list(self.tombstone_execution_ids)
         }
 
     def create_metadatas_for_all_executions(
-            self,
-            snapshot_id: str,
-            parameters: dict,
-            instance_market_spec: dict,
-            execution_spec: dict,
+            self, snapshot_id: str, parameters: dict,
+            instance_market_spec: dict, execution_spec: dict,
             start_metadata: dict,
-            parallel_indices_range: Optional[Tuple[int,
-                                                   int]],
+            parallel_indices_range: Optional[Tuple[int, int]],
             indices_per_execution: Optional[int],
-            previous_execution_id: Optional[str],
-            execution_id: str,
-            execution_id_generator: Callable[[],
-                                             str]) -> [dict]:
+            previous_execution_id: Optional[str], execution_id: str,
+            execution_id_generator: Callable[[], str]) -> [dict]:
         enriched_start_metadata = enrich_start_metadata(
             execution_id,
             start_metadata,
@@ -173,12 +148,10 @@ class IndicesComposition(ExecutionComposition):
         metadatas = [enriched_start_metadata]
         if indices_per_execution is None:
             indices_per_execution = 1
-        for i in range(parallel_indices_range[0],
-                       parallel_indices_range[1],
+        for i in range(parallel_indices_range[0], parallel_indices_range[1],
                        indices_per_execution):
-            this_exec_n_indices = min(
-                indices_per_execution,
-                parallel_indices_range[1] - i)
+            this_exec_n_indices = min(indices_per_execution,
+                                      parallel_indices_range[1] - i)
             subexecution_id = execution_id_generator()
             for j in range(this_exec_n_indices):
                 self.assign_index(i + j, AtomicComposition(subexecution_id))
@@ -190,8 +163,7 @@ class IndicesComposition(ExecutionComposition):
                 instance_market_spec,
                 execution_spec,
                 parallel_indices_range=None,
-                index_range_to_run=(i,
-                                    i + this_exec_n_indices),
+                index_range_to_run=(i, i + this_exec_n_indices),
                 indices_per_execution=None,
                 previous_execution_id=None)
             metadatas.append(enriched_start_metadata)
@@ -204,14 +176,12 @@ class IndicesComposition(ExecutionComposition):
 
     def get_component_brief_description(self, metadata: dict) -> str:
         index_range_to_run = metadata['execution_spec']['index_range_to_run']
-        return 'Indices: ' + (
-            ', '.join(str(n) for n in range(*index_range_to_run)))
+        return 'Indices: ' + (', '.join(
+            str(n) for n in range(*index_range_to_run)))
 
 
-WorkerStartupConfig = namedtuple(
-    'WorkerStartupConfig',
-    ['config_keys',
-     'volumes'])
+WorkerStartupConfig = namedtuple('WorkerStartupConfig',
+                                 ['config_keys', 'volumes'])
 
 
 def subdir_name_for_index(index: int) -> Optional[str]:
@@ -267,14 +237,12 @@ class InstanceComposition(ABC):
             return containers.get_files(
                 execution_id,
                 os.path.join(
-                    _dirname_for_index(Volumes.OUTPUT_DIRECTORY_PATH,
-                                       index),
+                    _dirname_for_index(Volumes.OUTPUT_DIRECTORY_PATH, index),
                     output_path))
         else:
             return containers.get_files(
                 execution_id,
-                os.path.join(Volumes.OUTPUT_DIRECTORY_PATH,
-                             output_path))
+                os.path.join(Volumes.OUTPUT_DIRECTORY_PATH, output_path))
 
     @staticmethod
     def get_measures_tarball(
@@ -283,12 +251,10 @@ class InstanceComposition(ABC):
         if index is not None:
             return containers.get_files(
                 execution_id,
-                _dirname_for_index(Volumes.MEASURES_DIRECTORY_PATH,
-                                   index))
+                _dirname_for_index(Volumes.MEASURES_DIRECTORY_PATH, index))
         else:
-            return containers.get_files(
-                execution_id,
-                Volumes.MEASURES_DIRECTORY_PATH)
+            return containers.get_files(execution_id,
+                                        Volumes.MEASURES_DIRECTORY_PATH)
 
 
 class AtomicInstanceComposition(InstanceComposition):
@@ -299,8 +265,7 @@ class AtomicInstanceComposition(InstanceComposition):
             'measures_directory':
                 Volumes.MEASURES_DIRECTORY_PATH,
             'summary_measures_path':
-                os.path.join(Volumes.MEASURES_DIRECTORY_PATH,
-                             'summary')
+                os.path.join(Volumes.MEASURES_DIRECTORY_PATH, 'summary')
         }
         volumes = [
             VolumeEmptyDirectory(Volumes.OUTPUT_DIRECTORY),
@@ -313,20 +278,16 @@ class AtomicInstanceComposition(InstanceComposition):
             output_path: Optional[str] = None) \
             -> [(Optional[str], Iterator[bytes])]:
         tarball = InstanceComposition.get_output_tarball(
-            containers,
-            execution_id,
-            index=None,
-            output_path=output_path)
+            containers, execution_id, index=None, output_path=output_path)
         directory = None
         return [(directory, tarball)]
 
     def get_measures_dirs_and_tarballs(
             self, execution_id: str, containers: Containers) \
             -> [(Optional[str], Iterator[bytes])]:
-        tarball = InstanceComposition.get_measures_tarball(
-            containers,
-            execution_id,
-            index=None)
+        tarball = InstanceComposition.get_measures_tarball(containers,
+                                                           execution_id,
+                                                           index=None)
         directory = None
         return [(directory, tarball)]
 
@@ -349,30 +310,23 @@ class IndicesInstanceComposition(InstanceComposition):
         }
         config_keys = {
             f'index_to_{kind}_directory':
-            {i: _dirname_for_index(name_map[kind],
-                                   i)
+            {i: _dirname_for_index(name_map[kind], i)
              for i in indices_to_run}
             for kind in name_map
         }
-        config_keys.update(
-            {
-                'index_to_summary_measures_path':
-                    {
-                        i: os.path.join(
-                            _dirname_for_index(
-                                Volumes.MEASURES_DIRECTORY_PATH,
-                                i),
-                            'summary')
-                        for i in indices_to_run
-                    }
-            })
+        config_keys.update({
+            'index_to_summary_measures_path': {
+                i: os.path.join(
+                    _dirname_for_index(Volumes.MEASURES_DIRECTORY_PATH, i),
+                    'summary')
+                for i in indices_to_run
+            }
+        })
         config_keys.update({'indices': {'range': self.range_index_to_run}})
         volumes = [
-            VolumeEmptyDirectory(_dirname_for_index(directory_path,
-                                                    i)) for i in indices_to_run
-            for directory_path in
-            [Volumes.OUTPUT_DIRECTORY,
-             Volumes.MEASURES_DIRECTORY]
+            VolumeEmptyDirectory(_dirname_for_index(directory_path, i))
+            for i in indices_to_run for directory_path in
+            [Volumes.OUTPUT_DIRECTORY, Volumes.MEASURES_DIRECTORY]
         ]
         return WorkerStartupConfig(config_keys=config_keys, volumes=volumes)
 
@@ -384,10 +338,7 @@ class IndicesInstanceComposition(InstanceComposition):
         indices_to_run = range(*self.range_index_to_run)
         for index in indices_to_run:
             tarball = InstanceComposition.get_output_tarball(
-                containers,
-                execution_id,
-                index,
-                output_path)
+                containers, execution_id, index, output_path)
             directory = subdir_name_for_index(index)
             output_dirs_and_tarballs.append((directory, tarball))
         return output_dirs_and_tarballs
@@ -399,9 +350,7 @@ class IndicesInstanceComposition(InstanceComposition):
         indices_to_run = range(*self.range_index_to_run)
         for index in indices_to_run:
             tarball = InstanceComposition.get_measures_tarball(
-                containers,
-                execution_id,
-                index)
+                containers, execution_id, index)
             directory = subdir_name_for_index(index)
             measures_dirs_and_tarballs.append((directory, tarball))
         return measures_dirs_and_tarballs

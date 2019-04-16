@@ -51,16 +51,11 @@ class SSHChannelHTTPConnection(HTTPConnection):
         username = self.connection_info.get('username', 'plz-user')
         path_to_private_key = self.connection_info['path_to_private_key']
         try:
-            transport = _get_transport(
-                hostname=self.host,
-                username=username,
-                path_to_private_key=path_to_private_key)
-            ch = transport.open_channel(
-                'direct-tcpip',
-                ('0.0.0.0',
-                 self.port),
-                ('0.0.0.0',
-                 0))
+            transport = _get_transport(hostname=self.host,
+                                       username=username,
+                                       path_to_private_key=path_to_private_key)
+            ch = transport.open_channel('direct-tcpip', ('0.0.0.0', self.port),
+                                        ('0.0.0.0', 0))
             _override_makefile(ch)
             _override_channel_close(ch)
             self._prepare_conn(ch)
@@ -75,11 +70,9 @@ class SSHChannelHTTPConnectionPool(HTTPConnectionPool):
         super().__init__(*args, **kwargs)
 
         connection_info = self.connection_info
-        self.ConnectionCls = type(
-            'SSHChannelHTTPConnectionWithInfo',
-            (SSHChannelHTTPConnection,
-             ),
-            {'connection_info': connection_info})
+        self.ConnectionCls = type('SSHChannelHTTPConnectionWithInfo',
+                                  (SSHChannelHTTPConnection, ),
+                                  {'connection_info': connection_info})
 
 
 def _get_transport(hostname: str, username: str, path_to_private_key: str):

@@ -37,10 +37,9 @@ class LeNet(nn.Module):
         if self.linear1 is None:
             self.linear1 = nn.Linear(x.view(-1).size(0) // batch_size, 50)
             self.linear1 = self.linear1.to(self.device)
-            self.optimizer = optim.SGD(
-                self.parameters(),
-                lr=self.learning_rate,
-                momentum=self.momentum)
+            self.optimizer = optim.SGD(self.parameters(),
+                                       lr=self.learning_rate,
+                                       momentum=self.momentum)
 
         x = x.view(batch_size, self.linear1.in_features)
         for l in self.linear1, self.relu, self.dropout, self.linear2, \

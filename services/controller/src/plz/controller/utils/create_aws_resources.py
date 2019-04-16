@@ -16,52 +16,43 @@ config = configuration.load()
 
 
 def create_workers_security_group():
-    ec2_client = boto3.client(
-        service_name='ec2',
-        region_name=config['instances.region'])
+    ec2_client = boto3.client(service_name='ec2',
+                              region_name=config['instances.region'])
     group_exists = len(
-        ec2_client.describe_security_groups(
-            Filters=[{
-                'Name': 'group-name',
-                'Values': ['plz-workers']
-            }])['SecurityGroups']) > 0
+        ec2_client.describe_security_groups(Filters=[{
+            'Name': 'group-name',
+            'Values': ['plz-workers']
+        }])['SecurityGroups']) > 0
     if group_exists:
-        print(
-            'Security group for workers already exists',
-            file=sys.stderr,
-            flush=True)
+        print('Security group for workers already exists',
+              file=sys.stderr,
+              flush=True)
         return
 
     print('Creating security group for workers', file=sys.stderr, flush=True)
 
     response = ec2_client.create_security_group(
-        Description='Plz group for workers',
-        GroupName='plz-workers')
+        Description='Plz group for workers', GroupName='plz-workers')
     group_id = response['GroupId']
 
     # Authorize the docker port
-    ec2_client.authorize_security_group_ingress(
-        GroupId=group_id,
-        IpPermissions=[
-            {
-                'IpRanges': [{
-                    'CidrIp': '0.0.0.0/0'
-                },
-                             ],
-                'Ipv6Ranges': [{
-                    'CidrIpv6': '::/0'
-                }],
-                'FromPort': 2375,
-                'ToPort': 2375,
-                'IpProtocol': 'tcp'
-            }
-        ])
+    ec2_client.authorize_security_group_ingress(GroupId=group_id,
+                                                IpPermissions=[{
+                                                    'IpRanges': [{
+                                                        'CidrIp': '0.0.0.0/0'
+                                                    }, ],
+                                                    'Ipv6Ranges': [{
+                                                        'CidrIpv6': '::/0'
+                                                    }],
+                                                    'FromPort': 2375,
+                                                    'ToPort': 2375,
+                                                    'IpProtocol': 'tcp'
+                                                }])
 
 
 def create_ecr_builds_repository():
-    ecr_client = boto3.client(
-        service_name='ecr',
-        region_name=config['instances.region'])
+    ecr_client = boto3.client(service_name='ecr',
+                              region_name=config['instances.region'])
     repository_name = config['images.repository']
     try:
         repository_exists = len(
@@ -74,10 +65,9 @@ def create_ecr_builds_repository():
             raise e
 
     if repository_exists:
-        print(
-            'Repository for builds already exists',
-            file=sys.stderr,
-            flush=True)
+        print('Repository for builds already exists',
+              file=sys.stderr,
+              flush=True)
         return
 
     print('Creating repository for builds', file=sys.stderr, flush=True)
@@ -104,10 +94,9 @@ def pull_common_images():
         for json_bytes in docker_client.pull(image_name, stream=True):
             _print_bytes_from_docker(json_bytes)
         tag_from_image_name = image_name.replace('/', '-').replace(':', '-')
-        docker_client.tag(
-            image_name,
-            images.repository,
-            tag=tag_from_image_name)
+        docker_client.tag(image_name,
+                          images.repository,
+                          tag=tag_from_image_name)
         images.push(tag_from_image_name, log_level=INFO, log_progress=True)
 
 

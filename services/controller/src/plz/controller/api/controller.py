@@ -12,10 +12,8 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def ping(
-            self,
-            ping_timeout: int,
-            build_timestamp: Optional[int] = None) -> dict:
+    def ping(self, ping_timeout: int,
+             build_timestamp: Optional[int] = None) -> dict:
         pass
 
     @abstractmethod
@@ -29,14 +27,11 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def rerun_execution(
-            self,
-            user: str,
-            project: str,
-            instance_max_uptime_in_minutes: Optional[int],
-            override_parameters: Optional[dict],
-            previous_execution_id: str,
-            instance_market_spec: dict) -> Iterator[dict]:
+    def rerun_execution(self, user: str, project: str,
+                        instance_max_uptime_in_minutes: Optional[int],
+                        override_parameters: Optional[dict],
+                        previous_execution_id: str,
+                        instance_market_spec: dict) -> Iterator[dict]:
         pass
 
     @abstractmethod
@@ -53,11 +48,8 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def get_output_files(
-            self,
-            execution_id: str,
-            path: Optional[str],
-            index: Optional[int]) -> Iterator[bytes]:
+    def get_output_files(self, execution_id: str, path: Optional[str],
+                         index: Optional[int]) -> Iterator[bytes]:
         pass
 
     @abstractmethod
@@ -67,11 +59,8 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def delete_execution(
-            self,
-            execution_id: str,
-            fail_if_running: bool,
-            fail_if_deleted: bool) -> None:
+    def delete_execution(self, execution_id: str, fail_if_running: bool,
+                         fail_if_deleted: bool) -> None:
         """:raises InstanceStillRunningException:
            :raises ExecutionAlreadyHarvestedException:"""
         pass
@@ -86,11 +75,8 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def put_input(
-            self,
-            input_id: str,
-            input_metadata: InputMetadata,
-            input_data_stream: BinaryIO) -> None:
+    def put_input(self, input_id: str, input_metadata: InputMetadata,
+                  input_data_stream: BinaryIO) -> None:
         pass
 
     @abstractmethod
@@ -110,13 +96,9 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def kill_instances(
-            self,
-            user: str,
-            instance_ids: Optional[List[str]],
-            ignore_ownership: bool,
-            including_idle: Optional[bool],
-            force_if_not_idle: bool) -> bool:
+    def kill_instances(self, user: str, instance_ids: Optional[List[str]],
+                       ignore_ownership: bool, including_idle: Optional[bool],
+                       force_if_not_idle: bool) -> bool:
         """
            :param user: the user requesting to kill the instances
            :param instance_ids: list of instances to kill. A value of `None`

@@ -25,23 +25,16 @@ CHUNK_SIZE = 1024 * 1024  # 1 MB
 
 
 class LocalResultsStorage(ResultsStorage):
-    def __init__(
-            self,
-            redis: StrictRedis,
-            db_storage: DBStorage,
-            directory: str):
+    def __init__(self, redis: StrictRedis, db_storage: DBStorage,
+                 directory: str):
         super().__init__(db_storage)
         self.redis = redis
         self.db_storage = db_storage
         self.directory = directory
 
-    def publish(
-            self,
-            execution_id: str,
-            exit_status: int,
-            logs: Iterator[bytes],
-            containers: Containers,
-            finish_timestamp: int):
+    def publish(self, execution_id: str, exit_status: int,
+                logs: Iterator[bytes], containers: Containers,
+                finish_timestamp: int):
         paths = Paths(self.directory, execution_id)
         with self._lock(execution_id):
             log.debug(f'Checking if results exist for {execution_id}')
@@ -62,11 +55,8 @@ class LocalResultsStorage(ResultsStorage):
             index_range_to_run = metadata['execution_spec'].get(
                 'index_range_to_run')
 
-            _write_output_and_measures(
-                paths,
-                containers,
-                execution_id,
-                index_range_to_run)
+            _write_output_and_measures(paths, containers, execution_id,
+                                       index_range_to_run)
 
             with open(paths.metadata, 'w') as metadata_file:
                 json.dump(metadata, metadata_file)
@@ -135,17 +125,14 @@ class LocalResults(Results):
         else:
             return InstanceStatusFailure(status)
 
-    def get_logs(
-            self,
-            since: Optional[int] = None,
-            stdout: bool = True,
-            stderr: bool = True) -> Iterator[bytes]:
+    def get_logs(self,
+                 since: Optional[int] = None,
+                 stdout: bool = True,
+                 stderr: bool = True) -> Iterator[bytes]:
         return read_bytes(self.paths.logs)
 
-    def get_output_files_tarball(
-            self,
-            path: Optional[str],
-            index: Optional[int]) -> Iterator[bytes]:
+    def get_output_files_tarball(self, path: Optional[str],
+                                 index: Optional[int]) -> Iterator[bytes]:
         if path is not None:
             raise NotImplementedControllerException(
                 'Getting paths of already finished executions is not '
@@ -173,11 +160,10 @@ class LocalTombstone(Results):
     def get_status(self) -> InstanceStatus:
         return self._raise_aborted()
 
-    def get_logs(
-            self,
-            since: Optional[int] = None,
-            stdout: bool = True,
-            stderr: bool = True) -> Iterator[bytes]:
+    def get_logs(self,
+                 since: Optional[int] = None,
+                 stdout: bool = True,
+                 stderr: bool = True) -> Iterator[bytes]:
         # In the future we might, for instance, store partial logs from the
         # workers. For now, a tombstone just raises exceptions
         return self._raise_aborted()
@@ -208,16 +194,13 @@ class Paths:
         self.metadata = os.path.join(self.directory, 'metadata.json')
 
     def output(self, subdir: Optional[str]) -> str:
-        return os.path.join(
-            self.directory,
-            subdir if subdir is not None else '',
-            'output.tar')
+        return os.path.join(self.directory,
+                            subdir if subdir is not None else '', 'output.tar')
 
     def measures(self, subdir: Optional[str]) -> str:
-        return os.path.join(
-            self.directory,
-            subdir if subdir is not None else '',
-            'measures.tar')
+        return os.path.join(self.directory,
+                            subdir if subdir is not None else '',
+                            'measures.tar')
 
 
 def read_bytes(path: str) -> Iterator[bytes]:
@@ -243,23 +226,15 @@ def _force_mk_empty_dir(directory: str):
         os.makedirs(directory)
 
 
-def _write_output_and_measures(
-        paths: Paths,
-        containers: Containers,
-        execution_id: str,
-        index_range_to_run: Optional[Tuple[int,
-                                           int]]):
+def _write_output_and_measures(paths: Paths, containers: Containers,
+                               execution_id: str,
+                               index_range_to_run: Optional[Tuple[int, int]]):
     ic = InstanceComposition.create_for(index_range_to_run)
-    paths_and_getters = [
-        (paths.output,
-         ic.get_output_dirs_and_tarballs),
-        (paths.measures,
-         ic.get_measures_dirs_and_tarballs)
-    ]
+    paths_and_getters = [(paths.output, ic.get_output_dirs_and_tarballs),
+                         (paths.measures, ic.get_measures_dirs_and_tarballs)]
     for path_function, tarball_getter in paths_and_getters:
-        dirs_and_tarballs = tarball_getter(
-            execution_id=execution_id,
-            containers=containers)
+        dirs_and_tarballs = tarball_getter(execution_id=execution_id,
+                                           containers=containers)
         for d, tarball in dirs_and_tarballs:
             dirname = os.path.dirname(path_function(d))
             if not os.path.exists(dirname):

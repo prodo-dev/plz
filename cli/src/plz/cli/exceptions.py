@@ -21,10 +21,8 @@ class CLIException(ExitWithStatusCodeException):
         if cause:
             print(cause)
             if configuration.debug:
-                traceback.print_exception(
-                    type(cause),
-                    cause,
-                    cause.__traceback__)
+                traceback.print_exception(type(cause), cause,
+                                          cause.__traceback__)
 
 
 class RequestException(Exception):
