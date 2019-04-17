@@ -73,7 +73,7 @@ def get_included_and_excluded_files(context_path: [str], excluded_paths: [str],
         excluded_paths_tuples.update(
             paths_as_tuples([get_ignored_git_files(context_path)]))
         excluded_paths_tuples.update(
-            paths_as_tuples(abs_path_glob_including_snapshot('.git')))
+            paths_as_tuples([abs_path_glob_including_snapshot('.git')]))
 
     def strip_context_from_file(fil):
         return fil[len(os.path.abspath(context_path)) + len(os.sep):]
@@ -88,9 +88,9 @@ def get_included_and_excluded_files(context_path: [str], excluded_paths: [str],
         # path. Same for included
         if len(f_prefixes.intersection(excluded_paths_tuples)) and (not len(
                 f_prefixes.intersection(included_paths_tuples))):
-            excluded_files.add(strip_context_path(f))
+            excluded_files.add(strip_context_from_file(f))
         else:
-            included_files.add(strip_context_path(f))
+            included_files.add(strip_context_from_file(f))
     return included_files, excluded_files
 
 
