@@ -32,18 +32,15 @@ def capture_build_context(image: str, image_extensions: [str], command: [str],
                                  f'COPY . ./\n'
                                  f'CMD {json.dumps(command)}\n')
             os.chmod(dockerfile_path, 0o644)
-        print('Capture: Before get_matching_excluded')
         included_files, _ = get_included_and_excluded_files(
             context_path=context_path,
             excluded_paths=excluded_paths,
             included_paths=included_paths + [DOCKERFILE_NAME],
             exclude_gitignored_files=exclude_gitignored_files)
-        print('Capture: Before docker.utils.build.tar')
         build_context = docker.utils.build.create_archive(
             root=os.path.abspath(context_path),
             files=included_files,
             gzip=True)
-        print('Capture: After')
     finally:
         if dockerfile_created:
             os.remove(dockerfile_path)
