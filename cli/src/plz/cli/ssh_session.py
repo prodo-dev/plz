@@ -54,11 +54,8 @@ class SSHChannelHTTPConnection(HTTPConnection):
             transport = _get_transport(hostname=self.host,
                                        username=username,
                                        path_to_private_key=path_to_private_key)
-            ch = transport.open_channel('direct-tcpip',
-                                        ('0.0.0.0',
-                                         self.port),
-                                        ('0.0.0.0',
-                                         0))
+            ch = transport.open_channel('direct-tcpip', ('0.0.0.0', self.port),
+                                        ('0.0.0.0', 0))
             _override_makefile(ch)
             _override_channel_close(ch)
             self._prepare_conn(ch)
@@ -74,8 +71,7 @@ class SSHChannelHTTPConnectionPool(HTTPConnectionPool):
 
         connection_info = self.connection_info
         self.ConnectionCls = type('SSHChannelHTTPConnectionWithInfo',
-                                  (SSHChannelHTTPConnection,
-                                   ),
+                                  (SSHChannelHTTPConnection, ),
                                   {'connection_info': connection_info})
 
 

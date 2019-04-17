@@ -24,8 +24,7 @@ class DescribeExecutionOperation(CompositionOperation):
 
     def run_atomic(self,
                    atomic_execution_id: str,
-                   composition_path: [(str,
-                                       Any)]):
+                   composition_path: [(str, Any)]):
         description = self.controller.describe_execution_entrypoint(
             atomic_execution_id)
         description_str = json.dumps(description['start_metadata'], indent=2)

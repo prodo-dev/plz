@@ -17,11 +17,7 @@ from plz.controller.volumes import Volumes
 
 Dependencies = collections.namedtuple(
     'Dependencies',
-    ['redis',
-     'instance_provider',
-     'images',
-     'results_storage',
-     'db_storage'])
+    ['redis', 'instance_provider', 'images', 'results_storage', 'db_storage'])
 
 
 def load() -> pyhocon.ConfigTree:
@@ -86,22 +82,17 @@ def _instance_provider_from(config, images, redis, results_storage):
             client=boto3.client(service_name='ec2',
                                 region_name=config['instances.region']),
             aws_worker_ami=config['instances.aws_worker_ami'],
-            aws_key_name=config.get('instances.key_name',
-                                    None),
+            aws_key_name=config.get('instances.key_name', None),
             results_storage=results_storage,
             images=images,
             acquisition_delay_in_seconds=config.get_int(
-                'instances.acquisition_delay',
-                10),
+                'instances.acquisition_delay', 10),
             max_acquisition_tries=config.get_int(
-                'instances.max_acquisition_tries',
-                5),
+                'instances.max_acquisition_tries', 5),
             name=config['instances.group_name'],
             worker_security_group_names=config.get(
-                'instances.worker_security_group_names',
-                []),
-            use_public_dns=config.get('instances.use_public_dns',
-                                      False),
+                'instances.worker_security_group_names', []),
+            use_public_dns=config.get('instances.use_public_dns', False),
             instance_lock_timeout=config['assumptions.instance_lock_timeout'],
             instance_max_startup_time_in_minutes=config[
                 'assumptions.instance_max_startup_time_in_minutes'],
@@ -144,8 +135,7 @@ def get_docker_host_from_config(config):
 def docker_client_from_config(config):
     docker_host = get_docker_host_from_config(config)
     docker_api_client_timeout = config.get(
-        'assumptions.docker_api_client_timeout_in_minutes',
-        None)
+        'assumptions.docker_api_client_timeout_in_minutes', None)
     if docker_api_client_timeout is not None:
         client_extra_args = {'timeout': docker_api_client_timeout * 60}
     else:

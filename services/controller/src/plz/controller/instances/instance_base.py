@@ -43,10 +43,8 @@ class Instance(Results):
             snapshot_id: str,
             parameters: Parameters,
             input_stream: Optional[io.BytesIO],
-            docker_run_args: Dict[str,
-                                  str],
-            index_range_to_run: Optional[Tuple[int,
-                                               int]]) -> None:
+            docker_run_args: Dict[str, str],
+            index_range_to_run: Optional[Tuple[int, int]]) -> None:
         pass
 
     def get_status(self) -> InstanceStatus:
@@ -66,8 +64,7 @@ class Instance(Results):
 
     @abstractmethod
     def get_idle_since_timestamp(
-            self,
-            container_state: Optional[ContainerState] = None) -> int:
+            self, container_state: Optional[ContainerState] = None) -> int:
         pass
 
     @abstractmethod
@@ -239,8 +236,7 @@ class Instance(Results):
             return False
         else:
             lock_timestamp_seconds_bytes = self.redis.hget(
-                self._lock_timestamp_seconds_key_name,
-                self.instance_id)
+                self._lock_timestamp_seconds_key_name, self.instance_id)
             if lock_timestamp_seconds_bytes is None:
                 log.warning(
                     f'Instance {self.instance_id} does not have a timestamp '
@@ -312,8 +308,7 @@ class InstanceProvider(ABC):
                         parameters: Parameters,
                         input_stream: Optional[io.BytesIO],
                         instance_market_spec: dict,
-                        execution_spec: dict) -> Iterator[Dict[str,
-                                                               Any]]:
+                        execution_spec: dict) -> Iterator[Dict[str, Any]]:
         pass
 
     @abstractmethod

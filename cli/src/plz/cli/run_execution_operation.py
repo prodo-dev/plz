@@ -120,8 +120,7 @@ class RunExecutionOperation(Operation):
 
     def _check_dockerfile_specs(self):
         user_provided_dockerfile = os.path.isfile(
-            os.path.join(self.configuration.context_path,
-                         DOCKERFILE_NAME))
+            os.path.join(self.configuration.context_path, DOCKERFILE_NAME))
         if self.configuration.image is not None and user_provided_dockerfile:
             raise CLIException('You specified an image (either in '
                                '`plz.config.json` or in the `PLZ_IMAGE` '
@@ -177,15 +176,12 @@ class RunExecutionOperation(Operation):
                           retrieve_output_operation.harvest)
 
         retrieve_measures_operation = RetrieveMeasuresOperation(
-            self.configuration,
-            execution_id=self.execution_id,
-            summary=True)
+            self.configuration, execution_id=self.execution_id, summary=True)
         self.suboperation('Retrieving summary of measures (if present)...',
                           retrieve_measures_operation.retrieve_measures)
 
         show_status_operation = ShowStatusOperation(
-            self.configuration,
-            execution_id=self.execution_id)
+            self.configuration, execution_id=self.execution_id)
         status = show_status_operation.get_status()
         if status.running:
             raise CLIException(
@@ -216,8 +212,7 @@ class RunExecutionOperation(Operation):
             -> Tuple[Optional[str], bool]:
         configuration = self.configuration
         execution_spec = RunExecutionOperation.create_execution_spec(
-            configuration,
-            input_id)
+            configuration, input_id)
         instance_market_spec = create_instance_market_spec(configuration)
         commit = get_head_commit_or_none(context_path)
         response_dicts = self.controller.run_execution(
@@ -232,8 +227,7 @@ class RunExecutionOperation(Operation):
                     for k,
                     v in configuration.as_dict().items()
                     # User and project are present in the execution spec
-                    if k not in {'user',
-                                 'project'}
+                    if k not in {'user', 'project'}
                 }
             },
             parallel_indices_range=configuration.parallel_indices_range,
@@ -243,8 +237,7 @@ class RunExecutionOperation(Operation):
 
     @staticmethod
     def get_execution_id_from_start_response(response_dicts: Iterator[dict]
-                                             ) -> Tuple[str,
-                                                        bool]:
+                                             ) -> Tuple[str, bool]:
         execution_id: Optional[str] = None
         ok = True
         for data in response_dicts:
@@ -284,8 +277,7 @@ class RunExecutionOperation(Operation):
 
     def suboperation(self,
                      name: str,
-                     f: Callable[...,
-                                 Any],
+                     f: Callable[..., Any],
                      if_set: bool = True):
         if not if_set:
             return
@@ -311,8 +303,7 @@ def add_detach_command_line_argument(parser):
 
 def create_instance_market_spec(configuration: Configuration) -> dict:
     return {
-        k: getattr(configuration,
-                   k)
+        k: getattr(configuration, k)
         for k in ('instance_market_type',
                   'instance_max_idle_time_in_minutes',
                   'max_bid_price_in_dollars_per_hour')

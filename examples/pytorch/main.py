@@ -73,8 +73,7 @@ def main():
     is_cuda_available = torch.cuda.is_available()
 
     input_directory = get_from_plz_config('input_directory',
-                                          os.path.join('..',
-                                                       'data'))
+                                          os.path.join('..', 'data'))
     output_directory = get_from_plz_config('output_directory', 'models')
     parameters = get_from_plz_config('parameters', DEFAULT_PARAMETERS)
     # If some parameters weren't passed, use default values for them
@@ -83,9 +82,7 @@ def main():
             parameters[p] = DEFAULT_PARAMETERS[p]
     measures_directory = get_from_plz_config('measures_directory', 'measures')
     summary_measures_path = get_from_plz_config(
-        'summary_measures_path',
-        os.path.join('measures',
-                     'summary'))
+        'summary_measures_path', os.path.join('measures', 'summary'))
 
     device = torch.device('cuda' if is_cuda_available else 'cpu')
 
@@ -131,8 +128,7 @@ def main():
             print(f'Best model found at epoch {epoch}, '
                   f'with accuracy {accuracy:.2f}')
             torch.save(model.state_dict(),
-                       os.path.join(output_directory,
-                                    'le_net.pth'))
+                       os.path.join(output_directory, 'le_net.pth'))
 
     with open(summary_measures_path, 'w') as f:
         json.dump(

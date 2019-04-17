@@ -21,44 +21,37 @@ class TestParallelIndices(unittest.TestCase):
         super().tearDownClass()
 
     def test_five_separate_indices_no_harvest(self):
-        self._run_range_and_check_results((0,
-                                           5),
+        self._run_range_and_check_results((0, 5),
                                           harvest_after_run=False,
                                           indices_per_execution=None)
 
     def test_five_separate_indices_harvest_after_run(self):
-        self._run_range_and_check_results((0,
-                                           5),
+        self._run_range_and_check_results((0, 5),
                                           harvest_after_run=True,
                                           indices_per_execution=None)
 
     def test_five_indices_two_per_exec_no_harvest(self):
-        self._run_range_and_check_results((0,
-                                           5),
+        self._run_range_and_check_results((0, 5),
                                           harvest_after_run=False,
                                           indices_per_execution=2)
 
     def test_six_indices_two_per_exec_no_harvest(self):
-        self._run_range_and_check_results((0,
-                                           6),
+        self._run_range_and_check_results((0, 6),
                                           harvest_after_run=False,
                                           indices_per_execution=2)
 
     def test_five_indices_two_per_exec_harvest_after_run(self):
-        self._run_range_and_check_results((0,
-                                           5),
+        self._run_range_and_check_results((0, 5),
                                           harvest_after_run=True,
                                           indices_per_execution=2)
 
     def test_one_to_six_two_per_exec_no_harvest(self):
-        self._run_range_and_check_results((1,
-                                           6),
+        self._run_range_and_check_results((1, 6),
                                           harvest_after_run=False,
                                           indices_per_execution=2)
 
     def test_one_to_six_two_per_exec_harvest_after_run(self):
-        self._run_range_and_check_results((1,
-                                           6),
+        self._run_range_and_check_results((1, 6),
                                           harvest_after_run=True,
                                           indices_per_execution=2)
 
@@ -85,13 +78,11 @@ class TestParallelIndices(unittest.TestCase):
                                          execution_composition)
 
     def _run_range_and_check_results(self,
-                                     rainch: Tuple[int,
-                                                   int],
+                                     rainch: Tuple[int, int],
                                      harvest_after_run: bool,
                                      indices_per_execution: Optional[int],
                                      check_only_assignment: bool = False
-                                     ) -> Tuple[TestingContext,
-                                                str]:
+                                     ) -> Tuple[TestingContext, str]:
         context, execution_id = run_example(
             'parallel_indices',
             'print_indices',
@@ -173,13 +164,11 @@ class TestParallelIndices(unittest.TestCase):
             # Check that the number of in
             self.assertEqual(len(metadata['measures'].keys()),
                              n_indices_of_execution)
-            self.assertDictEqual(metadata['measures'][str(index)],
-                                 {
-                                     'accuracy': index,
-                                     'summary': {
-                                         'time': index
-                                     }
-                                 })
+            self.assertDictEqual(metadata['measures'][str(index)], {
+                'accuracy': index, 'summary': {
+                    'time': index
+                }
+            })
 
     def _check_measures(self,
                         context: TestingContext,
@@ -189,13 +178,11 @@ class TestParallelIndices(unittest.TestCase):
             context.controller.get_measures(index_execution_id,
                                             summary=False,
                                             index=index)))
-        self.assertDictEqual(measures,
-                             {
-                                 'accuracy': index,
-                                 'summary': {
-                                     'time': index
-                                 }
-                             })
+        self.assertDictEqual(measures, {
+            'accuracy': index, 'summary': {
+                'time': index
+            }
+        })
         summary_measures = json.loads(''.join(
             context.controller.get_measures(index_execution_id,
                                             summary=True,
@@ -229,11 +216,9 @@ class TestParallelIndices(unittest.TestCase):
         self.assertTrue(not all([line != str(index) for line in logs_lines]))
 
     def _check_execution_assignment(self,
-                                    rainch: Tuple[int,
-                                                  int],
+                                    rainch: Tuple[int, int],
                                     indices_per_execution: int,
-                                    indices_to_compositions: Dict[str,
-                                                                  dict]
+                                    indices_to_compositions: Dict[str, dict]
                                     ) -> None:
         range_len = rainch[1] - rainch[0]
         self.assertEqual(len(indices_to_compositions), range_len)
@@ -249,14 +234,10 @@ def _maybe_harvest(harvest_after_run: bool,
                    context: TestingContext,
                    index_execution_id: str):
     execution_listing_status = get_execution_listing_status(
-        context.configuration.user,
-        context.controller,
-        index_execution_id)
+        context.configuration.user, context.controller, index_execution_id)
     while harvest_after_run and execution_listing_status is not None:
         if execution_listing_status is not 'running':
             context.controller.harvest()
         time.sleep(0.1)
         execution_listing_status = get_execution_listing_status(
-            context.configuration.user,
-            context.controller,
-            index_execution_id)
+            context.configuration.user, context.controller, index_execution_id)

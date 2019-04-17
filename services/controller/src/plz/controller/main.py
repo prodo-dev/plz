@@ -112,8 +112,7 @@ def maybe_add_forensics(exception: WorkerUnreachableException) \
 def ping_entrypoint():
     # We are not calling a server, so the timeout is not used
     return jsonify(
-        controller.ping(ping_timeout=0,
-                        build_timestamp=_build_timestamp))
+        controller.ping(ping_timeout=0, build_timestamp=_build_timestamp))
 
 
 @app.route('/', methods=['GET'])
@@ -186,8 +185,7 @@ def list_executions_entrypoint():
     log.debug(f'Listing for: {user} {list_for_all_users}')
 
     return Response(json.dumps(
-        {'executions': controller.list_executions(user,
-                                                  list_for_all_users)}),
+        {'executions': controller.list_executions(user, list_for_all_users)}),
                     mimetype='application/json',
                     status=requests.codes.ok)
 
@@ -206,8 +204,7 @@ def get_status_entrypoint(execution_id):
 @app.route(f'/executions/<execution_id>/logs', methods=['GET'])
 def get_logs_entrypoint(execution_id):
     since: Optional[int] = request.args.get('since', default=None, type=int)
-    return Response(controller.get_logs(execution_id,
-                                        since=since),
+    return Response(controller.get_logs(execution_id, since=since),
                     mimetype='application/octet-stream')
 
 
@@ -215,9 +212,7 @@ def get_logs_entrypoint(execution_id):
 def get_output_files_entrypoint(execution_id):
     path: Optional[str] = request.args.get('path', default=None, type=str)
     index: Optional[int] = request.args.get('index', default=None, type=int)
-    return Response(controller.get_output_files(execution_id,
-                                                path,
-                                                index),
+    return Response(controller.get_output_files(execution_id, path, index),
                     mimetype='application/octet-stream')
 
 
@@ -226,9 +221,7 @@ def get_measures(execution_id):
     summary: bool = request.args.get('summary', default=False, type=strtobool)
     index: Optional[int] = request.args.get('index', default=None, type=int)
     return Response(stream_with_context(
-        controller.get_measures(execution_id,
-                                summary,
-                                index)),
+        controller.get_measures(execution_id, summary, index)),
                     mimetype='text/plain')
 
 
@@ -250,8 +243,7 @@ def delete_execution(execution_id):
 
 @app.route(f'/executions/<user>/<project>/history', methods=['GET'])
 def history_entrypoint(user, project):
-    return Response(stream_with_context(controller.get_history(user,
-                                                               project)),
+    return Response(stream_with_context(controller.get_history(user, project)),
                     mimetype='text/plain')
 
 
@@ -278,8 +270,7 @@ def put_input_entrypoint(input_id: str):
 @app.route('/data/input/<input_id>', methods=['HEAD'])
 def check_input_data_entrypoint(input_id: str):
     is_present = controller.check_input_data(
-        input_id,
-        _get_input_metadata_from_request())
+        input_id, _get_input_metadata_from_request())
     if is_present:
         return jsonify({'id': input_id})
     else:

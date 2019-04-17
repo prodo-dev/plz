@@ -16,8 +16,7 @@ log = logging.getLogger(__name__)
 
 class Images(ABC):
     def __init__(self,
-                 docker_api_client_creator: Callable[[],
-                                                     docker.APIClient],
+                 docker_api_client_creator: Callable[[], docker.APIClient],
                  repository: str):
         self.docker_api_client_creator = docker_api_client_creator
         self.docker_api_client = docker_api_client_creator()

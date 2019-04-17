@@ -18,8 +18,7 @@ class RetrieveHistoryOperation(Operation):
     @on_exception_reraise('Retrieving the history failed.')
     def retrieve_history(self):
         json_strings = self.controller.get_history(
-            user=self.configuration.user,
-            project=self.configuration.project)
+            user=self.configuration.user, project=self.configuration.project)
         for s in json_strings:
             print(s, end='')
 

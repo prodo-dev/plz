@@ -43,8 +43,7 @@ def capture_build_context(image: str,
         build_context = docker.utils.build.tar(
             path=context_path,
             exclude=matching_excluded_paths,
-            gzip=True,
-        )
+            gzip=True, )
     finally:
         if dockerfile_created:
             os.remove(dockerfile_path)
@@ -63,8 +62,7 @@ def get_matching_excluded_paths(context_path: [str],
             # Return the dir as well as the files inside
             return itertools.chain(
                 iter([path]),
-                glob2.iglob(os.path.join(path,
-                                         '**'),
+                glob2.iglob(os.path.join(path, '**'),
                             recursive=True,
                             include_hidden=True))
         else:
@@ -128,8 +126,7 @@ def submit_context_for_building(user: str,
                                 quiet_build: bool) -> str:
     metadata = {
         'user': user,
-        'project': project,
-    }
+        'project': project, }
     status_json_strings = controller.create_snapshot(metadata, build_context)
     errors = []
     snapshot_id: str = None

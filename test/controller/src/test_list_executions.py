@@ -23,8 +23,7 @@ class TestParallelIndices(unittest.TestCase):
         infos = context.controller.list_executions(first_user,
                                                    list_for_all_users=False)
         self.assertSetEqual(
-            {first_user_execution_id1,
-             first_user_execution_id2},
+            {first_user_execution_id1, first_user_execution_id2},
             {i['execution_id']
              for i in infos})
 
@@ -49,8 +48,7 @@ class TestParallelIndices(unittest.TestCase):
         infos = context.controller.list_executions(first_user,
                                                    list_for_all_users=False)
         self.assertSetEqual(
-            {first_user_execution_id1,
-             first_user_execution_id2},
+            {first_user_execution_id1, first_user_execution_id2},
             {i['execution_id']
              for i in infos})
 
@@ -62,9 +60,8 @@ class TestParallelIndices(unittest.TestCase):
                 first_user_execution_id1,
                 first_user_execution_id2,
                 second_user_execution_id
-            },
-            {i['execution_id']
-             for i in infos})
+            }, {i['execution_id']
+                for i in infos})
         # ...also for the second user
         infos = context.controller.list_executions(second_user,
                                                    list_for_all_users=True)
@@ -73,6 +70,5 @@ class TestParallelIndices(unittest.TestCase):
                 first_user_execution_id1,
                 first_user_execution_id2,
                 second_user_execution_id
-            },
-            {i['execution_id']
-             for i in infos})
+            }, {i['execution_id']
+                for i in infos})

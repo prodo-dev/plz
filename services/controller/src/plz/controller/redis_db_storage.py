@@ -16,8 +16,7 @@ class RedisDBStorage(DBStorage):
         super().__init__()
         self.redis = redis
 
-    def store_start_metadata(self,
-                             execution_id: str,
+    def store_start_metadata(self, execution_id: str,
                              start_metadata: dict) -> None:
         self.redis.hset('start_metadata',
                         execution_id,
@@ -39,12 +38,10 @@ class RedisDBStorage(DBStorage):
         self.redis.sadd(f'finished_execution_ids_for_project#{project}',
                         execution_id)
 
-    def retrieve_finished_execution_ids(self,
-                                        user: str,
+    def retrieve_finished_execution_ids(self, user: str,
                                         project: str) -> Set[str]:
         return {
-            str(e,
-                'utf-8')
+            str(e, 'utf-8')
             for e in self.redis.sinter([
                 f'finished_execution_ids_for_user#{user}',
                 f'finished_execution_ids_for_project#{project}'
@@ -100,10 +97,8 @@ class RedisDBStorage(DBStorage):
             indices_to_execution_ids = {
                 i: self.retrieve_execution_composition(
                     self.retrieve_execution_id_from_parent_and_index(
-                        execution_id,
-                        i))
-                for i in range(int(index_bounds[0]),
-                               int(index_bounds[1]))
+                        execution_id, i))
+                for i in range(int(index_bounds[0]), int(index_bounds[1]))
             }
             return IndicesComposition(
                 execution_id,
@@ -118,8 +113,7 @@ class RedisDBStorage(DBStorage):
                                                     index: int
                                                     ) -> Optional[str]:
         execution_bytes = self.redis.hget(
-            f'composition_index_to_execution#{execution_id}',
-            index)
+            f'composition_index_to_execution#{execution_id}', index)
         if execution_bytes is None:
             return None
         return str(execution_bytes, 'utf-8')

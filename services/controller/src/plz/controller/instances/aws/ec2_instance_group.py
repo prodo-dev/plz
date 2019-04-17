@@ -62,13 +62,11 @@ class EC2InstanceGroup(InstanceProvider):
     def ami_id(self) -> str:
         if self._ami_id is not None:
             return self._ami_id
-        response = self.client.describe_images(Filters=[
-            {
-                'Name': 'name',
-                'Values': [self.aws_worker_ami],
-            },
-        ],
-                                               )
+        response = self.client.describe_images(
+            Filters=[
+                {
+                    'Name': 'name',
+                    'Values': [self.aws_worker_ami], }, ], )
         self._ami_id = response['Images'][0]['ImageId']
         return self._ami_id
 
@@ -90,8 +88,7 @@ class EC2InstanceGroup(InstanceProvider):
                         instance_market_spec: dict,
                         execution_spec: dict,
                         max_tries: int = 30,
-                        delay_in_seconds: int = 5) -> Iterator[Dict[str,
-                                                                    Any]]:
+                        delay_in_seconds: int = 5) -> Iterator[Dict[str, Any]]:
         """
         Gets an available instance for the execution with the given id.
 
@@ -197,8 +194,7 @@ class EC2InstanceGroup(InstanceProvider):
                                            execution_id: str,
                                            instance_data: dict,
                                            is_instance_newly_created: bool
-                                           ) -> (EC2Instance,
-                                                 dict):
+                                           ) -> (EC2Instance, dict):
         # When the dns name is public, it takes some time to show up. Make
         # sure there's a dns name before building the instance object.
         # We start by getting a fresh view of the instance data
@@ -211,8 +207,7 @@ class EC2InstanceGroup(InstanceProvider):
         instance = None
         if dns_name != '':
             instance = self._ec2_instance_from_instance_data(
-                instance_data,
-                container_execution_id=execution_id)
+                instance_data, container_execution_id=execution_id)
             try:
                 instance.earmark_for(execution_id,
                                      self.instance_max_startup_time_in_minutes)
@@ -230,16 +225,12 @@ class EC2InstanceGroup(InstanceProvider):
                                   execution_id: str,
                                   instance_market_spec: dict,
                                   instance_max_uptime_in_minutes: int,
-                                  instance_type: str) -> (EC2Instance,
-                                                          bool):
+                                  instance_type: str) -> (EC2Instance, bool):
         instances_not_assigned = self._get_group_aws_instances(
             only_running=True,
-            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}',
-                      ''),
-                     (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}',
-                      ''),
-                     ('instance-type',
-                      instance_type)])
+            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
+                     (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}', ''),
+                     ('instance-type', instance_type)])
         if len(instances_not_assigned) > 0:
             is_instance_newly_created = False
             instance_data = instances_not_assigned[0]
@@ -256,8 +247,7 @@ class EC2InstanceGroup(InstanceProvider):
 
     def instance_for(self, execution_id: str) -> Optional[EC2Instance]:
         instance_data_list = self._get_group_aws_instances(filters=[
-            (f'tag:{EC2Instance.EXECUTION_ID_TAG}',
-             execution_id)
+            (f'tag:{EC2Instance.EXECUTION_ID_TAG}', execution_id)
         ],
                                                            only_running=False)
         if len(instance_data_list) == 0:
@@ -336,12 +326,10 @@ class EC2InstanceGroup(InstanceProvider):
                 'instance',
             'Tags': [
                 {
-                    'Key': EC2Instance.GROUP_NAME_TAG,
-                    'Value': self.name
+                    'Key': EC2Instance.GROUP_NAME_TAG, 'Value': self.name
                 },
                 {
-                    'Key': EC2Instance.EXECUTION_ID_TAG,
-                    'Value': ''
+                    'Key': EC2Instance.EXECUTION_ID_TAG, 'Value': ''
                 },
                 {
                     'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
@@ -371,10 +359,7 @@ class EC2InstanceGroup(InstanceProvider):
         # persistence daemon. This is needed because otherwise containers might
         # take too long to start and docker might timeout when starting them
         spec['UserData'] = '\n'.join(
-            ['#!/bin/sh',
-             shutdown_line,
-             'nvidia-persistenced',
-             ''])
+            ['#!/bin/sh', shutdown_line, 'nvidia-persistenced', ''])
         spec['InstanceType'] = instance_type
         if instance_market_spec['instance_market_type'] == 'spot':
             spec['InstanceMarketOptions'] = {

@@ -25,8 +25,7 @@ class DBStorage(ABC):
         pass
 
     @abstractmethod
-    def retrieve_finished_execution_ids(self,
-                                        user: str,
+    def retrieve_finished_execution_ids(self, user: str,
                                         project: str) -> Set[str]:
         pass
 

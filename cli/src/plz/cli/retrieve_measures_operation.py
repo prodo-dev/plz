@@ -30,10 +30,10 @@ class RetrieveMeasuresOperation(CompositionOperation):
         self.execution_id = execution_id
 
     @on_exception_reraise('Retrieving the measures failed.')
-    def retrieve_measures(self,
-                          atomic_execution_id: Optional[str] = None,
-                          composition_path: Optional[List[Tuple[str,
-                                                                Any]]] = None):
+    def retrieve_measures(
+            self,
+            atomic_execution_id: Optional[str] = None,
+            composition_path: Optional[List[Tuple[str, Any]]] = None):
         if composition_path is None:
             composition_path = []
         if atomic_execution_id is None:
@@ -51,6 +51,5 @@ class RetrieveMeasuresOperation(CompositionOperation):
 
     def run_atomic(self,
                    atomic_execution_id: str,
-                   composition_path: [(str,
-                                       Any)]):
+                   composition_path: [(str, Any)]):
         self.retrieve_measures(atomic_execution_id, composition_path)

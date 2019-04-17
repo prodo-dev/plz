@@ -89,8 +89,7 @@ class LocalInputData(InputData):
             return self
 
         log_debug('Building the tarball!')
-        files = (os.path.join(directory,
-                              file) for directory,
+        files = (os.path.join(directory, file) for directory,
                  _,
                  files in os.walk(self.path) for file in files)
         self.tarball = tempfile.NamedTemporaryFile()

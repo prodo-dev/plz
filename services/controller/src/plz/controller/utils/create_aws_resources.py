@@ -20,8 +20,7 @@ def create_workers_security_group():
                               region_name=config['instances.region'])
     group_exists = len(
         ec2_client.describe_security_groups(Filters=[{
-            'Name': 'group-name',
-            'Values': ['plz-workers']
+            'Name': 'group-name', 'Values': ['plz-workers']
         }])['SecurityGroups']) > 0
     if group_exists:
         print('Security group for workers already exists',
@@ -32,8 +31,7 @@ def create_workers_security_group():
     print('Creating security group for workers', file=sys.stderr, flush=True)
 
     response = ec2_client.create_security_group(
-        Description='Plz group for workers',
-        GroupName='plz-workers')
+        Description='Plz group for workers', GroupName='plz-workers')
     group_id = response['GroupId']
 
     # Authorize the docker port

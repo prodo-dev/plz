@@ -38,10 +38,8 @@ class DockerInstance(Instance):
             snapshot_id: str,
             parameters: Parameters,
             input_stream: Optional[io.RawIOBase],
-            docker_run_args: Dict[str,
-                                  str],
-            index_range_to_run: Optional[Tuple[int,
-                                               int]]) -> None:
+            docker_run_args: Dict[str, str],
+            index_range_to_run: Optional[Tuple[int, int]]) -> None:
         startup_config = InstanceComposition.create_for(
             index_range_to_run).get_startup_config()
 
@@ -58,16 +56,14 @@ class DockerInstance(Instance):
                                 contents_tarball=input_stream or io.BytesIO()),
                 *startup_config.volumes,
                 VolumeFile(Volumes.CONFIGURATION_FILE,
-                           contents=json.dumps(configuration,
-                                               indent=2)),
+                           contents=json.dumps(configuration, indent=2)),
             ])
         self.containers.run(
             execution_id=self.execution_id,
             repository=self.images.repository,
             tag=snapshot_id,
             environment=environment,
-            mounts=[Mount(source=volume.name,
-                          target=Volumes.VOLUME_MOUNT)],
+            mounts=[Mount(source=volume.name, target=Volumes.VOLUME_MOUNT)],
             docker_run_args=docker_run_args)
 
     def stop_execution(self):
@@ -83,8 +79,7 @@ class DockerInstance(Instance):
         return f'plz-{self.execution_id}'
 
     def get_idle_since_timestamp(
-            self,
-            container_state: Optional[ContainerState] = None) -> int:
+            self, container_state: Optional[ContainerState] = None) -> int:
         # Doesn't make sense for local instances
         return 0
 
@@ -187,9 +182,7 @@ class DockerInstance(Instance):
     def get_measures_files_tarball(self, index: Optional[int]) \
             -> Iterator[bytes]:
         return InstanceComposition.get_measures_tarball(
-            self.containers,
-            self.execution_id,
-            index)
+            self.containers, self.execution_id, index)
 
     def get_stored_metadata(self) -> dict:
         raise InstanceStillRunningException(self.execution_id)

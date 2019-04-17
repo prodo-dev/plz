@@ -36,6 +36,5 @@ class ListContextOperation(Operation):
                 print(p)
             return
         for f in sorted(
-                get_context_files(context_path,
-                                  matching_excluded_paths)):
+                get_context_files(context_path, matching_excluded_paths)):
             print(f)

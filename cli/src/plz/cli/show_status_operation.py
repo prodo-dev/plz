@@ -8,9 +8,7 @@ from plz.cli.log import log_info
 from plz.cli.operation import on_exception_reraise
 
 ExecutionStatus = collections.namedtuple('ExecutionStatus',
-                                         ['running',
-                                          'success',
-                                          'code'])
+                                         ['running', 'success', 'code'])
 
 
 class ShowStatusOperation(CompositionOperation):
@@ -40,8 +38,7 @@ class ShowStatusOperation(CompositionOperation):
 
     def run_atomic(self,
                    atomic_execution_id: str,
-                   composition_path: [(str,
-                                       Any)]):
+                   composition_path: [(str, Any)]):
         status = self.get_status(atomic_execution_id)
         string_prefix = create_path_string_prefix(composition_path)
         log_info(f'{string_prefix}Status:')

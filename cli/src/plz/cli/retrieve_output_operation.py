@@ -58,8 +58,7 @@ class RetrieveOutputOperation(CompositionOperation):
 
     def harvest(self,
                 atomic_execution_id: Optional[str] = None,
-                composition_path: Optional[List[Tuple[str,
-                                                      Any]]] = None):
+                composition_path: Optional[List[Tuple[str, Any]]] = None):
         if atomic_execution_id is None:
             atomic_execution_id = self.get_execution_id()
         if composition_path is None:
@@ -78,10 +77,10 @@ class RetrieveOutputOperation(CompositionOperation):
                     'terminate it, \nor use --force-if-running (discouraged)')
 
     @on_exception_reraise('Retrieving the output failed.')
-    def retrieve_output(self,
-                        atomic_execution_id: Optional[str] = None,
-                        composition_path: Optional[List[Tuple[str,
-                                                              Any]]] = None):
+    def retrieve_output(
+            self,
+            atomic_execution_id: Optional[str] = None,
+            composition_path: Optional[List[Tuple[str, Any]]] = None):
         if atomic_execution_id is None:
             atomic_execution_id = self.get_execution_id()
         if composition_path is None:
@@ -92,9 +91,7 @@ class RetrieveOutputOperation(CompositionOperation):
         else:
             index = None
         output_tarball_bytes = self.controller.get_output_files(
-            atomic_execution_id,
-            path=self.path,
-            index=index)
+            atomic_execution_id, path=self.path, index=index)
         formatted_output_dir = \
             self.output_dir.replace('%e', self.get_execution_id())
         formatted_output_dir = os.path.join(
@@ -120,8 +117,7 @@ class RetrieveOutputOperation(CompositionOperation):
 
     def run_atomic(self,
                    atomic_execution_id: str,
-                   composition_path: [(str,
-                                       Any)]):
+                   composition_path: [(str, Any)]):
         string_prefix = create_path_string_prefix(composition_path)
         if len(string_prefix) > 0:
             message_suffix = f' for {string_prefix[:-1]}'

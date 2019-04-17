@@ -45,14 +45,11 @@ class ControllerImpl(Controller):
         os.makedirs(input_dir, exist_ok=True)
         os.makedirs(temp_data_dir, exist_ok=True)
         self.input_data_configuration = InputDataConfiguration(
-            self.redis,
-            input_dir=input_dir,
-            temp_data_dir=temp_data_dir)
+            self.redis, input_dir=input_dir, temp_data_dir=temp_data_dir)
         self.log = log
 
     # noinspection PyMethodMayBeStatic
-    def ping(self,
-             ping_timeout: int,
+    def ping(self, ping_timeout: int,
              build_timestamp: Optional[int] = None) -> dict:
         # This is plz, and we're up and running
         return {
@@ -138,8 +135,7 @@ class ControllerImpl(Controller):
                          path: Optional[str],
                          index: Optional[str]) -> Iterator[bytes]:
         return self.executions.get(execution_id).get_output_files_tarball(
-            path,
-            index)
+            path, index)
 
     def get_measures(self,
                      execution_id: str,
@@ -179,8 +175,7 @@ class ControllerImpl(Controller):
 
     def get_history(self, user: str, project: str) -> Iterator[JSONString]:
         execution_ids = self.db_storage.retrieve_finished_execution_ids(
-            user,
-            project)
+            user, project)
 
         yield '{\n'
         first = True
@@ -196,8 +191,7 @@ class ControllerImpl(Controller):
             Iterator[JSONString]:
         tag = Images.construct_tag(image_metadata)
         yield from (frag.decode('utf-8')
-                    for frag in self.images.build(context,
-                                                  tag))
+                    for frag in self.images.build(context, tag))
         self.instance_provider.push(tag)
         yield json.dumps({'id': tag})
 
@@ -208,19 +202,15 @@ class ControllerImpl(Controller):
         if not input_metadata.has_all_args_or_none():
             raise BadInputMetadataException(input_metadata.__dict__)
         self.input_data_configuration.publish_input_data(
-            input_id,
-            input_metadata,
-            request.stream)
+            input_id, input_metadata, request.stream)
         return jsonify({'id': input_id})
 
-    def check_input_data(self,
-                         input_id: str,
+    def check_input_data(self, input_id: str,
                          input_metadata: InputMetadata) -> bool:
         if not input_metadata.has_all_args_or_none():
             raise BadInputMetadataException(input_metadata.__dict__)
         return self.input_data_configuration.check_input_data(
-            input_id,
-            input_metadata)
+            input_id, input_metadata)
 
     def get_input_id_or_none(self,
                              input_metadata: InputMetadata) -> Optional[str]:
@@ -288,16 +278,14 @@ class ControllerImpl(Controller):
                           instance_market_spec: dict,
                           execution_spec: dict,
                           start_metadata: dict,
-                          parallel_indices_range: Optional[Tuple[int,
-                                                                 int]],
+                          parallel_indices_range: Optional[Tuple[int, int]],
                           indices_per_execution: Optional[int],
                           previous_execution_id: Optional[str]
                           ) -> Iterator[dict]:
         execution_id = str(_get_execution_uuid())
 
         composition = ExecutionComposition.from_parallel_indices_range(
-            parallel_indices_range,
-            execution_id)
+            parallel_indices_range, execution_id)
 
         all_metadatas = composition.create_metadatas_for_all_executions(
             snapshot_id,
@@ -349,8 +337,7 @@ class ControllerImpl(Controller):
                                          statuses_generators)
 
             indices_without_instance = [
-                i for (i,
-                       instance) in enumerate(instances) if instance is None
+                i for (i, instance) in enumerate(instances) if instance is None
             ]
 
             if len(indices_without_instance) > 0:

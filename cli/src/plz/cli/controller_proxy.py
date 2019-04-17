@@ -23,8 +23,7 @@ class ControllerProxy(Controller):
     def handle_exception(cls, exception: ResponseHandledException):
         pass
 
-    def ping(self,
-             ping_timeout: int,
+    def ping(self, ping_timeout: int,
              build_timestamp: Optional[int] = None) -> dict:
         response = self.server.get('ping', timeout=ping_timeout)
         is_ok = response.status_code == requests.codes.ok
@@ -117,8 +116,7 @@ class ControllerProxy(Controller):
             'files',
             codes_with_exceptions={requests.codes.not_implemented},
             params={
-                'path': path,
-                'index': index
+                'path': path, 'index': index
             },
             stream=True)
         _check_status(response, requests.codes.ok)
@@ -133,8 +131,7 @@ class ControllerProxy(Controller):
             execution_id,
             'measures',
             params={
-                'summary': summary,
-                'index': index
+                'summary': summary, 'index': index
             },
             stream=True,
             codes_with_exceptions={requests.codes.conflict})

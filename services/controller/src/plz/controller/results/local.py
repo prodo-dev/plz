@@ -238,13 +238,10 @@ def _force_mk_empty_dir(directory: str):
 def _write_output_and_measures(paths: Paths,
                                containers: Containers,
                                execution_id: str,
-                               index_range_to_run: Optional[Tuple[int,
-                                                                  int]]):
+                               index_range_to_run: Optional[Tuple[int, int]]):
     ic = InstanceComposition.create_for(index_range_to_run)
-    paths_and_getters = [(paths.output,
-                          ic.get_output_dirs_and_tarballs),
-                         (paths.measures,
-                          ic.get_measures_dirs_and_tarballs)]
+    paths_and_getters = [(paths.output, ic.get_output_dirs_and_tarballs),
+                         (paths.measures, ic.get_measures_dirs_and_tarballs)]
     for path_function, tarball_getter in paths_and_getters:
         dirs_and_tarballs = tarball_getter(execution_id=execution_id,
                                            containers=containers)

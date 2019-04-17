@@ -37,8 +37,7 @@ class TestReRun(unittest.TestCase):
                 context.configuration))
 
         output = b''.join(
-            context.controller.get_logs(rerun_execution_id,
-                                        since=None))
+            context.controller.get_logs(rerun_execution_id, since=None))
         self.assertEqual('foo = 55\n' 'bar = zeppelin\n', str(output, 'utf-8'))
 
     def test_rerun_override_parameters(self):
@@ -68,6 +67,5 @@ class TestReRun(unittest.TestCase):
 
         # Make sure we get the overridden the parameters
         output = b''.join(
-            context.controller.get_logs(rerun_execution_id,
-                                        since=None))
+            context.controller.get_logs(rerun_execution_id, since=None))
         self.assertEqual('foo = 66\n' 'bar = zeppelin\n', str(output, 'utf-8'))

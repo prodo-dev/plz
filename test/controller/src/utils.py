@@ -86,8 +86,7 @@ def run_example(
                                              is_end_to_end_path)
     instance_market_spec = create_instance_market_spec(context.configuration)
     execution_spec = RunExecutionOperation.create_execution_spec(
-        context.configuration,
-        input_id)
+        context.configuration, input_id)
     response_dicts = context.controller.run_execution(
         context.snapshot_id,
         parameters=parameters,
@@ -135,8 +134,8 @@ def harvest():
     controller.harvest()
 
 
-def create_file_map_from_tarball(tarball_bytes: Iterator[bytes]) -> Dict[str,
-                                                                         str]:
+def create_file_map_from_tarball(tarball_bytes: Iterator[bytes]
+                                 ) -> Dict[str, str]:
     # The first parameter is a tarball we need to extract into `output_dir`.
     with tempfile.TemporaryFile() as tarball:
         # `tarfile.open` needs to read from a real file, so we copy to one.

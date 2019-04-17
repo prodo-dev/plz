@@ -66,8 +66,7 @@ class NotImplementedControllerException(ResponseHandledException):
 
 class ProviderKillingInstancesException(ResponseHandledException):
     def __init__(self,
-                 failed_instance_ids_to_messages: Dict[str,
-                                                       str],
+                 failed_instance_ids_to_messages: Dict[str, str],
                  **kwargs):
         super().__init__(requests.codes.conflict, **kwargs)
         self.failed_instance_ids_to_messages = failed_instance_ids_to_messages

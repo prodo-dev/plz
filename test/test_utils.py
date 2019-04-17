@@ -28,8 +28,7 @@ CONTROLLER_PORT = 80
 
 TEST_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 PLZ_ROOT_DIRECTORY = os.path.abspath(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                 '..'))
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 DATA_DIRECTORY = f'{PLZ_ROOT_DIRECTORY}/test_cache/'
 REDIS_DATA_DIRECTORY = f'{DATA_DIRECTORY}/redis_data/'
@@ -77,8 +76,7 @@ def execute_command(
         hide_stderr: bool = False,
         fail_on_failure: bool = True,
         file_to_dump_stdout: Optional[io.FileIO] = None,
-        substitute_stdout_lines: Optional[List[Tuple[bytes,
-                                                     bytes]]] = None,
+        substitute_stdout_lines: Optional[List[Tuple[bytes, bytes]]] = None,
         stderr_to_stdout: bool = False,
         env: Optional[dict] = None,
         stdout_holder: Optional[List[bytes]] = None) -> subprocess.Popen:
@@ -165,32 +163,20 @@ def _print_with_color(color: str, *args: Any):
 
 def remove_volume(volume_name: str):
     if container_exists(volume_name):
-        execute_command(['docker',
-                         'container',
-                         'kill',
-                         volume_name],
+        execute_command(['docker', 'container', 'kill', volume_name],
                         hide_output=True,
                         hide_stderr=True,
                         fail_on_failure=False)
-        execute_command(['docker',
-                         'container',
-                         'rm',
-                         volume_name],
+        execute_command(['docker', 'container', 'rm', volume_name],
                         hide_output=True)
     if volume_exists(volume_name):
-        execute_command(['docker',
-                         'volume',
-                         'rm',
-                         volume_name],
+        execute_command(['docker', 'volume', 'rm', volume_name],
                         hide_output=True)
 
 
 def container_exists(container_name: str) -> bool:
     completed_process = execute_command(
-        ['docker',
-         'container',
-         'inspect',
-         container_name],
+        ['docker', 'container', 'inspect', container_name],
         hide_output=True,
         hide_stderr=True,
         fail_on_failure=False)
@@ -199,10 +185,7 @@ def container_exists(container_name: str) -> bool:
 
 def volume_exists(container_name: str) -> bool:
     completed_process = execute_command(
-        ['docker',
-         'volume',
-         'inspect',
-         container_name],
+        ['docker', 'volume', 'inspect', container_name],
         hide_output=True,
         hide_stderr=True,
         fail_on_failure=False)
@@ -240,16 +223,10 @@ class DoCleanupContextManager(ContextManager):
 def stop_container(container_name: str):
     if not container_exists(container_name):
         return
-    execute_command(['docker',
-                     'container',
-                     'stop',
-                     container_name],
+    execute_command(['docker', 'container', 'stop', container_name],
                     hide_output=True,
                     fail_on_failure=False)
-    execute_command(['docker',
-                     'container',
-                     'rm',
-                     container_name],
+    execute_command(['docker', 'container', 'rm', container_name],
                     hide_output=True,
                     fail_on_failure=False)
 
@@ -257,11 +234,7 @@ def stop_container(container_name: str):
 def remove_all_volumes():
     stdout_holder: List[bytes] = []
     execute_command([
-        'docker',
-        'volume',
-        'ls',
-        '--quiet',
-        f'--filter=name={VOLUME_PREFIX}'
+        'docker', 'volume', 'ls', '--quiet', f'--filter=name={VOLUME_PREFIX}'
     ],
                     stdout_holder=stdout_holder)
     volumes = str(b''.join(stdout_holder), 'utf-8').splitlines()

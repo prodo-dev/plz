@@ -64,10 +64,8 @@ class EC2Instance(Instance):
             snapshot_id: str,
             parameters: Parameters,
             input_stream: Optional[io.BytesIO],
-            docker_run_args: Dict[str,
-                                  str],
-            index_range_to_run: Optional[Tuple[int,
-                                               int]],
+            docker_run_args: Dict[str, str],
+            index_range_to_run: Optional[Tuple[int, int]],
             max_idle_seconds: int = 60 * 30) -> None:
         # Sanity check before we get the lock
         if self._get_earmark() != self.delegate.execution_id:
@@ -178,14 +176,12 @@ class EC2Instance(Instance):
 
     def _do_unearmark(self):
         self._set_tags([{
-            'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG,
-            'Value': ''
+            'Key': EC2Instance.EARMARK_EXECUTION_ID_TAG, 'Value': ''
         }])
 
     def _set_execution_id(self, execution_id: str, max_idle_seconds: int):
         self._set_tags([{
-            'Key': EC2Instance.EXECUTION_ID_TAG,
-            'Value': execution_id
+            'Key': EC2Instance.EXECUTION_ID_TAG, 'Value': execution_id
         },
                         {
                             'Key': EC2Instance.MAX_IDLE_SECONDS_TAG,
@@ -200,15 +196,13 @@ class EC2Instance(Instance):
         instance_id = self.instance_id
         self.client.create_tags(Resources=[instance_id], Tags=tags)
         self.data = describe_instances(self.client,
-                                       [('instance-id',
-                                         instance_id)])[0]
+                                       [('instance-id', instance_id)])[0]
 
     def get_max_idle_seconds(self) -> int:
         return int(get_tag(self.data, self.MAX_IDLE_SECONDS_TAG, '0'))
 
     def get_idle_since_timestamp(
-            self,
-            container_state: Optional[ContainerState] = None) -> int:
+            self, container_state: Optional[ContainerState] = None) -> int:
         if container_state is not None:
             return container_state.finished_at
         return int(get_tag(self.data, self.IDLE_SINCE_TIMESTAMP_TAG, '0'))
@@ -272,8 +266,7 @@ class EC2Instance(Instance):
                                   idle_since_timestamp,
                                   release_container)
             self._set_tags([{
-                'Key': EC2Instance.EXECUTION_ID_TAG,
-                'Value': ''
+                'Key': EC2Instance.EXECUTION_ID_TAG, 'Value': ''
             },
                             {
                                 'Key': EC2Instance.IDLE_SINCE_TIMESTAMP_TAG,
@@ -290,23 +283,17 @@ class EC2Instance(Instance):
             instances = get_aws_instances(
                 self.client,
                 only_running=check_running,
-                filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}',
-                          ''),
-                         (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}',
-                          ''),
-                         ('instance-id',
-                          self.instance_id)])
+                filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
+                         (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}', ''),
+                         ('instance-id', self.instance_id)])
             if len(instances) > 0:
                 return True
         instances = get_aws_instances(
             self.client,
             only_running=check_running,
-            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}',
-                      ''),
-                     (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}',
-                      earmark),
-                     ('instance-id',
-                      self.instance_id)])
+            filters=[(f'tag:{EC2Instance.EXECUTION_ID_TAG}', ''),
+                     (f'tag:{EC2Instance.EARMARK_EXECUTION_ID_TAG}', earmark),
+                     ('instance-id', self.instance_id)])
         return len(instances) > 0
 
     def _is_running(self):
@@ -329,8 +316,7 @@ class EC2Instance(Instance):
 
     def get_forensics(self) -> dict:
         spot_requests = self.client.describe_spot_instance_requests(Filters=[{
-            'Name': 'instance-id',
-            'Values': [self.instance_id]
+            'Name': 'instance-id', 'Values': [self.instance_id]
         }])['SpotInstanceRequests']
         if len(spot_requests) == 0:
             spot_request_info = {}
@@ -377,9 +363,7 @@ def get_tag(instance_data, tag, default=None) -> Optional[str]:
     return default
 
 
-def get_aws_instances(client,
-                      filters: [(str,
-                                 str)],
+def get_aws_instances(client, filters: [(str, str)],
                       only_running: bool) -> [dict]:
     if only_running:
         filters += [('instance-state-name', 'running')]

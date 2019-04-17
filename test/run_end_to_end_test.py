@@ -32,9 +32,7 @@ def run_end_to_end_test(network: str,
 
     # Make sure the directory has a single slash at the end
     test_directory = os.path.join(
-        os.path.normpath(os.path.join(TEST_DIRECTORY,
-                                      test_name)),
-        '')
+        os.path.normpath(os.path.join(TEST_DIRECTORY, test_name)), '')
 
     test_utils.print_info(f'Running {test_name}...')
 
@@ -157,10 +155,7 @@ def run_cli(network: str,
         test_args = []
 
     # Add the app directory to a Docker volume.
-    test_utils.execute_command(['docker',
-                                'volume',
-                                'create',
-                                volume],
+    test_utils.execute_command(['docker', 'volume', 'create', volume],
                                hide_output=True)
     test_utils.execute_command([
         'docker',
@@ -174,11 +169,7 @@ def run_cli(network: str,
     ],
                                hide_output=True)
     test_utils.execute_command(
-        ['docker',
-         'container',
-         'cp',
-         app_directory,
-         f'{volume}:/data/app'])
+        ['docker', 'container', 'cp', app_directory, f'{volume}:/data/app'])
 
     # Initialize a Git repository to make excludes work.
     test_utils.execute_command([
@@ -222,36 +213,23 @@ def run_cli(network: str,
     # Pycharm has the wrong return types for Popen
     # noinspection PyTypeChecker
     test_utils.execute_command(
-        ['docker',
-         'container',
-         'logs',
-         '--follow',
-         cli_container],
+        ['docker', 'container', 'logs', '--follow', cli_container],
         substitute_stdout_lines=[
             (rb'\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-'
              rb'[0-9a-f]{12}\b',
-             rb'<UUID>'),
-            (rb'^:: .*',
-             rb''),
-            (rb'^Instance status: .*',
-             rb'')
+             rb'<UUID>'), (rb'^:: .*', rb''), (rb'^Instance status: .*', rb'')
         ],
         file_to_dump_stdout=actual_logs_file,
         stderr_to_stdout=True)
 
     # Capture the exit status
     stdout_holder = []
-    test_utils.execute_command(['docker',
-                                'wait',
-                                cli_container],
+    test_utils.execute_command(['docker', 'wait', cli_container],
                                stdout_holder=stdout_holder,
                                hide_output=True)
     exit_status = int(b''.join(stdout_holder))
 
-    test_utils.execute_command(['docker',
-                                'container',
-                                'rm',
-                                cli_container],
+    test_utils.execute_command(['docker', 'container', 'rm', cli_container],
                                hide_output=True)
 
     # Extract the output.

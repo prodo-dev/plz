@@ -24,8 +24,7 @@ def start_controller():
         'build',
         '--quiet',
         f'--tag={CONTROLLER_IMAGE}',
-        os.path.join(PLZ_ROOT_DIRECTORY,
-                     'services/controller')
+        os.path.join(PLZ_ROOT_DIRECTORY, 'services/controller')
     ])
 
     test_utils.stop_container(CONTROLLER_CONTAINER)
@@ -102,8 +101,7 @@ def get_end_to_end_tests(
                     and '.ignored' not in tdir:
                 end_to_end_tests.append(
                     # Remove the dir path until end-to-end
-                    tdir[len(os.path.join(TEST_DIRECTORY,
-                                          '')):])
+                    tdir[len(os.path.join(TEST_DIRECTORY, '')):])
         return end_to_end_tests
 
     # Run selected tests.
@@ -146,9 +144,8 @@ def run_end_to_end_tests(
             'bless': bless,
             'test_name': end_to_end_tests[i]
         },
-                         output_pipe) for i,
-                        (_,
-                         output_pipe) in enumerate(pipe_pairs)]
+                         output_pipe)
+                        for i, (_, output_pipe) in enumerate(pipe_pairs)]
         readers = [os.fdopen(r.fileno(), 'r') for r, _ in pipe_pairs]
         pool_result = pool.starmap_async(_run_test_piping_output, process_args)
 

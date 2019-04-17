@@ -14,11 +14,7 @@ from plz.controller.api.exceptions import WorkerUnreachableException
 
 ContainerState = collections.namedtuple(
     'ContainerState',
-    ['running',
-     'status',
-     'success',
-     'exit_code',
-     'finished_at'])
+    ['running', 'status', 'success', 'exit_code', 'finished_at'])
 
 log = logging.getLogger(__name__)
 
@@ -38,11 +34,9 @@ class Containers:
             execution_id: str,
             repository: str,
             tag: str,
-            environment: Dict[str,
-                              str],
+            environment: Dict[str, str],
             mounts: List[Mount],
-            docker_run_args: Dict[str,
-                                  str]):
+            docker_run_args: Dict[str, str]):
         image = f'{repository}:{tag}'
         if execution_id == '':
             raise ValueError('Empty execution id!')

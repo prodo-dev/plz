@@ -14,10 +14,8 @@ log = logging.getLogger(__name__)
 
 class ECRImages(Images):
     def __init__(self,
-                 docker_api_client_creator: Callable[[],
-                                                     docker.APIClient],
-                 ecr_client_creator: Callable[[],
-                                              Any],
+                 docker_api_client_creator: Callable[[], docker.APIClient],
+                 ecr_client_creator: Callable[[], Any],
                  repository_without_registry: str,
                  login_validity_in_minutes: int):
         self.ecr_client_creator = ecr_client_creator

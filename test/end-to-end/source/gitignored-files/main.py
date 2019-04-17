@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
 for file_name in [
-        'file_ignored_by_git_included_explicitly',
-        'file_managed_by_git'
+        'file_ignored_by_git_included_explicitly', 'file_managed_by_git'
 ]:
     with open(file_name) as f:
         print(f.read(), end='')

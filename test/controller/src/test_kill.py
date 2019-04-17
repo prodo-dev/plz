@@ -28,8 +28,7 @@ class TestKill(unittest.TestCase):
 
         self._assert_running_executions(context.controller,
                                         context.configuration.user,
-                                        {execution_id1,
-                                         execution_id2})
+                                        {execution_id1, execution_id2})
 
         context.controller.kill_instances(user=context.configuration.user,
                                           instance_ids=None,
@@ -135,8 +134,7 @@ class TestKill(unittest.TestCase):
 
         infos = self._assert_running_executions(context.controller,
                                                 context.configuration.user,
-                                                {execution_id1,
-                                                 execution_id2})
+                                                {execution_id1, execution_id2})
 
         instance_ids = [
             i['instance_id'] for i in infos
@@ -173,8 +171,7 @@ class TestKill(unittest.TestCase):
                 user=second_user)
 
         self._assert_and_cleanup_instances(context.controller,
-                                           first_user,
-                                           {execution_id})
+                                           first_user, {execution_id})
 
     def test_kill_all_kills_only_user(self):
         context, first_user_execution_id = run_example(
@@ -203,8 +200,7 @@ class TestKill(unittest.TestCase):
 
         # Check the execution for the first user still exists
         self._assert_running_executions(context.controller,
-                                        first_user,
-                                        {first_user_execution_id})
+                                        first_user, {first_user_execution_id})
 
         self._assert_running_executions(context.controller,
                                         second_user,
@@ -223,8 +219,7 @@ class TestKill(unittest.TestCase):
         context.configuration.user = second_user
 
         self._assert_running_executions(context.controller,
-                                        first_user,
-                                        {first_user_execution_id})
+                                        first_user, {first_user_execution_id})
 
         context, second_user_execution_id = run_example(
             'common', 'run_forever', context=context, is_end_to_end_path=False)
@@ -233,9 +228,7 @@ class TestKill(unittest.TestCase):
         third_user = second_user + '_third'
         self._assert_running_executions(
             context.controller,
-            third_user,
-            {first_user_execution_id,
-             second_user_execution_id},
+            third_user, {first_user_execution_id, second_user_execution_id},
             list_for_all_users=True)
 
         # Kill ignoring ownership
@@ -262,8 +255,7 @@ class TestKill(unittest.TestCase):
         # empty execution ID)
         infos = [
             i for i in controller.list_executions(
-                user=user,
-                list_for_all_users=list_for_all_users)
+                user=user, list_for_all_users=list_for_all_users)
             if i['status'] not in {'shutting-down'}
         ]
         self.assertSetEqual(execution_ids, {i['execution_id'] for i in infos})
