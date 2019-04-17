@@ -24,8 +24,9 @@ class InputMetadata:
         return self.has_all_args() or not any(self.__dict__.values())
 
     def redis_field(self) -> str:
-        return (f'{self.user}#{self.project}#{self.path}'
-                f'#{self.timestamp_millis}')
+        return (
+            f'{self.user}#{self.project}#{self.path}'
+            f'#{self.timestamp_millis}')
 
 
 JSONString = str

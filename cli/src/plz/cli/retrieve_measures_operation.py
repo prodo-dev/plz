@@ -8,7 +8,6 @@ from plz.cli.operation import on_exception_reraise
 
 class RetrieveMeasuresOperation(CompositionOperation):
     """Output measures for an execution"""
-
     @classmethod
     def name(cls):
         return 'measures'
@@ -16,16 +15,18 @@ class RetrieveMeasuresOperation(CompositionOperation):
     @classmethod
     def prepare_argument_parser(cls, parser, args):
         cls.maybe_add_execution_id_arg(parser, args)
-        parser.add_argument('-s',
-                            '--summary',
-                            action='store_true',
-                            help='Retrieve only the summary measures')
+        parser.add_argument(
+            '-s',
+            '--summary',
+            action='store_true',
+            help='Retrieve only the summary measures')
         parser.set_defaults(summary=False)
 
-    def __init__(self,
-                 configuration: Configuration,
-                 summary: bool,
-                 execution_id: Optional[str] = None):
+    def __init__(
+            self,
+            configuration: Configuration,
+            summary: bool,
+            execution_id: Optional[str] = None):
         super().__init__(configuration)
         self.summary = summary
         self.execution_id = execution_id
@@ -50,6 +51,6 @@ class RetrieveMeasuresOperation(CompositionOperation):
         for line in json_strings:
             print(create_path_string_prefix(composition_path) + line, end='')
 
-    def run_atomic(self, atomic_execution_id: str,
-                   composition_path: [(str, Any)]):
+    def run_atomic(
+            self, atomic_execution_id: str, composition_path: [(str, Any)]):
         self.retrieve_measures(atomic_execution_id, composition_path)

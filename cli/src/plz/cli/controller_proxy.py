@@ -23,8 +23,9 @@ class ControllerProxy(Controller):
     def handle_exception(cls, exception: ResponseHandledException):
         pass
 
-    def ping(self, ping_timeout: int,
-             build_timestamp: Optional[int] = None) -> dict:
+    def ping(
+            self, ping_timeout: int,
+            build_timestamp: Optional[int] = None) -> dict:
         response = self.server.get('ping', timeout=ping_timeout)
         is_ok = response.status_code == requests.codes.ok
         if is_ok:
@@ -52,37 +53,41 @@ class ControllerProxy(Controller):
         _check_status(response, requests.codes.accepted)
         return (json.loads(line) for line in response.iter_lines())
 
-    def rerun_execution(self, user: str, project: str,
-                        instance_max_uptime_in_minutes: Optional[int],
-                        override_parameters: Optional[dict],
-                        previous_execution_id: str,
-                        instance_market_spec: dict) -> Iterator[dict]:
-        response = self.server.post('executions/rerun',
-                                    stream=True,
-                                    json={
-                                        'user':
-                                            user,
-                                        'project':
-                                            project,
-                                        'execution_id':
-                                            previous_execution_id,
-                                        'instance_market_spec':
-                                            instance_market_spec,
-                                        'override_parameters':
-                                            override_parameters,
-                                        'instance_max_uptime_in_minutes':
-                                            instance_max_uptime_in_minutes
-                                    })
+    def rerun_execution(
+            self,
+            user: str,
+            project: str,
+            instance_max_uptime_in_minutes: Optional[int],
+            override_parameters: Optional[dict],
+            previous_execution_id: str,
+            instance_market_spec: dict) -> Iterator[dict]:
+        response = self.server.post(
+            'executions/rerun',
+            stream=True,
+            json={
+                'user':
+                    user,
+                'project':
+                    project,
+                'execution_id':
+                    previous_execution_id,
+                'instance_market_spec':
+                    instance_market_spec,
+                'override_parameters':
+                    override_parameters,
+                'instance_max_uptime_in_minutes':
+                    instance_max_uptime_in_minutes
+            })
         _check_status(response, requests.codes.accepted)
         return (json.loads(line) for line in response.iter_lines())
 
     def list_executions(self, user: str, list_for_all_users: bool) -> [dict]:
-        response = self.server.get('executions',
-                                   'list',
-                                   params={
-                                       'user': user,
-                                       'list_for_all_users': list_for_all_users
-                                   })
+        response = self.server.get(
+            'executions',
+            'list',
+            params={
+                'user': user, 'list_for_all_users': list_for_all_users
+            })
         _check_status(response, requests.codes.ok)
         return json.loads(response.content)['executions']
 
@@ -103,8 +108,9 @@ class ControllerProxy(Controller):
         # Do not read in chunks as otherwise the logs don't flow interactively
         return response.raw
 
-    def get_output_files(self, execution_id: str, path: Optional[str],
-                         index: Optional[int]) -> Iterator[bytes]:
+    def get_output_files(
+            self, execution_id: str, path: Optional[str],
+            index: Optional[int]) -> Iterator[bytes]:
         response = self.server.get(
             'executions',
             execution_id,
@@ -112,8 +118,7 @@ class ControllerProxy(Controller):
             'files',
             codes_with_exceptions={requests.codes.not_implemented},
             params={
-                'path': path,
-                'index': index
+                'path': path, 'index': index
             },
             stream=True)
         _check_status(response, requests.codes.ok)
@@ -128,50 +133,49 @@ class ControllerProxy(Controller):
             execution_id,
             'measures',
             params={
-                'summary': summary,
-                'index': index
+                'summary': summary, 'index': index
             },
             stream=True,
             codes_with_exceptions={requests.codes.conflict})
         _check_status(response, requests.codes.ok)
         return (line.decode('utf-8') for line in response.raw)
 
-    def delete_execution(self, execution_id: str, fail_if_running: bool,
-                         fail_if_deleted: bool) -> None:
-        response = self.server.delete('executions',
-                                      execution_id,
-                                      params={
-                                          'fail_if_deleted': fail_if_deleted,
-                                          'fail_if_running': fail_if_running,
-                                      },
-                                      codes_with_exceptions={
-                                          requests.codes.expectation_failed,
-                                          requests.codes.conflict
-                                      })
+    def delete_execution(
+            self, execution_id: str, fail_if_running: bool,
+            fail_if_deleted: bool) -> None:
+        response = self.server.delete(
+            'executions',
+            execution_id,
+            params={
+                'fail_if_deleted': fail_if_deleted,
+                'fail_if_running': fail_if_running,
+            },
+            codes_with_exceptions={
+                requests.codes.expectation_failed, requests.codes.conflict
+            })
         _check_status(response, requests.codes.no_content)
 
     def get_history(self, user: str, project: str) -> Iterator[JSONString]:
-        response = self.server.get('executions',
-                                   user,
-                                   project,
-                                   'history',
-                                   stream=True)
+        response = self.server.get(
+            'executions', user, project, 'history', stream=True)
         _check_status(response, requests.codes.ok)
         return (line.decode('utf-8') for line in response.raw)
 
     def create_snapshot(self, image_metadata: dict, context: BinaryIO) -> \
             Iterator[JSONString]:
         metadata_bytes = json.dumps(image_metadata).encode('utf-8')
-        request_data = itertools.chain(io.BytesIO(metadata_bytes),
-                                       io.BytesIO(b'\n'), context)
-        response = self.server.post('snapshots',
-                                    data=request_data,
-                                    stream=True)
+        request_data = itertools.chain(
+            io.BytesIO(metadata_bytes), io.BytesIO(b'\n'), context)
+        response = self.server.post(
+            'snapshots', data=request_data, stream=True)
         _check_status(response, requests.codes.ok)
         return (frag.decode('utf-8') for frag in response.raw)
 
-    def put_input(self, input_id: str, input_metadata: InputMetadata,
-                  input_data_stream: BinaryIO) -> None:
+    def put_input(
+            self,
+            input_id: str,
+            input_metadata: InputMetadata,
+            input_data_stream: BinaryIO) -> None:
         response = self.server.put(
             'data',
             'input',
@@ -237,9 +241,13 @@ class ControllerProxy(Controller):
             # This bad behaviour is prior to plz serverless
             raise ValueError('Expected an execution ID')
 
-    def kill_instances(self, user: str, instance_ids: Optional[List[str]],
-                       ignore_ownership: bool, including_idle: Optional[bool],
-                       force_if_not_idle: bool) -> bool:
+    def kill_instances(
+            self,
+            user: str,
+            instance_ids: Optional[List[str]],
+            ignore_ownership: bool,
+            including_idle: Optional[bool],
+            force_if_not_idle: bool) -> bool:
         response = self.server.post(
             'instances',
             'kill',
@@ -257,10 +265,8 @@ class ControllerProxy(Controller):
         return response_json['were_there_instances_to_kill']
 
     def describe_execution_entrypoint(self, execution_id: str) -> dict:
-        response = self.server.get('executions',
-                                   'describe',
-                                   execution_id,
-                                   stream=True)
+        response = self.server.get(
+            'executions', 'describe', execution_id, stream=True)
         _check_status(response, requests.codes.ok)
         return response.json()
 

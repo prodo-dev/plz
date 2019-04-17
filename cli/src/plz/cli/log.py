@@ -74,8 +74,8 @@ def _format_error(message, use_emojis):
 
 
 def setup_logger(configuration):
-    level = configuration.log_level or (logging.INFO if not configuration.debug
-                                        else logging.DEBUG)
+    level = configuration.log_level or (
+        logging.INFO if not configuration.debug else logging.DEBUG)
     logger = logging.getLogger(__name__)
     logger.setLevel(level)
     logger_handler = logging.StreamHandler(stream=sys.stdout)
@@ -88,12 +88,13 @@ class _LogFormatter(logging.Formatter):
         super().__init__()
         self.use_emojis = use_emojis
         self.formatter_map = defaultdict(lambda: lambda msg, _: msg)
-        self.formatter_map.update({
-            logging.INFO: _format_info,
-            logging.WARNING: format_warning,
-            logging.ERROR: _format_error,
-        })
+        self.formatter_map.update(
+            {
+                logging.INFO: _format_info,
+                logging.WARNING: format_warning,
+                logging.ERROR: _format_error,
+            })
 
     def format(self, record: logging.LogRecord):
-        return self.formatter_map[record.levelno](record.getMessage(),
-                                                  self.use_emojis)
+        return self.formatter_map[record.levelno](
+            record.getMessage(), self.use_emojis)

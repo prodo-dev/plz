@@ -21,7 +21,6 @@ from plz.cli.snapshot import DOCKERFILE_NAME, PullAccessDeniedException, \
 
 class RunExecutionOperation(Operation):
     """Run an arbitrary command on a remote machine"""
-
     @classmethod
     def name(cls):
         return 'run'
@@ -30,16 +29,21 @@ class RunExecutionOperation(Operation):
     def prepare_argument_parser(cls, parser, args):
         parser.add_argument('--command', type=str, help='Command to run')
         add_output_dir_arg(parser)
-        parser.add_argument('-p',
-                            '--parameters',
-                            dest='parameters_file',
-                            help='Json file where parameters are stored',
-                            type=str)
+        parser.add_argument(
+            '-p',
+            '--parameters',
+            dest='parameters_file',
+            help='Json file where parameters are stored',
+            type=str)
         add_detach_command_line_argument(parser)
 
-    def __init__(self, configuration: Configuration, command: Optional[str],
-                 output_dir: str, parameters_file: Optional[str],
-                 detach: bool):
+    def __init__(
+            self,
+            configuration: Configuration,
+            command: Optional[str],
+            output_dir: str,
+            parameters_file: Optional[str],
+            detach: bool):
         super().__init__(configuration)
         self.configuration = configuration
         self.output_dir = output_dir
@@ -96,9 +100,10 @@ class RunExecutionOperation(Operation):
                     else:
                         raise e
 
-        input_id = self.suboperation('Capturing the input',
-                                     self.capture_input,
-                                     if_set=self.configuration.input)
+        input_id = self.suboperation(
+            'Capturing the input',
+            self.capture_input,
+            if_set=self.configuration.input)
         execution_id, was_start_ok = self.suboperation(
             'Sending request to start execution', lambda: self.start_execution(
                 snapshot_id, params, input_id, context_path))
@@ -120,28 +125,32 @@ class RunExecutionOperation(Operation):
         user_provided_dockerfile = os.path.isfile(
             os.path.join(self.configuration.context_path, DOCKERFILE_NAME))
         if self.configuration.image is not None and user_provided_dockerfile:
-            raise CLIException('You specified an image (either in '
-                               '`plz.config.json` or in the `PLZ_IMAGE` '
-                               'environment variable) and you have a file '
-                               f'{DOCKERFILE_NAME} (that would be used to '
-                               'create an image).\nPlease do not specify the '
-                               'image or move the file somewhere else')
+            raise CLIException(
+                'You specified an image (either in '
+                '`plz.config.json` or in the `PLZ_IMAGE` '
+                'environment variable) and you have a file '
+                f'{DOCKERFILE_NAME} (that would be used to '
+                'create an image).\nPlease do not specify the '
+                'image or move the file somewhere else')
         if self.configuration.command is not None and user_provided_dockerfile:
-            raise CLIException('You specified a command (either in '
-                               '`plz.config.json`, in the command you issued, '
-                               'or in the `PLZ_COMMAND` environment variable) '
-                               f'and you have a file {DOCKERFILE_NAME} (that '
-                               'would be used to create an image, including a '
-                               'command). Please do not specify the command, '
-                               'or move the file somewhere else')
+            raise CLIException(
+                'You specified a command (either in '
+                '`plz.config.json`, in the command you issued, '
+                'or in the `PLZ_COMMAND` environment variable) '
+                f'and you have a file {DOCKERFILE_NAME} (that '
+                'would be used to create an image, including a '
+                'command). Please do not specify the command, '
+                'or move the file somewhere else')
         if self.configuration.image is None and not user_provided_dockerfile:
-            raise CLIException('No image specified! Include an `image` entry '
-                               'in plz.config.json, or a file called '
-                               f'{DOCKERFILE_NAME} in your context path')
+            raise CLIException(
+                'No image specified! Include an `image` entry '
+                'in plz.config.json, or a file called '
+                f'{DOCKERFILE_NAME} in your context path')
         if self.configuration.command is None and not user_provided_dockerfile:
-            raise CLIException('No command specified! Include a `command` '
-                               'entry in plz.config.json, or a file called '
-                               f'{DOCKERFILE_NAME} in your context path')
+            raise CLIException(
+                'No command specified! Include a `command` '
+                'entry in plz.config.json, or a file called '
+                f'{DOCKERFILE_NAME} in your context path')
 
     def follow_execution(self, was_start_ok: bool):
         log_info(f'Execution ID is: {self.execution_id}')
@@ -160,9 +169,10 @@ class RunExecutionOperation(Operation):
         try:
             if not was_start_ok:
                 raise CLIException('The command failed.')
-            logs = LogsOperation(self.configuration,
-                                 execution_id=self.execution_id,
-                                 since='start')
+            logs = LogsOperation(
+                self.configuration,
+                execution_id=self.execution_id,
+                since='start')
             logs.display_logs(self.execution_id, print_interrupt_message=True)
         except CLIException as e:
             e.print(self.configuration)
@@ -170,13 +180,14 @@ class RunExecutionOperation(Operation):
         except KeyboardInterrupt:
             return
 
-        self.suboperation('Harvesting the output...',
-                          retrieve_output_operation.harvest)
+        self.suboperation(
+            'Harvesting the output...', retrieve_output_operation.harvest)
 
         retrieve_measures_operation = RetrieveMeasuresOperation(
             self.configuration, execution_id=self.execution_id, summary=True)
-        self.suboperation('Retrieving summary of measures (if present)...',
-                          retrieve_measures_operation.retrieve_measures)
+        self.suboperation(
+            'Retrieving summary of measures (if present)...',
+            retrieve_measures_operation.retrieve_measures)
 
         show_status_operation = ShowStatusOperation(
             self.configuration, execution_id=self.execution_id)
@@ -187,8 +198,9 @@ class RunExecutionOperation(Operation):
                 ' Please report it.')
         elif status.success:
             log_info('Execution succeeded.')
-            self.suboperation('Retrieving the output...',
-                              retrieve_output_operation.retrieve_output)
+            self.suboperation(
+                'Retrieving the output...',
+                retrieve_output_operation.retrieve_output)
             log_info('Done and dusted.')
             return status.code
         else:
@@ -220,12 +232,14 @@ class RunExecutionOperation(Operation):
             instance_market_spec=instance_market_spec,
             start_metadata={
                 'commit': commit,
-                'configuration': {
-                    k: v
-                    for k, v in configuration.as_dict().items()
-                    # User and project are present in the execution spec
-                    if k not in {'user', 'project'}
-                }
+                'configuration':
+                    {
+                        k: v
+                        for k,
+                        v in configuration.as_dict().items()
+                        # User and project are present in the execution spec
+                        if k not in {'user', 'project'}
+                    }
             },
             parallel_indices_range=configuration.parallel_indices_range,
             indices_per_execution=configuration.indices_per_execution)
@@ -250,8 +264,8 @@ class RunExecutionOperation(Operation):
         return execution_id, ok
 
     @staticmethod
-    def create_execution_spec(configuration: Configuration,
-                              input_id: Optional[str]) -> dict:
+    def create_execution_spec(
+            configuration: Configuration, input_id: Optional[str]) -> dict:
         return {
             'instance_type':
                 configuration.instance_type,
@@ -272,10 +286,8 @@ class RunExecutionOperation(Operation):
         # server asking for the previous one
         return self.execution_id
 
-    def suboperation(self,
-                     name: str,
-                     f: Callable[..., Any],
-                     if_set: bool = True):
+    def suboperation(
+            self, name: str, f: Callable[..., Any], if_set: bool = True):
         if not if_set:
             return
         log_info(name)
@@ -289,18 +301,21 @@ class RunExecutionOperation(Operation):
 
 
 def add_detach_command_line_argument(parser):
-    parser.add_argument('--detach',
-                        '-d',
-                        action='store_true',
-                        default=False,
-                        help='Make CLI exit as soon as the job is '
-                        'running (does not print logs, or download '
-                        'outputs, etc.)')
+    parser.add_argument(
+        '--detach',
+        '-d',
+        action='store_true',
+        default=False,
+        help='Make CLI exit as soon as the job is '
+        'running (does not print logs, or download '
+        'outputs, etc.)')
 
 
 def create_instance_market_spec(configuration: Configuration) -> dict:
     return {
         k: getattr(configuration, k)
-        for k in ('instance_market_type', 'instance_max_idle_time_in_minutes',
-                  'max_bid_price_in_dollars_per_hour')
+        for k in (
+            'instance_market_type',
+            'instance_max_idle_time_in_minutes',
+            'max_bid_price_in_dollars_per_hour')
     }

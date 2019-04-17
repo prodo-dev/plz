@@ -4,7 +4,6 @@ from plz.cli.operation import Operation, on_exception_reraise
 
 class RetrieveHistoryOperation(Operation):
     """Output json describing finished executions for user and project"""
-
     @classmethod
     def name(cls):
         return 'history'

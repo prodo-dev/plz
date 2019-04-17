@@ -15,7 +15,6 @@ from plz.controller.api.exceptions import InstanceStillRunningException
 
 class RetrieveOutputOperation(CompositionOperation):
     """Download output for an execution"""
-
     @classmethod
     def name(cls):
         return 'output'
@@ -33,23 +32,26 @@ class RetrieveOutputOperation(CompositionOperation):
             'Discouraged as the output might be in an inconsistent '
             'state. If the output directory is present it\'ll be '
             'overwritten')
-        parser.add_argument('--path',
-                            '-p',
-                            type=str,
-                            default=None,
-                            help='Download only the path specified')
-        parser.add_argument('--rewrite-subexecutions',
-                            action='store_true',
-                            default=False,
-                            help='When downloading output of subexecutions, ')
+        parser.add_argument(
+            '--path',
+            '-p',
+            type=str,
+            default=None,
+            help='Download only the path specified')
+        parser.add_argument(
+            '--rewrite-subexecutions',
+            action='store_true',
+            default=False,
+            help='When downloading output of subexecutions, ')
 
-    def __init__(self,
-                 configuration: Configuration,
-                 output_dir: str,
-                 force_if_running: bool,
-                 path: Optional[str],
-                 rewrite_subexecutions: bool,
-                 execution_id: Optional[str] = None):
+    def __init__(
+            self,
+            configuration: Configuration,
+            output_dir: str,
+            force_if_running: bool,
+            path: Optional[str],
+            rewrite_subexecutions: bool,
+            execution_id: Optional[str] = None):
         super().__init__(configuration)
         self.output_dir = output_dir
         self.force_if_running = force_if_running
@@ -57,17 +59,19 @@ class RetrieveOutputOperation(CompositionOperation):
         self.rewrite_subexecutions = rewrite_subexecutions
         self.execution_id = execution_id
 
-    def harvest(self,
-                atomic_execution_id: Optional[str] = None,
-                composition_path: Optional[List[Tuple[str, Any]]] = None):
+    def harvest(
+            self,
+            atomic_execution_id: Optional[str] = None,
+            composition_path: Optional[List[Tuple[str, Any]]] = None):
         if atomic_execution_id is None:
             atomic_execution_id = self.get_execution_id()
         if composition_path is None:
             composition_path = []
         try:
-            self.controller.delete_execution(execution_id=atomic_execution_id,
-                                             fail_if_running=True,
-                                             fail_if_deleted=False)
+            self.controller.delete_execution(
+                execution_id=atomic_execution_id,
+                fail_if_running=True,
+                fail_if_deleted=False)
         except InstanceStillRunningException:
             if self.force_if_running or len(composition_path) > 0:
                 log_info('Process is still running')
@@ -116,8 +120,8 @@ class RetrieveOutputOperation(CompositionOperation):
         for path in untar(output_tarball_bytes, formatted_output_dir):
             print(path)
 
-    def run_atomic(self, atomic_execution_id: str,
-                   composition_path: [(str, Any)]):
+    def run_atomic(
+            self, atomic_execution_id: str, composition_path: [(str, Any)]):
         string_prefix = create_path_string_prefix(composition_path)
         if len(string_prefix) > 0:
             message_suffix = f' for {string_prefix[:-1]}'

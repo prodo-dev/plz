@@ -65,15 +65,16 @@ class ServerTest(unittest.TestCase):
         server = Server(host=self.host, port=self.port + 1)
         with self.assertRaises(CLIException) as cm:
             server.get()
-        self.assertEqual(cm.exception.args[0],
-                         "We couldn't establish a connection to the server.")
+        self.assertEqual(
+            cm.exception.args[0],
+            "We couldn't establish a connection to the server.")
 
     def test_handles_timeouts(self):
         server = Server(host=self.host, port=self.port)
         with self.assertRaises(CLIException) as cm:
             server.get(timeout=0.00001)
-        self.assertEqual(cm.exception.args[0],
-                         'Our connection to the server timed out.')
+        self.assertEqual(
+            cm.exception.args[0], 'Our connection to the server timed out.')
 
 
 def create_app():

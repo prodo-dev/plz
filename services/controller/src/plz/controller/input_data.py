@@ -24,9 +24,11 @@ class InputDataConfiguration:
         self.input_dir = input_dir
         self.temp_data_dir = temp_data_dir
 
-    def publish_input_data(self, expected_input_id: str,
-                           metadata: InputMetadata,
-                           input_data_stream: BinaryIO) -> None:
+    def publish_input_data(
+            self,
+            expected_input_id: str,
+            metadata: InputMetadata,
+            input_data_stream: BinaryIO) -> None:
         input_file_path = self.input_file(expected_input_id)
         if os.path.exists(input_file_path):
             input_data_stream.close()
@@ -104,8 +106,9 @@ class InputDataConfiguration:
     def _store_input_id(self, metadata: InputMetadata, input_id: str) -> None:
         field = metadata.redis_field()
         self.redis.hset(_INPUT_ID_KEY, field, input_id)
-        log.debug(field + ': ' +
-                  str(self.get_input_id_from_metadata_or_none(metadata)))
+        log.debug(
+            field + ': ' +
+            str(self.get_input_id_from_metadata_or_none(metadata)))
 
     def _input_file_exists(self, input_id: str) -> bool:
         return os.path.exists(self.input_file(input_id))

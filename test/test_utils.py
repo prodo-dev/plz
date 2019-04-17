@@ -163,15 +163,16 @@ def _print_with_color(color: str, *args: Any):
 
 def remove_volume(volume_name: str):
     if container_exists(volume_name):
-        execute_command(['docker', 'container', 'kill', volume_name],
-                        hide_output=True,
-                        hide_stderr=True,
-                        fail_on_failure=False)
-        execute_command(['docker', 'container', 'rm', volume_name],
-                        hide_output=True)
+        execute_command(
+            ['docker', 'container', 'kill', volume_name],
+            hide_output=True,
+            hide_stderr=True,
+            fail_on_failure=False)
+        execute_command(
+            ['docker', 'container', 'rm', volume_name], hide_output=True)
     if volume_exists(volume_name):
-        execute_command(['docker', 'volume', 'rm', volume_name],
-                        hide_output=True)
+        execute_command(
+            ['docker', 'volume', 'rm', volume_name], hide_output=True)
 
 
 def container_exists(container_name: str) -> bool:
@@ -223,20 +224,27 @@ class DoCleanupContextManager(ContextManager):
 def stop_container(container_name: str):
     if not container_exists(container_name):
         return
-    execute_command(['docker', 'container', 'stop', container_name],
-                    hide_output=True,
-                    fail_on_failure=False)
-    execute_command(['docker', 'container', 'rm', container_name],
-                    hide_output=True,
-                    fail_on_failure=False)
+    execute_command(
+        ['docker', 'container', 'stop', container_name],
+        hide_output=True,
+        fail_on_failure=False)
+    execute_command(
+        ['docker', 'container', 'rm', container_name],
+        hide_output=True,
+        fail_on_failure=False)
 
 
 def remove_all_volumes():
     stdout_holder: List[bytes] = []
-    execute_command([
-        'docker', 'volume', 'ls', '--quiet', f'--filter=name={VOLUME_PREFIX}'
-    ],
-                    stdout_holder=stdout_holder)
+    execute_command(
+        [
+            'docker',
+            'volume',
+            'ls',
+            '--quiet',
+            f'--filter=name={VOLUME_PREFIX}'
+        ],
+        stdout_holder=stdout_holder)
     volumes = str(b''.join(stdout_holder), 'utf-8').splitlines()
     for volume in volumes:
         remove_volume(volume)
@@ -244,11 +252,16 @@ def remove_all_volumes():
 
 def stop_all_clis():
     stdout_holder: List[bytes] = []
-    execute_command([
-        'docker', 'container', 'ls', '--quiet', '--all',
-        f'--filter=name={CLI_CONTAINER_PREFIX}'
-    ],
-                    stdout_holder=stdout_holder)
+    execute_command(
+        [
+            'docker',
+            'container',
+            'ls',
+            '--quiet',
+            '--all',
+            f'--filter=name={CLI_CONTAINER_PREFIX}'
+        ],
+        stdout_holder=stdout_holder)
     containers = b''.join(stdout_holder)
     for container in str(containers, 'utf-8').splitlines():
         stop_container(container)
@@ -262,12 +275,17 @@ def stop_controller():
 
 def stop_all_test_containers():
     stdout_holder = []
-    execute_command([
-        'docker', 'container', 'ls', '-a', '--filter=name=plz.execution.id.',
-        '--format={{.ID}}#{{.Image}}'
-    ],
-                    stdout_holder=stdout_holder,
-                    hide_output=True)
+    execute_command(
+        [
+            'docker',
+            'container',
+            'ls',
+            '-a',
+            '--filter=name=plz.execution.id.',
+            '--format={{.ID}}#{{.Image}}'
+        ],
+        stdout_holder=stdout_holder,
+        hide_output=True)
     for l in str(b''.join(stdout_holder), 'utf-8').splitlines():
         container_id, image = l.split('#', 1)
         if image.startswith(f'plz/builds:{PLZ_USER}-'):
@@ -282,8 +300,11 @@ def docker_compose(*args):
     env['CONTROLLER_CONTAINER'] = CONTROLLER_CONTAINER
     env['DATA_DIRECTORY'] = DATA_DIRECTORY
     env['REDIS_DATA_DIRECTORY'] = REDIS_DATA_DIRECTORY
-    execute_command([
-        'docker-compose', f'--project-name={PROJECT_NAME}',
-        f'--file={os.path.join(TEST_DIRECTORY, "docker-compose.yml")}', *args
-    ],
-                    env=env)
+    execute_command(
+        [
+            'docker-compose',
+            f'--project-name={PROJECT_NAME}',
+            f'--file={os.path.join(TEST_DIRECTORY, "docker-compose.yml")}',
+            *args
+        ],
+        env=env)

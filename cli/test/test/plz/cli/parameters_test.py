@@ -17,8 +17,9 @@ class ParametersTest(unittest.TestCase):
         f = io.StringIO('{this: is, not: json}')
         with self.assertRaises(CLIException) as cm:
             parameters.parse_io(f, 'parameters.json')
-        self.assertEqual(cm.exception.args[0],
-                         'There was an error parsing "parameters.json".')
+        self.assertEqual(
+            cm.exception.args[0],
+            'There was an error parsing "parameters.json".')
 
     def test_reports_when_the_parameters_are_not_a_JSON_object(self):
         f = io.StringIO('42')

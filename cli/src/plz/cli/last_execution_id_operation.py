@@ -7,7 +7,6 @@ from plz.cli.operation import Operation
 
 class LastExecutionIDOperation(Operation):
     """Print the last execution id."""
-
     @classmethod
     def name(cls):
         return 'last'

@@ -17,22 +17,24 @@ READ_BUFFER_SIZE = 16384
 
 class InputData(contextlib.AbstractContextManager):
     @staticmethod
-    def from_configuration(configuration: Configuration,
-                           controller: Controller):
+    def from_configuration(
+            configuration: Configuration, controller: Controller):
         if not configuration.input:
             return NoInputData()
         if configuration.input.startswith('file://'):
             path = configuration.input[len('file://'):]
-            return LocalInputData(controller=controller,
-                                  user=configuration.user,
-                                  project=configuration.project,
-                                  path=path)
+            return LocalInputData(
+                controller=controller,
+                user=configuration.user,
+                project=configuration.project,
+                path=path)
         elif configuration.input.startswith('input_id://'):
             input_id = configuration.input[len('input_id://'):]
-            return LocalInputData(controller=controller,
-                                  user=configuration.user,
-                                  project=configuration.project,
-                                  input_id=input_id)
+            return LocalInputData(
+                controller=controller,
+                user=configuration.user,
+                project=configuration.project,
+                input_id=input_id)
         raise CLIException('Could not parse the configured input.')
 
     @abstractmethod
@@ -49,12 +51,13 @@ class NoInputData(InputData):
 
 
 class LocalInputData(InputData):
-    def __init__(self,
-                 controller: Controller,
-                 user: str,
-                 project: str,
-                 path: Optional[str] = None,
-                 input_id: Optional[str] = None):
+    def __init__(
+            self,
+            controller: Controller,
+            user: str,
+            project: str,
+            path: Optional[str] = None,
+            input_id: Optional[str] = None):
         self.controller = controller
         self.user = user
         self.project = project
@@ -70,8 +73,9 @@ class LocalInputData(InputData):
             return self
 
         if self.path is None:
-            raise ValueError('For input data, neither path nor input id were '
-                             'given')
+            raise ValueError(
+                'For input data, neither path nor input id were '
+                'given')
 
         input_metadata = InputMetadata.of(
             user=self.user,
@@ -89,9 +93,10 @@ class LocalInputData(InputData):
             return self
 
         log_debug('Building the tarball!')
-        files = (os.path.join(directory, file)
-                 for directory, _, files in os.walk(self.path)
-                 for file in files)
+        files = (
+            os.path.join(directory, file) for directory,
+            _,
+            files in os.walk(self.path) for file in files)
         self.tarball = tempfile.NamedTemporaryFile()
         with tarfile.open(self.tarball.name, mode='w:bz2') as tar:
             for file in files:
@@ -115,8 +120,9 @@ class LocalInputData(InputData):
 
         input_id = self._compute_input_id()
         if not self._has_input(input_id):
-            log_info(f'{os.path.getsize(self.tarball.name)} input bytes to '
-                     'upload')
+            log_info(
+                f'{os.path.getsize(self.tarball.name)} input bytes to '
+                'upload')
             self._put_tarball(input_id)
         return input_id
 
@@ -145,9 +151,10 @@ class LocalInputData(InputData):
             project=self.project,
             path=self.path,
             timestamp_millis=self.timestamp_millis)
-        self.controller.put_input(input_id=input_id,
-                                  input_metadata=input_metadata,
-                                  input_data_stream=self.tarball)
+        self.controller.put_input(
+            input_id=input_id,
+            input_metadata=input_metadata,
+            input_data_stream=self.tarball)
 
     @property
     def timestamp_millis(self) -> int:
@@ -155,7 +162,7 @@ class LocalInputData(InputData):
             modified_timestamps_in_seconds = [
                 os.path.getmtime(path[0]) for path in os.walk(self.path)
             ]
-            max_timestamp_in_seconds = max([0] +
-                                           modified_timestamps_in_seconds)
+            max_timestamp_in_seconds = max(
+                [0] + modified_timestamps_in_seconds)
             self._timestamp_millis = int(max_timestamp_in_seconds * 1000)
         return self._timestamp_millis

@@ -51,13 +51,9 @@ setup(
         'test': [
             'flake8==3.5.0',
             'nose==1.3.7',
-            'flask >= 1.0.2',
-        ],
-    },
+            'flask >= 1.0.2', ], },
     entry_points={
-        'console_scripts': ['plz=plz.cli.main:main'],
-    },
+        'console_scripts': ['plz=plz.cli.main:main'], },
     project_urls={
-        'Bug Reports': 'https://github.com/prodo-ai/plz/issues',
-    },
+        'Bug Reports': 'https://github.com/prodo-ai/plz/issues', },
 )
