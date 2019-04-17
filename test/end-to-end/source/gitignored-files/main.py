@@ -10,4 +10,4 @@ for file_name in [
 
 for path in ['file_managed_by_git_excluded', 'file_ignored_by_git', '.git/']:
     if os.path.exists(path):
-        raise Exception(f'File {file_name} shouldn\'t be here')
+        raise Exception(f'File {path} shouldn\'t be here')
