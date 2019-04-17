@@ -57,12 +57,12 @@ def get_included_and_excluded_files(context_path: [str], excluded_paths: [str],
                            include_hidden=True)
 
     included_paths = {
-        ip
+        tuple(ip.split(os.sep))
         for p in included_paths for ip in abs_path_glob_including_snapshot(p)
     }
 
     excluded_paths = {
-        ip
+        tuple(ip.split(os.sep))
         for p in excluded_paths for ip in abs_path_glob_including_snapshot(p)
     }
 
@@ -82,11 +82,13 @@ def get_included_and_excluded_files(context_path: [str], excluded_paths: [str],
     included_files = set()
     excluded_files = set()
     for f in context_files:
-        f_split = os.path.split(f)
+        f_split = tuple(f.split(os.sep))
         f_prefixes = {
-            os.path.join(*f_split[0:i + 1])
-            for i in range(1, len(f_split))
+            f_split[0:i + 1]
+            for i in range(0, len(f_split))
         }
+        # A file matches a excluded path if one of it prefixes is a excluded
+        # path. Same for included
         if len(f_prefixes.intersection(excluded_paths)) and (not len(
                 f_prefixes.intersection(included_paths))):
             excluded_files.add(strip_context_path(f))
