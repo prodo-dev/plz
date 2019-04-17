@@ -84,7 +84,7 @@ def get_included_and_excluded_files(context_path: [str], excluded_paths: [str],
     excluded_files = set()
     for f in context_files:
         f_split = tuple(f.split(os.sep))
-        f_prefixes = {f_split[0:i] for i in range(0, len(f_split))}
+        f_prefixes = {f_split[0:i + 1] for i in range(0, len(f_split))}
         # A file matches a excluded path if one of it prefixes is a excluded
         # path. Same for included
         if len(f_prefixes.intersection(excluded_paths_tuples)) and (not len(
