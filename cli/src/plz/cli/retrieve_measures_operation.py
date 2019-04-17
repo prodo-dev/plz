@@ -15,27 +15,25 @@ class RetrieveMeasuresOperation(CompositionOperation):
     @classmethod
     def prepare_argument_parser(cls, parser, args):
         cls.maybe_add_execution_id_arg(parser, args)
-        parser.add_argument(
-            '-s',
-            '--summary',
-            action='store_true',
-            help='Retrieve only the summary measures')
+        parser.add_argument('-s',
+                            '--summary',
+                            action='store_true',
+                            help='Retrieve only the summary measures')
         parser.set_defaults(summary=False)
 
-    def __init__(
-            self,
-            configuration: Configuration,
-            summary: bool,
-            execution_id: Optional[str] = None):
+    def __init__(self,
+                 configuration: Configuration,
+                 summary: bool,
+                 execution_id: Optional[str] = None):
         super().__init__(configuration)
         self.summary = summary
         self.execution_id = execution_id
 
     @on_exception_reraise('Retrieving the measures failed.')
-    def retrieve_measures(
-            self,
-            atomic_execution_id: Optional[str] = None,
-            composition_path: Optional[List[Tuple[str, Any]]] = None):
+    def retrieve_measures(self,
+                          atomic_execution_id: Optional[str] = None,
+                          composition_path: Optional[List[Tuple[str,
+                                                                Any]]] = None):
         if composition_path is None:
             composition_path = []
         if atomic_execution_id is None:
@@ -51,6 +49,8 @@ class RetrieveMeasuresOperation(CompositionOperation):
         for line in json_strings:
             print(create_path_string_prefix(composition_path) + line, end='')
 
-    def run_atomic(
-            self, atomic_execution_id: str, composition_path: [(str, Any)]):
+    def run_atomic(self,
+                   atomic_execution_id: str,
+                   composition_path: [(str,
+                                       Any)]):
         self.retrieve_measures(atomic_execution_id, composition_path)

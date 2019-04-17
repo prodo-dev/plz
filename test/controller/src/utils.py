@@ -15,25 +15,26 @@ dir_of_this_script = os.path.dirname(os.path.abspath(__file__))
 
 
 class TestingContext:
-    def __init__(
-            self,
-            configuration: Configuration,
-            controller: Controller,
-            snapshot_id: str):
+    def __init__(self,
+                 configuration: Configuration,
+                 controller: Controller,
+                 snapshot_id: str):
         self.configuration = configuration
         self.controller = controller
         self.snapshot_id = snapshot_id
 
 
-def create_context_for_example(
-        example_type: str, example_name: str,
-        is_end_to_end_path: bool) -> TestingContext:
+def create_context_for_example(example_type: str,
+                               example_name: str,
+                               is_end_to_end_path: bool) -> TestingContext:
     if is_end_to_end_path:
         path_to_example = ['..', '..', 'end-to-end']
     else:
         path_to_example = ['..', 'contexts']
-    example_dir = os.path.join(
-        dir_of_this_script, *path_to_example, example_type, example_name)
+    example_dir = os.path.join(dir_of_this_script,
+                               *path_to_example,
+                               example_type,
+                               example_name)
     configuration = Configuration.load(example_dir)
     configuration.context_path = example_dir
     configuration.instance_market_type = 'spot'
@@ -61,10 +62,9 @@ def create_context_for_example(
             controller=controller,
             build_context=build_context,
             quiet_build=True)
-        return TestingContext(
-            configuration=configuration,
-            controller=ControllerProxy(server),
-            snapshot_id=snapshot_id)
+        return TestingContext(configuration=configuration,
+                              controller=ControllerProxy(server),
+                              snapshot_id=snapshot_id)
 
 
 def run_example(
@@ -81,11 +81,13 @@ def run_example(
     parameters = parameters if parameters is not None else {}
     start_metadata = start_metadata if start_metadata is not None else {}
     if context is None:
-        context = create_context_for_example(
-            example_type, example_name, is_end_to_end_path)
+        context = create_context_for_example(example_type,
+                                             example_name,
+                                             is_end_to_end_path)
     instance_market_spec = create_instance_market_spec(context.configuration)
     execution_spec = RunExecutionOperation.create_execution_spec(
-        context.configuration, input_id)
+        context.configuration,
+        input_id)
     response_dicts = context.controller.run_execution(
         context.snapshot_id,
         parameters=parameters,
@@ -133,8 +135,8 @@ def harvest():
     controller.harvest()
 
 
-def create_file_map_from_tarball(tarball_bytes: Iterator[bytes]
-                                 ) -> Dict[str, str]:
+def create_file_map_from_tarball(tarball_bytes: Iterator[bytes]) -> Dict[str,
+                                                                         str]:
     # The first parameter is a tarball we need to extract into `output_dir`.
     with tempfile.TemporaryFile() as tarball:
         # `tarfile.open` needs to read from a real file, so we copy to one.
@@ -160,8 +162,9 @@ def create_file_map_from_tarball(tarball_bytes: Iterator[bytes]
         return tarball_to_file_map
 
 
-def get_execution_listing_status(
-        user: str, controller: Controller, execution_id: str) -> Optional[str]:
+def get_execution_listing_status(user: str,
+                                 controller: Controller,
+                                 execution_id: str) -> Optional[str]:
     executions = controller.list_executions(user, list_for_all_users=False)
     for execution in executions:
         if execution['execution_id'] == execution_id:

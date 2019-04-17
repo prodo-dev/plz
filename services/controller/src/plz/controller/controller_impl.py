@@ -37,21 +37,23 @@ class ControllerImpl(Controller):
             dependencies.instance_provider
         self.db_storage: DBStorage = dependencies.db_storage
         self.redis: StrictRedis = dependencies.redis
-        self.executions: Executions = Executions(
-            dependencies.results_storage, self.instance_provider)
+        self.executions: Executions = Executions(dependencies.results_storage,
+                                                 self.instance_provider)
         data_dir = config['data_dir']
         input_dir = os.path.join(data_dir, 'input')
         temp_data_dir = os.path.join(data_dir, 'tmp')
         os.makedirs(input_dir, exist_ok=True)
         os.makedirs(temp_data_dir, exist_ok=True)
         self.input_data_configuration = InputDataConfiguration(
-            self.redis, input_dir=input_dir, temp_data_dir=temp_data_dir)
+            self.redis,
+            input_dir=input_dir,
+            temp_data_dir=temp_data_dir)
         self.log = log
 
     # noinspection PyMethodMayBeStatic
-    def ping(
-            self, ping_timeout: int,
-            build_timestamp: Optional[int] = None) -> dict:
+    def ping(self,
+             ping_timeout: int,
+             build_timestamp: Optional[int] = None) -> dict:
         # This is plz, and we're up and running
         return {
             # This is plz, and we're up and running
@@ -76,14 +78,13 @@ class ControllerImpl(Controller):
             indices_per_execution=indices_per_execution,
             previous_execution_id=None)
 
-    def rerun_execution(
-            self,
-            user: str,
-            project: str,
-            instance_max_uptime_in_minutes: Optional[int],
-            override_parameters: Optional[dict],
-            previous_execution_id: str,
-            instance_market_spec: dict) -> Iterator[dict]:
+    def rerun_execution(self,
+                        user: str,
+                        project: str,
+                        instance_max_uptime_in_minutes: Optional[int],
+                        override_parameters: Optional[dict],
+                        previous_execution_id: str,
+                        instance_market_spec: dict) -> Iterator[dict]:
         start_metadata = self.db_storage.retrieve_start_metadata(
             previous_execution_id)
 
@@ -132,15 +133,18 @@ class ControllerImpl(Controller):
             -> Iterator[bytes]:
         return self.executions.get(execution_id).get_logs(since=since)
 
-    def get_output_files(
-            self, execution_id: str, path: Optional[str],
-            index: Optional[str]) -> Iterator[bytes]:
+    def get_output_files(self,
+                         execution_id: str,
+                         path: Optional[str],
+                         index: Optional[str]) -> Iterator[bytes]:
         return self.executions.get(execution_id).get_output_files_tarball(
-            path, index)
+            path,
+            index)
 
-    def get_measures(
-            self, execution_id: str, summary: bool,
-            index: Optional[int]) -> Iterator[JSONString]:
+    def get_measures(self,
+                     execution_id: str,
+                     summary: bool,
+                     index: Optional[int]) -> Iterator[JSONString]:
         measures = self.executions.get(execution_id).get_measures(index)
         if summary:
             measures_to_return = measures.get('summary', {})
@@ -157,9 +161,10 @@ class ControllerImpl(Controller):
         for l in str_response.splitlines(keepends=True):
             yield l
 
-    def delete_execution(
-            self, execution_id: str, fail_if_running: bool,
-            fail_if_deleted: bool) -> None:
+    def delete_execution(self,
+                         execution_id: str,
+                         fail_if_running: bool,
+                         fail_if_deleted: bool) -> None:
         response = jsonify({})
         status = self.executions.get(execution_id).get_status()
         if fail_if_running and status.running:
@@ -167,14 +172,15 @@ class ControllerImpl(Controller):
         instance = self.instance_provider.instance_for(execution_id)
         if fail_if_deleted and instance is None:
             raise ExecutionAlreadyHarvestedException(execution_id)
-        self.instance_provider.release_instance(
-            execution_id, fail_if_not_found=False)
+        self.instance_provider.release_instance(execution_id,
+                                                fail_if_not_found=False)
         response.status_code = requests.codes.no_content
         return response
 
     def get_history(self, user: str, project: str) -> Iterator[JSONString]:
         execution_ids = self.db_storage.retrieve_finished_execution_ids(
-            user, project)
+            user,
+            project)
 
         yield '{\n'
         first = True
@@ -189,28 +195,32 @@ class ControllerImpl(Controller):
     def create_snapshot(self, image_metadata: dict, context: BinaryIO) -> \
             Iterator[JSONString]:
         tag = Images.construct_tag(image_metadata)
-        yield from (
-            frag.decode('utf-8') for frag in self.images.build(context, tag))
+        yield from (frag.decode('utf-8')
+                    for frag in self.images.build(context,
+                                                  tag))
         self.instance_provider.push(tag)
         yield json.dumps({'id': tag})
 
-    def put_input(
-            self,
-            input_id: str,
-            input_metadata: InputMetadata,
-            input_data_stream: BinaryIO) -> None:
+    def put_input(self,
+                  input_id: str,
+                  input_metadata: InputMetadata,
+                  input_data_stream: BinaryIO) -> None:
         if not input_metadata.has_all_args_or_none():
             raise BadInputMetadataException(input_metadata.__dict__)
         self.input_data_configuration.publish_input_data(
-            input_id, input_metadata, request.stream)
+            input_id,
+            input_metadata,
+            request.stream)
         return jsonify({'id': input_id})
 
-    def check_input_data(
-            self, input_id: str, input_metadata: InputMetadata) -> bool:
+    def check_input_data(self,
+                         input_id: str,
+                         input_metadata: InputMetadata) -> bool:
         if not input_metadata.has_all_args_or_none():
             raise BadInputMetadataException(input_metadata.__dict__)
         return self.input_data_configuration.check_input_data(
-            input_id, input_metadata)
+            input_id,
+            input_metadata)
 
     def get_input_id_or_none(self,
                              input_metadata: InputMetadata) -> Optional[str]:
@@ -235,13 +245,12 @@ class ControllerImpl(Controller):
         else:
             return None
 
-    def kill_instances(
-            self,
-            user: str,
-            instance_ids: Optional[List[str]],
-            ignore_ownership: bool,
-            including_idle: Optional[bool],
-            force_if_not_idle: bool) -> bool:
+    def kill_instances(self,
+                       user: str,
+                       instance_ids: Optional[List[str]],
+                       ignore_ownership: bool,
+                       including_idle: Optional[bool],
+                       force_if_not_idle: bool) -> bool:
         try:
             self.instance_provider.kill_instances(
                 instance_ids=instance_ids,
@@ -270,23 +279,25 @@ class ControllerImpl(Controller):
 
     def _set_user_last_execution_id(self, user: str, execution_id: str) \
             -> None:
-        self.redis.set(
-            f'key:{__name__}#user_last_execution_id:{user}', execution_id)
+        self.redis.set(f'key:{__name__}#user_last_execution_id:{user}',
+                       execution_id)
 
-    def _do_run_execution(
-            self,
-            snapshot_id: str,
-            parameters: dict,
-            instance_market_spec: dict,
-            execution_spec: dict,
-            start_metadata: dict,
-            parallel_indices_range: Optional[Tuple[int, int]],
-            indices_per_execution: Optional[int],
-            previous_execution_id: Optional[str]) -> Iterator[dict]:
+    def _do_run_execution(self,
+                          snapshot_id: str,
+                          parameters: dict,
+                          instance_market_spec: dict,
+                          execution_spec: dict,
+                          start_metadata: dict,
+                          parallel_indices_range: Optional[Tuple[int,
+                                                                 int]],
+                          indices_per_execution: Optional[int],
+                          previous_execution_id: Optional[str]
+                          ) -> Iterator[dict]:
         execution_id = str(_get_execution_uuid())
 
         composition = ExecutionComposition.from_parallel_indices_range(
-            parallel_indices_range, execution_id)
+            parallel_indices_range,
+            execution_id)
 
         all_metadatas = composition.create_metadatas_for_all_executions(
             snapshot_id,
@@ -324,25 +335,28 @@ class ControllerImpl(Controller):
                     ex_spec)
 
             statuses_generators = [
-                status_generator(
-                    m['execution_id'],
-                    m['execution_spec'],
-                    self.input_data_configuration) for m in metadatas_to_run
+                status_generator(m['execution_id'],
+                                 m['execution_spec'],
+                                 self.input_data_configuration)
+                for m in metadatas_to_run
             ]
 
             instances = [None for _ in statuses_generators]
 
-            yield from _create_instances(
-                composition, instances, metadatas_to_run, statuses_generators)
+            yield from _create_instances(composition,
+                                         instances,
+                                         metadatas_to_run,
+                                         statuses_generators)
 
             indices_without_instance = [
-                i for (i, instance) in enumerate(instances) if instance is None
+                i for (i,
+                       instance) in enumerate(instances) if instance is None
             ]
 
             if len(indices_without_instance) > 0:
                 for i in indices_without_instance:
-                    status_prefix = _status_prefix(
-                        composition, metadatas_to_run[i])
+                    status_prefix = _status_prefix(composition,
+                                                   metadatas_to_run[i])
                     yield {
                         'error': status_prefix + 'Couldn\'t get an instance'
                     }
@@ -364,11 +378,10 @@ def _get_execution_uuid() -> str:
 log = logging.getLogger(__name__)
 
 
-def _create_instances(
-        composition: ExecutionComposition,
-        instances: [Optional[Instance]],
-        metadatas_to_run: [dict],
-        statuses_generators: [Iterator[dict]]) -> Iterator[dict]:
+def _create_instances(composition: ExecutionComposition,
+                      instances: [Optional[Instance]],
+                      metadatas_to_run: [dict],
+                      statuses_generators: [Iterator[dict]]) -> Iterator[dict]:
     # Whether was there a status update
     was_there_status = True
     while was_there_status:
@@ -382,8 +395,8 @@ def _create_instances(
                 continue
             was_there_status = True
             if 'message' in status:
-                status_prefix = _status_prefix(
-                    composition, metadatas_to_run[i])
+                status_prefix = _status_prefix(composition,
+                                               metadatas_to_run[i])
                 yield {'status': status_prefix + status['message']}
             if 'instance' in status:
                 instances[i] = status['instance']

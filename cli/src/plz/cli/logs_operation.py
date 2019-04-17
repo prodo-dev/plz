@@ -29,11 +29,10 @@ class LogsOperation(Operation):
             'assumed to be same as of current time: `10:30` is today\'s '
             '10:30. Use `start` to print all logs')
 
-    def __init__(
-            self,
-            configuration: Configuration,
-            since: Optional[str],
-            execution_id: Optional[str] = None):
+    def __init__(self,
+                 configuration: Configuration,
+                 since: Optional[str],
+                 execution_id: Optional[str] = None):
         super().__init__(configuration)
         self.execution_id = execution_id
         self.since = since
@@ -48,20 +47,19 @@ class LogsOperation(Operation):
 
         try:
             if len(atomic_executions) == 1:
-                byte_lines = self.controller.get_logs(
-                    self.get_execution_id(), since=since_timestamp)
+                byte_lines = self.controller.get_logs(self.get_execution_id(),
+                                                      since=since_timestamp)
                 for byte_line in byte_lines:
                     print(byte_line.decode('utf-8'), end='', flush=True)
             else:
-                self._print_logs_for_composite(
-                    atomic_executions, since_timestamp)
+                self._print_logs_for_composite(atomic_executions,
+                                               since_timestamp)
         except KeyboardInterrupt:
             print()
             if print_interrupt_message:
-                log_info(
-                    'Your program is still running. '
-                    'To stream the logs, type:\n\n'
-                    f'        plz logs {self.get_execution_id()}\n')
+                log_info('Your program is still running. '
+                         'To stream the logs, type:\n\n'
+                         f'        plz logs {self.get_execution_id()}\n')
             raise
         print()
 
@@ -70,14 +68,12 @@ class LogsOperation(Operation):
             -> None:
         lines_queue = Queue()
         for e in atomic_executions:
-            t = Thread(
-                target=_queue_log_lines,
-                args=(
-                    self.controller,
-                    lines_queue,
-                    e,
-                    since_timestamp,
-                    self.configuration.debug))
+            t = Thread(target=_queue_log_lines,
+                       args=(self.controller,
+                             lines_queue,
+                             e,
+                             since_timestamp,
+                             self.configuration.debug))
             t.start()
         end_signals = 0
         while end_signals < len(atomic_executions):
@@ -119,12 +115,11 @@ class LogsOperation(Operation):
             pass
 
 
-def _queue_log_lines(
-        controller: Controller,
-        lines_queue: Queue,
-        execution_id: str,
-        since_timestamp: Optional[str],
-        debug: bool) -> None:
+def _queue_log_lines(controller: Controller,
+                     lines_queue: Queue,
+                     execution_id: str,
+                     since_timestamp: Optional[str],
+                     debug: bool) -> None:
     # noinspection PyBroadException
     try:
         byte_lines = controller.get_logs(execution_id, since_timestamp)

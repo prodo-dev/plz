@@ -6,10 +6,10 @@ from plz.controller.images.images_base import Images
 
 
 class LocalImages(Images):
-    def __init__(
-            self,
-            docker_api_client_creator: Callable[[], docker.APIClient],
-            repository: str):
+    def __init__(self,
+                 docker_api_client_creator: Callable[[],
+                                                     docker.APIClient],
+                 repository: str):
         super().__init__(docker_api_client_creator, repository)
 
     def build(self, fileobj: BinaryIO, tag: str) -> Iterator[bytes]:
