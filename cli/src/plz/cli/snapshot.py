@@ -56,15 +56,14 @@ def get_included_and_excluded_files(context_path: [str], excluded_paths: [str],
                            recursive=True,
                            include_hidden=True)
 
-    included_paths = {
-        tuple(ip.split(os.sep))
-        for p in included_paths for ip in abs_path_glob_including_snapshot(p)
-    }
+    def paths_as_tuples(path_generators):
+        return {tuple(p.split(os.sep)) for pp in path_generators for p in pp}
 
-    excluded_paths = {
-        tuple(ip.split(os.sep))
-        for p in excluded_paths for ip in abs_path_glob_including_snapshot(p)
-    }
+    included_paths_tuples = paths_as_tuples(
+        abs_path_glob_including_snapshot(p) for p in included_paths)
+
+    excluded_paths_tuples = paths_as_tuples(
+        abs_path_glob_including_snapshot(p) for p in excluded_paths)
 
     # Add the git ignored files if specified in the config
     # A value of None for exclude_gitignored_files means "exclude if git is
@@ -72,8 +71,10 @@ def get_included_and_excluded_files(context_path: [str], excluded_paths: [str],
     use_git = exclude_gitignored_files or (exclude_gitignored_files is None
                                            and is_git_present(context_path))
     if use_git:
-        excluded_paths.update(get_ignored_git_files(context_path))
-        excluded_paths.add(abs_path_glob_including_snapshot('.git'))
+        excluded_paths_tuples.update(
+            paths_as_tuples([get_ignored_git_files(context_path)]))
+        excluded_paths_tuples.update(
+            paths_as_tuples([abs_path_glob_including_snapshot('.git')]))
 
     def strip_context_path(f):
         return f[len(os.path.abspath(context_path)) + len(os.sep):]
@@ -86,8 +87,8 @@ def get_included_and_excluded_files(context_path: [str], excluded_paths: [str],
         f_prefixes = {f_split[0:i + 1] for i in range(0, len(f_split))}
         # A file matches a excluded path if one of it prefixes is a excluded
         # path. Same for included
-        if len(f_prefixes.intersection(excluded_paths)) and (not len(
-                f_prefixes.intersection(included_paths))):
+        if len(f_prefixes.intersection(excluded_paths_tuples)) and (not len(
+                f_prefixes.intersection(included_paths_tuples))):
             excluded_files.add(strip_context_path(f))
         else:
             included_files.add(strip_context_path(f))
