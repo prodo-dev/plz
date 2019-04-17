@@ -32,6 +32,7 @@ class ListContextOperation(Operation):
             excluded_paths=self.configuration.excluded_paths,
             included_paths=self.configuration.included_paths,
             exclude_gitignored_files=exclude_gitignored_files)
-        for p in sorted(list(
-                excluded_paths if self.excluded_paths else included_paths)):
-                print(p)
+        for p in sorted(
+                list(excluded_paths if self.excluded_paths else included_paths)
+        ):
+            print(p)

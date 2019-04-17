@@ -42,8 +42,7 @@ def capture_build_context(image: str, image_extensions: [str], command: [str],
         build_context = docker.utils.build.create_archive(
             root=os.path.abspath(context_path),
             files=included_files,
-            gzip=True
-        )
+            gzip=True)
         print('Capture: After')
     finally:
         if dockerfile_created:
@@ -51,24 +50,23 @@ def capture_build_context(image: str, image_extensions: [str], command: [str],
     return build_context
 
 
-def get_included_and_excluded_files(
-        context_path: [str],
-        excluded_paths: [str],
-        included_paths: [str],
-        exclude_gitignored_files: bool) -> ({str}, {str}):
+def get_included_and_excluded_files(context_path: [str], excluded_paths: [str],
+                                    included_paths: [str],
+                                    exclude_gitignored_files: bool
+                                    ) -> ({str}, {str}):
     def abs_path_glob_including_snapshot(p):
         return glob2.iglob(os.path.abspath(os.path.join(context_path, p)),
                            recursive=True,
                            include_hidden=True)
 
     included_paths = {
-        ip for p in included_paths
-        for ip in abs_path_glob_including_snapshot(p)
+        ip
+        for p in included_paths for ip in abs_path_glob_including_snapshot(p)
     }
 
     excluded_paths = {
-        ip for p in excluded_paths
-        for ip in abs_path_glob_including_snapshot(p)
+        ip
+        for p in excluded_paths for ip in abs_path_glob_including_snapshot(p)
     }
 
     # Add the git ignored files if specified in the config
@@ -88,10 +86,12 @@ def get_included_and_excluded_files(
     excluded_files = set()
     for f in context_files:
         f_split = os.path.split(f)
-        f_prefixes = {os.path.join(*f_split[0:i + 1])
-                      for i in range(1, len(f_split))}
-        if len(f_prefixes.intersection(excluded_paths)) and (
-                not len(f_prefixes.intersection(included_paths))):
+        f_prefixes = {
+            os.path.join(*f_split[0:i + 1])
+            for i in range(1, len(f_split))
+        }
+        if len(f_prefixes.intersection(excluded_paths)) and (not len(
+                f_prefixes.intersection(included_paths))):
             excluded_files.add(strip_context_path(f))
         else:
             included_files.add(strip_context_path(f))
