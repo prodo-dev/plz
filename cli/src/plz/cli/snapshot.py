@@ -1,4 +1,3 @@
-import itertools
 import json
 import os
 from typing import BinaryIO
@@ -74,10 +73,10 @@ def get_included_and_excluded_files(context_path: [str], excluded_paths: [str],
         excluded_paths_tuples.update(
             paths_as_tuples([get_ignored_git_files(context_path)]))
         excluded_paths_tuples.update(
-            paths_as_tuples([abs_path_glob_including_snapshot('.git')]))
+            paths_as_tuples(abs_path_glob_including_snapshot('.git')))
 
-    def strip_context_path(f):
-        return f[len(os.path.abspath(context_path)) + len(os.sep):]
+    def strip_context_from_file(fil):
+        return fil[len(os.path.abspath(context_path)) + len(os.sep):]
 
     context_files = abs_path_glob_including_snapshot('**')
     included_files = set()
