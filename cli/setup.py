@@ -46,6 +46,8 @@ setup(
         'python-dateutil >= 2.7.3',
         'requests >= 2.20.0',
         'urllib3 >= 1.23',
+        # Current version of requests is incompatible with urllib3 1.25
+        'urllib3 <= 1.24.2',
     ],
     extras_require={
         'test': [
