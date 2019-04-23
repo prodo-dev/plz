@@ -1,6 +1,6 @@
 from plz.cli.configuration import Configuration
 from plz.cli.operation import Operation
-from plz.cli.snapshot import get_context_files, get_matching_excluded_paths
+from plz.cli.snapshot import get_included_and_excluded_files
 
 
 class ListContextOperation(Operation):
@@ -27,15 +27,12 @@ class ListContextOperation(Operation):
         exclude_gitignored_files = \
             self.configuration.exclude_gitignored_files
         context_path = self.configuration.context_path
-        matching_excluded_paths = get_matching_excluded_paths(
+        included_paths, excluded_paths = get_included_and_excluded_files(
             context_path=context_path,
             excluded_paths=self.configuration.excluded_paths,
             included_paths=self.configuration.included_paths,
             exclude_gitignored_files=exclude_gitignored_files)
-        if self.excluded_paths:
-            for p in sorted(list(set(matching_excluded_paths))):
-                print(p)
-            return
-        for f in sorted(
-                get_context_files(context_path, matching_excluded_paths)):
-            print(f)
+        for p in sorted(
+                list(excluded_paths if self.excluded_paths else included_paths)
+        ):
+            print(p)
