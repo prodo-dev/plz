@@ -47,6 +47,8 @@ setup(
         'requests >= 2.20.0',
         # Current version of requests is incompatible with urllib3 1.25,
         # forcing it to be at most 1.24.2
+        # See issue https://github.com/prodo-ai/plz/issues/252
+        # and PR https://github.com/prodo-ai/plz/pull/251 
         'urllib3 >= 1.23, <= 1.24.2',
     ],
     extras_require={
