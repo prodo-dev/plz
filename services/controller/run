@@ -20,12 +20,22 @@ if [[ "${CREATE_AWS_RESOURCES:-}" ]]; then
   python src/plz/controller/utils/create_aws_resources.py
 fi
 
-exec gunicorn \
-  --bind="0.0.0.0:${PORT}" \
-  --workers=16 \
-  --timeout=2000 \
-  --pythonpath="${PYTHONPATH}" \
-  --capture-output \
-  --log-level="${LOG_LEVEL}" \
-  plz.controller.main:app \
-  -- $@
+CONFIGURATION+=$'\n'
+CONFIGURATION+='data_dir = ../../test_cache/'$'\n'
+CONFIGURATION+='results = {'$'\n'
+CONFIGURATION+='  directory = ../../test_cache/results'$'\n'
+CONFIGURATION+='}'$'\n'
+CONFIGURATION+='redis_host=localhost'$'\n'
+
+echo Here
+CONFIGURATION="$CONFIGURATION" PORT=$PORT coverage run --source=. src/plz/controller/main.py
+
+# exec gunicorn \
+#   --bind="0.0.0.0:${PORT}" \
+#  --workers=16 \
+#  --timeout=2000 \
+#  --pythonpath="${PYTHONPATH}" \
+#  --capture-output \
+#  --log-level="${LOG_LEVEL}" \
+#  plz.controller.main:app \
+#  -- $@
