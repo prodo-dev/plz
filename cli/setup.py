@@ -53,9 +53,10 @@ setup(
     ],
     extras_require={
         'test': [
-            'flake8==3.5.0',
-            'nose==1.3.7',
+            'flake8>=3.5.0',
+            'nose>=1.3.7',
             'flask >= 1.0.2',
+            'coverage >= 4.5.3',
         ],
     },
     entry_points={

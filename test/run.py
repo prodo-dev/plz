@@ -7,13 +7,15 @@ import sys
 from glob import glob
 from typing import List, Optional, Set
 
+import time
+
 import test_utils
 from run_end_to_end_test import run_end_to_end_test
 from test_utils import CLI_BUILDER_IMAGE, CLI_IMAGE, \
     CONTROLLER_CONTAINER, CONTROLLER_HOSTNAME, CONTROLLER_IMAGE, \
     CONTROLLER_PORT, CONTROLLER_TESTS_CONTAINER, CONTROLLER_TESTS_IMAGE, \
-    DATA_DIRECTORY, PLZ_ROOT_DIRECTORY, PLZ_USER, TEST_DIRECTORY, \
-    docker_compose, get_network
+    COVERAGE_RESULTS_DIRECTORY, DATA_DIRECTORY, PLZ_ROOT_DIRECTORY, PLZ_USER, \
+    TEST_DIRECTORY, docker_compose, get_network
 
 
 def start_controller():

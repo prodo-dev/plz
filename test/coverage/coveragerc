@@ -1,0 +1,19 @@
+[paths]
+# The containers that run the CLI install plz at the system level
+cli_source =
+    cli/src/plz/cli
+    /usr/*/plz/cli
+# The CLI uses the api submodule of the controller
+controller_api_source =
+    services/controller/src/plz/controller
+    /usr/*/plz/controller
+# The container for the controller has the code inside src/src
+controller_container_source =
+    services/controller/src/
+    /src/src
+
+[report]
+# Do not count "pass" lines in abstract methods and properties
+exclude_lines =
+    pragma: no cover
+    @abstract

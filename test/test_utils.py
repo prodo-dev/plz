@@ -7,6 +7,8 @@ import sys
 import traceback
 from typing import Any, ContextManager, List, Optional, Tuple
 
+import time
+
 PROJECT_NAME = 'plztest'
 VOLUME_PREFIX = f'{PROJECT_NAME}_data_'
 CLI_BUILDER_IMAGE = f'{PROJECT_NAME}/cli-builder'
@@ -29,6 +31,8 @@ CONTROLLER_PORT = 80
 TEST_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 PLZ_ROOT_DIRECTORY = os.path.abspath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+COVERAGE_RESULTS_DIRECTORY = os.path.join(TEST_DIRECTORY, 'coverage',
+                                          'results')
 
 DATA_DIRECTORY = f'{PLZ_ROOT_DIRECTORY}/test_cache/'
 REDIS_DATA_DIRECTORY = f'{DATA_DIRECTORY}/redis_data/'
@@ -255,6 +259,16 @@ def stop_all_clis():
 
 
 def stop_controller():
+    if 'PLZ_HOST' not in os.environ:
+        # Unless we interrupt the server before stopping, coverage won't write
+        # the report
+        execute_command(
+            ['docker', 'kill', '--signal=INT', CONTROLLER_CONTAINER])
+        execute_command([
+            'docker', 'container', 'cp',
+            f'{CONTROLLER_CONTAINER}:/src/controller.coverage',
+            os.path.join(COVERAGE_RESULTS_DIRECTORY, 'controller.coverage')
+        ])
     docker_compose('stop')
     docker_compose('logs')
     docker_compose('down', '--volumes')

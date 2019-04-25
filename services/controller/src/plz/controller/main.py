@@ -22,7 +22,7 @@ ResponseGenerator = Iterator[Union[bytes, str]]
 ResponseGeneratorFunction = Callable[[], ResponseGenerator]
 
 config = configuration.load()
-port = 5123
+port = config.get_int('port', 8080)
 
 
 def _setup_logging():

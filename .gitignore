@@ -22,3 +22,7 @@ dist
 # Terraform
 .terraform
 *.tfstate.backup
+
+# Coverage results
+*.coverage
+test/coverage/results/

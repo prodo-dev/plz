@@ -11,7 +11,8 @@ gunicorn = "*"
 pyhocon = "*"
 redis = "*"
 requests = ">=2.20.0"
-yapf = "*"
 
 [dev-packages]
-"flake8" = "*"
+coverage = "*"
+flake8 = "*"
+yapf = "*"

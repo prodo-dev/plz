@@ -5,4 +5,4 @@ check: test lint
 
 .PHONY: test
 test: environment
-	pipenv run nosetests
+	COVERAGE_FILE=../test/coverage/results/cli_nose_tests.coverage pipenv run coverage run --source=. -m nose
