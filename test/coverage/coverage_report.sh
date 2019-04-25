@@ -16,6 +16,7 @@ RCFILE="${DIR_OF_THIS_SCRIPT}/coveragerc"
   cd "$DIR_OF_THIS_SCRIPT"/../.. && \
   COVERAGE_FILE="${RESULTS_DIR}/total.coverage" coverage combine \
     --rcfile="${RCFILE}" "${RESULTS_DIR}"/*.coverage;
-  COVERAGE_FILE="${RESULTS_DIR}/total.coverage" coverage report | sed "s:`pwd`::"
+  COVERAGE_FILE="${RESULTS_DIR}/total.coverage" coverage report \
+    --rcfile="${RCFILE}" | sed "s:`pwd`::"
 )
 
