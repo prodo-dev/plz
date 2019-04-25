@@ -6,7 +6,6 @@ import re
 import shutil
 import signal
 import sys
-import time
 from tempfile import NamedTemporaryFile, TemporaryDirectory, TemporaryFile
 
 import test_utils

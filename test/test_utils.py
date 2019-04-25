@@ -7,8 +7,6 @@ import sys
 import traceback
 from typing import Any, ContextManager, List, Optional, Tuple
 
-import time
-
 PROJECT_NAME = 'plztest'
 VOLUME_PREFIX = f'{PROJECT_NAME}_data_'
 CLI_BUILDER_IMAGE = f'{PROJECT_NAME}/cli-builder'
