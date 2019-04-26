@@ -10,6 +10,7 @@ check: environment
 	$(MAKE) -C cli check
 	$(MAKE) -C services/controller check
 	BUILD_TIMESTAMP=$(BUILD_TIMESTAMP) python3 test/run.py
+	RUN_WITH_COVERAGE=yes BUILD_TIMESTAMP=$(BUILD_TIMESTAMP) python3 test/run.py
 	pipenv run test/coverage/coverage_report.sh
 	terraform fmt -check
 

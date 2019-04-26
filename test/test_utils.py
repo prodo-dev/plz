@@ -257,7 +257,7 @@ def stop_all_clis():
 
 
 def stop_controller():
-    if 'PLZ_HOST' not in os.environ:
+    if running_with_coverage():
         # Unless we interrupt the server before stopping, coverage won't write
         # the report
         execute_command(
@@ -299,3 +299,7 @@ def docker_compose(*args):
         f'--file={os.path.join(TEST_DIRECTORY, "docker-compose.yml")}', *args
     ],
                     env=env)
+
+
+def running_with_coverage():
+    return os.environ.get('RUN_WITH_COVERAGE', '') != ''

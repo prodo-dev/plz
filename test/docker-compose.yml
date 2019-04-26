@@ -16,7 +16,7 @@ services:
       context: ../services/controller
     container_name: $CONTROLLER_CONTAINER
     environment:
-      RUN_WITH_COVERAGE: "yes"
+      RUN_WITH_COVERAGE: ${RUN_WITH_COVERAGE:-}
       CONFIGURATION: |
         # copied from ../start/docker.conf, as we can't mount files inside CircleCI
         log_level = DEBUG

@@ -171,6 +171,13 @@ def main():
 
     options = parser.parse_args(sys.argv[1:])
 
+    test_utils.print_info('=' * 70)
+    if test_utils.running_with_coverage():
+        test_utils.print_info('Running with flask dev server, with coverage')
+    else:
+        test_utils.print_info('Running with gunicorn, without coverage')
+    test_utils.print_info('=' * 70)
+
     if options.end_to_end_only and options.controller_tests_only:
         raise ValueError('Options end_to_end_only and controller_tests_only '
                          'can\'t be specified simultaneously')

@@ -168,6 +168,20 @@ def run_cli(network: str, plz_host: str, plz_port: int, test_name: str,
         'docker:stable-git', 'git', 'init', '--quiet', '/data/app'
     ])
 
+    if test_utils.running_with_coverage():
+        docker_run_args = [
+            f'--entrypoint',
+            'coverage',
+            test_utils.CLI_IMAGE,
+            # This run is for `coverage`
+            'run',
+            '-m',
+            '--source=plz',
+            'plz.cli.main'
+        ]
+    else:
+        docker_run_args = [test_utils.CLI_IMAGE]
+
     # Start the CLI process.
     test_utils.execute_command([
         'docker',
@@ -187,14 +201,7 @@ def run_cli(network: str, plz_host: str, plz_port: int, test_name: str,
         f'--env=COVERAGE_FILE=/data/coverage',
         f'--workdir=/data/app',
         f'--volume={volume}:/data',
-        f'--entrypoint',
-        'coverage',
-        test_utils.CLI_IMAGE,
-        # This run is for `coverage`
-        'run',
-        '-m',
-        '--source=plz',
-        'plz.cli.main',
+        *docker_run_args,
         # This run is for `plz`
         'run',
         '--output=/data/output',
@@ -221,10 +228,12 @@ def run_cli(network: str, plz_host: str, plz_port: int, test_name: str,
                                hide_output=True)
     exit_status = int(b''.join(stdout_holder))
 
-    test_utils.execute_command([
-        'docker', 'cp', f'{cli_container}:/data/coverage',
-        os.path.join(COVERAGE_RESULTS_DIRECTORY, coverage_file_name(test_name))
-    ])
+    if test_utils.running_with_coverage():
+        test_utils.execute_command([
+            'docker', 'cp', f'{cli_container}:/data/coverage',
+            os.path.join(COVERAGE_RESULTS_DIRECTORY,
+                         coverage_file_name(test_name))
+        ])
 
     test_utils.execute_command(['docker', 'container', 'rm', cli_container],
                                hide_output=True)
