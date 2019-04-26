@@ -268,7 +268,11 @@ def stop_controller():
             os.path.join(COVERAGE_RESULTS_DIRECTORY, 'controller.coverage')
         ])
     docker_compose('stop')
-    docker_compose('logs')
+    # When we are running with coverage don't print the logs. They will be
+    # printed in the run without coverage. If we print both times, the whole
+    # output of the tests is too big for CircleCI
+    if not running_with_coverage():
+        docker_compose('logs')
     docker_compose('down', '--volumes')
 
 
