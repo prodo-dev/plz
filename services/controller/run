@@ -20,12 +20,18 @@ if [[ "${CREATE_AWS_RESOURCES:-}" ]]; then
   python src/plz/controller/utils/create_aws_resources.py
 fi
 
-exec gunicorn \
-  --bind="0.0.0.0:${PORT}" \
-  --workers=16 \
-  --timeout=2000 \
-  --pythonpath="${PYTHONPATH}" \
-  --capture-output \
-  --log-level="${LOG_LEVEL}" \
-  plz.controller.main:app \
-  -- $@
+if [[ "${RUN_WITH_COVERAGE:-}" ]]; then
+  pipenv install --dev --system --deploy
+  COVERAGE_FILE=controller.coverage exec coverage run \
+    --source=. src/plz/controller/main.py
+else
+  exec gunicorn \
+    --bind="0.0.0.0:${PORT}" \
+    --workers=16 \
+    --timeout=2000 \
+    --pythonpath="${PYTHONPATH}" \
+    --capture-output \
+    --log-level="${LOG_LEVEL}" \
+    plz.controller.main:app \
+    -- $@;
+fi

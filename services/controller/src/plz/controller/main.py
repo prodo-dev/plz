@@ -8,6 +8,7 @@ from typing import Any, Callable, Iterator, List, Optional, TypeVar, Union
 import requests
 from flask import Flask, Response, abort, jsonify, request, stream_with_context
 
+import plz.controller
 from plz.controller import configuration
 from plz.controller.api.exceptions import AbortedExecutionException, \
     InstanceNotRunningException, JSONResponseException, \
@@ -40,8 +41,7 @@ def _setup_logging():
         print(f'Setting log level to: {log_level}',
               file=sys.stderr,
               flush=True)
-        controller_logger = logging.getLogger('.'.join(
-            __name__.split('.')[:-1]))
+        controller_logger = logging.getLogger(plz.controller.__name__)
         controller_logger.setLevel(log_level)
 
 

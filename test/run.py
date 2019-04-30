@@ -12,8 +12,8 @@ from run_end_to_end_test import run_end_to_end_test
 from test_utils import CLI_BUILDER_IMAGE, CLI_IMAGE, \
     CONTROLLER_CONTAINER, CONTROLLER_HOSTNAME, CONTROLLER_IMAGE, \
     CONTROLLER_PORT, CONTROLLER_TESTS_CONTAINER, CONTROLLER_TESTS_IMAGE, \
-    DATA_DIRECTORY, PLZ_ROOT_DIRECTORY, PLZ_USER, TEST_DIRECTORY, \
-    docker_compose, get_network
+    DATA_DIRECTORY, PLZ_ROOT_DIRECTORY, PLZ_USER, \
+    TEST_DIRECTORY, docker_compose, get_network
 
 
 def start_controller():
@@ -170,6 +170,13 @@ def main():
     parser.add_argument('--clean-up-first', action='store_true', default=False)
 
     options = parser.parse_args(sys.argv[1:])
+
+    test_utils.print_info('=' * 70)
+    if test_utils.running_with_coverage():
+        test_utils.print_info('Running with flask dev server, with coverage')
+    else:
+        test_utils.print_info('Running with gunicorn, without coverage')
+    test_utils.print_info('=' * 70)
 
     if options.end_to_end_only and options.controller_tests_only:
         raise ValueError('Options end_to_end_only and controller_tests_only '

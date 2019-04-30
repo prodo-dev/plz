@@ -5,9 +5,13 @@ include vars.mk
 .PHONY: check
 check: environment
 	pipenv run yapf -rd .
+	rm -rf test/coverage/results
+	mkdir test/coverage/results
 	$(MAKE) -C cli check
 	$(MAKE) -C services/controller check
 	BUILD_TIMESTAMP=$(BUILD_TIMESTAMP) python3 test/run.py
+	RUN_WITH_COVERAGE=yes BUILD_TIMESTAMP=$(BUILD_TIMESTAMP) python3 test/run.py
+	pipenv run test/coverage/coverage_report.sh
 	terraform fmt -check
 
 .PHONY: format

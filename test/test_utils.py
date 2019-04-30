@@ -29,6 +29,8 @@ CONTROLLER_PORT = 80
 TEST_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 PLZ_ROOT_DIRECTORY = os.path.abspath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+COVERAGE_RESULTS_DIRECTORY = os.path.join(TEST_DIRECTORY, 'coverage',
+                                          'results')
 
 DATA_DIRECTORY = f'{PLZ_ROOT_DIRECTORY}/test_cache/'
 REDIS_DATA_DIRECTORY = f'{DATA_DIRECTORY}/redis_data/'
@@ -255,8 +257,22 @@ def stop_all_clis():
 
 
 def stop_controller():
+    if running_with_coverage():
+        # Unless we interrupt the server before stopping, coverage won't write
+        # the report
+        execute_command(
+            ['docker', 'kill', '--signal=INT', CONTROLLER_CONTAINER])
+        execute_command([
+            'docker', 'container', 'cp',
+            f'{CONTROLLER_CONTAINER}:/src/controller.coverage',
+            os.path.join(COVERAGE_RESULTS_DIRECTORY, 'controller.coverage')
+        ])
     docker_compose('stop')
-    docker_compose('logs')
+    # When we are running with coverage don't print the logs. They will be
+    # printed in the run without coverage. If we print both times, the whole
+    # output of the tests is too big for CircleCI
+    if not running_with_coverage():
+        docker_compose('logs')
     docker_compose('down', '--volumes')
 
 
@@ -287,3 +303,7 @@ def docker_compose(*args):
         f'--file={os.path.join(TEST_DIRECTORY, "docker-compose.yml")}', *args
     ],
                     env=env)
+
+
+def running_with_coverage():
+    return os.environ.get('RUN_WITH_COVERAGE', '') != ''

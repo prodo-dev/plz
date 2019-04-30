@@ -26,6 +26,6 @@ ARG BUILD_TIMESTAMP=0
 
 RUN echo -n $BUILD_TIMESTAMP > ./src/plz/controller/BUILD_TIMESTAMP
 
-HEALTHCHECK --interval=5s CMD curl -f http://localhost/
+HEALTHCHECK --interval=5s --start-period=60s CMD curl -f http://localhost/
 
 ENTRYPOINT ["/tini", "--", "./run"]

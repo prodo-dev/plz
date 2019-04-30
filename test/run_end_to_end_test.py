@@ -9,8 +9,8 @@ import sys
 from tempfile import NamedTemporaryFile, TemporaryDirectory, TemporaryFile
 
 import test_utils
-from test_utils import CLI_CONTAINER_PREFIX, DATA_DIRECTORY, PLZ_USER, \
-    TEST_DIRECTORY, VOLUME_PREFIX, get_network
+from test_utils import CLI_CONTAINER_PREFIX, COVERAGE_RESULTS_DIRECTORY, \
+    DATA_DIRECTORY, PLZ_USER, TEST_DIRECTORY, VOLUME_PREFIX, get_network
 
 
 def run_end_to_end_test(network: str, plz_host: str, plz_port: int,
@@ -26,6 +26,10 @@ def run_end_to_end_test(network: str, plz_host: str, plz_port: int,
     """
     if not os.path.isdir(DATA_DIRECTORY):
         os.mkdir(DATA_DIRECTORY)
+    # Keep the coverage results separate because we are going to use them after
+    # the tests (the data directory gets wiped after all tests have run)
+    if not os.path.isdir(COVERAGE_RESULTS_DIRECTORY):
+        os.mkdir(COVERAGE_RESULTS_DIRECTORY)
 
     # Make sure the directory has a single slash at the end
     test_directory = os.path.join(
@@ -59,6 +63,7 @@ def run_end_to_end_test(network: str, plz_host: str, plz_port: int,
             app_directory=test_directory,
             actual_logs_file=logs_file,
             output_directory_name=output_directory_name)
+
         end = datetime.datetime.now()
         test_utils.print_info(f'Time taken: {end-start}')
 
@@ -118,6 +123,15 @@ def run_end_to_end_test(network: str, plz_host: str, plz_port: int,
             return True
 
 
+# Replace non-common characters by hyphens
+def hiphenize(st: str):
+    return re.sub(r'[^0-9a-zA-Z_]', '-', st)
+
+
+def coverage_file_name(test_name: str):
+    return hiphenize(test_name) + '.coverage'
+
+
 def run_cli(network: str, plz_host: str, plz_port: int, test_name: str,
             app_directory: str, actual_logs_file: TemporaryFile,
             output_directory_name: str) -> int:
@@ -125,10 +139,9 @@ def run_cli(network: str, plz_host: str, plz_port: int, test_name: str,
     :return: exit code of the test
     """
     output_directory_name = os.path.abspath(output_directory_name)
-    project_name = re.sub(r'[^0-9a-zA-Z_]', '-', test_name)
+    project_name = hiphenize(test_name)
     test_config_file = f'{app_directory}/test.config.json'
-    suffix = re.sub(r'[^0-9a-zA-Z_]', '-',
-                    '-'.join(os.path.split(test_name)[-2:]))
+    suffix = hiphenize('-'.join(os.path.split(test_name)[-2:]))
     cli_container = f'{CLI_CONTAINER_PREFIX}_{suffix}'
     volume = f'{VOLUME_PREFIX}{suffix}'
 
@@ -155,18 +168,44 @@ def run_cli(network: str, plz_host: str, plz_port: int, test_name: str,
         'docker:stable-git', 'git', 'init', '--quiet', '/data/app'
     ])
 
+    if test_utils.running_with_coverage():
+        docker_run_args = [
+            f'--entrypoint',
+            'coverage',
+            test_utils.CLI_IMAGE,
+            # This run is for `coverage`
+            'run',
+            '-m',
+            '--source=plz',
+            'plz.cli.main'
+        ]
+    else:
+        docker_run_args = [test_utils.CLI_IMAGE]
+
     # Start the CLI process.
     test_utils.execute_command([
-        'docker', 'container', 'run', f'--name={cli_container}', f'--detach',
-        f'--network={network}', f'--env=PLZ_HOST={plz_host}',
-        f'--env=PLZ_PORT={plz_port}', f'--env=PLZ_USER={PLZ_USER}',
+        'docker',
+        'container',
+        'run',
+        f'--name={cli_container}',
+        f'--detach',
+        f'--network={network}',
+        f'--env=PLZ_HOST={plz_host}',
+        f'--env=PLZ_PORT={plz_port}',
+        f'--env=PLZ_USER={PLZ_USER}',
         f'--env=PLZ_PROJECT={project_name}',
         f'--env=PLZ_INSTANCE_MARKET_TYPE=spot',
         f'--env=PLZ_MAX_BID_PRICE_IN_DOLLARS_PER_HOUR=0.5',
         f'--env=PLZ_INSTANCE_MAX_UPTIME_IN_MINUTES=0',
-        f'--env=PLZ_QUIET_BUILD=true', f'--workdir=/data/app',
-        f'--volume={volume}:/data', test_utils.CLI_IMAGE, 'run',
-        '--output=/data/output', *test_args
+        f'--env=PLZ_QUIET_BUILD=true',
+        f'--env=COVERAGE_FILE=/data/coverage',
+        f'--workdir=/data/app',
+        f'--volume={volume}:/data',
+        *docker_run_args,
+        # This run is for `plz`
+        'run',
+        '--output=/data/output',
+        *test_args
     ])
 
     # Capture the logs
@@ -188,6 +227,13 @@ def run_cli(network: str, plz_host: str, plz_port: int, test_name: str,
                                stdout_holder=stdout_holder,
                                hide_output=True)
     exit_status = int(b''.join(stdout_holder))
+
+    if test_utils.running_with_coverage():
+        test_utils.execute_command([
+            'docker', 'cp', f'{cli_container}:/data/coverage',
+            os.path.join(COVERAGE_RESULTS_DIRECTORY,
+                         coverage_file_name(test_name))
+        ])
 
     test_utils.execute_command(['docker', 'container', 'rm', cli_container],
                                hide_output=True)
