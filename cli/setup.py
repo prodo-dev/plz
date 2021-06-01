@@ -49,7 +49,7 @@ setup(
         # forcing it to be at most 1.24.2
         # See issue https://github.com/prodo-ai/plz/issues/252
         # and PR https://github.com/prodo-ai/plz/pull/251
-        'urllib3 == 1.24.2',
+        'urllib3 == 1.26.5',
     ],
     extras_require={
         'test': [
